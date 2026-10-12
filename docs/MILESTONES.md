@@ -41,8 +41,8 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
 
 ## Phase 3: First executable (`irgen.c`, `sema.c`, `codegen.c`)
 
-- [ ] **M3.1 Untyped IR (ZIR-like) design + `szc ir` dump.**
-- [ ] **M3.2 irgen for functions, integer literals, `return`, params, locals.**
+- [x] **M3.1 Untyped IR (ZIR-like) design + `szc ir` dump.**
+- [x] **M3.2 irgen for functions, integer literals, `return`, params, locals.**
 - [ ] **M3.3 Typed IR + minimal sema**: `void`, `bool`, `i32`/`u8`/`usize` etc., coercion of comptime_int literals.
 - [ ] **M3.4 QBE codegen**: functions, arithmetic, calls; driver runs `qbe` and `cc`.
 - [ ] **M3.5 End-to-end test harness** (`tests/run/*.zig` check exit code/stdout).
@@ -59,7 +59,7 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
 ## Phase 5: Memory
 
 - [ ] **M5.1 Single pointers, `&`, `.*`, `const` pointers.**
-- [ ] **M5.2 Arrays, indexing, array literals, `++`/`**` at comptime.**
+- [ ] **M5.2 Arrays, indexing, array literals, `++` at comptime** (0.17.0 has no `**`).
 - [ ] **M5.3 Slices, many-pointers, slicing, `.len`, `.ptr`, for over slices.**
 - [ ] **M5.4 String literals, sentinels, `[*:0]const u8`.**
 - [ ] **M5.5 Casting builtins**: `@intCast`, `@truncate`, `@ptrCast`, `@intFromPtr`, `@ptrFromInt`, `@bitCast`, `@as`.
@@ -112,6 +112,29 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
 ## Completed milestone log
 
 (newest first; each entry: what, limitations, interactions)
+
+### M3.1–M3.2 Untyped IR + irgen basics (`src/ir.h`, `src/irgen.c`, `src/intern.[ch]`)
+- **What**: IR design in `docs/IR.md`: per-file instruction array + `extra` words, refs with
+  well-known constants (primitive types and values), bodies as instruction lists ending in a
+  terminator, payload structs read with `IR_READ` (memcpy, no aliasing). String interner
+  (`StringId`). irgen handles structs (fields with type/default bodies; const/var/fn/test/
+  comptime declarations with lazily analysed value bodies; duplicate-declaration check),
+  functions (param/`anytype` instructions with type bodies that see earlier params, return
+  type/callconv bodies, body with `ret_implicit`), integer literals (decoded, big ones as
+  32-bit limbs, underscore/leading-zero/digit validation), identifiers (locals, params,
+  declarations, primitives, `iN`/`uN`), arithmetic/bitwise/comparison/unary operators,
+  short-circuit `and`/`or`, calls with per-argument bodies whose result type is `arg_type`,
+  `return` with `ret_type` result type, local `const`/`var` (alloc), plain assignment through
+  `elem_type` result type, `_ = x`, unreachable-code and shadowing errors. `szc ir` dumper,
+  IR golden tests (`tests/ir/`), `fuzz_irgen` target; irgen runs crash-free (ASan) on all
+  1373 Zig sources (reporting unsupported constructs).
+- **Limitations**: everything else reports "not supported by szc yet" (control flow, builtins,
+  pointers, strings, floats, containers other than auto-layout structs, compound
+  assignment, labeled blocks, …). Captures of outer function locals by nested containers are
+  not implemented (M7.3). Unused-local errors are not reported.
+- **Interactions**: sema walks bodies via `ir_body_count/ir_body_insts`; a declaration's value
+  body ends in `break_inline result, value`; `arg_type %call, i` is resolved while sema
+  analyses the call's arguments; `elem_type`/`ret_type` give assignment/return result types.
 
 ### M2.1–M2.13 AST + parser (`src/ast.[ch]`, `src/parser.[ch]`)
 - **What**: one struct per AST node kind (`AstNode` header with kind, file, main-token offset

@@ -18,7 +18,8 @@ Read this first when resuming work (the sandbox resets often).
 
 - Done: M0 (infrastructure), M1 (lexer), M2 (AST + parser, differential-tested against
   `std.zig.Ast`).
-- Next: **M3.1** untyped IR design in `src/irgen.c` + `szc ir` dump.
+- Done: M3.1–M3.2 (untyped IR + irgen basics, `szc ir`).
+- Next: **M3.3** typed IR + minimal sema (`src/sema.c`), then M3.4 QBE codegen.
 
 ## Notes for the next steps
 

@@ -4,6 +4,7 @@
 #   tests/lexer/**/NAME.zig + NAME.tokens  -> compare `szc tokens` (stdout only)
 #   tests/parser/NAME.zig + NAME.ast        -> compare `szc ast` (must succeed)
 #   tests/parser/errors/NAME.zig + NAME.err -> compare `szc parse` diagnostics (must fail)
+#   tests/ir/NAME.zig + NAME.ir             -> compare `szc ir` (must succeed)
 # usage: tests/run_golden.sh path/to/szc
 set -u
 export ASAN_OPTIONS="${ASAN_OPTIONS:-exitcode=99}"
@@ -62,6 +63,9 @@ check_errors() {
 
 for input in $(find tests/parser -maxdepth 1 -name '*.zig' | sort); do
 	check ast "$input" "${input%.zig}.ast"
+done
+for input in $(find tests/ir -name '*.zig' | sort); do
+	check ir "$input" "${input%.zig}.ir"
 done
 for input in $(find tests/parser/errors -name '*.zig' | sort); do
 	check_errors "$input" "${input%.zig}.err"

@@ -1,0 +1,11 @@
+const A = ?*const [4:0]u8;
+const B = []align(8) volatile u8;
+const C = [*c]allowzero u8;
+const D = [*:0]const u8;
+const E = *align(1:2:4) u32;
+const F = error{Oops}!u32;
+const G = fn (u32) callconv(.c) void;
+const H = anyframe->u32;
+const I = *addrspace(.gs) u8;
+const J = opaque {};
+const K = @Vector(4, f32);

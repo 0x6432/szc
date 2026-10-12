@@ -5,6 +5,7 @@
  *   szc tokens-kinds <file>  print only token kinds (used by tests)
  *   szc ast <file>           parse and print the syntax tree
  *   szc ast-spans <file>     print "start end" byte spans of all syntax nodes
+ *   szc ir <file>            print the untyped IR
  *   szc parse <file>...      parse files and report syntax errors only
  *   szc version
  */
@@ -15,6 +16,8 @@
 #include "arena.h"
 #include "ast_dump.h"
 #include "diag.h"
+#include "intern.h"
+#include "ir.h"
 #include "lexer.h"
 #include "parser.h"
 #include "source.h"
@@ -37,6 +40,7 @@ print_usage(FILE *out)
 	      "  tokens-kinds <file>  dump token kinds only\n"
 	      "  ast <file>           dump the syntax tree\n"
 	      "  ast-spans <file>     print byte spans of all syntax nodes\n"
+	      "  ir <file>            print the untyped IR\n"
 	      "  parse <file>...      check files for syntax errors\n"
 	      "  version              print version\n", out);
 }
@@ -115,6 +119,7 @@ command_tokens(const char *path, TokenDumpMode mode)
 typedef enum ParseMode {
 	PARSE_DUMP_AST,
 	PARSE_DUMP_SPANS,
+	PARSE_DUMP_IR,
 	PARSE_CHECK_ONLY,
 } ParseMode;
 
@@ -157,6 +162,12 @@ command_parse(char **paths, int count, ParseMode mode)
 			ast_dump(stdout, source_get(&sources, file_id), &root->base);
 		if (mode == PARSE_DUMP_SPANS)
 			ast_visit_children(&root->base, print_spans, stdout);
+		if (mode == PARSE_DUMP_IR && !diag_has_errors(&diag)) {
+			Interner interner;
+			intern_init(&interner, &arena);
+			IrFile *ir = irgen_file(&arena, &diag, &interner, source_get(&sources, file_id), file_id, root);
+			ir_dump(stdout, ir, &interner);
+		}
 		diag_print(&diag, stderr);
 		if (diag_has_errors(&diag))
 			status = 1;
@@ -199,6 +210,13 @@ main(int argc, char **argv)
 			return 2;
 		}
 		return command_parse(argv + 2, 1, PARSE_DUMP_AST);
+	}
+	if (strcmp(command, "ir") == 0) {
+		if (argc != 3) {
+			print_usage(stderr);
+			return 2;
+		}
+		return command_parse(argv + 2, 1, PARSE_DUMP_IR);
 	}
 	if (strcmp(command, "ast-spans") == 0) {
 		if (argc != 3) {

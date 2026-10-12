@@ -17,7 +17,8 @@ source ──lexer.c──> tokens (produced on demand, one at a time)
 ```
 
 Support files: `arena.c` (memory), `diag.c` (error collection), `source.c`
-(file loading), `main.c` (command line).
+(file loading), `intern.c` (string interning), `main.c` (command line).
+The IR between irgen and sema is described in `docs/IR.md`.
 
 ## Decisions
 
