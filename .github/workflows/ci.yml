@@ -46,3 +46,28 @@ jobs:
             crash-*
             leak-*
             timeout-*
+
+  differential:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download Zig 0.17.0
+        run: |
+          curl -sSfL https://ziglang.org/download/0.17.0/zig-x86_64-linux-0.17.0.tar.xz | tar -xJ
+          echo "ZIG=$PWD/zig-x86_64-linux-0.17.0/zig" >> "$GITHUB_ENV"
+      - name: Build szc and the reference span dumper
+        run: |
+          make
+          "$ZIG" build-exe tools/ast_spans.zig -OReleaseFast -femit-bin=build/ast_spans
+      - name: Compare AST node spans with std.zig.Ast over the Zig lib
+        run: |
+          find zig-x86_64-linux-0.17.0/lib -name '*.zig' | sort > build/zig-files.txt
+          tools/diff_ast_spans.sh build/szc build/ast_spans build/zig-files.txt
+      - name: Accept/reject differential on mutated Zig sources
+        run: python3 tools/diff_parse_errors.py build/szc build/ast_spans build/zig-files.txt 1000 "$GITHUB_RUN_NUMBER"
+      - name: Upload disagreeing mutants
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: parse-diff
+          path: build/parse-diff
