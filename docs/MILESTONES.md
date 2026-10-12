@@ -25,18 +25,19 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
 
 ## Phase 2: AST + parser (`src/ast.h`, `src/parser.c`)
 
-- [ ] **M2.1 AST node structs + `szc ast` dumper skeleton**; token lookahead buffer in the parser.
-- [ ] **M2.2 Top level**: ContainerMembers, `const`/`var` decls, FnProto, TestDecl, ComptimeDecl.
-- [ ] **M2.3 Binary expressions (Pratt)**: one `parse_expr_precedence(min_prec)` driven by an operator table covering BoolOr … MultiplyExpr (the grammar rules are listed in its comment), non-associative comparisons, `catch |e|` payload; PrefixExpr stays recursive descent.
-- [ ] **M2.4 Primary/suffix expressions**: literals, identifiers, calls, field access, `.*`, `.?`, indexing, slicing, builtin calls.
-- [ ] **M2.5 Type expressions**: pointers, slices, arrays, optionals, error unions, `fn` types, ptr modifiers.
-- [ ] **M2.6 Statements + blocks**: var decls, assignments (incl. destructuring), defer/errdefer, labeled blocks.
-- [ ] **M2.7 Control flow**: if/while/for with payloads, else branches, break/continue/return, labels.
-- [ ] **M2.8 switch**: prongs, ranges, `inline`, payloads, labeled switch.
-- [ ] **M2.9 Containers**: struct/enum/union/opaque, fields, `extern`/`packed`, error sets, init lists.
-- [ ] **M2.10 asm expressions, callconv/align/addrspace/linksection.**
-- [ ] **M2.11 Error recovery**: keep going after parse errors and collect them all.
-- [ ] **M2.12 Parser fuzzer + parse the whole of Zig 0.17.0 `lib/std` without errors.**
+- [x] **M2.1 AST node structs + `szc ast` dumper skeleton**; token lookahead buffer in the parser.
+- [x] **M2.2 Top level**: ContainerMembers, `const`/`var` decls, FnProto, TestDecl, ComptimeDecl.
+- [x] **M2.3 Binary expressions (Pratt)**: one `parse_expr_precedence(min_prec)` driven by an operator table covering BoolOr … MultiplyExpr (the grammar rules are listed in its comment), non-associative comparisons, `catch |e|` payload; PrefixExpr stays recursive descent.
+- [x] **M2.4 Primary/suffix expressions**: literals, identifiers, calls, field access, `.*`, `.?`, indexing, slicing, builtin calls.
+- [x] **M2.5 Type expressions**: pointers, slices, arrays, optionals, error unions, `fn` types, ptr modifiers.
+- [x] **M2.6 Statements + blocks**: var decls, assignments (incl. destructuring), defer/errdefer, labeled blocks.
+- [x] **M2.7 Control flow**: if/while/for with payloads, else branches, break/continue/return, labels.
+- [x] **M2.8 switch**: prongs, ranges, `inline`, payloads, labeled switch.
+- [x] **M2.9 Containers**: struct/enum/union/opaque, fields, `extern`/`packed`, error sets, init lists.
+- [x] **M2.10 asm expressions, callconv/align/addrspace/linksection.**
+- [x] **M2.11 Error recovery**: keep going after parse errors and collect them all.
+- [x] **M2.12 Parser fuzzer + parse the whole of Zig 0.17.0 `lib/std` without errors.**
+- [x] **M2.13 Differential tests against `std.zig.Ast`**: node spans over all Zig sources, accept/reject on mutated sources (CI job `differential`).
 
 ## Phase 3: First executable (`irgen.c`, `sema.c`, `codegen.c`)
 
@@ -112,12 +113,43 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
 
 (newest first; each entry: what, limitations, interactions)
 
+### M2.1–M2.13 AST + parser (`src/ast.[ch]`, `src/parser.[ch]`)
+- **What**: one struct per AST node kind (`AstNode` header with kind, file, main-token offset
+  and `start`/`end` byte span), `ast_visit_children`, indented dumper (`szc ast`), span
+  dumper (`szc ast-spans`). Recursive-descent parser, one function per grammar rule with the
+  PEG rule in its comment; binary operators use one Pratt loop over an operator table
+  (`parse_expr_precedence`), comparisons are non-associative, operator whitespace symmetry
+  and `&&` are checked like the reference. 4-token lookahead ring buffer. Doc comments are
+  accepted only where the reference accepts them (before members, error-set names and
+  params; `//!` at the start of a container) with the same errors (same-line, unattached,
+  on tests/comptime blocks); declarations between fields are reported.
+  Error recovery: setjmp/longjmp at member and statement level, skipping like
+  `findNextContainerMember`; a stray `}` at the root ends the parse like the reference.
+  Nesting limit 1024.
+- **Testing**: parses all 1373 `.zig` files of Zig 0.17.0 (`lib/`, `src/`, `test/behavior`,
+  `test/standalone`) without errors; node spans of every file equal those of `std.zig.Ast`
+  (`tools/ast_spans.zig` + `tools/diff_ast_spans.sh`); accept/reject agrees with the reference
+  on >10k mutated sources (`tools/diff_parse_errors.py`); golden tests `tests/parser/*.ast`
+  and `tests/parser/errors/*.err`; libFuzzer + standalone fuzzing clean.
+- **Found on the way**: the lexer had been ported from an older tokenizer; fixed to 0.17.0
+  (no `**` operator, no `.**` token, control characters invalid after `\\` in strings) and the
+  reference tests re-ported (336 cases). 0.17.0 also has no `errdefer |e|` payload, and local
+  `const`/`var` declarations require an initializer.
+- **Limitations**: doc comment text is not stored. Enum fields and untyped union fields are
+  stored as tuple-like fields whose `type` is the name identifier (`has_name == false`, like
+  the reference AST); irgen decides by container kind. Literals are kept as source spans
+  (decoded later). Diagnostic wording is close to, not identical with, the reference, and
+  recovery may report a different number of follow-up errors.
+- **Interactions**: irgen walks the tree via the node structs (`AST_CAST` checks the kind).
+  `start`/`end` spans are only used for tests and diagnostics; `offset` is the main token
+  (operator, keyword, name) for error positions.
+
 ### M1.1–M1.6 Lexer (`src/lexer.c`, `src/lexer.h`)
 - **What**: on-demand state-machine tokenizer matching Zig 0.17.0 `std.zig.Tokenizer`
   token for token: same kinds (`TK_*`, named after `Token.Tag`), boundaries, BOM skip,
   and recovery after an invalid token (resume at the next newline). Keywords are looked up by
   first letter + length (no strcmp scan). `szc tokens` / `szc tokens-kinds` dump commands.
-  All 339 `testTokenize` cases from the reference are ported (`tools/port_tokenizer_tests.py`
+  All `testTokenize` cases (336) from the 0.17.0 reference are ported (`tools/port_tokenizer_tests.py`
   → `tests/lexer/ref/`) and pass. Unit tests: every fixed lexeme round-trips, all 46 keywords,
   EOF is sticky, embedded NUL, BOM. Fuzz target checks ordering/progress/bounds properties;
   2.3M libFuzzer runs and the standalone mutator run clean.
@@ -136,5 +168,5 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
   GitHub Actions CI (gcc+clang `-Werror`, ASan/UBSan tests, 60s libFuzzer per push,
   30 min nightly).
 - **Limitations**: diagnostics print in the order they were reported (not sorted). Line/column
-  is computed by scanning from the start of the file (fine for errors only).
+  lookup binary-searches a per-file line-start table (added in M2 after a slow error flood).
 - **Interactions**: every later stage allocates from an `Arena` and reports through `Diag`.

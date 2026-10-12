@@ -16,15 +16,19 @@ Read this first when resuming work (the sandbox resets often).
 
 ## Current state
 
-- Done: M0.1–M0.5 (infrastructure), M1.1–M1.6 (lexer).
-- Next: **M2.1** AST node structs + parser lookahead buffer + `szc ast` dumper.
+- Done: M0 (infrastructure), M1 (lexer), M2 (AST + parser, differential-tested against
+  `std.zig.Ast`).
+- Next: **M3.1** untyped IR design in `src/irgen.c` + `szc ir` dump.
 
 ## Notes for the next steps
 
-- Parser: pull tokens with `lexer_next` into a small ring buffer for lookahead.
-  The grammar needs at most 2–3 tokens of lookahead (e.g. `IDENTIFIER COLON` for labels,
-  `DOT IDENTIFIER EQUAL` in init lists). Doc comments are tokens: the parser
-  must skip or attach them.
-- Each parse function begins with the PEG rule it implements, copied from `docs/grammar.peg`.
+- Reference Zig 0.17.0: source tarball from codeberg (ziglang/zig tag 0.17.0) and the binary
+  `https://ziglang.org/download/0.17.0/zig-x86_64-linux-0.17.0.tar.xz`. Always check behavior
+  against **these** sources (`lib/std/zig/{tokenizer,Parse,Ast}.zig`), not memory of older Zig.
+- Parser differential tests (need the official binary `$ZIG`):
+  `$ZIG build-exe tools/ast_spans.zig -OReleaseFast -femit-bin=build/ast_spans`, then
+  `tools/diff_ast_spans.sh build/szc build/ast_spans <file-list>` and
+  `tools/diff_parse_errors.py build/szc build/ast_spans <file-list> [count] [seed]`.
+  `zig fmt --check file.zig` shows the reference's parse error for a mutant.
 - Number literals are lexed loosely (like the reference). Validate them when decoding (M3.x).
 - Pending user decision: how to build the Zig compiler source (M10.2).
