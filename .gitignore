@@ -1,0 +1,8 @@
+/build/
+*.o
+*.ssa
+*.s
+!tests/**/*.s
+/fuzz/crash-*
+/fuzz/leak-*
+/fuzz/timeout-*

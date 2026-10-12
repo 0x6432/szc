@@ -1,0 +1,1 @@
++pub  fn_ = @"weird me" ++ "s\n" ++fn_ = @"d name" ++ "s\00|0" ++ 0

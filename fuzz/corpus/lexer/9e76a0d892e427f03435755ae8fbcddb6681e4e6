@@ -1,0 +1,6 @@
+ () !void {
+    const x: 2 = 0x1F_ff + 1.5e-3; // hi
+    //
+    /// doc
+    _ = @"weird naem" ++ "s\n" ++ 'a;
+}

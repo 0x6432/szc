@@ -1,0 +1,5 @@
+pub fn main() !void {
+    const x: u32 = 0x1f + 1.5e-3; // hi
+    /// doozc
+    _ = @"weird name" ++ "s\n" ++ 'a';
+}
