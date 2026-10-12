@@ -110,7 +110,7 @@ test_lexeme_round_trip(void)
 	for (uint32_t i = 0; i < TK_COUNT; i++) {
 		TokenKind kind = (TokenKind)i;
 		const char *lexeme = token_kind_lexeme(kind);
-		if (lexeme == NULL || kind == TK_INVALID_PERIODASTERISKS)
+		if (lexeme == NULL)
 			continue;
 		Token second;
 		Token first = lex_one(lexeme, &second);

@@ -54,7 +54,6 @@ typedef enum LexState {
 	LS_ANGLE_BRACKET_ANGLE_BRACKET_RIGHT,
 	LS_PERIOD,
 	LS_PERIOD_2,
-	LS_PERIOD_ASTERISK,
 	LS_SAW_AT_SIGN,
 	LS_INVALID,
 } LexState;
@@ -590,6 +589,8 @@ lex_string_literal_backslash(Lexer *lexer, Token *result)
 		result->kind = TK_INVALID;
 		return LS_DONE;
 	}
+	if (is_string_control(c))
+		return LS_INVALID;
 	return LS_STRING_LITERAL;
 }
 
@@ -725,10 +726,6 @@ lex_asterisk(Lexer *lexer, Token *result)
 		single(lexer, result, TK_ASTERISK_EQUAL);
 		return LS_DONE;
 	}
-	if (c == '*') {
-		single(lexer, result, TK_ASTERISK_ASTERISK);
-		return LS_DONE;
-	}
 	if (c == '%')
 		return LS_ASTERISK_PERCENT;
 	if (c == '|')
@@ -815,8 +812,10 @@ lex_period(Lexer *lexer, Token *result)
 
 	if (c == '.')
 		return LS_PERIOD_2;
-	if (c == '*')
-		return LS_PERIOD_ASTERISK;
+	if (c == '*') {
+		single(lexer, result, TK_PERIOD_ASTERISK);
+		return LS_DONE;
+	}
 	result->kind = TK_PERIOD;
 	return LS_DONE;
 }
@@ -830,18 +829,6 @@ lex_period_2(Lexer *lexer, Token *result)
 		return LS_DONE;
 	}
 	result->kind = TK_ELLIPSIS2;
-	return LS_DONE;
-}
-
-/* ".*" followed by '*' is the invalid ".**" token; the second '*' is not consumed. */
-static LexState
-lex_period_asterisk(Lexer *lexer, Token *result)
-{
-	lexer->index = lexer->index + 1;
-	if (current(lexer) == '*')
-		result->kind = TK_INVALID_PERIODASTERISKS;
-	else
-		result->kind = TK_PERIOD_ASTERISK;
 	return LS_DONE;
 }
 
@@ -1194,9 +1181,6 @@ lexer_next(Lexer *lexer)
 			break;
 		case LS_PERIOD_2:
 			state = lex_period_2(lexer, &result);
-			break;
-		case LS_PERIOD_ASTERISK:
-			state = lex_period_asterisk(lexer, &result);
 			break;
 		}
 	}

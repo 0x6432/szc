@@ -64,7 +64,6 @@ pub const Token = struct {
 
     pub const Tag = enum {
         invalid,
-        invalid_periodasterisks,
         identifier,
         string_literal,
         multiline_string_literal_line,
@@ -109,7 +108,6 @@ pub const Token = struct {
         minus_pipe_equal,
         asterisk,
         asterisk_equal,
-        asterisk_asterisk,
         asterisk_percent,
         asterisk_percent_equal,
         asterisk_pipe,
@@ -197,7 +195,6 @@ pub const Token = struct {
                 .container_doc_comment,
                 => null,
 
-                .invalid_periodasterisks => ".**",
                 .bang => "!",
                 .pipe => "|",
                 .pipe_pipe => "||",
@@ -236,7 +233,6 @@ pub const Token = struct {
                 .minus_pipe_equal => "-|=",
                 .asterisk => "*",
                 .asterisk_equal => "*=",
-                .asterisk_asterisk => "**",
                 .asterisk_percent => "*%",
                 .asterisk_percent_equal => "*%=",
                 .asterisk_pipe => "*|",
@@ -313,7 +309,8 @@ pub const Token = struct {
             return tag.lexeme() orelse switch (tag) {
                 .invalid => "invalid token",
                 .identifier => "an identifier",
-                .string_literal, .multiline_string_literal_line => "a string literal",
+                .string_literal => "a string literal",
+                .multiline_string_literal_line => "a multiline string literal",
                 .char_literal => "a character literal",
                 .eof => "EOF",
                 .builtin => "a builtin function",
@@ -385,7 +382,6 @@ pub const Tokenizer = struct {
         angle_bracket_angle_bracket_right,
         period,
         period_2,
-        period_asterisk,
         saw_at_sign,
         invalid,
     };
@@ -568,10 +564,6 @@ pub const Tokenizer = struct {
                         result.tag = .asterisk_equal;
                         self.index += 1;
                     },
-                    '*' => {
-                        result.tag = .asterisk_asterisk;
-                        self.index += 1;
-                    },
                     '%' => continue :state .asterisk_percent,
                     '|' => continue :state .asterisk_pipe,
                     else => result.tag = .asterisk,
@@ -713,6 +705,9 @@ pub const Tokenizer = struct {
                 self.index += 1;
                 switch (self.buffer[self.index]) {
                     0, '\n' => result.tag = .invalid,
+                    0x01...0x09, 0x0b...0x1f, 0x7f => {
+                        continue :state .invalid;
+                    },
                     else => continue :state .string_literal,
                 }
             },
@@ -911,7 +906,10 @@ pub const Tokenizer = struct {
                 self.index += 1;
                 switch (self.buffer[self.index]) {
                     '.' => continue :state .period_2,
-                    '*' => continue :state .period_asterisk,
+                    '*' => {
+                        result.tag = .period_asterisk;
+                        self.index += 1;
+                    },
                     else => result.tag = .period,
                 }
             },
@@ -924,14 +922,6 @@ pub const Tokenizer = struct {
                         self.index += 1;
                     },
                     else => result.tag = .ellipsis2,
-                }
-            },
-
-            .period_asterisk => {
-                self.index += 1;
-                switch (self.buffer[self.index]) {
-                    '*' => result.tag = .invalid_periodasterisks,
-                    else => result.tag = .period_asterisk,
                 }
             },
 
@@ -1339,31 +1329,6 @@ test "correctly parse pointer assignment" {
     });
 }
 
-test "correctly parse pointer dereference followed by asterisk" {
-    try testTokenize("\"b\".* ** 10", &.{
-        .string_literal,
-        .period_asterisk,
-        .asterisk_asterisk,
-        .number_literal,
-    });
-
-    try testTokenize("(\"b\".*)** 10", &.{
-        .l_paren,
-        .string_literal,
-        .period_asterisk,
-        .r_paren,
-        .asterisk_asterisk,
-        .number_literal,
-    });
-
-    try testTokenize("\"b\".*** 10", &.{
-        .string_literal,
-        .invalid_periodasterisks,
-        .asterisk_asterisk,
-        .number_literal,
-    });
-}
-
 test "range literals" {
     try testTokenize("0...9", &.{ .number_literal, .ellipsis3, .number_literal });
     try testTokenize("'0'...'9'", &.{ .char_literal, .ellipsis3, .char_literal });
@@ -1721,15 +1686,22 @@ fn testTokenize(source: [:0]const u8, expected_token_tags: []const Token.Tag) !v
     try std.testing.expectEqual(source.len, last_token.loc.end);
 }
 
-fn testPropertiesUpheld(_: void, source: []const u8) !void {
-    var source0_buf: [512]u8 = undefined;
-    if (source.len + 1 > source0_buf.len)
-        return;
-    @memcpy(source0_buf[0..source.len], source);
-    source0_buf[source.len] = 0;
-    const source0 = source0_buf[0..source.len :0];
+fn testPropertiesUpheld(_: void, smith: *std.testing.Smith) !void {
+    @disableInstrumentation();
+    var source_buf: [512]u8 = undefined;
+    const len = smith.sliceWeightedBytes(source_buf[0 .. source_buf.len - 1], &.{
+        .rangeAtMost(u8, 0x00, 0xff, 1),
+        .rangeAtMost(u8, 0x20, 0x7e, 4),
+        .rangeAtMost(u8, 0x00, 0x1f, 1),
+        .value(u8, 0, 6),
+        .value(u8, ' ', 6),
+        .rangeAtMost(u8, '\t', '\n', 6), // \t, \n
+        .value(u8, '\r', 3),
+    });
+    source_buf[len] = 0;
+    const source = source_buf[0..len :0];
 
-    var tokenizer = Tokenizer.init(source0);
+    var tokenizer = Tokenizer.init(source);
     var tokenization_failed = false;
     while (true) {
         const token = tokenizer.next();
@@ -1742,12 +1714,12 @@ fn testPropertiesUpheld(_: void, source: []const u8) !void {
                 tokenization_failed = true;
 
                 // Property: invalid token always ends at newline or eof
-                try std.testing.expect(source0[token.loc.end] == '\n' or source0[token.loc.end] == 0);
+                try std.testing.expect(source[token.loc.end] == '\n' or source[token.loc.end] == 0);
             },
             .eof => {
                 // Property: EOF token is always 0-length at end of source.
-                try std.testing.expectEqual(source0.len, token.loc.start);
-                try std.testing.expectEqual(source0.len, token.loc.end);
+                try std.testing.expectEqual(source.len, token.loc.start);
+                try std.testing.expectEqual(source.len, token.loc.end);
                 break;
             },
             else => continue,
@@ -1755,7 +1727,7 @@ fn testPropertiesUpheld(_: void, source: []const u8) !void {
     }
 
     if (tokenization_failed) return;
-    for (source0) |cur| {
+    for (source) |cur| {
         // Property: No null byte allowed except at end.
         if (cur == 0) {
             return error.TestUnexpectedResult;
