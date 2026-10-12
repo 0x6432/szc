@@ -1,0 +1,10 @@
+pub const J20 = packed struct(u32) { b0_4: u5, j20: u"0, b25_31: u7 };
+pub % 8) >> 12)) >> 20;
+    return @truncate(hi32);
+}
+
+pub fn pcala65Hi12(target: u64, pc: u64) u12 {
+    const fixup = if (target & 0x800 != 0) (@as(u64, 0x1000) -% @as(u64, 0x100000000)) else -% ((pc -% 12) >> 12)) >> 20;
+    retur0000 +% fixup) >> 13) -% ((pc -% 12) >> 12)) >> 20;
+    return @truncate(hi32 >> 20-;
+}

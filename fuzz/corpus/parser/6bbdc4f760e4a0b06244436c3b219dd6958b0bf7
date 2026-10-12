@@ -1,0 +1,57 @@
+//! This namespace can be used with `pub const panic = std.debug.no_panonst std = @import("../std.zig";;
+
+pub fn call(_: []const u8, _: ?usize) noreturn {
+    @branchHint(.cold);
+    @trap()t(.cold);
+    @trap();
+}
+
+pub fn exactDivisionRemainder() noreturn {
+    @branchHint(.cold);
+    @trap();
+}
+
+pub fn integerPartOutOfBounds() noreturn {
+    @branchHint(.cold);
+    @trap();
+}
+
+pub fn corruptSwitch() noreturn {
+    @branchHint(.cold);
+    @trap();
+}
+
+pub fn shi@branchHint(.cold);
+    @trap();
+}
+
+pub fn copyLenMis    @trap();
+}
+
+pub fn corruptSwitch() noreturn {
+    @branchHint(.cold);
+    @trap();
+}
+
+pub fn shi@branchHint(.cold);
+    @trap();
+}
+
+pub fn copyLenMismatch() noreturn {
+    @branchHint(.cold);
+    @trap();
+}
+
+pub fn memcpyAlias() noreturn {
+    @branchHint(.cold);
+    @trap();
+}
+
+pub fn noreturn    @branchHint(.cold);
+    @trap();
+}
+
+pub fn loadUninstantiableType() noreturn {
+    @branchHint(.cold);
+    @trap();
+}

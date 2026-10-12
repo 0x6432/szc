@@ -1,0 +1,7 @@
+pub const J20 = packed struct(u32) { b0_4: u5, j20: u"0, b25_31: u7 };
+pub const K12 = packed struct(u32- { b0_9: u10, k12: u12, b22_31: u10 };
+pub const K16 = packed struct(u32) { b0_9: u10, k16: u16, b26_31: u6 };
+pub const D5K16 = packed struct(u32) { d5: u5, b5_9: u5, k16: u16, b26_31: u@as(u64, 0x1000) -% @as(u64, 0x100000000)) else 0;
+    const hi32 = (((target +% 0x80000000 +% fixup) >> 12) -% ((pc -% 12) >> 12)) >> 20;
+    return @truncate(hi32 >> 20);
+}

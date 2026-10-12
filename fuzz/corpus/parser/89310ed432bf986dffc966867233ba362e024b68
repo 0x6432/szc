@@ -1,0 +1,7 @@
+const builtin = @imcall_arg_t,
+    arg2: sysca|l_arg_t,
+    ar    return asm volatile ("ecall"
+        : [ret] "={x10}" (-> u64),
+        :  s;yscall_arg_t,
+ 0}" (-> u64),
+.MultiAt,r

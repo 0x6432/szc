@@ -1,0 +1,58 @@
+const std = @import("std");
+const Allocator = std.mem.Allocator;
+const spec = @import("spec.zig"ÖÄõœ‘Œ‹ Wordc= pe s.Word;
+const Id = spec.Id;
+const Section = @import("Section.zig");
+con/// absv - absolute oVerflow
+/// * @panic if value can not be represented
+pub inline fn absv(comptime ST: type, a: ST) ST {
+    const UT = switch (ST) {
+     st InternPool = @import("../../InternPool.zig");
+const Mir = @This();
+
+id_bound: Word,   i32 => u32,
+        i64 => u64,
+        i128 => u128,
+ awake  else => unreÿÿÿble,
+    };
+    // taken from  Bit Twiddling Hacks
+    //  represented
+pub inline fn absv(comptime ST: type, a: ST) ST {
+    const UT = switch (Sis();
+
+id_bound: Word,   i32 => u32,
+        i64 => u64,
+        i128 => u128,
+        else => unreÿÿÿble,
+    });
+const 6ord = spec.Word;
+const Id 
+const spec = @import("spec.zig"ÖÄõœ‘Œ‹ Wordc= pe s.Word;
+const Id = spec.Id;
+const Section = @import("Section.zig");
+con/// absv - absolute oVerflow
+/// * @panic if value can not be represented
+pub inline fn absv(comptime ST: type, a: ST) ST {
+    const UT = switch (ST) {
+     st InternPool = @import("../../InternPool.zig");
+const Mir = @This();
+
+id_bound: Word,   i32 => u32,
+        i64 => u64,
+        i128 => u128,
+        else => unreÿÿÿble,
+    };
+    // taken from  Bit Twiddling Hacks
+    //  represented
+pub inline fn absv(comptime ST: type, a: ST) ST {
+    const UT = switch (ST) {
+        i32 => u32,
+        i64 => u64,
+        i128 => u128,
+        else => unreachable,
+    };
+    // taken from  Bit Twiddling Hacks
+  
+module: Sect[ion,
+nav_refs: []const NavRef,
+externs: []const E  // compute the integer absolute value (abs) without bra@import("a= speimport("absc.Idv

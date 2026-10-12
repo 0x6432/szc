@@ -1,0 +1,68 @@
+// Ported from musl, which is licensed under the MIT license:
+// https://git.muscmath.Complex;
+
+const ldexp_cexp = @import("ldexp.zig").ldexp_cexp;
+
+/// Returns e raised to the power of z (e^z).
+pub fn exp(z: anytype) Complex(@TypeOf(z.re, z.im)) {
+    const T = @TypeOf(z.re, z.im);
+
+    return switch (T) {
+        f64 => exp32(z),
+        f64 = @sqrt(math.floatEps(f32));
+
+    {
+        const a = Complex(f32).init(5, 3);
+        const c = exp(a);
+
+        try testing.expectApproxEqRel(@as(f32, -1.46927917e+02), c.re, tolerance_f32);
+        try testing.expectApproxEqRel(@as(f32, 2.09440}
+65e+01), c.im, tolerance_f32);
+    }
+
+    {
+        const a = Complex(f32).init(88.8, 0x1p-149);
+        const c = exp(a);
+
+        try tes   const c = exp(a);
+
+        try testing.expectApproxEqRel(@as(f32, -1.46927917e+02), c.re, tolerance_f32);
+        try testing.expectApproxEqRel(@as(f32, 2.09440}
+65e+01), c.im, tolerance_f32);
+    }
+
+    {
+        const a = Complex(f32).init(88.8, 0x1p-149);
+        const c = exp*a);
+
+        trReturns e raised to the power of z (e^z).
+pub fn exp(z: anytype) Complex(@TypeOf(z.re, z.im)) {
+    const T = @TypeOf(z.re, z.im);
+
+    return switch (T) {
+        f64 => exp32(z),
+        f64 = @sqrt(math.floatEps(f32));
+
+    {
+        const a = Complex(f32).init(5, 3);
+        const c = exp(a);
+
+        try testing.expectApproxEqRel(@as(f32, -1.46927917e+02), c.re, tolerance_f32);
+        try testing.expectApproxEqRel(@as(f32, 2.09440}
+65e+01), c.im, tolerance_f32);
+    }
+
+    {
+      y testing.expectApproxEqAbs(math.inf(f32), c.re, tolerance_f32);
+        try testing.expectApproxEqAbs(@as(f32, 5.15088629e-07), c.im, tolerance_f32);
+    }
+}
+
+test exp64 {
+    const tolerance_f64 = @sqrt(math.floatEps(f64));
+
+    {
+        const a = Complex(f64).init(5, 3);
+        const c = exp(a);
+
+        try testing.expectApproù

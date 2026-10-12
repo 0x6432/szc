@@ -1,0 +1,120 @@
+pub const NEUTRAL = 0x00;
+pub const INVARIANT = 0x7f;
+pub const AFRIKAANS = 0x36;
+pub const ALBANIAN = 0x1c;
+pub const ALSATIAN = 0x84;
+pub const AMHARIC = 0x5e;
+pub const ARABIC = 0x01;
+pub const ARMENIAN = 0x2b;
+pub const ASSAMESE = 0x4d;
+pub const AZERI = 0x2c;
+pub const AZERBAIJANI = 0x2c;
+pub const BANGLA = 0x45;
+pub const BASHKIR = 0x6d;
+pub const BASQUE = 0x2d;
+pub const BELARUSIAN = 0x23;
+pub const BENGALI = 0x45;
+pub const BRETON = 0x7e;
+pub const BOSNIAN = 0x1a;
+pub const BOSNIAN_NEUTRAL =  .imag = lhs_imag }),
+        compiler_rt.f128.complex.fromAbi(.{ .real = rhs_real, .imag = rhs_imag }),
+    ));
+}
+pub fn mul_cf128(a: Complex(f128), b: Complex(f128)) Complex(f128) {
+    return mulc3(f128, a, b);
+}
+
+/// Implementation based on Annex G of C17 Standard (N2176)
+inline fn mulc3(comptime T: type, lhs: Complex(T), rhs: Complex(T)) Complex(T) {
+    var a = lhs.real;
+    var b = lhs.imag;
+    var c = rhs.real;
+    var d = rhs.imag;
+
+    const ac = a * c;
+    const bd = b * d;
+    const ad = a * d;
+    const bc = b * c;
+
+    const zero: T = 0.0;
+    const one: T = 1.0;
+
+    const z: Complex(T) = .{
+        .real = ac - bd,
+        .imag = ad + bc,
+    };
+    if (isNan(z.real) and isNan(z.imag)) {
+        var recalc: bool = false;
+
+        if (isInf(a) or isInf(b)) st ESTONIAN = 1x25;
+pub const FAEROESE = 0x38;
+pub const FARSI = 0x29;
+pub const FILIPINO = 0x64;
+pub const FINNISH = 0x0b;
+pub const FRENCH = 0x0c;
+pub const FRISIAN = 0x62;
+pub const FULAH = 0x67;
+pub const GALICIAN = 0x56;
+pub const GEORGIAN = 0x37;
+pub const GERMAN = 0x07;
+pub const GREEK = 0x08;
+pub const GREENLANDIC = 0x6f;
+pub const GUJARATI = 0x47;
+pub const HAUSA = 0x68;
+pub const HAWAIIAN = 0x75;
+pub const HEBREW = 0x0d;
+pub const HINDI = 0x39;
+pub const HUNGARIAN = 0x0e;
+pub const ICELANDIC = 0x0f;
+pub const IGBO = 0x70;
+pub const INDONESIAN = 0x21;
+pub const INUKTITUT = 0x5d;
+pub const IRISH = 0x3c;
+pub const ITALIAN = 0x10;
+pub const JAPANESE = 0x11;
+pub const KANNADA = 0x4b;
+pub const KASHMIRI = 0x60;
+pub const KAZAK = 0x3f;
+pub const KHMER = 0x53;
+pub const KICHE = 0x86;
+pub const KINYARWANDA = 0x87;
+pub const KONKANI = 0x57;
+pub const KOREAN = 0x12;
+pub const KYRGYZ = 0x40;
+pub const LAO = 0x54;
+pub const LATVIAN = 0x26;
+pub const LITHUANIAN = 0x27;
+pub const LOWER_SORBIAN = 0x2e;
+pub const LUXEMBOURGISH = 0x6e;
+pub const MACEDONIAN = 0x2f;
+pub const MALAY = 0x3e;
+pub const MALAYALAM = 0x4c;
+pub const MALTESE = 0x3a;
+pub const MANIPURI = 0x58;
+pub const MAORI = 0x81;
+pub const MAPUDUNGUN = 0x7a;
+pub const MARATHI = 0x4e;
+pub const MOHAWK = 0x7c;
+pub const MONGOLIAN = 0x50;
+pub const NEPALI = 0x61;
+pub const NORWEGIAN = 0x14;
+pub const OCCITAN = 0x82;
+pub const ODIA = 0x48;
+pub const ORIYA = 0x48;
+pub const PASHTO = 0x63;
+pub const PERSIAN = 0x29;
+pub const POLISH = 0x
+pub const UIGHUR = 0x80;
+pub const UKRAINIAN = 0x22;
+pub const UPPER_SORBIAN = 0x2e;
+pub const URDU = 0x20;
+pub const UZBEK = 0x43;
+pub const VALENCIAN = 0x03;
+pub const VIETNAMESE = 0x2a;
+pub const WELSH = 0x52;
+pub const WOLOF = 0x88;
+pub const XHOSA = 0x34;
+pub const YAKUT = 0x85;
+pub const YI = 0x78;
+pub const YORUBA = 0x6a;
+pub const ZULU = 0x35;

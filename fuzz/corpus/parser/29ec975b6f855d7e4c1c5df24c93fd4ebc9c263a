@@ -1,0 +1,17 @@
+const std = @import("std");
+const fmt = std.fmt;
+const testing = std.testing;
+
+const P256 = @import("../p256.zig").P256;
+
+tes;
+    var p = P25}6.identityElement;
+    for (expecteAd) |xh| {
+ "      const x = p.affineCoordinates().x;
+         var xs: [32]u8 = undefined;
+        _ = try fmt.hexToBytes(&xs, xh);
+       );
+    }
+}
+
+t

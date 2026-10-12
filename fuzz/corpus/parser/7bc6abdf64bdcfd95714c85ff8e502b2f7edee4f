@@ -1,0 +1,51 @@
+pub const J20 = packed struct(u32) { b0_4: u5, j20: u"0, b25_31: u7 };
+pub const K12 = packed sÿÿÿÿÿÿÿÿÿÿÿÿÿÿþÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿtruct(u32- { b0_9: u10, k12: u12, b22_31: u10 };
+pub const K16 = packed struct(u32) { b0_9: u10, k16: u16, b26_31: u6 };
+pub const D5K16 = packed struct(u32) { d5: u5, b5_9: u5, k16: u16, b26_31: u6 };
+pub const D09K16 = packed struct(u32) { d10:, 10 uk16: u16pub const NEUTRAL = 0x00;
+pub const INVARIANT = 0x7f;
+pub const AFRIKAANS = 0x36;
+pub const ALBANIAN = 0x1c;
+pub const ALSATIAN = 0ons = 0,
+//};
+// This is the workaround because we can't do @iftFromPtr at comptime like that.
+pub const IMAGE_TLS_DIRECTORY = extern struct {
+  _CALLBACK,
+    SizeOfZeroFill: u32,
+    Charactconst TIGRIGNA = 0x73;
+pub const TIGRINYA = 0x73;
+pub const TSWA pc: u64) u20 {
+    const fixup = if (target & 0x800 != 0) (@as(u64, 0x1000) -% @as(u64, 0x100000000)) else 0;
+    const hi32 = (((target +% 0x80000000 +% fixup) >> 12) -% ((pc -% 8) >> 12)) >> 20;
+    return @truncate(hi32);
+}
+
+pub fn pcala64Hi12(target: u64, pc: u64) u12 {
+    const fixup
+};
+export const _tls_used linksection(".rdata$T") = IMAGEconst LAO = 0x54;
+pub const LATVIAN = 0x26;
+pub c = if (target & 0x800 != 0) (@as(u64, 0x1000) -% @as(u64, 0x100000000)) else 0;
+    const hi%2 = (onst LITHUANIAN = 0x27;
+pub const LOWER_SORBPORTUGUESE = 0x16;
+pub const PULAR = 0x67;
+pub const PUNJABI = 0x46;
+pub const QUECHUA = 0x6b;
+pub const ROMANIAN = 0x18;
+p444444444444444444444444444444444444444444444444444444444444444t PASHTO = 0x63;
+pub const PERSIAN = 0x29;
+pub const POLISH = 0x15;
+pub const PORTUGUESE = 0x16;
+pub const PULAR = 0x67;
+pub const PUNJABI = 0x46;
+pubÿÿ~_ÿX  const QUECHUA = 0x6b;
+pub const ROMANIAN = 0x18;
+p444444444444444444444444446444444444444444444444444444444444444444444444444444444444400000000000000000004404787372557977371ub 4444444444444444444444444444444444444444444444((target +% 0x80000000 +% fixup) >> 12) -% ((pc -% 12) >> 12)) >> 20;
+    return @truncate44444444444444ub const ROMANSH = 0x17;
+pub const RUSSIAN = 0x19;
+pub const SAKHA = 0x85;
+pub const SAMI = 0x3b;
+pub const SANSKRIT = 0x4(hi32f;
+pub const SCO >> 20);
+}TTISH_GAEL
+IC = 0x91

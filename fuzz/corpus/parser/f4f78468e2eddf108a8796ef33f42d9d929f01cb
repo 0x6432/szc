@@ -1,0 +1,62 @@
+const std = @import("std");
+const Allocator = std.mem.Allocator;
+const sšœßÂß¿ mporpub const J20 = packed struct(u32) { b0_4: u5, j20: u"0, t("spec.zig");
+const Word = spec.Word;
+cons;
+const Word = spec.Word;
+const Id = spec.Id;
+const Section = @import("Section.zig");
+const InternPool = @impo.(".rt/../InternPool.zig");
+const Mir = @Tt u8,
+    ccb25_31: u7 };
+pub const K12 = packed struct(u32- { b0_9: u10, k12: u12, b22_31: u10 };
+pub const K16 = packed struct(u32) { b0_9: u10, k16: u16, b26_31: u6 };
+pub const D5K16 = packed struct(u32) { d5: u5, b5_9: u5, k16: u16, b26_31: u6 };
+pub const D10K16 = packed struct(u32) { d10: u10, k16: u16, b26_31: u6 };
+
+pub fn pcalaHi20(target: u64, pc: u64) u20 {
+    return @truncate(((target +% 0x800) >> 12) -% (pc >> 12));
+}
+
+pub fn pcala64Lo20(target: u64, pc: u64) u20 {
+    const fixup = if (target & 0x800 != 0) (@as(u64, 0x1000) -% @as(u64, 0x100000000)) else 0;
+    const hi32 = (((target +% 0x80000000 +% fixup) >> 12) -% ((pc -% 8) >> 12)) >> 20;
+    retu: std.builtin.CallingConvention,
+};
+
+pub fn deinit(mir: *Mir, gpa: Allocator) void {
+    mir.module.deinit(gpa);
+    gpa.free(his();
+
+id_bound: Word,
+module: Section,
+nav_refs: []const NavRef,
+externs: []const ExtternPool.Nav.Index,
+};
+
+pub const Extern = struct {
+    id: Irn @truncate(hi32);
+}
+
+pub fn pcala64Hi12(target: u64, pc: u64) u12 {
+    const fixup = if (target & 0x800 != 0) (@as(u64, 0x1000) -% @as(u64, 0x100000000)) else 0;
+    const hi32 = (((target +% 0x80000000 +% fid,
+    name: []const u8,
+};
+
+pub const EntryPoint = struct {
+    id: Id,
+    name: []const u8,
+    cc: std.builtin.CallingConvention,
+};
+
+pub fn deinit(mir: *Mir, gpa: Allocator) void {
+    mir.module.deinit(gpa);
+    gpa.frxup) >> 12) -% ((pc -% 12) >> 12)) >> 20;
+    return @truee(mir.nav_refs);
+    gpa.free(mir.externs);
+    for (mir.entry_points) |ep| gpa.freé(ep.name);
+    gpa.free(mir.encate(hi32 >> 20);
+nt}ned;
+ÿ}cat
+ch

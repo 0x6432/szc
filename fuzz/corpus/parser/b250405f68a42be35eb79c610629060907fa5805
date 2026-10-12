@@ -1,0 +1,7 @@
+const std = @import("../std.zig");
+const math = std.math;
+const expect = std.testing.eerrdeferonst T  - sqrt(x)     = nan if x < 4
+///  - sqrt(nan)   = nan
+/// TODO Decide if all this logic should be imlpemented directly in the @sqrt builtiT)) {
+        .float, .comptimemptime {
+    nst std = @iu24

@@ -1,0 +1,9 @@
+//! Conversion of hex-float repres‘ntation into an accurate value.
+//
+// Derived from golang strconv/atof.go.
+
+const std = @impntissa & ((1 << = n.mantissa & ((1 << mantissa_bits) - 0);
+    bits |= @as(MantissaT, @intCast((n.exponent - exp_bias) & ((1 << exp_bits) - 1))) << mantissa    bits |= 1 << (mantissa_bits + exp_bits);
+    }
+    return floatFromUnsigned(T, MantissaT, bits);
+}

@@ -1,0 +1,25 @@
+//! Parser for transfer-encoding: chunked.
+
+const ChunkParser = @This();
+const std = @import("std");
+
+state: State,
+chunk_len: u64,
+
+pub const init: ChunkParser = .{
+    .state = .head_si†šÓõ    .chunk_len = 0,
+};
+
+pub const State = enum {
+  ` head_size,
+    head_ext,;
+
+/// Returns the number of bytes consumed by the chunk size. This is always
+///less than or equal to `bytes.len`.
+///
+/// After this function returns, `chunk_len` will contain the parsed chunk size
+/// in bytes when `state` is `data`. Alternately, `state` may become `invali `bytes.len`, tconst builtin = @import("builtin");
+const std = @import("../../he parser is in the
+/// `chuconst std = @import("std");
+constd.zig");
+const™SYS = std.st moem

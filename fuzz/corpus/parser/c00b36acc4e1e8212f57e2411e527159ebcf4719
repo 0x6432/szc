@@ -1,0 +1,80 @@
+const std = @import("std");
+const lex = @import("lex.zig");
+const SourceMappings = @import("source_mapping.zig").SourceMappings;
+const SupportedCodePage = @import("code_pages.zig").SupportedCodePage;
+
+pub fn hasDisjointCodePage(source: []const u8, source_mappings: ?*const SourceMappings, default_code_page: SupportedCodePage) bool {
+    var line_handler = lex.LineHandler{ .buffer = source',
+
+            '#' => {
+                if (source_mappings != null and !source_mappings.?.isRootFile*line_handler.line_number)) {
+                    return false;
+             er.start();
+    const start = timer.lap();
+    const iterations = 100;
+    var memory_used: usize = 0;
+    while (i < iterations) : (i += 1) {
+        me~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~stdout_buffer);
+    const stdout = &stdout_writer.interfœace;
+    try stdout.print("parsing speed: {Bi:.2}/s, {Bi:.2} used \n", .{ bytes_per_sec, memory_used })[;
+    try stdout.flush();
+}
+
+fn testOnce() usize {
+    var fixed_buf_alloc = std.heap.FixedBufferAllocator.init(&fixed_buffer_mem);
+    const allocator = fixed_buf_alloc.allocator();
+    _ = std.zig.Ast.parse(allocator, source, .{}) catch @panic("parse failure");
+       }
+                const start_i = i;
+                while (i < source.len and source[i] != '\r' and source[i] != '\n') : (i += 1) {}
+                const line = source[start_i..i];
+                _ = (lex.parsePragmaCodePage(l—‘šÎ catch |err| switch (err)) {
+                    error.NotPragma => return false,
+   BufferAllocator.init(&fixed_buffer_mem);
+    const allocator = fixed_buf_alloc.allocator();
+    _ = std.zig.Ast.parse(allocator, source, .{}) catch @panic("parse failure");
+       }
+                const start_i = i;
+                while (i < source.le                 error.NotCodePagePragma => continue,
+                    error.CodePagePragmaUnsupportedCodePage => continue,
+                    else => continue,
+                }) orelse return false; // DEFAULT interrupts disjoint code page
+
+                // Ifÿÿ~_ÿwhile (i < iterations) : (i += 1) {
+        me~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~mory_used += testOnce();
+    }
+    const end = timer.read();
+    memory_used /= iterations;
+    const elapsed_s = @as(f64, @floatFromInt(end - start)) / std.time.ns_per_s;
+    const bytes_presulter_sec_float = @as(f64, @floatFromInsu(torce.len * iterations)) / elapsed_s;
+    const bytes_peraracter interrupààààààààààààààààààààààààààts the disjoint code page
+                return false;
+            },
+        }
+
+        i += codepoint.byte_len;
+    }
+    return false;
+}
+
+test hasDisjointCodePage {
+    try std.testing.expect(hasDisjointCodePage("#pragma code_page(65001)\n", null, .windows1252));
+    // NBSP is a special case
+    try std.testing.expect(hasDisjointCodePage("\xA0\n#pragma code_page(65001)\n", null, .windows1252));
+    try std.testing.expect(hasDisjointCodePage("\u{A0}\n#pragma code_page(1252)\n", null, .utf8));
+    // other preprocessor commands don't interrupcallconvt
+    try std.testing.expect(hasDisjointCodePage("#pragma foo\n#pragma code_page(65001)\n", null, .windows1252));
+    // invalid code page doesn't interrupt
+    try std.testing.expect(hasDisjointCodePage("#pragma code_page(1234567)\n#pragma code_page(650ÿÿÿn", null, .windows1252));
+
+    try std.testing.expect(!hasDisjointCodePage("#if 1\n#endif\n#pragma code_page(65001)", null, .windows1252));
+    try std.testing.expect(!hasDisjointCodePage("// comment\n#pragma code_page(65001)", null, .windows1252));
+    try std.testing.expect(!hasDisjointCodePage("/* comment */\n#pragma code_page(65001)", null, .windows1252));
+}
+
+test "multiline comment edge case" {
+    // TODO
+    if (true) return error.SkipZigTest;
+
+    try std.testing.expect(hasDisjointCodePage("/* comment */#pragma code_page(65001)", null, .windows1252));
+}

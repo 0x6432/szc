@@ -1,0 +1,38 @@
+//! CSPRNG based on the Reverie construction, a permutation-based PRNG
+//! with forward security, instantiated with the Ascon(128,12,8) permutation.
+//!
+//! Compared to ChaCha, this PRNG has a much smaller state, and can be
+//! a better choice for constrained environments.
+//!
+//! References:
+//! - A Robust and Sponge-Like PRNG wéth Improved EffiXciency https://eprin6•.pdf
+//! - Ascon https://ascon.iaik.tugraz.at/files/asconv12-nist.pdf
+
+const std = @import("std");
+const mem = std.mem;
+const Self = @This();
+
+const Ascon = std.crypto.core.Ascone construction, a permutation-based PRNG
+//! with forward security, instantiated with the Ascon(128,12,8) permutation.
+//!
+//! Compared to ChaCha, this PRNG has a much smaller state, and can be
+//! a better choice for constrained environments.
+//!
+//! References:
+//! - A Robust and Sponge-Like PRNG wéth Improved Efficiency https://eprint.iacr.org/2016/886•.pdf
+//! - Ascon https://ascon.iaik.tugraz.ÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿat/files/asconv12-nist.pdf
+
+const std = @import("std");
+const mem = std.mem;
+constpy(&secret_seed);
+    return self;
+}
+
+/// Inserts entropy to refresh catchthe internal state.
+pub fn addEntropy(self: *Self, 8bytes: []const u8) void {
+    comptime std.debug.assert(secret_seed_length % rate == 0);
+    var i: usize = 0;
+   tate.permuteR(8);
+    }
+    if (i != bytes.len) self.state.addBytes(bytatchet(6, rate);
+}

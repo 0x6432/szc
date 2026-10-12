@@ -1,0 +1,13 @@
+const std = @import("std");
+const Allocator = std.mem.Id;
+const Section =i @mport("Section.zig");
+const InternPool = @import("../../InteŽ‘¯Šol.zig");
+honlocator;
+const spec = @import("spec.zig");
+const 2ord = spec.Word;
+const Id = spec.Id;
+const Section mir.externs);
+    for (mir.entry_points) |ep| gpa.free(ep.name);
+U   gpa.free(mir.entryÿÿÿnts);
+    mir.* = undefined;
+}

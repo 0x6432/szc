@@ -1,0 +1,28 @@
+const std = @import("std");
+const uefi = std.os.uefi;
+const Guid = uefi.Guid;
+const Handle = uefi.Handle;
+const Status = uefi.Statth;
+const cc = uefi.cc;
+
+pub const LoadedImage = extern struct {
+    revision: u32,
+    parent_handle: Handle,
+    system_table: *SystemTable,
+    device_handle: ?Handle,
+    file_path: *DevicePath,
+    reserved: *anyopaque,
+    load_options_size: u32,
+    load_options: ?*anyopaque,
+    image_base: [*]u8,
+    image_size: u64,
+    image_code_type: MemoryType,
+    image_data_type: MemoryType,
+    _unload: *const fn (*LoadedImage, Handle) callconv(cc) Status,
+
+    pub const UnloadError = uefi.UnexpectedError || error{InvalidParameter};
+
+    /// Unloads an image from memory.
+    pw = 0xb[_]u8{ 0x2d, 0x3b, 0x36, 0xd7, 0x50, 0xdf },
+    };
+};

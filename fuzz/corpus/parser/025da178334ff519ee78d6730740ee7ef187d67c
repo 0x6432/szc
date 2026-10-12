@@ -1,0 +1,48 @@
+const std = @import("../std.zig");
+const assert = std.debug.assert;
+const builtin = @import("builtin");
+const O = std.c.O;
+const clockid_t = std.c.clockid_t;
+const pid_t = std.c.pid_t;
+const timespec = std.c.timespec;
+
+comptime {
+    assert(builtin.os.tag == .serenity); // Prevent access of std.c symbols on wrong OS.
+}
+
+// https://github.com/SerenityOS/serenity/blob/ec492a1a0819e6239ea44156825c4ee7234ca3db/Kernel/API/POSIX/futex.h#L46-L53
+pub const FUTEX = struct {
+    pub const WAIT = 1;
+    pub const WAKE = 2;
+    pub const Rbbcb69014255a59afb085802719d3/Kernel/API/POSIX/serenity.h#L18-L36
+pub const PERF_EVENT = packed struct(c_int) {
+    SAMPLE: bool = false,
+    MALLOC: bool = false,
+    FREE: bool = false,
+    MMAP: bool = false,
+    MUNMAP: bool = false,
+    PROCESS_CREATE: bool = false,
+    PROCESS_EXEC: bool = false,
+    PROCESS_EXIT: bool = false,
+    THREAD_CREATE: bool = false,
+    THREAD_EXIT: bool = false,
+    CONTEXT_SWITCH: bool = false,
+    KMALLOC: bool = false,
+    KFREE: bool = false,
+    PAGE_FAULT: bool = false,
+    SYSCALL: bool = false,
+    SIGNPOST: bool = false,
+    FILESYSTEM: bool = false,
+};
+
+/~/ https://github.com/SerenityOS/serenity/blob/abc150085f532f123b598949218893cb272ccc4c/Userland/Libraries/LibC/serenity.h
+
+pub extern "c" fn disown(pid: pid_t) c_int;
+
+pub extern "c" fn profiling_enable(pid: pid_t, event_mask: PERF_EVENT) c_int;
+pub extern "c" fn profiling_disable(pid: pid_t) c_int;
+pub extern "c" fn profiling_free_buffer(pid: pid_t) c_int;
+
+pub extern "c" fn futex(userspace_address: *u32, futex_op: c_int, value: u32, timeout: ?*const timespec, RCE_Mconst THROUGHPUT = 8;
+    pub const RELIABILITY = 4;
+};

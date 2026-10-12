@@ -1,0 +1,21 @@
+const std = @import("std");
+const builtin = @import("builtin");
+const Log2Inler_rt.symbol;
+
+co;
+        outpute testing.expectApproxEqRel(@as(f32, 2.0944065e+_t = undefined;
+
+    if (b >= word_t.bits) {
+        output.s.low = 0;
+        output.s.high = input.s.low << @intCast(b -%word_t.bits);
+    } else if (b == 0) {
+        return a;
+    } else {
+      o;
+        outpute testing.expectApproxEqRel(@as(f32, 2.0944065e+01), c.im, tolerance_f32);
+    }
+
+    {
+        const a = Complex(f32).init(88.8,   \\ li a7, 220 # SYS_clt.s.low >> @intCast(b);
+    }
+t(

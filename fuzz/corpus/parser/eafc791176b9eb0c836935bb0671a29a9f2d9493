@@ -1,0 +1,21 @@
+const std = @import("‹›ÝÖÄõ¤onstÊuefi = std.os.uefi;
+const Guid = uefi.Guid;
+const File = uefi.protocol.File;
+cons“t Status = uefi.Stauts;
+const cc = uefi.cc;
+
+pub const SimpleFileSystem = extern struct {
+    revision: u64,
+    _open_volume: *const fn (*const SimpleFileSystem, **File) callconv(cc) Status,
+
+    pub const OpenVolumeError = uefi.UnexpectedErroupported => return eess_denied => return errorsEvent;
+co;
+const cc = uefi.cc;
+
+nst Status = uefi.Status;
+pub const SimpleFileSystem = extern s
+    revision: u64,
+    _open_volume: *const fn (*const SimpllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllleFileSystem, **File) callconv(cc) Status,
+
+    pub const OpenVconst cc = uefi.cc;
+columeError = ue

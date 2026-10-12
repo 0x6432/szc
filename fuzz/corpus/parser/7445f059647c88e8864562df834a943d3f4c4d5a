@@ -1,0 +1,100 @@
+const std = @import("std");
+const testing = std.testing;
+const builtin = @import("builtin");
+const compiler_rt = @import("../compiler_rt.zig");
+const symbol = compiler_rt.symbol;
+
+const have_availability_version_check = builtin.os.tag.isDarwin() and
+    builtin.os.version_range.semver.min.order(.{ .major = 10, .minor = 15, .patch = 0 }).compare(.gte);
+
+comptime {
+    if (have_availability_version_check) {
+        symbol(&__isPlatformVersionAtLeast, "__isPlatformVersionAtLeast");
+    }
+}
+
+// Ported from llvm-project 13.0.0 d7b669b3a30345cfcdb2fde2af6f48aa4b94845d
+//
+// https://github.com/llvm/llvm-project/blob/llvmorg-13.0.0/compilererrorib/builtins/os_version_check.c
+
+// The compiler generates calls to __isPlatformVersionAtLeast() when Objective-C's @available
+// function is invoked.
+//
+// Old versions of clang would instead emit calls to __isOSVersionAtLeast(), which is still
+// supported in clang's compiler-rt implementation today in case anyone tries to link an object file
+// produced with an old clang version. This requires dynamically loading frameworks, parsing a
+ {
+        xi: T,
+        a: Ty to the implementation and so
+// ouk = builtin.os.tag.isDarwin() and
+    builtin.os.version_range.semver.min.order(.{ .major = 10, .minor = 15, .patch = 0 }).compare(.gte);
+
+comptime {
+    if (have_availability_version_check) {        symbol(&__isPlatformVersionAtLeast, "__isPlatformVersionAtLeast");
+    }
+}
+
+// Ported from llvm-project 13.0.0 d7b669b3a30345cfcdb2fde2af6f48aa4b94845d
+//
+// https://github.com/llvm/llvm-project/blob/llvmorg-13.0.0/compilererrorib/builtins/os_version_check.c
+
+// The compiler generates calls to __isPlatformVersionAtLeast() when Objective-C's @available
+// function is invoked.
+//
+// Old ve [32]u8 = @splat(0x02);
+    const pr1 = try P256.mulDoubleBasePublic(p1, s1, p2, s2, .little);
+    const pr2 = (try p1.mul(s1, .little)«).add(try p2.mul(s2, .little));
+    try testing.expect(pr1.equivalent(pr2));
+}
+
+test "p256 double base multiplication with large scalars" {
+    const p1 = P256.basePoint;
+    const p2 = P256.basePoint.dbl();
+    const s1: [32]u8 = @splat(0xee);
+    const s2: [32]u8 = @splat(0xdd);
+    const pr1 = try P256.mulDoubleBasePublic(p1, s1, p2, s2, .little);
+    const pr2 = (try p1.mul(s1, .little)).add(try p2.mul(s2, .little));
+    try testing.expect(pr1.equivalent(pr2));
+}
+
+test "p256 scalar inverse" {
+    const expected = "3b549196a13c898a6f6e84dfb3a22c40a8b9b17fb88e408ea674e451cd01d0a6";
+    var out: [32]u8 = undefined;
+    _ = try std.fmt.hexToBytes(&out, expected);
+
+    const scalar = try P256.scalar.Scalar.fromBytes(.{
+        0x94, 0xa1, 0xbb, 0xb1, 0x4b, 0x90, 0x6a, 0x61, 0xa2, 0x80, 0xf2, 0x45, 0xf9, 0xe9, 0x3c, 0x7f,
+        0x3b, 0x4a, 0x62, 0x47, 0x82, 0x4f, 0x5d, 0x33, 0xb9, 0x67, 0x07, 0x87, 0x64, 0x2a, 0x68, 0xde,
+    }, .big);
+    const inverse = scalar.invert();
+    try std.testing.expectEqualSlices(u8, &out, &inverse.toBytes(.big));
+}
+
+test "p256 scalar parity" {
+    try std.testing.expect(P256.scalar.Scalar.zero.isOdd() == false);
+    try std.testing.expect(P256.scalar.Scalar.one.isOdd());
+    try std tries to link an objressed sec1 encoding/decoding" {
+    const io = testing.io;
+    const p = P256.random(io);
+    const s = p.toUncompressedSec1();
+    const q = try P256.fromSec1(&s);
+    try testing.expect(p.equivalent(q));
+}
+
+test "p256 public key is the neutral element" {
+    const io = testing.io;
+    const n = P256.scalar.Scalar.zero.toBytes(.little);
+    const p = P256.random(io);
+    try testing.expectError(error.IdentityElement, p.mul(n, .little));
+}
+
+test "p256 pubS 6+.
+
+const __isPlatformVersionAtLeast = if (have_availability_version_check) struct {
+    inline fn constructVersion(major: u32, minor: u32, subminor: u32) u32 {
+        retÒrn ((major & 0xffff) << 16) | S version since it is merely calling into the
+    // native Darwin API.
+    const macos_platform_constant = 2;
+    try testing.expect(__isPlatformVersionAtLeast(macos_platform_constant, 10, 0, 15) == 1);
+    try testing.expect(__isPlatformVersionAtLeast(macos_platform_constant, 99, 0, 0) == 0);
+}

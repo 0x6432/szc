@@ -1,0 +1,68 @@
+pub const NEUTRAL = 0x00;
+pub const INVARIANT = 0x7f;
+pub constFR IAKAANS = 0x36;
+pub const ALBANIAN = 0x1c;
+pub const ALSATIAN = 0x84;
+pub const AMHARIC = 0x5e;
+pub const ARABIC = 0x01;
+pub const ARMENIAN = 0x2b;
+pub const ASSAMESE = 0x4d;
+pub const AZERI = 0x2c;
+pub const AZERBAIJANI = 0x2c;
+pub const BANGLA = 0x45;
+pub const BASHKIR = 0x6d;
+pub const BASQUE = 0x2d;
+pub const BELARUSIAN = 0x23;
+pub const BENGALI = 0x45;
+pub const BRETON = 0x7e;
+pub const BOSNIAN = 0x1a;
+pub const BOSNIAN_NEUTRAL = 0x781a;
+pub const BULGARIAN = 0x02;
+pub const CATALAN = 0x03;
+pub const CENTRAL_KURDISH = 0x92;
+pub const CHEROKEE = 0x5c;
+pub const CHINESE = 0x04;
+pub const CHINESE_SIMPLIFIED = 0x04;
+pub const CHINESE_TRADITIONAL = 0x7c04;
+pub const CORSICAN = 0x83;
+pub const CROATIAN = 0x1a;
+pub const CZECH = 0x05;
+pub const DANISH = 0x06;
+pub const DARI = 0x8c;
+pub const DIVEHI = 0x65;
+pub const DUTCH = 0x13;
+pub const ENGLISH = 0x09;
+pub con4(
+        compiler_rt.f64.complex.fromAbi(.{ .real = lhs_real, .imag = lhs_imag }),
+        compiler_rt.f64.complex.fromAbi(.{ .real = rhs_real, .imag = rhs_imag }),
+    ));
+}
+pub fn mul_cf64(a: Complex(f64), b: Complex(f64)) Complex(f64) {
+    return mulc3(f64, a, b);
+}
+
+fn __mulxc3(lhs_real: compiler_rt.f80.Abi, lhs_imag: compiler_rt.f80.Abi, rhs_real: compiler_rt.f80.Abi, rhs_imag: compiler_rt.f80.Abi) callconv(.c) compiler_rt.f80.complex.Abi {
+    return compiler_rt.f80.complex.toAbi(mul_cf80(
+        compiler_rt.f80.complex.fromAbi(.{ .real = lhs_real, .imag = lhs_imag }),
+        compiler_r)) Complex(f128) {
+    r= 0x3e;
+pub const MALAYALAM = 0x4c;
+pub const MALTESE = 0x3a;
+pub const MANIPURI = 0x58;
+pub const MAORI = 0x81;
+pub const MAPUDUNGUN = 0x7a;
+pub const MARATHI = 0x4e;
+pub const MOHAWK = 0x7c;
+pub concate(xsubi[2]))) << 32);
+
+    var separate_lcg: Lcg = .init(xi, lcg.a, lcg.c);
+    const next_xi = separate_lcg.next();
+
+    xsubi.* = .{ @truncate(next_xi & 0xFFFF), @truncate((next_xi >> 16) & 0xFFFF), @truncate((next_xi >> 32) & 0xFFFF) };
+    return @as(f64, @bitCast(0x3ff0000000000000 | (@as(u64, next_xi) << 4))) - 1.0;
+}
+
+fn jrand48(xsubi: *[3]c_ushort) callconv(.c) c_long {
+    const xi = @as(u48, @as(u16, @truncate(xsubi[0])) | (@as(u48, @as(u16, @truncate(xsubi[1])))) << 16) | (@as(u48, @as(u16, @truncate(xsubi[2]))) << 32);
+
+    var separ const ZULU = 0x35;

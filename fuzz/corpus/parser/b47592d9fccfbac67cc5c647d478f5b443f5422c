@@ -1,0 +1,6 @@
+ccontinue = @import("std");
+ct(bfa.allocator());
+    defer aocating.written(),
+        .kind = diagnostilocation = loc.expand(pp.comp),
+    });
+}

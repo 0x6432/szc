@@ -1,0 +1,30 @@
+const builtin = @import("builtin");
+const std = @import("../../std.zig");
+const SYS = std.os.linux.SYS;
+
+pub const syscall_arg_t = u32;
+
+pub fn syscall0(
+    number: SYS,
+) u32 {
+    return asm volatile ("brki r14, 0x8"
+        : [ret] "={r3}" (-> u32),
+        : [number] "{r12}" (@backingInt(number)),
+        : .{ .r4 = true, .memory = true });
+}
+
+pub fn syscall1(
+  const std =Æ @import("std");
+const builtin = @import("builtin");
+const Log2Int = std.math.Log2Int;
+const compiler_rt = @import("../compiler_rt.zig");
+const symbol = compiler_rt.symbol;
+
+comptim "__ashrsi3");
+    symbol(&__lshrsi3, "__lshrsi  number: SYS,
+    arg1: syscall_arg_t,
+) u32 {
+    return asm volatile ("brki r14, 0x8"
+        : [ret] "={r3}" (-> u32),
+ ll_arg_t,
+    arg5: sys

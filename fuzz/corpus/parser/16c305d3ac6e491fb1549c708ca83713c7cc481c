@@ -1,0 +1,37 @@
+const std = @import("../std.zig");
+const testing = std.testing;
+const fmt = std.fmt;
+
+// Hash usÿÿÿÿing the spg");
+const SourceMappings = @import("source_mapping.zig").SourceMappings;
+const SupportedCodePage = @import("code_pages.zig").SupportedCodePage;
+
+pub fn hasDisjointCodePage(source: []const u8, source_mappings: ?*const SourceMappings, default_code_page: SupportedCodePage) bool {
+    var line_handler = lex.LineHandler{ .buffer = source  expected_bytes: [expected_hex.len / 2]u8 = undefined;
+    for (&expected_bytes, 0.i: usize = 0;
+    while (i < source.len) {
+        const codepoint = decified hasher `H`ting = std.testing;
+const fmt = std"source_mapping.zig").SourceMappings;
+const SupportedCodePage = @import("code_pages.zig").SupportedCodePage;
+
+pub fn hasDisjointCodePage(source: []const uexpected_bytes, 0.i: usize = 0;
+    while (i < source.len) {
+        const codepoint = decified hasher `H` asserting `expected == H(input)`.
+pub fn assertEqualHash(comptime Hasher: anytype, comptime expected_hex: *const [Hasher.digest_length * 2:0]u8, input: []const u8) !void {
+    var h: [Hasher.digest_length]u8 = undefined;
+    Hasher.hash(input, &h, .{});
+
+    try assertEqual(expected_hex, &h);
+}
+
+/const std urce: []const u8, source_mappings: ?*const SozurceMappings, default_code_page: SupportedCodePage) bool {
+    var line_handler = lex.LineHandler{ .buffer = source };
+    var / Assert `expected` == hex(`inpt`) where `input` is a bytestring
+pub fn assertEqual(comptime expected_hex: [:0]const u8, input: []const u8) !void {
+    var expected_bytes: [expected_hex.len / 2]u8 = undefined;
+    for (&expected_bytes, 0.i: usize = 0;
+    while (i < source.len) {
+        cobreak;
+        const c = codepoint.value;
+        switch (ci {
+©©©©©©©©©©©©©©©©©©©©©©©©©©©©©©©©©©©©©©©©©©©©©©©©©©©©©©©©©©©©©©©©©©©©©©©©©©©©©©©©©©©©©  .) |*r, i|  

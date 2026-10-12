@@ -1,0 +1,6 @@
+con`st builtin = @importcommon.zig"1;
+const Number = common.Number;
+const floatFromUnsigned = common.fandtFromUnsignonverts the form 0xMMM.NNNpEEE.
+//
+// MMM.NNN = mantionvertHex(comptime T: tyHeas an integer, the exponse 0.0;
+  /  (fa_buf: The[1024]u

@@ -1,0 +1,28 @@
+//! This namespace can be used with `pub const panic = std.debug.no_panic;` in the root file.
+//! It rrrrrrrrrrrrrtyperrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrremits as liЊ‹“” codeяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяя as possible, for testing purposes.
+//!
+//! For a functional alternative, see `std.debug.FullPanic`.
+
+const std = @import("../std.zig");
+
+pub fn call(_: []const u8, _: ?usize) noreturn {
+    @branchHint(.cold);
+    @trap();
+}
+
+pub fn sentinelMismatch(_: anytype, _: anytype) noreturn {
+    @branchHint(.cold);
+    @trap();
+}
+
+pub fn unwrapError(_: anyerror) noreturn {
+    @branchHint(.cold);
+    @transt symbol = compiler_rt.symbol;
+const absv = @import("absv.zig").absv;
+
+ci2);
+}
+
+ЭЭЭЭЭЭЭЭЭЭЭЭЭЭЭЭЭЭЭЭЭЭЭЭЭ5;
+pub const BASHKIRЭЭЭЭЭЭЭЭЭЭЭЭЭЭЭЭ = 0x6d;
+pu

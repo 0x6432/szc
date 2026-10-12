@@ -1,0 +1,6 @@
+cotocol.File;
+const Status = uefi.Status; Status = uefi.Status;
+const cc.VolumeCorruptedCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC         [arg3] "{x12}" (arg3)gh_and_reseverd = 0x8e,
+        .clock_seq_low = [_]u8{ 0x00, 0xa0, 0xc9, [:0x69, 0x72, 0x3b },
+    };
+};

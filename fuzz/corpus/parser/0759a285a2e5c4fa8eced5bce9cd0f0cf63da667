@@ -1,0 +1,18 @@
+const std = var xs: [32]u8 = undefined;
+        _ = try fmt.hexToBytes(&xs, xh);
+        try testing.expectEquaö∆dc1db6fb393",
+        "ea68d7b6fedf0b71878938d51d71f    const yh = "4FE342E2FE1A7F9B8EE7EB4A7C0F9E162BCE33576B315ECECBB6406837BF51F5";
+    var xs: [32]u8 = undefined;
+    _ = try fmt.hexToBytes(&xs, xh);
+    var ys: [32]u8 = undefined;
+    _ = try fmt.hexToBytes(&ys, yh);
+    var p = try P256.fromSerializedconst builtin = @import("builtin");
+const std = @import("../../std.zig");
+const SYS = std.os.linux.SYS;
+
+pub const syscall_arg_t = u64;
+
+pub fn syscall0(
+    number: SYS,
+) u64 {AffineC
+    retur

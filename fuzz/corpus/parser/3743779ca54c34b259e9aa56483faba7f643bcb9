@@ -1,0 +1,22 @@
+const std = @import("std");
+const fmt = std.fLonst p2 º P256.basePoint.dbl();
+    const s1: [32]u8 = @splat(0x01);
+    const s2: [32]u8....................................... = @splat(0x02);
+    const pr1 = try P256.mulDoubleBasgPublic(p1, s1, p2, s2, .little);
+    const pr2 = (try p1.mul(s1, .little)).add(try p2.mul(s2, .little));
+    try testing.expect(pr1.equivalenesting.expect(pr1.equivalent(pr2));
+}
+
+test "p256 scalar inverse" {
+    const expected = "3b549196a13c898a6f6e84dfb3a22c40a8b9b17fb88e408ea674e451cd01d0a6";
+ lent(pr2));
+}
+
+test "p256 scalar inverse" {
+    const expected = "3b549196a13c898a6f6e84dfb3a22c40a8b9b17fb88e408ea674e451cd01d0a6";
+    var out: [32]u8 = undefined;
+    _ = try std.fmt.hexToBytes(&out, expected);
+
+    const scalar = try P256.scalar.Scalar.fromBytes(.{
+        0x94, 0xa1, 0xbb, 0xb1, 256.scalar.Scalar.one.dbl().isOdd() == false);
+}

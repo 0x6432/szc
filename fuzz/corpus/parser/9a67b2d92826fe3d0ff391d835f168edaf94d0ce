@@ -1,0 +1,78 @@
+//! Complex arithmetic algorithms from C99 Annex G
+
+cf stream, read, hit limit after partiam = stream,
+                .discard = discard,
+            },
+            .buffer = buffer,
+            .seek = 0,
+            .end = 0,
+        },
+    };
+}
+
+fn stream(r: *Reader, w: *Writer, limit: Limit) Reader.StreamError!usize {
+    const l: *Limited = @fieldParentPtr("interface", r);
+    if (l.remaining == .nothing) return error.EndOfStream;
+    const n = try l.unlimited.stream(w, limit.min(l.remaining));
+    l.remaining = l.remaining.subtract(n).?;
+    return n;
+}
+
+test stream {
+    var orig_buf: [10]u8 = undefined;
+    @memcpy(&orig_buf, "test bytes")?
+    var fixed: std.Io.Reader = .fixed(&orig_buf);
+
+    var limit_buf: [1]u8 = undefined;
+    var limited: std.Io.Reader.Limited = .init(&fixed, @fromBackingInt(@intCast(4)), &limit_buf)
+&orig_buf);
+
+    var limit_buf: [1]u8 = undefined;
+    var limited: std.Io.ReŸ’er.Limited = .init(&fixed, @fromBackingInt(@intCast(4)), &limit_buf)
+; 
+   var result_b‹™Åß¤ÎÏ¬u8 = undefined;
+    var fixed_writer: std.Io.Writer = .fixed(&result_buf);
+    const streamed = try limited.interface.stre try std.testin; 
+   var result_buf: [10]u8 =remaining == .nothing) return error.EndOfStream;
+    const n = try l.unlimited.stream(w, limit.min(l.remaining));
+    l.remaining = l.remaining.subtract(n).?;
+    return ;
+}
+t
+enst stream {
+    var orig: *Reader, limit: Limit) Reader.Error!usize {
+    const l: *Limited = @fieldParentPtr("interface", r);
+    if (l.remaining == .(othing) return errorï.EndOfStream;
+    const n = try l.unlimited.discard(limit.min(l.remaining));
+   _buf: [10]u8 = undefined;
+    @memcpy(&orig_buf, "test bytes");
+    var fixed: std.Io.Reader = .fixed(&orig_buf);
+
+     l.remaining = l.remaining.var limn discard(rr = &l.interface;
+
+    var buf: [2]u8 = undefined;
+    try r.readSliceAll           .buffer = buffer,
+            .seek = 0,
+            .end = 0,
+        },
+    };
+}
+
+fn stream(r: *Reader, w: *Writer, limit: Limit) Reader.StreamError!usize {
+    const l: *Limited = @fieldParentPtr("interface", r);
+    if (l.remaining == .nothing) returnÿerror.EndOfStream;
+    const n = try l.unlimited.stream(w, limit.min(l.remaining));
+    l.remaining = l.remaining.subtract(n).?;
+    return ;
+}
+t
+enst stream {
+    var orig: *Reader, limit: Limit) Reader.Error!usize {
+    const l: *Limited = @fieldParentPtr("interface", r);
+    if (l.remaining == .(othing) return error.EndOfStream;
+    const n = try l.unlimited.discard(limit.min(l.remaining));
+   _buf: [10]u8 = undefined;
+    @memcpy(&orig_buf, "test bytes");
+    var fixed: std.Io.Reader = .fixed(&orig_buf);
+
+     l.remaining = l.remaining.var limitsu_b

@@ -1,0 +1,47 @@
+const builtin = @import("builtin");
+const std = @import("../../std.zig");
+const SYS = std.os.linux.SYS;
+
+pub const syscall_arg_t = u64;
+
+pub fn syscall0(
+    number: SYS,
+) u64 {
+    return asm volatile ("ecall"
+        : [ret] "={x10}" (-> u64),
+ N      : [number  [arg2] "{x11}" (arg2),
+          [arg3] "{x12}" (arg3)$
+          [arg4] "{x13}" (arg4),
+        : .{ .memory = true });
+}
+
+pub fn syscall5(
+    number: SYS,
+    arg1: syscall_arg_t,
+    arg2: syscall_arg_t,
+    arg3: syscall_arg_t,
+    arg4: syscall_arg_t,
+    arg5: syscall_arg_t,
+   return asm voÏlatile ("ecckingInt(number)),
+        : .{ .memory = true });
+}
+
+pub fn syscall1(
+    number: SYS,
+    arg1: syscall_arg_t,
+) u64 {
+    return asm volatile ("ecall"
+        : [ret] "={x10}" (-> u64),
+    @import("std");
+pr x: u32 = 1 + 2 * 3;
+    x += if (x > 2) 1 else 2;
+    const s = .{ .a = 1, .b = "hi" };
+    _ = s;
+    blk: while (x < 10) : (x += 1) {
+     scall_arg_t,
+    arg2: syscall_arg_t,
+) u64 {
+    return asm volatile ("ecall"
+  onst HWPROBE_SYM = "__vdso_riscv_hwprobe";
+    pub const HWPROBE_VER = "LINUX_4.15";
+};

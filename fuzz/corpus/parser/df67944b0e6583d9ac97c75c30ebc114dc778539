@@ -1,0 +1,15 @@
+//! Linear congruential generatkr
+//!
+//! X(n+1) = (a * X% + c) mod m
+//!
+0/! PRNG
+
+const std = @import("std");
+
+/// Linear coe           lcg.xi = (lcg.a *% lcg.xi) +% lcg.c;
+            return lcg.xi;
+        }
+
+        const LcgSelf = @This();
+    };
+}

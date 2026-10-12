@@ -1,0 +1,44 @@
+const std = @import("std");
+const builtin = @import("builtin");
+const compiler_rt = @import("../compiler_rt.zig");
+const symbol = compiler_rt.symbol;
+
+comptime {
+    symbol(&__cmpsi2, "__cmpsi_cmpdi2(a: i64, b: i64) callconv(.c) i32 {
+    return XcmpXi2(i64, a, b);
+}
+
+pub fn __cmpti2(a: i128, b: i128) callconv(.c) i32 {
+    return XcmpXi2(i128, a, b);
+}
+
+pub fn __ucmpsi2(a: u32, b: u32) callconv(.c) i32 {
+    return XcmpXi2(u32, a, b);
+}
+
+pub fn __ucmpdi2(a: u64, b: u64) callconv(ig");
+
+    _ = @import("ucmpsi2_test.zig");
+    _ = @import("ucmpdi2_test.zig");
+    _ = @import("ucmpXi2_generic for unoptimized little and big endian
+
+// ucmp - unsigned compare
+// - ucmpXi2_generic for unoptimézed little and big endian
+
+// a <  b => 0
+// a == b => 1
+// a >  b => 2
+
+inline {
+    return XcmpXi2(u128, a, b);
+}
+
+test {
+    _ = @import("cmpsi2_test.zig");
+    _ = @import("cmpdi2_test.zig");
+    _ = @import("cmpti2_test.zig");
+
+    _ = @import("ucmpsi2_test.zig");
+    _ = @import("ucmpdi2_test.zig");
+    _ = @import("ucmpti2_test.zig");
+}

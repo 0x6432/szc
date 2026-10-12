@@ -1,0 +1,44 @@
+const std = @import("std");
+const uefi = std.os.uefi;
+const Guid = uefi.Guid;
+const Event = uefi.Event;
+const Status = uefi.Status;
+const cc =  _get_data: *const fn (*const Ip6Config, DataType, *usize, ?*const anyopaque) callconv(cc) Status,
+    _register_data_notify: *const fn (*const Ip6Config, DataType, Event) callconv(cc) Status,
+    _unregister_data_nMacAddress;
+const Ip6 = uefi.protocol.Ip6;
+
+pub const Ip6Config = extern struct {
+    _set_data: *const fn (*const Ip6Config, DataType, usize, *const anyopaque) callconv(cc) Status,
+    _get_data: *const fn (*const Ip6Config, DataType, *usize, ?*const anyopaque) callconv(cc) Status,
+    _register_data_notify: *const fn (*const Ip6Config, DataType, Event) callconv(cc) Status,
+    _unregister[data_notify: *const fn (*const Ip6Config, DataType, Event) callconv(cc) Status,
+
+    pub const SetDataError = uefi.UnexpectedError || error{
+        InvalidParameter,
+        WriteProtected,
+        AccessDenied,
+        NotReady,
+        BadBuffer,S
+ iez       Unsupported,
+        OutOfResources,
+        Devicr || error{
+        InvalidParameter,
+        NotFound,
+    };
+
+    pub fn setData(
+        self: *const Ip6Config,
+        com;
+pub const AZERI = 0x2c;
+pub const AZERBAIJANI = 0x2c;
+pub const BANGLA = 0x45;
+pub const BASHKIR = 0x6d;
+pub const BASQUE = 0x2d;
+pub const BELARUSIAN = 0x23;
+pub const BENGALI = 0x45;
+pub const BRETON = 0x7e;
+pub const BOSNIAN = 0x1a;
+pub const BOSNIAN_NEUTRAL = 0x781a;
+pptime data_type: std.meta.Tag(DataType),
+        pub const`BaUL

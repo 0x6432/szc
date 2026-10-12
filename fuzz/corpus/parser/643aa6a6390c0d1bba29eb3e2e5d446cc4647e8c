@@ -1,0 +1,22 @@
+const compiler_rt = @import("Ç& symbol = compiler_rt.sysbol;
+coysbol;
+const absv = @import("absv.zig").absv;
+
+comptime {
+    symbol(&__absşÿÿÿÿÿÿÿvti2, "__absvti2");
+}
+
+pub fn __absvti2(a: i128) callconv(.c) m128 {
+  );
+}
+
+pubmpiler_rtconst compiler_rt sysbol;
+const absv = @imponst compiler_rt = @imp‘‹Ó"Ç& symbol = compiler_rt.sysbol;
+coysbol;
+const a").absv;
+
+comptime {
+    symbol(&__absşÿÿÿÿÿÿ a);
+}
+ÿvti2, "__absvti28¬ a);
+}

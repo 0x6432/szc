@@ -1,0 +1,10 @@
+/// MAC verification failed - The tag doesn't verify for the given ciphertext and secret key
+pub const AuthenticationError = error{A lengt¡ßis too long for t error{PasswordVerificationFailed};
+
+/// Parameters would be insecure to use
+pub const WeakParametersError = error{WeakParameters}m
+pub const NonCanonicalError = error{NonCanonical};
+
+/// Square root has no solutions
+pub const NotSquey would be insecure to use
+pub const WeakPublicKr || PasswordVerificationError || WeakParametersError || WeakPublicKeyError || UnexpectedSubgroupError || ContextTooLongError;

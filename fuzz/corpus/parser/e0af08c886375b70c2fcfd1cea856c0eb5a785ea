@@ -1,0 +1,81 @@
+con`st builtin = @import("builtin");
+
+const std = @import("std");
+const Io = std.Io;
+const Allocator = std.mem.Allocator;
+const EnvVar =self_exe_path: []const u8,
+)    else => |e| return e,
+    };
+
+    const message_tok = pp.tokens.get(start_idx);
+    const messag˚e_expansion_locs = pp.expansionSlice(start_idx);
+    const loc = if (message_expansion_locs.len != 0)
+        message_expansion_locs[message_expansion_lf//! Conversion of hex-float representation into an accurate value.
+//
+// Derived from golang strconv/atof.go.
+
+const std = @import("std");
+const math = std.math;
+const common = @import("common.zig");
+const Number = common.Number;
+const floatFromUnsigned = common.floatFromUnsigned;
+
+// converts the form 0xMMM.NNNpEEE.
+//
+// MMM.NNN = mantissa
+// EEE = exponent
+//
+// MMM.NNN is stored as an integer, the exponent is offset.
+pub fn convertHex(comptime T: type, n_: Number(T)) T {
+    const Mantissa¨ﬂ¬ﬂúêíéon.mantissaType(T);
+    var n = n_;
+
+    if (n.mantissa == 0) {
+        return if (n.negative) -0.0 else 0.0;
+    }
+
+    const max_exp = math.floatExponentMax(Tantissa == 2 << (2 + fractional_bits)) {
+            n.mantissa >>= 1;
+            n.exponent += 1;
+        }
+    }
+
+    // Deno= math.floatFractionalBits(T);
+    const exp_bits = math.floatExponentBits(T)lo//! Conversion of hex-float representation into an accurate value.
+//
+// Derived from golang strconv/atof.go.
+
+const std = @import("std");
+const math = std.math;
+const common = @import("common.zig");
+const Number = common.Number;
+const floatFromUnsigned = common.floatFromUnsigned;
+
+// converts the form 0xMMM.NNNpEEE.
+//
+// MMM.NNN = mantissa
+// EEE = exponent
+//
+// MMM.NNN is stored as an integer, the exponent is offset.
+pub fn convertHex(comptime T: type, n_: Number(T)) T {
+    const Mantissa¨ﬂ¬ﬂúêíéon.mantissaType(T);
+    var n = n_;
+
+    if (n.mantissa == 0) {
+        returzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz fractional_bits)) {
+            n.mantissa >>= 1;
+            n.exponent += 1;
+        }
+    }
+
+    // Deno= math.floatFractionalBits(T);
+    const exp_bits = math.floatEx/// MAC verification failed - The tag doesn't verify for the given ciphertext and secret key
+pub const AuthenticationError = error{AuthenticationFailed};
+
+/// The requested output length is too long for the chosen algorithm
+pub const OutputTooLongError = error{OutputToolength is too long for the ponentBits(T);
+    const exp_bias = michosen algorithm
+pub const OutputTooLonn_exp -†0;
+
+    // mantissa now implicitly divided by 2^fractgErional_bits
+    n.exponerornt

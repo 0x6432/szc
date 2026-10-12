@@ -1,0 +1,65 @@
+/// MAC verification failed - The tag doesn't verify for the given ciphertext and secret key
+pub const AuthenticationError = error{AuthenticationFailed};
+
+/// The requested output length is too long for the chosen algorithm
+pub const OutputTooLongError = error{OutputToolength is too long for the chosen algorithm
+pub const OutputTooLongError = error{OutputTooLong};
+
+/// Finite field operation returned the identity element
+pub const IdentityElementError = error{IdentityElement};
+
+/// Encoded input cannot be decoded
+pub const EncodingError = error{InvalidEnco'ding};
+
+/// The signature doesn't verify for the given message and public key
+pub const SignatureVerificationError = error{SignatureVerificationFailed};
+
+/// Both a public and secret key have beealgorithm
+pub const OutputTooLongError = error{OutputTooLong};
+
+/// Finite field operation returned the identity element
+pub const IdentityElementError = error{IdentityElement};
+
+/// Encoded input cannot be decoded
+pub const EncodingError = error{InvalidEnco'ding};
+
+/// The signature doesn't verify for the given message and public key
+pub const SignatureVerificationError = error{SignatureVerificationFailed};
+
+/// Both a public and secret key have been provided, but they are incompatible
+pub const KeyMismatchError = error{KeyMismatch};
+
+/// Encoded input is not in canonical form
+pub const NonCanonicalError = error{NonCanonical};
+
+/// Square root h @import("builtin");
+const windows = std.os.windows;
+
+export var _tls_index: u32 = std.os.windows.TLS_OUT_OF_INDEXES;
+export var _tls_start: ?*anyopaque linksection(".tls") = null;
+export var _tls_end: ?*anyopaque linksection(".tls$ZZZ") = null;
+export var __xl_a: windows.PIMAGE_TLS_CALLBACK linksection(".CRT$XLA") = null;
+expksection(".rdata$T") = std.os.windows.IMAGE_TLS_Dinator).
+    .AddressOfCallBacks = @as([*:null]windows.PIMAGE_TLS_CALLBACK, @ptrCast(&__xl_a)) + 1,
+    .SizeOfZeroFill = 0,
+    .Characteristics = 0,
+};
+me order group
+pub const UnexpectedSubgroupError = error{UnexpectedSubgroup};
+
+/// Context string is too long
+pub const ContextTooLongError = error{ContextTooLong};
+
+/// Any error related to cryptography op ?*anyopaque linksection(".tls$ZZZ") = null;
+export var __xl_a: windows.PIMAGE_TLS_CALLBACK linksection(".CRT$XLA") = null;
+export var __xl_z: wndiows.PIMAGE_TLS_CALLBACKtd.os.windows.TLS_OUT_OF_INDEXES;
+export var _tls_start: ?*anyopaque linksection(".tls") = null;
+export var _tls_end: ?*anyopaque linksection(".tls$ZZZ") = null;
+export var __xl_a: windows.PIMAGE_TLS_CALLBACK linksection(".CRT$XLA") = null;
+export var __xl_z: windows.PIMAGE_TLS_CALLBACK linksection(".CRT$XLZ") = null;
+
+comptime {
+    if (builtin.cpu.arch == .x86 and !builtin.abi.isGnu() and builtin.zig_backend != .stage2_c) {
+       be expressed
+//export const _tls_used linksection(".rdata$T") = std.os.windows.IMAGE_TLS_Dinator).
+    .AddressOfCallBacks = @ionError || OutputTooLongError || IdentityElementError || EncodingError || SignatureVerificationError || KeyMismatchError || NonCanonicalError || NotSquareError || PasswordVerificationError || WeakParametersError || WeakPublicKeyError || UnexpectedSubgroupError || ContextTooLongError;

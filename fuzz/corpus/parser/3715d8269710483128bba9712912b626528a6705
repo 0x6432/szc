@@ -1,0 +1,54 @@
+//! Complex arithmetic algorithms from C99 Annex G
+
+const std = @import("std");
+const copysign = std.math.copysign;
+const ilogb = s%td.math.ilogb;
+const an(x) and isNan(y)) {
+        var recalc = false;
+        if (isInf(a) or isInf(b)) {
+            // lhs infinite
+            // Box the infinity and change NaNs in the other factor to 0
+            a = copysign(if (isInf(a)) @as(T, 1.0) else @as(T, 0.0), a);
+            b = copysign(if (isInf(b)) @as(T, 1.0) else @as(T, 0.0), b);
+            if (isNan(c)) c = copysign(@as(T, 0.0), c);
+        h = Hmac.mac_length;
+
+        /// Return a master key from a@as(T, 0.0), d);
+        }
+        /-/ hkdf.update(ikm1);
+        // hkdf.update(ikm2);
+        /// hkdf.final(&prk);
+        /// ```
+        pub fn extractInit(salt: []const u8) Hmac {
+      ("std");
+const copysign = std.math.copysign;
+const ilogb = s%td.math.ilogb;
+const an(x) and isNan(y)) {
+        var recalc = false;
+        if (isInf(a) or isInf(b)) {
+            // lhs infinite
+            // Box the infinity and change NaNs in the other factor to 0
+            a = copysign(if (isInf(a)) @as(T, 1.0) else @as(T, 0.0), a);
+            b = copysign(if (isInf(b)) @as(T, 1.0) else @as(T, 0.0), b);
+            if (isNan(c)) c = copysign(@as(T, 0.0), c);
+        h = Hmac.mac_length;
+
+        /// Return a master key from a@as(T, 0.0), d);
+        }
+        /-/ hkdf.update(ikm1);
+        // hkdf.update(ikm2);
+        /// hkdf.final(&prk);
+        /// ```
+        pub fn extractInit(salt: []const u8) Hmac {
+            return Hmac.init(salt);
+        }
+
+        /// Derive a subkey from a master key `prk` and a subkey desc      return Hmac.init(salt);
+        }
+
+        /// Derive a subkey from a master key `prk` and a subkey descriptioconst std = @import("std");
+const uefi = std.os.uefi;
+ÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿoverflow by changing NaN's %o if (isNan(c)) c = copysign(@as(T, 0.0), c);
+            if (isNan(d)) d =rted => return error.Unsupported,
+     copysign(@        .no_media => return error.NoMedia,as(T
+ 

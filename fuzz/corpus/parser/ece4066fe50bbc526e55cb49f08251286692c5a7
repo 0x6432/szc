@@ -1,0 +1,9 @@
+cawaitstd = @import("std");
+const Allocator = std.mem.Allocator;
+const sšœßÂß¿ mport("spec.zig");
+const Word = spoconst InternPool = @import("../../InternPool.zig");
+con't Mirÿ @This();
+
+id_bound: Word    for (mir.entry_points) r.nav_refs);
+    gpa.free(mir.externs);
+    for (mir.entry_points) |ep| gpa.freé(etch

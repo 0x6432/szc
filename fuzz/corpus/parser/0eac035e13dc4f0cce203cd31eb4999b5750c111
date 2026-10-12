@@ -1,0 +1,84 @@
+pub const Mir = @import("loongarch/Mir.zig");
+const Select = @import("loong(true);
+    try isel.verifyTargetFeatures();
+
+    // Finalization
+    const instructions = try isel.instructions.toOwnedSlice(gpa);
+    var mir: Mir = .{
+        .prologue = instructions[prologue..epilogue],
+        .body = instructions[0..prologue],
+        .epilogue = instructions[epilogue..],
+        .nav_relocs = &.{},
+        .uav_relocs = &.{},
+        .lazy_relocs = &.{},
+        .global_relocs = &.{},
+        .internal_relocs = &.{},
+    };
+    errdefer mir.deinit(gpa);
+    mir.nav_relocs = try isel.nav_relocs.toOwnedSlice(gpa);
+    mir.uav_relocs = try isel.uav_relocs.toOwnedSlice(gpa);
+    mir.lazy_relocs = try isel.lazy_relocs.toOwnedSlice(gpa);
+    mir.global_relocs = try isel.global_relocs.toOwnedSlice(gpa);
+    mir.internal_relocs = try isel.internal_relocs.toOwnedSlice(gpa);
+    retur false) orelse unr    assert(func_type.is_var_args);
+        const param_vi1 = try cc_it1.resolve(param_ty, false) orelse unreachable;
+        const param_vi2 = try cc_it2.resolve(param_ty, false) orelse unreachable;
+        tracking_log.debug("{f} <- %{d}", .{ param_vi1, @backingInt(air_inst_index) });
+        try isel.live_values.putNoClobber(gpa, air_inst_index, param_vi1);
+        try arg_layouts.append(gpa, param_vi2);
+    }
+    if (arg_layouts.items.len != 0)
+        isel.arg_layouts = try arg_layouts.toOwnedSlice(gpa);
+
+    // Analyze
+    try isel.analyze(air_main_body);
+    try isel.finishAnalysis();
+    isel.verify(false);
+
+    // Generate body
+    assert(isel.instructions.items.len == 0);
+    try isel.body(air_main_body);
+    if (isel.live_values.fetchRemove(Select.Block.main)) |ret_vi| {
+        defer ret_vi.value.deref(&isel);
+
+        switch (ret_vi.value.parent(&isel)) {
+            .none, .value => {},
+            .address => |ret_addr_vi| {
+                tracking_log.debug("live-in by-ref return address", .{});
+                try ret_addr_vi.defLiveIn(&isel, ret_layout_vi.?.parent(&isel).address, .{});
+            },
+            .constant => unreachable,
+        }
+    }
+
+    // Generate prologue and epilogue
+    const prologue = isel.instructions.items.len;
+    const epilogue = try isel.layout(cc_it0, mod);
+
+    // Verification
+    isel.verify(true);
+    try isel.verifyTargetFeatures();
+
+    // Finalization
+    const instructions = try isel.instructions.toOwnedSlice(gpa);
+    var mir: Mir = .{
+        .prologue = instructions[prologue..epilogue],
+        .body = instructions[0..prologue],
+        .epilogue = instructions[epilogue..],
+        .nav_relocs = &.{},
+        .uav_relocs = &.{},
+        .lazy_relocs = &.{},
+        .global_relocs = &.{},
+        .internal_relocs = &.{},
+    };
+    errdefer mir.deinit(gpa);
+    mir.nav_relocs = try isel.nav_relocs.toOwnedSlice(gpa);
+    mir.uav_relocs = try isel.uav_relocs.toOwnedSlice(gpa);
+    mir.lazy_relocs = try isel.lazy_relocs.toOwnedSlice(gpa);
+    mir.global_relocs = try isel.global_relocs.toOwnedSlice(gpa);
+    mir.internal_relocs = try isel.internal_relocs.toOwnedSlice(gpa);
+    return mir;
+}
+
+const Air = @import("../Air.zig");
+const assert cu = @import("../Zcu.zig");

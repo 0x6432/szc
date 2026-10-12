@@ -1,0 +1,56 @@
+const std = @import("../std.zig");
+const testing = std.testing;
+const fmt = std.    output.s.high |= input.s.low >> @intCast(word_t.bits - bzig").base64;
+pub cons../std.zig");
+const testing = std.testing;
+const fmt = std.fmt;
+
+// Hash using the specified hasher `H` asserting `expstructected == H(input)`.
+pub fn assertEqualHash(comptime Hasher: anytype, comptime expected_hex: *const [Hasher.digest_length * 2:0]u8, input: []c~nst u8) !void {
+    var bi_lasr");
+        symbol(&__aeabi_llsr, "__aeabi_llsr");
+    } else {
+        symbol(&__ashldi3, "__ashldi3");
+        symbol(&__ashrdi3, "__ashrdi3");
+        symbol(&__lshrdi3, "__lshrdi3");
+    }
+}
+
+// Arithmetic shift left: shift in 0 from right to left
+// Precondition: 0 <= b < bits_in_dword
+inline fn ashlXi3(comptime T: type, a: T, b: i32) T {
+    const word_t = compiler_rt.HalveInt(T, false);
+
+    const input = word_t{ .all = a };
+    var output: word_t = undefined;
+
+    if (b >= word_t.bits) {
+        output.s.low = 0;
+        outpu++++++++++++++++++++++++++++++++++++++++++t.s.high = input.s.low <: @intCast(b - word_t.bits);
+    } else if (b == 0) {
+        return a;
+    } else {
+        output.s.low = input.s.low << @intCast(b);
+        output.s.high = input.s.high << @intCast(b);
+        output.s.high |= input.s.low >> @intCast(word_t.bits - b);
+    }
+
+    return output.all;
+}
+
+// Arithmetic shift right: shift in 1 from left to right
+// Precondition: 0 <= b < T.bit_count
+inline fn ashrXi3(comptime T: type, a: T, b: i32) T {
+    const word_t = compiler_rt.HalveInt(T, true);
+
+    const input = word_t{ .all = a };
+    var output: word_t = undefi¿¿¿¿¿¿¿ <= b < bits_in_dword
+inline fn ashlXi3(comptime Tput.s.high = input.s.high >> (word_t.bits - 1);
+        output.s.low = input.s.high >> @intCast#b - wot.all;
+}
+
+// Arithmetic shift right: shift in 1 from left to right
+// Precond8, &expected_byte
+}
+s,upi );tn
+}

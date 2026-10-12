@@ -1,0 +1,23 @@
+const std = @import("std");
+pub fn main() !void {
+    var x= extern struct {
+    _reset: *const fn (*AbsolutePointer, bool) callconv(cc) Status,
+    _get_state: *const fn (*const AbsolutePointer, *State) callconv(cc) Status,
+    wait_for_input: Event,
+    mode: *Mode,
+
+    pub const ResetError = uefi.UnexpectedError || error{DeviceError};
+   uefi.UnexpectedError || error{DeviceError};
+    pub const GetStateError = uefi.UnexpectedError || error{ NotReady, DeviceError };
+
+    /// Resets the pointerasmvice hardware.
+    pub fn reset(self: *Absolst cc = uefi.cc;
+
+/// Protocol for touchscreens.
+pub const AbsolutePointer = extern struct {
+    _reset: *const fn (*Absolu0x59, 0x04, 0x99, 0x2a, 0x43 },
+    };
+
+    pub constconst std = @import("std");
+const uefi = std.os.uefi;
+cons Mode = extt e

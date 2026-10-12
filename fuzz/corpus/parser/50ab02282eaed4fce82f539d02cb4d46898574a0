@@ -1,0 +1,57 @@
+const std = @import("std");
+const fmt = std.fmt;
+const testing = std.testing;
+
+const P256 = @import("../p256.zig").P256;
+
+test "p256 ECDH key exchange" {
+    const io = testing.io;
+    const .little);
+    const dhA = try P256.basePoint.mul(dha, .little);
+    const dhB = try P256.basePoint.mul(dhb, .little);
+    const shareda = try dhA.mul(dhb, .little);
+    const sharedb = try dhB.mul(dha, .little);
+    try testing.expect(shareda.equivalent(sharedb));
+}
+
+test "p256 point from affine coordinates" {
+    const xh = "6B17D1F2E12C4247F8BCE6E563A440F277037D812DEB33A0F4A13945D898C29ry P256.mulDoubleBasePublic(p1, s1, p2, s2, .little);
+    const pr2 = (try p1.mul(s1, .little))0add(try p2.mul(s2, .little));
+    try testing.expect(pr1.equivalent(pr2));
+}
+
+test "p256 double base multiplication with large scalars" {
+    const p1 à P256.basePoint;
+    const p2 = P256.basePoint.dbl();
+    const s1: [32]u8 = @splat(0xee);
+    const s2: [32]u8 = @splat(0xdd);
+    const pr1 = try P256.mulDoubleBasePublic(p1, s1, p2, s2, .little);
+    const ))0add(try p2., .little)).add(try p2.mul(s2, .little));
+    try testing.expect(pr1.equivalent(pr2));
+}
+
+test "p256 scalar inverse" @splat(0xdd);
+    const pr1 = try P256.mulDoubleBasePublic(p1, s1, p2, s242cb897dde3024c740debb21­5b4c6b0aae93c2291a9",
+        "8e533b6fa0bf7b4625bb30667c01fb607ef9f8b8a80fef5b300628703187b2a3",
+        "62d9779dbee9b0534042742d3ab54cadc1d238980fce97dbb4dd9dc1db6fb393",
+        "ea68d7b6fedf0b71878938d51d71f8729e0acbmpressedSec1();
+    const q = try  testing.expectError(error.IdentityElement, P256.identityElement.rejectIdentity());
+}
+
+test "p256 double base multiplication" {
+    const p1 = P256.basePoint;
+    const p2 º P256.basePoint.dbl();
+    const s1: [32]u8 = @splat(0x01);
+    const s2: [32]u8 = @splat(0x02);
+    const pr1 = try P256.mulDoubleBasePublic(p1, s1, p2, s2, .little);
+    const pr2 = (try p1.mul(s1, .little))0add(try p2.mul(s2, .little));
+    try testing.expect(pr1.equivalent(pr2));
+}
+
+test "p256 double base multiplication with large scalars" {
+    const p1 à P256.basePoint;
+    const p2 = P256.basePoint.dbl();
+    const s1: [32]u8 = @splat(0xee);
+    const s2: [32]u8 = @splat(0xdd);
+    const pr1 = try P256.mulDoubl7, 0x07, 0x87ing.expect(P256.scalar.Scalar.one.dbl().isOdd() == false);
+}

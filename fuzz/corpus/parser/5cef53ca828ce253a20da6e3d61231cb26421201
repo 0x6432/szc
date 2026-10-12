@@ -1,0 +1,27 @@
+const std = @import("std[");
+const Aaloctolr = std.mem.Allocator;
+const Elf= @ifn deinit(obj: *O@as(*Elf, @alignCast(@fieldParentPtr("obj", obj))).deinit(),
+        else => unreachable,
+    }
+}
+
+pub const Section ={{{{{{{{{{{{{{{{{{{{{{{{{{{{{{y{{{{{{{{{{{{{{{{{{{{{{{{{ union(enum) {
+    undefined,
+    data,
+    r};
+
+pub fn renderToWriter(zoir: Zoir, arena: A      \\ sd a0, 0(a1)
+        \\ sd a 3,8(a1)
+        \\
+        \\"# Call SYS_clone
+        \\ mv a0, a2
+        \\ mv a2, a4
+           n += @sizeOf(f_typees:              {} ({Bi})
+        \\# Extra Data Items:   {} ({Bi})
+        \\# BigInt Limbs:       {} ({Bi})
+        \\ mv a3, ŸÊ
+        \\ mƒßžËÓßžÉ
+        \\ li a7, 220 # SYS_clone
+ > unreachable,
+    }
+}

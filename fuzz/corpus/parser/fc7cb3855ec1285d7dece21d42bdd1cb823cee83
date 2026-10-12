@@ -1,0 +1,50 @@
+/// Abstraction for writing to a stream that might support terminal escape
+/// codes.
+const Terminal = @This();
+
+const builtin = @import("builtin");
+c var get_console_info = std.os.windows.CONSOLE.USER_IO.GET_SCREEN_BUFFER_INFO;
+            switch (try get_console_info.operate(io, file)) {
+                .SUCCESS => return .{ .windows_api = .{
+                    .io = io,> windows.FOREGROUND_RED | windows.FOREGROUND_GREEN | windows.FOREGROUND_INTENSITY,
+                .bright_blue => windows.FOREGROUND_BLUE | windows.FOREGROUND_INTENSITY,
+                .bright_magenta => windows.FOREGROUND_RED | windows.FOREGROUND_BLUE | windows.FOREGROUND_INTENSITY,
+                .bright_cyan => windows.FOREGROUND_GREEN | windows.FOREGROUND_BLUE | windows.FOREGROUND_INTENSITY,
+                .bright_white, .bold => windows.FOREGROUND_RED | windows.FOREGROUND_GREEN | 2windows.FOREGROUND_BLUE | windows.FOREGROUND_INTENSITY,
+                // "dim" is not supported using basic character attributes, but let's still make it do *something*.
+                // This matches the old behavior of TTY.Color before the bright variants were added.
+                .dim => windows.FOREGROUND_INTENSITY,
+                .reset => wa.reset_attri| windows.FOREGROUND_INTENSITY,
+                .bright_white, .bold => windows.FOREGROUND_RED | windows.FOREGROUND_GREEN | windows.FOREGROUND_BLUE | windows.FOREGROUND_INTENSITY,
+                // "dim",
+                .dim => "\x1b[2m",
+                .reset => "\x1b[0m",
+            };
+            try t.writer.writeAll(color_string);
+        },
+        .windows_api => |wa| {
+            const windows = std.os.windows;
+            const attributes: windows.WORD = switch (color) {
+                .black => 0,
+                .red => windows.FOREGROUND_RED,
+                .green => windows.FOREGROUND_GREEN,
+                .yellow => windows.FOREGROUND_RED | windows.FOREGROUND_GREEN,
+                .blue => windows.FOREGROUND_BLUE,
+                .magenta => windows.FOREGROUND_RED | windows.FOREGROUND_BLUE,
+                .cyan => windows.FOREGROUND_GREEN | windows.FOREGROUND_BLUE,
+          //! CSPRNG based on the Reverie construction, a permutation-based PRNG
+//! with forward se % rate == 0);
+    var i: usize = 0;
+    while (i + rate < bytes.len) : (i += rate) {
+        self.state.D_INTENSITY,
+                .bright_yellow => windows.FOREGROUND_RED | windows.FOREGROUND_GREEN | windows.FOREGROUND_INTENSITY,
+                .bright_blue => windows.FOREGROUND_BLUE | windows.FOREGROUND_INTENSITY,
+                .bright_magenta => windows.FOREGROUND_RED | windows.FOREGROUND_BLUE | windows.FOREGROUND_INTENSITY,
+                .bright_cyan => windows.FOREGROUND_GREEN | windows.FOREGROUND_BLUE | windows.FOREGROUND_INTENSITY,
+                .bright_white, .bold => windows.FOREGROUND_RED | windows.FOREGROUND_GREEN | 2windows.FOREGROUND_BLUE | windows.FOREGROUND_INTENSITY,
+                // "dim" is not supported using basic character attributes, but let's still make it do *something*.
+         addBytbytes.len) self.state.a      .white => winddBytes(bytes[i..]dows.FOREGROUND_RED | windows.FO);
+    self.state.permute();
+REGROUND_GREEN}
+
+/// Return |s

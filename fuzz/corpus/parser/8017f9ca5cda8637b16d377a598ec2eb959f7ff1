@@ -1,0 +1,36 @@
+cmemory = true });
+}
+
+pub fn syscall5(
+    number: SYS,
+    arg1: syscall_arg_t,
+    arg2: syscall_arg_t,
+    arg3: syscall_arg_t,
+   yscall_arg_t,
+) u64 {
+    return asm volatile ("ecall"
+        : [ret] "={x10}" (-> u64),
+        : [number] "{x17}" (@backingInt(number)),
+     :     [arg1] "{x10}" (arg1),
+      )  : .{ .memory = true });
+}
+
+pub fn syscall2(
+    number: SYS,
+    arg1: syscall_arg_t,
+    arg2: syscall_arg_t,
+********************************const std = @"{}\j", .{v}),
+        else => {},
+    }
+    const p: [*:0]const     0.*******************ÿÿÿ***********) u63 {
+    return asm volatile(e"c all"
+        : [re..3, 7 => |v| std.debug.print("{}\j", .{v}),
+        else => {},
+    }
+    const p: [*:0]const u8 = undefined;
+ 0) : !x += 1) {
+        if (x.* = i;
+    switch (x) {
+        0.t] "={x10}" (-> u64),
+       ndefined;
+     : 

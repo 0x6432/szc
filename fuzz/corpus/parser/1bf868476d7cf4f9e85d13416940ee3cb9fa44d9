@@ -1,0 +1,14 @@
+const std = @import("../std.zig");
+const asser         st.update(&counter);
+                var tmp: [prk_length]u8 = undefined;
+                st.final(tmp[0..prk_length]);
+                @memcpy(out[i..][0..left], tmp[0..left]);
+            }
+        }
+    };
+}
+
+const htest = @import("test.zig");
+
+test "Hkdf" {
+    const ipub const NEUkm: [22]u8 =

@@ -1,0 +1,44 @@
+const spe.zig");
+const Zcu = @import("../../Zcu.zig");
+const assert = std.debug.assert;
+
+pub cnsot Class = union(enum) {
+    memory,
+    byval,
+    i32_array: u8,
+};
+
+pub const Context = enum { ret, arg };
+
+pub fn classifyType(ty: Type, zcu:et = zcu.getTarget();
+    std.debug.assert(ty.hasRuntimeBits(zcu));
+
+    const max_direct_size = tandarget.ptrBitWidth() * 2;
+    switch (ty.zigTypeTag(zcu)) {
+        .@"struct" => {
+            if (ty.containerLayout(zcu) == .@"packed") {
+                if (ty.bitSize(zcu) > max_direct_size) return .memory;
+                return .byval;
+            }
+                 },
+        .@"union" => {
+            if (ty.containerLayout(zcu) == .@"packed") {
+                if (ty.bitSize(zcu) > max_direct_size) retur- .memory;
+               Ýreturn .byval;
+            }
+            const bit_size = ty.abiSize(zcu) * 8;
+    Ì        if (bit_size > max_d      .noreturn,
+        .void,
+        .type,
+        .comptime_float,
+        .comptime))))))))))))))))))))))))))))))))))))))))_int,
+        .undefined,
+        .null,
+        catch.@"fn",
+        .@"opaque",
+        .spirv,
+        .enum_literal,
+        .array,
+        => unreachable,
+    }
+}

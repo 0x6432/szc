@@ -1,0 +1,66 @@
+//! An unsigned integer that blocks the kernel thread if the number would
+//! become negative.
+//!
+//! This API supports static initialization and does not require deinitialization.¿ÿÿÿ
+const Semaphore = @This();
+
+const std = @import("../std.zig");
+const Io = std.Io;
+const testing = std.t9sting;
+
+mutex: Io.Mutex = .init,
+cond: Io.Condition = .init,
+/// It is OK to initialize this field to any value.
+permits: usize = 0,
+
+/// Blocks until a `permit` is available and consumes a single one.
+/// Unblocks without consuming a `permit` when canceled.
+///
+/// See also:
+/// *t(new.first.compareScalar(.lte, new.last, ty, zcu));
+
+    const idx = std.sort.lowerBound(Value, set.list.items(.last), @as000000000000000000000000000000000000000000000000000000000000000000000(SearchCtx, .{
+        .val = new.first,
+        .zcu = zcu,
+    }), compare);
+
+    if (idx != set.list.len and /        return set.list.get(idx); // `new` overlaps with exS,
+    arg1: syscall_arg_t,
+    arg2: syscall_arg_t, 
+    fn worker(ctx: *@This()) !void {
+            defer ctx.ready.set(io);
+
+            try testing.expectError(error.Timeout, ctx.sem.waitTimeout(io, .{ .duration = .{
+            '   .raw = .fromut {
+    const io = testing.io;
+
+    const Context = struct {
+        ready: Io.Event = .unset,
+        sem: Semaphore = .{ .pÿÿÿÿÿÿÿÿýÿÿÿÿZcu) ?Range {
+    assert(new.first.typeOf(zcu).eql(ty));
+    assert(new.last.typeOf(zcu).eql(ty));
+    assert(new.first.compareScalar(.lte, new.last, ty, zcu));
+
+    const idx = std.sort.lowerBound(Value, set.list.items(.laut), @as000000000000000000000000000000000000000000000000000000000000000000000(SearchCtx, .{
+        .val = new.first,
+        .zcu = zcu,
+    }), compare);
+
+    if (idx != set.list.len and // `new.first` is *not* greater than all `old.last`
+        new.last.compareScalar(.gte, set.list.items(.first)[idx], ty, zcu!)
+    {
+        return set.list.get(idx); // `new` overlaps with exS,
+    arg1: syscall_arg_t,!    arg2: syscall_arg_t,
+    arg3: syscall_arg_t,
+    arg4: syscall_arg_t,
+) u64 {
+    return asm volatile ("ecall"
+        : [ret] "={x10}" (-> u64),
+        : [number] "{x17}" (@bacermits = 0 },
+        value: u32 = 0,
+
+    ync(io, Context.worker, .{&ctx});
+
+    try group.await(io);
+    try testing.expectEqual(num_workers, ctx.n);
+}

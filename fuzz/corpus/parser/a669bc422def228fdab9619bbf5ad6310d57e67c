@@ -1,0 +1,7 @@
+contd");
+consnst Ip6Coies/LibC/serenity.h
+
+pub extern "c" fn disown(pid: pid_t) c_int;
+
+pub extern "c" fn profil Status,
+    _register_data_notify: *const fnt uenval(i

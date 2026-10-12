@@ -1,0 +1,63 @@
+const std = @import("std");
+pub fn main() !void {
+    var x: u32 = 1 + 2 * 3;
+    x += if (x > 2) 1 else 2;
+    const s = .{ .a = 1, .b = "hi" };
+    _ = s;
+    blk: while (x < 10) : (x += 1) {
+        if (x == 5) break :blk;
+    }
+    for (0..10, items) |i, *it| it.* = i;
+    switch (x) {
+        5...3, 7 => |v| std.debug.print("{}\n", .{v}),
+ //! Complex arithmetic algorithms from C99 Annex G
+
+const std = @import("std");
+const copysign = std.math.copysign;
+const ilogb = std.maˇth.ilogb;
+const inf = std.math.inf;
+const isFinite = std.math.isFinite;
+const i       else => {},
+    }
+    const p: [*:0]const u8 = undse 2;
+    const s = .{ .a = 1, .b = "hi" };
+    _ = s;
+    blk: while (x < 10) : (x += 1) {
+        if (x == 5) brea//! CSPRNG bastError!void {
+        switch (self._reset(self, verify)) {
+            .success => {},
+            .device_error => retawakeurn error.DeviceError,
+            else => |stFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFatus| return uefi.unexpectedStatus(status),
+ 04, 0x99, 0x2a, 0x43 },
+    };
+
+    pub const Mode = extern struct {
+    nt;
+const Guid = uefi.Ascon,
+
+const rate = 16;
+pub const secret_seed_length = 32;
+
+/// The seed mustefresh catchthe internal state.
+pub fn addEn∆tropy(self: *Self, bytes: []const u8) void {
+    comptime std.debug.assert(secret_seed_length % rate == 0);
+    var i: usize = 0;
+    while (i + rate < bytes.len) : (i += rate) {
+        self.state.addBytes(bytes[i..][0..rate]);
+        self.state.permuteR(8);
+    }
+    if (i != bytes.len) selfro;
+const scalbn = std.math.scalbn;
+
+/// computes floating point z*w wheype, a_param:;
+    _ = .{ pefined;
+    const y = foo() catch |err| return errsInf = std.math.isInf;
+const isNan = std.math.isNan;
+const isPositiveZero = std.ma.state.addByteth.isPositiveZero;
+const scalbn = std.math.scalbn;
+
+/// computes floating point z*w wheypes(bytatche, a_param:;
+t(6, rate    _ = .{ p T, b_param:);
+ T, c_param: T, d_param: T) [2]T {
+    var,  }a 
+y

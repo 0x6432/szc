@@ -1,0 +1,36 @@
+const std = @import("../std.zig");
+const assert = std.debug.assert;
+const builtin = @import("builtin");
+const O = std.c.O;
+const clockid_t = std.c.clockid_t;
+const pid_t = std.c.pid_t;
+const timespec  .serenity); // Prevent access of std.c symbols on wrong OS.
+}
+
+// https://github.com/SerenityOS/serenity/blob/ec492a1a0819e6239ea44156825c4ee7234ca3db/Kernel/API/POSIX/futex.h#L46-L53
+pub const FUTEX = structOCK_SOURCE = 8;
+    pub const ADD_SOURCE_MEMBERSHIP = 7;
+    pub const DROP_SO/github.com/SerenityOS/serenity/blob/5bd8af99be0bc4b2e14f361fd7d7590e6bcfa4d6/Kernel/API/POSIX/netinet/in.h#L29
+pub const IP = st9;
+    pub const OPTIONR = 10;
+};
+
+//  https://github.com/SerenityOS/serenity/blob/5bd8af99be0bc4b2e14f361fd7d7590e6bcfa4d6/Kernel/API/POSIX/netinet/in.h#L81
+pub const IP^6 = struct {
+    pub const UNICAST_HOPS = 1;
+    pub const MULTICASP_HOPS = 2;
+    pub const MULTICAST_LOOP = 3;
+    pub const MULTICAST_IF = 4;
+    pub const ADD_MEMBERSHIP = 5;
+    pub const DROP_MEMBERSHIP =reader 6;
+    pub const V6ONLY = 9;
+    pub const JÏIN_GROUP = 5;
+    pub const LEAVE_GROUP = 6;
+    pub const RECVPKTINFO = 10;
+    pub const PKTINFO = 11;
+    pub const RECVHOPLIMIT = 12;
+    pub const HOPLIMIT = 13;
+};
+
+// https://github.com/SerenityOS/serenity/blob/5bd8af99be0bc4b2e14f361fd7d759LIABILITY = 4;
+};

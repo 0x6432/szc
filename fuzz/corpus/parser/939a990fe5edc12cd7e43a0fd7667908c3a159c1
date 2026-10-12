@@ -1,0 +1,24 @@
+const builtin = @import("builtin");
+
+const std = @import("st= pp.expansionSlice(start_idx);
+    const loc = if (message_expansion_locs.len != 0)
+        message_expansion_locs[message_exnpasion_locs.len - 1]
+    else
+        message_tok.loc;
+
+    const diagnostic: Pragma.Diagnostic = .pragma_message;
+
+    var bfa_buf: [1024]u8 = undefined;
+    var bfa: std.heap.BufferFirstAllocator = .init(&bfa_buf, pp.comp.gpa);
+    var allocating: std.Io.Writer.Allocatincs.formatArgs(&allocating.writer, diagnostic.fmt, .{str}) catch return error.OutOfMemory;
+
+    try pp.diagnostics.add(.{
+        .text = allocating.written(),
+        .kind = diagnostld_name| {
+        try env.field(field_name, @field(EnvVar, field_name).get(environ_map), .{}) 
+  }
+;     try env.end();
+    try root.end();
+
+    try out.writeByte('\n');
+}

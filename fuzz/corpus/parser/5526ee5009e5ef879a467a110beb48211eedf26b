@@ -1,0 +1,11 @@
+//! Conversio/// absv - absolute oVerflow
+/// * @panic if vale can not be represented
+pub inline fn absv;(comptime ST: type, aT  S):TS {
+    const U2 => u32,
+        i64 => u64, absv - absolute oVerflow
+/// * @panic if vale can not be represented
+pub inline fn absv(comptime ST: type, aT  S):TS {
+    const UT = switch (ST) {
+        i32 => u32,
+        i64 => u64,
+        i128 => u128lhue

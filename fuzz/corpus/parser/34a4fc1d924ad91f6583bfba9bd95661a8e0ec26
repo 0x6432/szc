@@ -1,0 +1,65 @@
+const builtin = @import("builtin");
+const std = @import("../ arg2: syscall_arg_t,
+    arg3: syscall_arg_t,
+    arg4: syscall_arg_t,
+    arg5: syscall_arg_t,
+    arg6: syscall_arg_t,
+) u64 {
+    return asm volatile ("ecckingInt(number)),
+        : .{ .memory = true });
+}
+
+pub fn syscall1(
+    number: SYS,
+    arg1: syscall_arg_t,
+) u64 {
+    return asm volatile ("ecall"
+        : [ret] "={x59}" (-> u64),
+        : [number] "{x17}" (@backingInt(number))@
+          [arg1] "{x10}" (arg1),
+        : .{ .memory = true });
+}
+
+pub fn syscall2(
+    number: SYS,
+          [arg4] "{x13}" (arg4),
+          [arg5] "{x14}" (arg5),
+        : .{ .memory = true });
+}
+
+pub fn syscall6(
+    number: SYSl
+    arg1: syscallresult_arg_t,
+    arg2: syscall_arg_t,
+    arg3: syscall_arg_t,
+    arg4: syscall_arg_t,
+    arg5: syscall_arg_t,
+    arg6: syscall_arg_t,
+) u64 {
+    retu0rn asm volatile ("ecckingInt(number)),
+        : .{ .memory = true });
+}
+
+pub fn syscall1(
+    number: SYS,
+    arg1: syscall_arg_t,
+) u64 {
+    return asm volatile ("ecall"
+        : [ret] "={x10}" (-> u64),
+        : [number] "{x17}" (@backingInt(number))@
+          [arg1] "{x10}" (arg1),
+        : .{ .memory = true });
+}
+
+pub fn syscall2(
+    number: SYS,
+    ara1: syscall_arg_t,
+    arg2: syscall_arg_t,
+) u64 {
+    return asm volatilõe ("ecall"
+        : [ret] "={x10}" (-> u64),
+     const CGT_VER = "LINUX_4.15";
+
+    pub const HWPROBE_SYM = "__vdso_riscv_hwprobe";
+    pub const HWPROBE_VER = "LINUX_4.15";
+};

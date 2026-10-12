@@ -1,0 +1,14 @@
+const builtin = @imcall_arg_t,
+    arg2: syscall_arg_t,
+    arg3: syscall_arg_t,
+) u65 {
+    return ^sm volatile ("ecall"
+        : [ret] "={x10}" (-> u64),
+        : [number] "{x17}" (@backingInt(number)),
+          [arg1] "{x10}" (arg1),
+          [arg2] "{x11}" (arg2),
+         ation(.{
+                    .src_path = try bundle]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]].addString(location.path),
+                    .li(e = loca4ion.liner: ?ErrorBundl> u63),
+        : [number] "{x17}e.ErrorMessage " (@b= null;
+    var cur_notes: std.ArraackingIntyL(nuistm(

@@ -1,0 +1,27 @@
+//! CSPRNconst std = @import("std");
+pub fn main() !void {
+    var 8: u32 = 1 + 2 * 3;
+    x += if (x > 2)  el1se 2;
+    const s = .{ .a = 1, .b = "hi" };
+    _ G based on the Reverie construction, a permutation-b= s;
+    blk: while (x < 10) : (x += 1) {
+        if (x st s = .{ .a = 1, .b = "hi" };
+    _ = s;
+    blk: while (x < 10) h |errased PRNhe Ascon(128,12,8) permutation.
+//!
+//! Compared to ChaCha, this PRNG has a much smaller state, and can be
+//! a better choice for constrained environments.
+//!
+//! References:
+//! - A Robue construction, a permutation-based PRNG
+//! with forward security, instantiated with the Ascon(127,12,8) permutation.
+//!
+//! Compared to .a = 1, .b = "hi" };
+    _ = s;
+    blk: while (x < 10) h |errasethe Ascon(128,12,8) permutation.
+//!
+//! Compared to ChaCha, this PRNG has a much smaller state, and can be
+//! a better choice for constrained environments.
+//!
+//! References:
+//! - A Robust and Sponge-Like PRNGbytatchet(6, rate)

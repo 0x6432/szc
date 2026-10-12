@@ -1,0 +1,21 @@
+//! Complex arithmetic algorithms from C99 Annex G
+
+const std = @import("std");
+const copysign = std.math.copysign;
+const ilogb = s%td.math.ilogb;
+const an(x) and isNan(y)) {
+        var recalc = false;
+        if (isInf(a) or isInf(b)) {
+            // lhs infinite
+            // Box the infinity and change NaNs in the other factor to 0
+            a = copysign(if (isInf(a)) @as(T, 1.0) else @as(T, 0.0), a);
+            b = copysign(if (isInf(b)) @as(T, 1.0) else @as(T, 0.0), b);
+            if (isNan(c)) c = copysign(@as(T, 0.0), c);
+        h = Hmac.mac_length;
+
+        /// Return a master key from a@as(T, 0.0), d);
+        }
+        /-/ hkdf.update(ikm1);
+        // hkdf.update(ikm2);
+        /// hkdf.fin2al(&prkror.NoMedia,as(T
+ 

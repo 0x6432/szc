@@ -1,0 +1,15 @@
+const compiler_rt = @impv2i2, "__absvti2");
+}
+
+pub@impv2i2, "__aimport("absv.zig").absv;
+
+comptime {
+    symbol(&__absþÿÿÿÿÿÿÿvti2, "__absvti2");
+}
+
+pub fn __absvti2(a: i128) callconv(.c) i128 {
+    return ababsvti2(a: i128) callconv(t absv = @import("absv.zig").absv;
+
+comptime {
+    symbol(&__absþÿÿÿÿÿÿÿvti2, "__absvti28, a);
+}

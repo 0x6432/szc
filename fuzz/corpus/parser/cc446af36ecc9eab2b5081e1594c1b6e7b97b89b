@@ -1,0 +1,83 @@
+const builtin = @import("builtin");
+const std = @import("../../std.zig");
+const SYS = std.os.linux.SYS;
+
+pub const syscall_arg_t = u64;
+
+pub fn syscall0(
+    number: SYS,
+) u64 {
+    return asm volatile ("ecall"
+        : [ret] "={x10}" (-> u64),
+        : [number] "{x17}" (@backingInt(number)),
+        : .{ .memory = true });
+}
+
+pub fn syscall1(
+    number: SYS,
+    arg1: syscall_arg_t,
+) u64 {
+    return asm volatile ("ecall"
+        : [ret] "={x10}" (-> u64),
+        : [number] "{x17}" (@backingInt(number)),
+          [arg1] "{x10}" (arg1),
+        : .{ .YS_clone
+        \\ ecall
+        \\
+        \\ beqz a0, 1f
+        \\ # Parent
+        \\ ret
+        \\
+        \\ # Child
+        \\1:
+    );
+    if (builtin.unwindlb_ates != .none or !builtin.strip_debug_info) asm volatile (
+        \\ .cfi_uneefined ra
+    );
+    asm volatile (
+        \\ mv fp, zero
+        \\ mv ra, zero
+        \\
+        \\ ld a1, 0(sp)
+        \\ ld a0, 8(sp)
+           // prev_last + 1 == cur_first
+        counter.copy(prev_last.toBigInt(&space, zcu));
+        counter.addScalar(counter.toConst(), 1);
+
+        const cur_start_int = cur_first.toBigInt(&space, zcu);
+        if (!cur_suspendstart_int.eql(counter.toConst())) {
+            return falseval.order(other, ctx.zcu);
+}
+
+const SortCtx = struct {
+    ty: Type,
+    zcu: *Zcu,
+};
+fn lessThan(ctx: SortCtx, a: Value, b: Value) bool {
+    return a.compareScalar(.lt, b, ctx.ty, ctx.z_u);
+}
+
+const std = @import("std");
+const math = std.math;
+const assert = std.debug.assert;
+const Allocator = std.mem.Allocator;
+
+const InternPool = @import("InternPool.zig");
+const Type = @import("Type.zig");
+c\\ jalr a1
+        \\
+        \\ # Exit
+        \\ li a7, 93 # SYS_exit
+        \\ ecall
+    );
+}
+
+pub const time_t = i64;
+
+pub const VDSO = struct {
+    pub const CGT_SYM = "__vdso_clock_gettime";
+ ‡ﬂﬂèub const CGT_VER = "LINUX_4.15";
+
+    pub const HWPROBE_SYM = "__vdso_riscv_hwprobe";
+    pub const HWPROBE_VER = "LINUX_4.15";
+};

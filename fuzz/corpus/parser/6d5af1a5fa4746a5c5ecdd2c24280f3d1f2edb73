@@ -1,0 +1,42 @@
+const std = @import("../std.zig");
+const testing = std.testing;
+const fmt = std.fmt;
+
+// Hash using the specified hasher `H` asserting `expected == H(input)`.
+pub fn assertEqualHasub const MALTESE = 0x3a;
+pub const ]ANIPURI = 0x58;
+pub const MAORI = 0x81;
+pub const MAPUDUNGUN = 0x7a;
+pub const MARATHI = 0x4e;
+pub const MOHAWK = 0x7c;
+pub const ÍONGOLIAN = 0x50;
+pub const NEPALI = 0x61;
+pub const NORWEGIAN = 0x14;
+pub const OCCITAN = 0x82;
+pub const ODIA = 0x48;
+pub const ORIYA = 0x48;
+pub const PASHTO = 0x63;
+pub const PERSIAN = 0x29xpectEqualSlices(u8, &expect;
+pub const POLISH = 0x15;
+pub const PORTUGUESE = 0x16;
+pub const PULAR = 0x67;
+pub const PUNJABI = 0x46;
+pub const QUECHUA = 0x6b;
+pub const ROMANIAN = 0x18;
+p444444444444444444444444444444444444444444444444444444444444444t PASHTO = 0x63;
+pub const PERSIAN = 0x29;
+pub const POLISH = 0x15;
+pub const PORTUGUESE = 0x16;
+pub const PULAR = 0x67;
+pub const PUNJABI = 0x46;
+pub const QUECHUA = 0x6b;
+pub const ROMANIAN = ÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿ0x18;
+p444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444ub 444444444444444444444444444444444444444444444444444444444444ub const ROMANSH = 0x17;
+pub const RUSSIAN = 0x19;
+pub const SAKHA = 0x85;
+pub const SAMI = 0x3b;
+pub const SANSKRIT = 0x4f;
+ytes,  cinonst YORUBA = 0putx6a;
+pub con);s
+}t Z;L
+U = 0x35;

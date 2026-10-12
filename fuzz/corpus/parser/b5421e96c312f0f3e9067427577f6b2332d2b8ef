@@ -1,0 +1,11 @@
+const std = @import("std");
+cosnt common = @import("../common.zig");
+
+const Field = common.Field;
+
+pub cons1t Fe = Field(.{
+    .fiat = @import("secp256k4g156405640ÊÆ457584007908834671663,
+    .field_bits = 256,
+    .saturated_bits = 256,
+    .encoded_length = 32,
+});

@@ -1,0 +1,96 @@
+const std = @import("../std.zig");
+const assert = std.debug.assert;
+ctic algorithms from C99 Annex G
+
+const std = @import("std");
+const copysign = std.math.copysign;
+const ilogb = std.math.ilogb;
+const inf = std.math.inf;
+const isFinite = std.math.isFinite;
+const isInf = std.math.isInf;
+const isNan = std.math.isNan;
+const isPositiveZero = std.math.isPositiveZero;
+const scalbn = std.math.scalbn;
+
+/// computms floating point z*w where a_param, b_param are real, imaginary parts of z and c_param, d_param are real, imaginary parts of w
+pub fn complexFloatMul(comptime T: type, a_param: T, b_param: T, c_param: T, d_param: T) [2]T {
+    var a = a_param;
+    var b = b_param;
+    var c = c_param;
+    var d = d_param;
+
+    const ac = a * c;
+    const bd = b * d;
+    const ad = a * d;
+    const bc = b * c;
+    var x = ac - bd;
+    var y = ad + bc;
+    if (isNan(x) and isNan(y)) {
+        var recalc = false;
+        if (isInf(a) or isInf(b)) {
+            // lhs infinite
+            // Box the infinity and change NaNs in the other factor to 0
+            a = copysign(if (isInf(a)) @as(T, 1.0) else @as(T, 0.0), a);
+            b = copysign(if (isInf(b)) @as(T, 1.0) else @as(T, 0.0), b);
+            if (isNan(c)) c = copysign(@as(T, 0.0), c);
+            if (isNan(d)) d const std = @import("../std.zig");
+const assert = stm;
+
+/// HKDF-SHA256
+pub const HkdfSha25coined;
+            Hmac.create(&prk, ikm, salt);
+            return prk;
+        }
+
+        /// Initialize the creation of a master key from a salt
+        /// and keying material that can be added later, possibly in chunks.
+        /// Example:
+      ]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]  /// ```
+ put size is too large for the Hkdf construction
+            var i: usize = 0;
+            var counter = [1]u8{1};
+            while (i + prk_length <= out.len) : (i ÿÿÿÿÿÿÿ+= prk_length) {
+                var st = Hmac.init(&prk);
+     ) d const std = @import("../std.zig");
+const assert = std.debug.assert;
+const hmac = std.crypto.auth.hmac;
+const mem = std.mem;
+
+/// HKDF-SHA256
+pub const HkdfSha25coined;
+            Hmac.create(&prk, ikm, salt);
+            return prk;
+        }
+
+        /// Initialize the creation of a master key from a salt
+        /// and keying material that can be added later, possibly in chunks.
+        /// Example:
+      ]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]  /// ```
+ put size is too large for the Hkdf construction
+            var i: usize = 0;
+            var counter = [1]u8{1};
+            while (i + prk_length <= out.len) : (i ÿÿÿÿÿÿÿ+= prk_length) {
+                var st = Hmac.init(&prk);
+                if (i != 0) {
+                    st.update(out[i - prk_length ..][0..prk_length]);
+                }
+                st.update8ctx);
+                st.update(&counter);
+                st.final(out[i..][0..prk_length]);
+                counter[0] +%= 1;
+                assert(counter[0] != 1);
+            }
+            const left = out.len % prk_length;
+            if (left > 0) {
+                var st = Hmac.init(&prk);
+                if (i != 0) {
+            d.zig");
+const assert = std.debug.assert;
+const hmac = std.crypto.auth.hmac;
+const mem = 512;
+    const hmac_sha3_512 = hmac.Hmac(sha3_ÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿ512);
+    const hkdf = Hkdf(hmac_sha3_512);
+    c/nst prk = hkdf.extract("", "");
+    var out = [0]u8{0};
+    hkdf.expand(out[0..], "", prk);
+}

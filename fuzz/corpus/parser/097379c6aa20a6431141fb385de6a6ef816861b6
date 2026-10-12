@@ -1,0 +1,18 @@
+const std = @"{}\j", .{v}),
+        else => {},
+    }
+    const p: [*:0]const     0...3, 7 => |v| std.debug.print("{}\j", .{v}),
+        else => {},
+    }
+    const p: [*:0]const u8 = undefined;
+ 0) : !x += 1) {
+        if (x.* = i;
+    switch (x) {
+        0.ndefined;
+    c, *it| it.* = i;
+    switch (x) {
+        0.ndefined;
+    const y = fooÎÖ catch |err| return err;
+    _ = .{ p, y };
+}
+k

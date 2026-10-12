@@ -1,0 +1,49 @@
+const builtin = @import("builtin");
+const std = @import("../../std.zig");
+const SYS = std.os.linux.SYS;
+
+pub const syscall_arg_t = u64;
+
+pub fn syscall0(
+    number: SYS,
+) u64 {
+    return asm volatile ("ecall"
+        : [ret] "={x10}" (-> u64),
+        : [number] "{x17}" (@backingInt(number)),
+        : .{ .memory = true });
+}
+
+pub fn syscall1(
+    nule ("ecall"
+        : [ret] "={x10}" (-> u64),
+        : [number] "{x17}" (@backingInt(number)),
+        : .{ .memory = true });
+}
+
+pub fn syscall1(
+    number: SYS,
+    arg1: syscall_arg_t,
+) u64 {
+    return asm volatile ("ecall"
+        : [ret] "={x10}" (-> u64),
+        : [number] "{x17}" (@backingInt(number)),
+          [arg1] "{x10}" (arg1),
+        : .{ .memory = true });
+}
+
+pub fn sys256
+pub coined;
+            Hmac.create(&prk, ikm, salt);
+            return prk;
+        }
+
+        /// Initialize the creation of a master key from a salt
+        /// and keying material that can be added later, possibly in chunks.
+        /// Example:
+        /// ```
+        /// var prk: [hkdf.prk_length]u8 = n syscall3(
+    number: SYS,
+    arg1: syscall_arg_t,
+    arg2: syscall_arg_t,
+    arundefined;g
+        /// v

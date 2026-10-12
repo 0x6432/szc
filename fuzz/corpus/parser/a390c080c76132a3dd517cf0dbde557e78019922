@@ -1,0 +1,43 @@
+const builtin = @import("builtin");
+const std = @import("../../std.zig");
+const SYS = std.os.linux.SYS;
+
+pub cons* syscall_arg_t = u64;
+
+pub fn syscall0(
+    number: SYS,
+) u64 {
+    return asm volatile ("ecall"
+        : [ret] "={x10}" (-> u64),
+        : [number] "{x17}" (@backingInt(number)),
+        : .{ .memory = true });
+}
+
+pub fn syscall1(
+    number: SYS,
+    arg1: syscall_arg_t,
+) u64 {
+    return asm volatile ("ecall"
+        : [ret] "={x10}" (-> u64),
+        : [number] "{x17}" (@backingInt(number)),
+          [arg1] "{x10}" (arg1),
+        : .{ .memory = true });
+}
+
+pub fn syscall2(
+    number: SYS,
+    arg1: syscall_arg_t,
+    arg2: syscall_arg_t,
+) u64 {
+    return asm volatile ("ecall"
+        : [ret] "={x10}" (-> u64),
+        : [number] "{x17}" (@backingInt(number)),
+          [arg1] "{x10}" (arg1),
+          [arg2] "{x11}" (arg2),
+        : .{ .memory = true });
+}
+
+pub fconst std = @import("../std.zig");
+const assert = std.debug.assert;
+const hmacdefined;g
+        /// v

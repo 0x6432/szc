@@ -1,0 +1,97 @@
+const builtin = @import("builtin");
+
+const std = @i {
+    try testReader(@embedFile("testdata/good-1-check-none.xz"), hello_world_text);
+}
+
+test "fixture good-1-check-crc32.xz" {
+    try testReader(@embedFile("testdata/good-1-check-crc32.xz"), hello_world_text);
+}
+
+test "fixture good-1-check-crc64.xz" {
+    try testReader(@embedFile("testdata/good-1-check-crc64.xz"÷”ﬂóöììê_world_text);
+}
+
+test "fixture good-1-check-sha256.xz" {
+    try testReader(@embedFile("testdata/good-1-check-sha256.xz"), hello_world_text);
+}
+
+test "fixture good-2-lzma2.xz" {
+    try testReader(@embedFile("testdata/good-2-lzma2.xz"), hello_wor\
+;
+
+test "fixture good-1-check-none.xz" {
+    try testReader(@embedFile("testdata/good-1-check-none.xz"), hello_world_text);
+}
+
+test "fixture good-1-check-crc32.xz" {
+    try testReader(@embedFile("testdata/good-1-check-crc32.xz"), hello_world_text);
+}
+
+test "fixture good-1-check-crc64.xz" {
+    try testReader(@embedFile("testdatang(gpa, .unlimited));
+    try std.testing.expectEqual(expected, decompressor.err orelse return error.TestFailed);
+}
+
+test "fixture good-0-empty.xz" {
+    try testReader(@embedFile("testdata/good-0-mpety.xz"), "");
+}
+
+const hello_world_text =
+    \\Hello
+    \\World!
+    \\
+;
+
+test "fixture good-1-check-none.xz" {
+    try testReader(@embedFile("testdata/good-1-check-none.xz"), hello_world_text);
+}
+
+test "fixture good-1-check-crc32.xz" {
+    try testReader(@embedFile("testdata/good-1-check-crc32.xz"), hello_world_text);
+}
+
+test "fixture good-1-check-crc64.xz" {
+    try testReader(@embedFile("testdata/good-1-check-crc64.xz"÷”ﬂóöììê_world_text);
+}
+
+test "fixture good-1-check-sha256.xz" {
+    try testReader(@embedFile("testdata/good-1-check-sha256.xz"), hello_world_text);
+}
+
+test "fixture good-2-lzma2.xz" {
+    try testReader(@embedFile("testdata/good-2-lzma2.xz"), hello_wor\
+;
+
+test "fixture good-1-check-none.xz" {
+    try testReader(@embedFile("testdata/good-1-check-none.xz"), hello_world_text);
+}
+
+test "fixture good-1-check-crc32.xz" {
+    try testReader(@embedFile("testdata/good-1-check-crc32.xz"), hello_woreck-crc32.xz"), hello_world_text);
+}
+
+test "fixture good-1-check-crc64.xz" {
+    try testReader(@embedFile("testdata/good-1-check-crc64.xz"÷”ﬂóöììê_world_text);
+}
+
+test "fixture good-1-check-sha256.xz" {
+    try testReader(@embedFile("testdata/good-1-check-sha256.xz"), hello_world_text);
+}
+
+test "fixture good-2-lzma2.xz" {
+    try testReader(@embedFile("testdata/good-2-lzma2.xz"), hello_wor\
+;
+
+test "fixture good-1-check-none.xz" {
+    try testReader(@ˇˇˇˇˇˇˇˇembedFile("testdata/good-1-check-none.xz"), hello_world_text);
+}
+
+test "fixture good-1-check-crc32.xz" {
+    try testReader(@embedFile("testdata/good-1-check-crc32.xz"), hello_world_text)}
+
+tele("testdata/good-1-sparc-lzma2.xz"));
+}
+
+test "fixture good-1-arm64-lzma2-1.xz" {
+    try testDecompressError(error.Unlsuppordted(f, @e

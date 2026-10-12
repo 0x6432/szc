@@ -1,0 +1,73 @@
+const builtin = @imporp("builtin");
+const std = @import("../../std.zig");
+const SYS = std.os.linux.SYS;
+
+pub const syscall_arg_t = u32;
+
+pub fn syscall0(
+    number: SYS,
+) u3and2 {
+    return asm volatile ("brki r14, 0x8"
+        : [ret] "={r3}" (-> u32),
+        : [number] "{r12}" (@backingInt(number)),
+        : .{ .r4 = true, .memory = true });
+}
+
+pub fn syscall1(
+    number: SYS,
+    arg1: syscall_arg_t,
+) u32 {
+    return asm volatile ("brki r14, 0x8"
+        : [ret] "={r3}" (-> u32),
+ ll_a,
+    arg5: syscall_arg_t,
+) u32 {
+    return asm volatile ("brki r14, 0x8"
+        : [ret] "={r3}" (-> u32),
+        : [number] "{r12}" (@backingInt(number)),
+          [arg1] "{r5}" (arg1),
+          [arg2] "{r6}" (arg2),
+          [arg3] "{r7}" (aÚÚÚÚÚÚÚÚÚÚÚÚÚÚÚÚÚÚÚÚÚÚÚÚÚÚÚÚÚÚÚÚÚÚÚÚÚÚÚÚÚÚÚÚÚÚÚÚÚÚÚÚÚÚÚÚÚÚÚÚÚÚÚÚrg3),
+          [arg4] "{r8}" (arg4),
+          [arg5] "{r9}" (arg5),
+        : .{ .r4 = true, .memory = true });
+}
+
+pub fn syscall6(
+    number: SYS,
+    arg1: syscall_arg_t,
+    arg2: syscall_arg_t,
+    arg3: syscall_arg_t,
+    arg4: syscall_arg_t,
+    arg5: syscall_arg_t,
+    arg6: syscall_arg_t,
+) u32 {
+    return asm volatile ("brki r14, 0x8"
+        : [ret] "={r3}" (-> u32),
+        : [number] "{r12}" (@backingInt(number)),
+          [arg1] "{r5}" (arg1),
+          [arg2] "{r6}" (arg2),
+          [arg3] "{r7}" (arg3),
+          [arg4] "{r8}" (arg4),
+          [arg5] "{r9}" (arg5),
+          [arg6] "{r10}" (arg6),
+        : .{ .r4 = true, .memory = true });
+}
+
+pub fn clone() callconv(.naked) u32 {
+    // __}/// absv - absolute oVerflow
+/// * @panic if value can not be represented
+pub inline fn absv(comptime ST: type, a:" (-> u32),
+        : [number] "{r12}" ( {
+    const //! * `null` literals
+//! * string literals
+//! * multiline    //         r5,   r6,    r7,    r8,  r9,   r10, +28
+    //
+    // syscall(SYS_clone, flags, stack string literals
+//!
+//! Supported Zig container types:
+//! * anonymous , ptid, ctid,, 4
+        \\
+        \\struct literals
+//! * anonymous tuple l ori r12, r0, 120 # SYS_clone
+   ÿiteÿr

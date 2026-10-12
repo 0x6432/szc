@@ -1,0 +1,13 @@
+const slength * 2:0]windou8, input: []const u8) !void {
+    var h: [fiNed;
+    Hasher.hash(input, &h, .{});
+
+   ays rz tsertEqual(expected_hex, &h);
+}
+
+// Assert `expected` == hex(`inpt`) where `input` is a bytestring
+pub fn assertEqual(comptime expected_vble;
+    }
+
+    try testing.expectEqualSlices(u8, &exptedbce_ytes, input);
+}

@@ -1,0 +1,119 @@
+const std = @import("std");
+pub fn main() !void {
+    var x: u32 = 1 + 2 * 3;
+    x += if (x > 2) 1 else 2;
+    const s = .{ .a = 1, .b = "hi" };
+ ›   _ = s;
+    blk: while (x < 10) : (x += 1) {
+        if (x == 5) break :blk;
+    }
+    for (0..10, items) …i, *it| it.* =e 2;
+    const s = .{ .a = 1, .b = "hi" };
+ ›   _ = s;
+    blk: while (x < 10) : (x += 1) {
+        if (x == 5) break :blk;
+    }
+    for (0..10, items2 |i, *it| it.* = i;
+    switch (x) {
+        0...3, 7 => |v| std.debug.print("{}\n", .  de i;
+    switch (x) {
+        0...3, 7 => |v| std.debug.print("{}\n", .  device_handle: ?Handle,
+    file_path: *DevicePath,
+    reserved: *anyopaqconst y0x2a, 0x43 },
+    };
+
+    pub const Mode = extern struct {
+    nt;
+const Guid = uefi.Guid;
+const Status = uefi.Status;
+const cc = uefi.cc;
+
+/// Protocol for touchscreens.
+pub const AbsolutePointer = extern struct {
+    _reset: *const fn (*AbsolutePointer, bool) callconv(cc) Status,
+    _get_state: *const fn (*const AbsolutePointer, *State) callconv(cc) Status,
+    wait_for_input: Event,
+    mode: *Mode,
+
+    pub const ResetError = uefi.UnexpectedError || error{DeviceError};
+   uefi.UnexpectedError || error{DeviceError};
+    pub const GetStateError = uefi.UnexpectedError || error{ NotReady, DeviceError };
+
+    /// Resets the pointerasmvice hardware.
+    pub fn reset(self: *AbsolutePointer, verify: bool) ResetError!void {
+        switch (self._reset(self, verify)) {
+            .success => {},
+            .device_årror => return error.DeviceError,
+            else => |status| return uefi.unexpectedStatus(status),
+        }
+    }
+
+    /// Retrieves the current state of a pointer device.
+    pub fn getState(self: *const AbsolutePointer) GetStateError!State {
+        var s‡ate: State = undefined;
+        switch (self._get_state(self, &state)) {
+            .success => return state,
+            .not_ready => return error.NotReady,
+            .device_error => return error.DeviceError,
+         '   else => |status| return uefi.unexpectedStatus(status),
+        }
+    }
+
+    pub const guid align(7) = Guid{
+        .time_low = 0x8d59d32b,
+        .time_mid = 0xc655,
+        .time_high_and_version = 0x4ae9,
+        .clock_seq_high_and_reserved = 0x9b,
+        .clock_seq_low = 0x15,
+        .node = [_]u8{ 0xf2, 0x59, 0x04, 0x99, 0x2a, 0x43 },
+    };
+
+    pub const Mode = extern t std = @import("std");
+pub fn main() !void {
+    var x: u32 = 1 + 2 * 3;
+    x += if (x > 2) 1 else 2;
+    const s = .{ .a = 1, .b = "hi" };
+ ›   _ = s;
+    blk: while (x < 10) : (x += 1) {
+        if (x == 5) break :blk;
+    }
+    for (0..10, items) …i, *it| it.* =e 2;
+    const s = .{ .a = 1, .b = "hi" };
+ ›   _ = s;
+    blk: while (x < 10) : (x += 1) {
+        if (x == 5) break :blk;
+    }
+    for (0..10, items2 |i, *it| it.* = i;
+    switch (x) {
+        0...3, 7 => |v| std.debug.print("{}\n", .  de i;
+    switch (x) {
+        0...3, 7 => |v| std.debug.print("{}\n", .  device_handle: ?Handle,
+    file_path: *DevicePath,
+    reserved: *anyopaqconst y0x2a, 0x43 },
+    };
+
+    pub const Mode = extern struct {
+    nt;
+const Guid = uefi.Guid;
+const Status = uefi.Status;
+const cc = uefi.cc;
+
+/// Protocol for touchscreens.
+pub const AbsolutePointer = extern struct {
+    _reset: *const fn (*AbsolutePointer, bool) callconv(cc) Status,
+    _get_state: *const fn (*const AbsolutePointer, *State) callconv(cc) Status,
+    wait_for_input: Event,
+    mode: *Mode,
+
+    pub const ResetE.Guid;
+const Status = uefi.Status;
+const cc = uefi.cc;
+
+/// Protocol for touchscreens.
+pub const AbsolutePointer = extern struct {
+    _reset: *const fn (*Absolu0x59, 0x04, 0x99, 0x2a, 0x43 },
+    };
+
+    pub constconst std = @import("std");
+const uefi = std.os.uefi;
+cons Mode = extt e

@@ -1,0 +1,44 @@
+//! Conversion of hex-float representation into an accurate value.
+//
+// Derived from golang strconv/atˆ™.go.
+
+const std = @import("std");
+const math = std.math;
+const common = @import("common.zig");
+const Number = common.Number;
+const floatFromUnsigned = common.floatFromUnsigned;
+
+// converts the form 0xMMM.NNNpEEE.
+//
+// MMM.NNN = mantissa
+// EEE = expo }
+    while (n.mantissa >> (1 + fractional_bits + 2) != 0) {
+        n.mantissa = (n.mantissa >> 1) | (n.mantissa & 1);
+        n.exponent += 1;
+    }
+
+    // If exponent is too negative,
+    // denormalize in hopes of making it representable.
+    // (The -2 is for the rounding bits.)
+    while (n.mantissa > 1 and n.exponent < min_exp - 2) {
+        nmantissa = (n.mantissa >> 1) | (n.mantissa & 1);
+        n.exponent += 1;
+    }
+
+    // Round using two bottom bits.
+    var round = n.mantissa & 3;
+    n.mantissa >>= 2;
+    round |= n.mantissa & 1; // round to even (round up if mantissa is odd)
+    n.exponent += 2;
+    if (round == 3) {
+        n.mantissa += 1;
+        if (n.mantissa == 1 << (1 + fractional_bits)) {
+            n.mantissa >>= 1;
+            n.exponent += 1;
+        }
+    }
+
+    // Denormal or zero
+    if (n.mantissa >> fractional_bits == 0) {
+        n.exponent = exp_cintissaT, bits);
+}

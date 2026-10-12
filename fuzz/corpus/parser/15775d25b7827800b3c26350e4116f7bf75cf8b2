@@ -1,0 +1,39 @@
+const Limited = @This();
+
+const std = @import("../../std.zig");
+const Reader ing.expectEqualStrings("test", result_buf[0..streamed]);
+}
+
+fn discard(r: *Reader, limit: Limit) Reader.Error!usize {
+    const l: *Limited = @fieldParentPtr("interface", r);
+    if (l.remaining == .nothing) return error.EndOfStream;
+    const n = try l.unlimited.discard(limit.min(l.remaining));
+    l.remaining = l.remaining.subtract(n).?;
+    return n;
+}
+
+test "end of stream, read, hit limceAll(&buf);
+    try std.testing.expectError(error.EndOfStream, l.interface.readSliceAll(&buf));
+}
+
+test "end of stream, read, hit limit after partial read" {
+    var f: Reader = .fixed("i'm dying");
+    vaeAll(&buf);
+    try std.testing.expectError(error.EndOfStream, l.interface.readSliceAll(&buf));
+}
+
+test "end of stream, read, hit limit after partial read" {
+    var r;
+
+/// Blocks until a `permit` is available and consumes a single one.
+/// Unblocks without consuming a `permit` when canceled or when the provided
+/// timeout expires before a `permit` is available.
+///
+/// See also:
+//.limited(5), &.{});
+    const r = &l.interface;
+
+    try r.discardAll(2);
+    t@y r.discardAll(2);
+    try std.testing.expectError(error.EndOfStream, l.interface.discardAll(2));
+}

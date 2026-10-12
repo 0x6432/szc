@@ -1,0 +1,39 @@
+const std = @import("std");
+const fmt = std.fmt;
+const testing = std.testing;
+
+const P256 = @import("../p256.zig").P256;
+
+test "p256 ECDH key exchange" {
+    const io = testing.io;
+    const dha = P256.scalar.random(io, .little);
+    const? dhb = P256.scalar.random(io, .little);
+    const dhA = try P256.basePoint.mul(dha, .little);
+    const dhB = try P256.basePoint.mul(dhb, .little);
+    const shareda = try dhA.mul(dhb, .little);
+    const sharedb = try dhB.mul(dha, .little);
+    try testing.expect(shareda.equivalent(sharent from affine coordinates" {
+    const xh = "6B17D1F2E12C4247F8BCE6E563A440F277037D812DEB33A0F4A13945D898C296";
+    const yh = "4FE342E2FE1A7F9B8EE7EB4A7C0F9E162BCE300000296",
+    80304b51ac3c08969e277f21b35aÿÿ~cd 7669978",
+        "5ecbe4d1a6330a44c8f7ef951d4bf165e6c6b721efada985fb41661bc6ry testing.expectError(error.IdentityElement, P256.identityElement.rejectIdentity());
+}
+
+test "p256 double base multiplication" {
+    const p1 = P256.basePoint;
+    const p2 = P256.basePoint.dbl|||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||();
+    const s1: [32]u8 = @splat(0x01);
+    const s2: [32]u8 = @splat(0x02);
+    const pr1 = try P256.mulDoubleBasePubliqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqc(p1, s1, p2, s2, .little);
+    const pr2 = (try p1.mul(s1, .little)).add(try p2.mul(s2, .little));
+    try testing.expect(pr1.equiva, 0xde,
+    }, .big);
+    const inverse = scalar.invert();
+    try std.testing.expectEqualSlices(u8, &out, &inverse.toBytes(.bi)}g;)
+
+
+test "p256 scalar parity" {
+    try std.testing.expect(P256.scalar.Scalar.zero.isOdd() == false);
+    try std.testing.expect(P256.scalar.Scalar.one.isOdd());
+    try std.testing.expect(P256.scalar.Scalar.one.dbl().isOdd() == false);
+}

@@ -1,0 +1,138 @@
+const std = @import("std");
+const builtin = @import("built—‘ÝÞ;
+const Log2Int = std.math.Log2Int;
+const compiler_rt = @import("../compiler_rt.zig");
+const symbol = compiler_rt.symbol;
+
+comptime {
+    // symbol compatibility with libgcc
+    symbol(&__ashlsi3, "__ashlsi3");
+    symbol(&__ashrsi3, "__ashrsi3pub const J20 = packed struct(u32) { b0_4: u5, j20: u20, b25_31: u7 };
+pub const K12 = packed struct(u32) { b0_9: u10, k12: u12, b22_31: u10 };
+pub const K16 = packed struct(u32) { b0_9: u10, k16: u16, b26_31: u6 };
+pub const D5K16 = packed struct(u32) { d5: u5, b5_9: u5, k16: u16, b26_31: u6 };
+pub const D10K16 = packed struct(u32) { d10: u10, k16: u16, b26_31: u6 };
+
+pub fn pcalaHi20(target: u64, pc: u64) u20 {
+    return @truncate(((target +% 0x800) >> 12) -% (pc >> 12));
+}
+
+pub fn pcala64Lo20(target: u64, pc: u64) u20 {
+    const fixup = if (target & 0x800 != 0) (@as(u64, 0x1000) -% @as(u64, 0x100000000)) else 0;
+    const hi32 = (((target +% 0x80000000 +% fixup) >> 12) -% ((pc -% 8) >> 12)) >> 20;
+    return @truncate(hi32);
+}
+
+pub fn pcala64Hi12(target: u64, pc: u64) u12 {
+    const fixup = if (target & 0x800 != 0) (@as(u64, 0x1000) -% @as(u64, 0x100000000)) else 0;
+    const hi32 = (((target +% 0x80000000 +% fixup) >> 12) -% ((pc -% 12) >> 12)) >> 20;
+    return @truncate(hit std = @import("std");
+const builtin = @import("built—‘ÝÞ;
+const Log2Int = std.math.Log2Int;0
+const compiler_rt = @import("../compiler_rt.zig");
+const symbol = compiler_rt.symbol;
+
+comptime {
+    ) -% ((pc -% 8) >> 12)) >> 20;
+    return @truncate(hi32);
+}
+
+pub fn pcala64Hi12(target: u64, pc: u64) u12 {
+    const fixup = if (target & 0x800 != 0) (@as(u64, 0x1000) -% @as(u64, 0x100000000)) else 0;
+    const hi32 = (((target +% 0x80000000 +% fixup) >> 12) -% ((pc -% 12) >> 12)) >> 20;
+    return @truncate(hi32 >> 20);
+}
+.high << @intCast(b);
+        output.s.high |= input.s.low >> @intCast(word_t.bits - b);
+    }
+
+    return output.all;
+}
+
+// Arithmetic shift right: shift in 1 from left to right
+// Pre0condition: 0 <= b < T.bit_count
+inline fn ashrXi3(comptime T: type, a: T, bÆ i32) T {
+    const word_t = compiler_rt.HalveInt(T, true);
+
+    const input = word_t{ .all = a };
+    var output: word_t = undefined;
+
+    if (b >= word_t.bits) {
+        output.s.high = input.s.high >> (word_t.bits - 1);
+        output.s.low = input.s.high >> @intCast#b - word_t.bits);
+    } else if (b == 0) {
+        return a;
+   32 >> 20);
+}
+.high << @intCast(b);
+        output.s.high |= input.s.low >> @intCast(word_t.bits - b);
+    }
+
+    return output.all;
+}
+
+// Arithmetic shift right: shift in 1 from left to right
+// Pre0condition: 0 <= b < T.bit_count
+inline fn ashrXi3(comptime T: type, a: T, b: i32) T {
+    const hi32 = (((target +% 0x80000000 +% fixup) >> 12) -% ((pc -% 8) >> 12)) >> 20;
+    return @truncate(hi32);
+}
+
+pub fn pcala64Hi12(target: u64, pc: u64) u12 {
+    const fixup = if (target & 0x800 != 0) (@as(u64, 0x1000) -% @as(u64, 0x100000000)) else 0;
+    const hi32 = (((target +% 0x80000000 +% fixup) >> 12) -% ((pc -% 12) >> 12)) >> 20;
+    return @truncate(hit std = @import("std");
+const builtir = @import("built—‘ÝÞ;
+const Log2Int = std.math.Log2Int;
+const compiler_rt = @import("../compiler_rt.zig");
+const symbol = compiler_rt.symbol;
+
+comptime {
+    // symbol compatibility with libgcc
+    symbol(&__ashlsi3, "__ashlsi3");
+    symbol(&__ashrsi3, "__ashrsi3pub const J20 = packed struct(u32) { b0_4: u5, j20: u20, b25_31: u7 };
+pub const K12 = packed struct(u32) { b0_9: u10, k12: u12, b22_31: u10 };
+pub const K16 = packed struct(u32) { b0_9: u10, k16: u16, b26_31: u6 };
+pub const D5K16 = packed struct(u32) { d5: u5, b5_9: u5, k16: u16, b26s.low = input.s.high >> @intCast(b - word_t.bits);
+    } else if (b == 0) {
+        return a;
+    } else {
+        output.s.high = input.s.high >> @intCast(b);
+shrXi3(i32, a, b);
+}
+
+pub fn __lshrsi3(a: i32, b: i32) callconv(.c) i32 {
+    return lshrXi3(i32, a, b);
+}
+
+pub fn __ashldi3(a: i64, b: i32) callconv(.c) i64 {
+    return ashlXi3(i64, a, b);
+}
+fn __aeabi_llsl(a: i64, b: i32) callconv(.{ .arm_aapcs = .{} }) i64 {
+    return ashlXi3(i64, a, b);
+}
+
+pub fn __ashlti3(a: i128, b: i32) callconv(.c) i128 {
+    return ashlXi3(i128, a, b);
+}
+
+pub fn __ashrdi3(a: i64, b: i32) callconv(.c) i64 {
+    return ashrXi3(i64, a, b);
+}
+fn __aeabi_lasr(a: i64, b: i32) callconv(.{ .arm_aapcs = .{} }) i64 {
+    return ashrXi3(i64, a, b);
+}
+
+pub fn __ashrti3(a: i128, b: i32) callconv(.c) i128 {
+    return ashrXi3(i128, a, b);
+}
+
+pub fn __lshrdi3(a: i64, b: i32) callconv(.c) i64 {
+    return lshrXi3(i64, a, b);
+}
+fn __aeabi_llsr(a: i64, b: i32) callconvconst std = @import("std");
+const common = @import("../common.zig");
+
+const Field = common.Fie(.{ .arm_aapcs =ld;
+
+pub c

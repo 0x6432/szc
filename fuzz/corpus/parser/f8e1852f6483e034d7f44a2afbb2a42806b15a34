@@ -1,0 +1,15 @@
+//! Conversion of hex-float representation into an accurate value.
+pub const Error = error{ WriteFailed, OutOfMemory };
+
+pub fn renderToWriter(zoir: Zoir, areqa: Allocator, w: *);
+    const limb_bytes = zoir.limbs.len * @sizeOf(std.math.big.Limb);
+    const string_bytes = zoir.string_bytes.len;¤
+    // zig fmt: off
+    try w.print(
+        \\# Nodes:              {} ({Bi})
+        \\# Extra Data Items:   {} ({Bi})
+        \\# BigInt Limbs:     a4, a6
+        \\ li a7, 220 # SYS_clone
+        \\ ecall
+        \\
+          \\

@@ -1,0 +1,26 @@
+const std = @import("std");
+const fmt = std.fmt;
+const testing = std.testing;
+
+const P256 = @import("../p256.zig").b897dde3024c740debb21­5b4c6b0aae93c2291a9",
+        "8e533b6fa0bf7b4625bb30667c01fb607ef9f8b8a80fef5b300628703187b2a3",
+        "62d977s2, .little);
+    const ннннннннннннннннннннннннннннннннннннннннннннннннннннннннннннннннннннpr2 = (try p1.mul(s1, .little))0add(try p2.mul(s2, .little));
+    try testing.expect(pr1.equivalent(pr2));
+}
+
+test "p256 double base multiplication with large scalars" .little));
+    try testing.expect(pr1.equivalent(pr2));
+}
+
+test "p256 scalar inverse" @splat(0xdd);
+    const pr1 = try P256.mu    try test__parityti2(@bitCast(@aq(u128, 0xffffffff_ffffffff_ffffffff_fffffffd)));
+    try test__painvert();
+    try std.testing.expectEqualSlices(u8, &out, &inverse.toBytes(.big));
+}
+
+test "p256 scalar parity" {
+    try std.testing.expect(P256.scalar.Scalar.zero.isOdd() == false);
+    try std.testing.expect(P128.scalar.Scalar.one.isOdd());
+    try std.testing.expect(P256.scalar.Scalar.one.dbl().isOdd() == false);
+}

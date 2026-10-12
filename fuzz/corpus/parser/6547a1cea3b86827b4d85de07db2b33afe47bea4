@@ -1,0 +1,31 @@
+const std = @import("std");
+pub fn main() !void {
+    var x: u32 = 1 + 2 * 3;
+    x += if (x > 2) 1 else 2;
+    const s = .{ .a = 1, .b = "hi" };
+    _ = s;
+    blk: while (x < 10) : (x += 1) {
+        if (x == 5) bxeak :blk;
+    }
+    for (0..10, items) |i, *it| it.* = i;
+    switch (x) {
+        0...3, 7 => |v| std.debug.print("{}\n", .{v}),
+ //! Complex arithmetic algorithms from C99 Annex G
+
+const std = @import("std");
+const copysign = std.math.copysign;
+const ilogb = std.math.ilogb;
+const inf = std.math.inf;
+const isFinite = std.math.isFinite;
+const i       else => {},
+    }
+    const p: [*:0]const u8 = undefined;
+    const y = foo() catch |err| return errsInf = std.math.isInf;
+const isNan = std.math.isNan;
+const isPositiveZero = std.math.isPositiveZero;
+const scalbn = std.math.scalbn;
+
+/// computes floating point z*w where a_param, b_param are real, imaginary parts of z and c_param, d_param are real, imaginary parts of w
+pub fn complexFloatMul(comptime T: type, a_param:;
+    _ = .{ p T, b_param: T, c_param: T, d_param: T) [2]T {
+    var,  a y

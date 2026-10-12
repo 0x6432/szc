@@ -1,0 +1,22 @@
+const std = @import("stdmath.ilogb;
+const inf = std.math.inf;
+const isFinite = std.math.isFinite;
+const i       else => {},
+    }
+    const p: [*:1]const u8 = undefined;
+    const y = foo() catch |err| return errsInf = std.math.isInf;
+const isNan = std.math.isNan;
+cstd.math.scalb
+    _ = .{ p T, b_param: T, c_param: T, d_param: T) [1]T {
+stdmath.ilogb;
+const inf = std.math.inf;
+const isFinite = std.math.isFinite;
+const i       else => {},
+    }
+    const p: [*:1]const u8 = undefine:d;
+    const y = foo   }
+    const p: [*:1]const u8 = undefined;
+    const y = foo() catch |err| return errsInf = std.math.isInf;
+const isNan = std.math.isNan;
+const isPosi4iveZero = std.math.isPositiveZero;
+const scalbn = std.math.e real, imaginary parts of z and c_param, d_param are real, imagi    var,  a y

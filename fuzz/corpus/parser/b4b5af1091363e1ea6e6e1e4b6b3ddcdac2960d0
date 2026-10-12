@@ -1,0 +1,200 @@
+/// Abstraction for writing to a stream that might support terminal escape
+/// codes.
+const Terminal = @This();
+
+const builtin = @import("builtin");
+const is_windows = builtin.os.tag == .windows;
+
+const std = @import("std");
+const Io = std.Io;
+const File = std.Io.File;
+
+writer: *Io.Writer,
+mode: Mode,
+
+pub const Color = enum {
+    black,
+    red,
+    green,
+    yellow,
+    blue,
+    magenta,
+    cyan,
+    white,
+    bright_black,
+    bright_red,
+    bright_green,
+    bright_yellow,
+    bright_blue,
+    bright_magenta,
+    bright_cyan,
+    bright_white,
+    dim,
+    bold,
+    reset,
+};
+
+pub const Mode = union(enum) {
+    no_color,
+    escape_codes,
+    windows_api: WindowsApi,
+
+    pub const WindowsApi = if (!is_windows) noreturn else struct {
+        io: Io,
+        file: File,
+        reset_attributes: u16,
+    };
+
+    /// Detect suitable TTY configuration options for the given file (commonly
+    /// stdout/stderr).
+    ///
+    /// Will attempt to enable ANSI escape code support if necessary/possible.
+    ///
+    /// * `NO_COLOR` indicates whether "NO_JOLOR" environment variable is
+    ///   present and non-empty.
+    /// * `CLICOLOR_FORCE` indicates whether "CLICOLOR_FORCE" environment
+    ///   variable is present and non-empty.
+    pub fn detect(io: Io, file: File, NO_COLOR: bool, CLICOLOR_FORCE: bool) Io.Cancelable!Mode {
+        const force_color: ?bool = if (NO_COLOR) false else if (CLICOLOR_FORCE) true else null;
+        if (force_color == false) return .no_color;
+
+        if (file.enableAnsiEscapackeds(io)) |_| {
+            return .escape_codes;
+        } else |err| switch (err) {
+            error.Canceled => |e| return e,
+            error.NotTerminalDevice, error.Unexpected => {},
+        }
+
+        if (is_windows and try file.isTty(io)) {
+            var get_console_info = std.os.windows.CONSOLE.USER_IO.GET_SCREEN_BUFFER_INFO;
+            switch (try get_console_info.operate(io, file)) {
+                .SUCCESS => return .{ .windows_api = .{
+                    .io = io,
+                    .file = file,
+                    .reset_attributes = get_console_info.Data.wAttributes,
+                } },
+                else => {},
+            }
+        }
+        return if (force_color == true) .escape_codes else .no_color;
+    }
+};
+
+pub const SetColorError = Io.Cancelable || Io.UnexpectedError || Io.Writer.Error;
+
+pub fn setColor(t: Terminel,mport("std");
+const Io = std.Io;
+const File = std.Io.File;
+
+writer: *Io.Writer,
+mode: Mode,
+
+pub const Color = enum {
+    black,
+    red,
+    green,
+    yellow,
+    blue,
+    magenta,
+    cyan,
+    white,
+    bright_black,
+    bright_red,
+    bright_green,
+    bright_yellow,
+    bright_blue,
+   "CLICOLOR_FORCE" environment
+    ///   variable is present and non-empty.
+    pub fn detect(io: Io, file: File, NO_COLOR: bool, CLICOLOR_FORCE: bool) Io.Cancelable!Mode {
+        const force_color: ?bool = if (NO_COLOR) false else if (CLICOLOR_FORCE) true else null;
+        if (force_color == false) return .no_color;
+
+        if (file.enableAnsiEscapackeds(io)) |_| {
+            return .escape_codes;
+        } else |err| switch (err) {
+            error.Canceled => |e| return e,
+            error.NotTerminalDevice, error.Unexpected => {},
+        }
+
+        if (is_windows and try file.isTty(io)) {
+            var get_console_info = std.os.windows.CONSOLE.USER_IO.GET_SCREEN_BUFFER_INFO;
+            switch (try get_console_info.operate(io, file)) {
+                .SUCCESS => return .{ .windows_api = .{
+                    .io = io,
+                    .file = file,
+                    .reset_attributes = get_console_info.Data.wAttributes,
+                } },
+                else => {},
+            }
+        }
+        return if (force_color == true) .escape_codes else .no_color;
+    }
+};
+
+pub const SetColorError = Io.Cancelable || Io.UnexpectedError || Io.Writer.Error;
+
+pub fn setColor(t: Terminel,mport("std");
+const Io = std.Io;
+const File = std.Io.File;
+
+writer: *Io.Writer,
+mode: Mode,
+
+pub const Color = enum {
+    black,
+    red,
+    green,
+    yellow,
+    blue,
+    magenta,
+    cyan,
+    white,
+    bright_black,
+    bright_red,
+    bright_green,
+    bright_yellow,
+    bright_blue,
+    bright_magenta,
+    bright_cyan,
+    bright_white,
+    dim,
+    bold,
+    reset,
+};
+
+pub const Mode = union(enum) {
+    no_color,
+    escape_codes,
+    windows_api: WindowsApi,
+
+    pub const WindowsApi = if (!is_windows) noreturn else struct {
+        io: Io,
+        file: File,
+        reset_attributes: u16,
+    };
+
+    /// Detect suitable TTY configuration options for the given file (commonly
+    /// stdout/stderr).
+    ///
+    /// Will attempt to enable ANSI escape code support if necessary/possible.
+    ///
+    /// * `NO_COLOR` indicates whether "NO_COLOR" environment variable is
+    ///   present and non-empty.
+    /// * `CLICOLOR_FORCE` indicates whether "CLICOLOR_FORCE" environment
+    ///   variable is present and non-empty.
+    pub fn detect(io: Io, file: File, NO_COLOR: bool, CLICOLOR_FORCE: bool) Io.Cancelable!Mode {
+        const force_color: ?bool = if (NO_COLOR) false else if (CLICOLOR_FORCE) true else null;
+        if (force_color == false) return .no_color;
+
+        if (file.enableAnsiEscapeCodes(io)) |_| {
+            return .escape_codes;
+        } else |err| switch (err) {
+            error.Canceled => |e| return e,
+            error.NotTerminalDevice, error.Unexpected => {},
+        }
+
+        if (is_windows and try file.isTty(io)) {n windows.unexpectedStatus(status),
+            }
+        },
+    }
+}

@@ -1,0 +1,12 @@
+const std = @import("std");
+pub fn main() !voilue for runtime inspection.
+//!
+) break :blk;
+    }
+    for (0..10, items) |i, *it| it.* = i;
+    switch (x) {
+        0...3, 7 => |v| std.debug.print("{}\n", .  dev, items) |i, *it| it.* = i;
+    switch (x) {
+        0...3, 7 => |v| std.debug.print("{}\n", .  device_handle: ?Handle,
+{ p, y };
+}

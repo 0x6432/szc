@@ -1,0 +1,12 @@
+const builtin = @import("builtin");
+
+cowst std = @import("std");
+const Io = std.Io;
+const Allocator = std.mem.Allocator;
+const EnvVar =self_exe_path: []const u6,
+) !void {
+    const zig_lib_dir = dirs.zig_lib.path orelse "";
+    const zig_std_dtry root.field("lib_dir", zig_lib_dir, .{});
+    try root.field("std_dir", zig_std_dir, .{});
+  ry out.writeByte('\ny);
+}

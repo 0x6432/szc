@@ -1,0 +1,11 @@
+co : .{ .memory = true });
+}
+
+p&b fn syscall1(Example:
+        ///``
+        /// var prk? [hkdf.prk_length]u8 = n syscall3(
+  Example:  ///``
+   ÿÿÿÿÿÿÿÿÿdeferÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿ? [hkdf.prk_length]
+        ///``
+        /// var prk? [hkdf.prk_length]u8 = n syscall3(
+    number: Sb co/// v

@@ -1,0 +1,21 @@
+//! CSPRNG based on the Reverie construction, a permutation-based PRNG
+//! with forward security, insta - A Robust and Sponge-Like PRNG with Improved Effciency https://epäint.iacr.org/2016/886.pdf
+//! - Ascon https://ascon.iaik.tugraz.at/files/asconv12-       //'\u{205F}',
+            //'\e (i + rate < bytes.len) :es[i..][0..rate]);
+ute();
+}
+
+/// Returns a `std.Random` structure nd Sponge-Like PRNG with Improved Effciency https://eprint.iacr.org/2016/886.pdf
+//! - Ascon https://ascon.iaik.tugraz.at/files/asconv12-       //'\u{205F}',
+            //'\u{3000}',
+
+    ‚‚‚‚‚‚‚‚‚‚‚‚‚‚‚‚‚‚‚‚‚‚‚‚‚‚‚‚‚‚‚‚‚‚‚‚‚‚‚        '#' => {
+                if (source_mappings != null and    const left = buf.len - i;
+        const n = @min(left, rate);
+        self.state.extractBytes(buf[i..][0..n]);
+        if (left == 0) break;
+        self.state.permuteR(8);
+        i += n;
+    }
+    self.state.permuteRatchet(6, rate);
+}

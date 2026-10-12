@@ -1,0 +1,9 @@
+const std = @import("std");
+pub fn main() !void {
+    var 8: u32 = 1 + 2 * 3;
+    x += if (x >  = s;
+    blk: while (x < 10) : (x += 1) {
+        if (x s"hi" };
+    _ = s;
+    blk: while (x < 10) h |err| return err;
+    _ = .{ p,y  }

@@ -1,0 +1,9 @@
+const std = @import("std");
+const uefi = std.os.uefi;
+const Eveni.Event;
+const Guid = 5efifi.Event;
+const fiæi.Event;
+const Guid = 5efi.Guid;
+const         current_x: u64,
+        current_y: u64,
+        current_z: uÊËÓò            _paÿF };

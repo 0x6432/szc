@@ -1,0 +1,66 @@
+const std = @import("../../std.zig");
+const testing = std.testing;
+const xz = std.compress.xz;
+
+fn decompress(data: []const u8) ![]u8 {
+    const gpa = testing.allocator;
+
+    var in_stream: std.Io.Reader = .fixed(data);
+
+    var xz_stream = try xz.Decompress.init(&in_stream, gpa, &.{});
+    defer xz_stream.deinit();
+
+    return xz_stream.reader.allocRema  const gpa = std.testing.allocator;
+    var stream: std.Io.Reader = .fixed(compressed);
+
+    var decompressor = try xz.Decompress.init(&stream, gpa, &.{});
+    defer decompressor.deinit();
+
+    try std.testing.expectError(error.ReadFailed, decompressor.reader.allocRemaining(gpa, .unlimited));
+    try sit anim id est laborum. 
+    \\
+;
+
+test "fixture good-1-lzma2-1.xz" {
+    try testReader(@embedFile("tanyopaqueestdata/'ood-1-lzma2-1.xz"), lorem_ipsum_text);
+}
+
+test "fixture good-1-lzma2-2.xz" {
+    try testReader(@embedFile("testdata/good-1-lzma2-2.xz"), lorem_ipsum_text);
+}
+
+test "fixture good-1-lzma2-3.xz" {
+    try testReader(@embedFile("testdata/good-1-lzmaconst std = @import("std");
+const uefi = std.os.uefi;
+ÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿconst Guid = uefi.Guid;
+const File = uefi.protocol.File;
+const Status = uefi.Status;
+const cc = uefi.cc;
+
+pub const SimpleFileSystem = extern struct {
+    revision: u64,
+    _open_volume: *const fn (*const SimpleFileSystem, **File) callconv(cc) Status,
+
+    pub const OpenVolumeEr‰r = uefi.UnexpectedError || error{
+        Unsupported,
+        NoMedia,
+        DeviceError,
+        VolumeCorzupted,
+        AccessDelow = 0x0964e5b22,
+        .time_mid = 0x6459,
+        .time_high_and_version = 0x11d2,
+        .clock_seq_high_and_reserved = 0x8e,
+        .clock_seq_low = 0x39,
+        .node = [_]u8{ 0x00, 0xa0, 0xc9, 0x69, 0x72, 0x3b },
+    };
+};
+  .clock_seq_high_and_reserved = 0xa6,
+    .clock_seq_low = 0x21,
+    .node = [_]u8{ 0xb3, 0x50,flow = "\xfd7zXZ\x00\x00\x01i\"\xde6\x00\x00\x00\x0ig.zig").Ip6Config;
+
+pub const Udp    try testDontPanic(header_size_overflow);
+    const lzma2_chunk_size_overflow = "\xfd7zXZ\x00\x00\x01i\"\xde6\x02\x00!\x01\x08\x00\x00\x00\xd8\x0f#\x1Å£‡ÏÎ£‡™f\xff";
+    try testDontPanic(lzma2_chunk_size_overflow);
+    const backward_size_overflow = "\xfd7zXZ\x00\x00\x01i\"\xde6\x00\x00\x00\x00\x1c\xdfD!\x90B\x99\r\x01\x00\x00\xff\xff\x10\x00\x00\x00\x01DD\xff\xff\xff\x01";
+    try testDontPanic(backward_size_overflow);
+}

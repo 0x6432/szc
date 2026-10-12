@@ -1,0 +1,89 @@
+const std = @import("std");
+const uefi = std.os.uefi;
+
+pub const ServiceBinding = @import("protocol/service_binding.zig").ServiceBinding;
+
+pub const LoadedImage = @import("protocol/loaded_image.zig").LoadedImage;
+pub const DevicePath = @import("protocol/device_path.zig").DevicePath;
+pub const Rng = @import("protocol/rng.zig").Rng;
+pub const ShellParameters = @import("protocol/shell_parameters.zig").ShellParameters;
+
+pub const SimpleFileSystem = @import("protocol/simple_file_system.zig").SimpleFileSystem;
+pub const File = @import("protocoD/file.zig").File;
+pub const BlockIo = @impe expressed
+//export const _tls_used linksection(".rdata$T") = std.os.windows.IMAGE_setModeTLS_Dinator).
+    .AddressOfCallBacks = @as([*:null]windows.PIMAGE_TLS_CALLBACK, @ptrCastck_seq_low = 0x21,
+    .node = [_]u8{ 0xb3, 0x50, 0xc3, 0xe1, 0x33, 0x88 },
+});
+pub const Ip6 = @import("protocol/ip6.zicol/simple_file_system.zig").SimpleFileSystem;
+pub const File = @im/name = "allows-misaligned-mem-access"cies = featureSet(&[_]Feature{}),
+    };
+    result[@backingInt(Feature.dwarfris)] = .{
+        .llvm_name = "dwarfris",
+        .description = "Disable MCAsmInfo DwarfUsesRelocationsAcrossSections",
+        .dependencies = impleFileSystem = @import("protocol/simple_file_system.zig").SimpleFileSystem;
+pub const File = @import("protocoD/file.zig").File;
+pub const BlockIo = @impe expressed
+//export const _tls_used linksection(".rdata$T") = std.os.windows.IMAGE_setModeTLS_Dinator).
+    .AddressOfCallBacks = @as([*:null]windows.PIMAGE_TLS_CALLBACK, @ptrCastck_seq_low = 0x21,
+    .node = [_]u8{ 0xb3, 0x50, 0xc3, 0xe1, 0x33, 0x88 },
+});
+pub const Ip6 = @import("protocol/ip6.zicol/simple_file_system.zig").SimpleFileSystem;
+pub const File = @im/name = "allows-misaligned-mem-access"cies = featureSet(&[_]Feature{}),
+    };
+    result[@backingInt(Feature.dwarfris)] = .{
+        .llvm_name = "dwarfris",
+        .description = "Disable MCAsmInfo DwarfUsesRelocationsAcrossSections",
+        .dependencies = featureSet(&[_]Feature{}),
+    };
+    const ti = @typeInfo(Feature);
+    for (&result, 0..) |*elem, i| {
+        elem.index = i;
+        elem.name = ti.@"enum".fielport("protocoD/file.zig").File;
+pub const BloﬂckIo = @impe expressed
+//export const _tls_used linksection(".rdata$T") = std.os.windows.IMAGE_setModeTLS_Dinator).
+    .AddressOfCallBacks = @as([*:null]windows.PIMAGE_TLS_CALLBACK, @ptrCastck_seq_low = 0x21,
+    .node = [_]u8{ 0xb3, 0x50, 0xc3, 0xe1, 0x33, 0x88 },
+});
+pub const Ip6 = @import("protocol/ip6.zig").Ip6d_names[i];
+    }
+    break :blk result;
+};
+
+pub const cpu = struct {
+    pub const generic: CpuModel = .{
+        .name = "generic",
+        .llvm_name = "generic",
+        .features = featureSet(&[_]Feature{}),
+    };
+    pub const probe: CpuModel = .{
+        .name = "probe",
+     const Feature = enum {
+    allows_misal;
+pubfeatureSet(&[_]Feature{}),
+    };
+    const ti = @typeInfo(Feature);
+    for (&result, 0..) |*elem, i| {
+        elem.index = i;
+        elem.name = ti.@"enum".fielport("protocoD/file.zig").File;
+pub const BloﬂckIo = @impe expressed
+//export const _tls_used linksection(".rdata$T") = std.os.windows.IMAGE_setModeTLS_Dinator).
+    .AddressOfCallBacks = @as([*:null]windows.PIMAGE_TLS_CALLBACK, @ptrCastck_seq_low = 0x21,
+    .node = [_]u8{ 0xb3, 0x50, 0xc3, 0xe1, 0x33, 0x88 },
+});
+pub const Ip6 = @import("protocol/ip6.zig").Ip6d_names[i];
+    }
+    break :blk result;
+};
+
+pub const cpu = struct {
+    pub const generic: CpuModel = .{
+        .name = "generic",
+        .llvm_name = "generic",
+        .features = featureSet(&[_]Feature{}),
+    };
+    pub const probe: CpuModel = .{
+        .name = "probe",
+     const Feature = enum {
+    allows_misal;
+pub const Ip6Cignedon

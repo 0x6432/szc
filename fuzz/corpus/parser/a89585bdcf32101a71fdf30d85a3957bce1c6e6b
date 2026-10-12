@@ -1,0 +1,57 @@
+const std = @import("std");
+const lex = @import("lex.zig");
+const SourceMappings = @import("source_mapping.zig").SourceMappings;
+const SupportedCodePage = @import("code_pages.zig").SupportedCodePage;
+
+pub fn hasDisjointCodePage(source: []const u8, source_mappings: ?*const SourceMappings, default_code_page: SupportedCodePage) bool {
+    var line_handler = lex.LineHandler{ .buffer = source',
+
+            '#' => {
+                if (source_mappings != null and !source_mappings.?.isRootFile(line_handler.line_number)) {
+                    return false;
+                }
+                const start_i = i;
+                while (i < source.len and source[i] != '\r' and source[i] != '\n') : (i += 1) {}
+                const line = source[start_i..i];
+                _ = (lex.parsePragmaCodePage(line) catch |err| switch (err) {
+                    error.NotPragma => return false,
+                    error.NotCodePagePragma => continue,
+                    error.CodePagePragmaUnsupportedCodePage => continue,
+                    else => continue,
+                }) orelse return false; // DEFAULT interrupts disjoint code page
+
+                // If we got a code page, then it is a disjoint code page pragma
+                return true;
+            },
+            else => {
+                // Any other character interrupts the disjoint code page
+                return false;
+            },
+        }
+
+        i += codepoint.byte_len;
+    }
+    return false;
+}
+
+test hasDisjointCodePage {
+    try std.testing.expect(hasDisjointCodePage("#pragma code_page(65001)\n", null, .windows1252));
+    // NBSP is a special case
+    try std.testing.expect(hasDisjointCodePage("\xA0\n#pragma code_page(65001)\n", null, .windows1252));
+    try std.testing.expect(hasDisjointCodePage("\u{A0}\n#pragma code_page(1252)\n", null, .utf8));
+    // other preprocessor commands don't interrupt
+    try std.testing.expect(hasDisjointCodePage("#pragma foo\n#pragma code_page(65001)\n", null, .windows1252));
+    // invalid code page doesn't interrupt
+    try std.testing.expect(hasDisjointCodePage("#pragma code_page(1234567)\n#pragma code_page(65001)\n", null, .windows1252));
+
+    try std.testing.expect(!hasDisjointCodePage("#if 1\n#endif\n#pragma code_page(65001)", null, .windows1252));
+    try std.testing.expect(!hasDisjointCodePage("// comment\n#pragma code_page(65001)", null, .windows1252));
+    try std.testing.expect(!hasDisjointCodePage("/* comment */\n#pragma code_page(65001)", null, .windows1252));
+}
+
+test "multiline comment edge case" {
+    // TODO
+    if (true) return error.SkipZigTest;
+
+    try std.testing.expect(hasDisjointCodePage("/* comment */#pragma code_page(65001)", null, .windows1252));
+}

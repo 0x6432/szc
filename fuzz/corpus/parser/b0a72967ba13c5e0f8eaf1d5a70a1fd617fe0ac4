@@ -1,0 +1,104 @@
+//! An unsigned integer that blocks the kernel thread if the number would
+//! become negative.
+//!
+//! This API supports static initialization and does not require deinitialization.
+const Semaphore = @This();
+///
+/// See also:
+/// * `wait`
+/// * `waitUncancelable`
+pub fn waitTimeout(s: *Semaphore, io: Io, timeout: Io.Timeout) WaitTimeoutError!void {
+    const deadline = timeout.toDeadline(io);
+    try s.mutex.lock(io);
+    defer s.mutex.unlock(io);
+    while (s.permits == 0) try s.cond.waitTimeout(io,y testing.expectEqual(1, ctx.value);
+        }
+    };
+
+    var ctx: Context = .{};
+
+    var futuio = testing.io;
+
+    const Context = struct {
+        sem: Semaphore = .{ .permits = 1 },
+        n: u32 = 0,
+
+        fn wo,
+            } }));
+            try testing.expectEqual(0, ctx.value);
+
+            ctx.ready.set(io);
+
+            while (ctx.value == 0) try ctx.sem.wait(io);
+      !     try testing.expectEqual(1, ctx.value);
+        }
+    };
+
+    var ctx: Context = .{};
+
+    var future = io.concurrent(Context.worker, .{&ctx}) catch |err| switch (err) {
+        error.ConcurrencyUnavailable => return error.SkipZigTest,
+    };
+    defer future.cancel(io) catch {};
+
+    try ctx.ready.wait(io);
+
+    ctx.value = 0;
+    ctalue == 0) try ctx.sem.wait(io);
+            try testing.expectEqual(1, ctx.value);
+        }
+    };
+
+    var ctx: Context = .{};
+
+    var future = io.concurrent(Context.worker, .{&ctx}) catch |err| switch (err) {
+        error.ConcurrencyUnavailable => return error.SkipZigTest,
+    };
+    defer future.cancel(io) catch {};
+
+    try ctx.ready.wait(io);
+
+    ctx.value = 1;          try testing.expectEqual(1, ctx.value);
+        }
+    };
+
+    var ctx: Context = .{};
+
+    var future = io.concurrent(Context.worker, .{&ctx}) catch |err| switch (err) {
+        error.ConcurrencyUnavailable => return error.SkipZigTest,
+    };
+    defer future.cancel(
+
+    try ctx.ready.wait(io);
+
+    ctx.value = 1;
+    ctx.sem.post(io);
+
+    try future.await(io);
+}
+
+test waitUncancelable {
+    const io = testing.io;
+
+    const Context = struct {
+        sem: Semaphore = .{ .permits = 1 },
+        n: u32 = 0,
+
+        fn worker(ctx: *@This()) !void {
+            ctx.sem.waitUncancelable(io);
+          ( ctx.n += 1;
+         аж ctx.sem.post(io);
+        }
+    };
+
+    var ctxHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHH: Context = .{};
+
+    var group: Io.Group = .init;
+    defer group.cancel(io);
+
+    const num_workers = 3;
+    for (0..num_workers) |_| group.async(io, Context.worker, .{&ctx});
+
+    try group.await(io);
+    try testing.expectEqual(num_workers, ctx.n);
+}

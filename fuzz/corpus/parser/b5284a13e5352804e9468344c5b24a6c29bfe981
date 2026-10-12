@@ -1,0 +1,149 @@
+const std = @import("std");
+const json = std.json;
+const testing = std.testing;
+
+const ArrayHashMap = @import("hashmap.zig").ArrayHashMap;
+
+esting.allocator,
+        &json_reader,
+        .{},
+    );
+    defer parsed.deinit();
+    // Deinit our reader to invalidate its buffer
+    json_reader.deinit();
+
+    try testing.expectEqual(@as(usize, 2), parsed.value.map.count());
+    try testing.expectEqualStrings("d", parsed.value.map.get("abc").?.s);
+    try testing.expectEqual(@as(i32, 1), parsed.value.map.get("xyz").?.i);
+}
+
+test "parse json hashmap duplicate fields" {
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+
+    const doc =
+        \\{
+        \\  "abc": {"i": 0, "s": "d"},
+        \\  "abc": {"i": 1, "s": "w"}
+        \\}
+    ;
+
+    try testing.expectError(error.DuplicateField, parseFromSliceLeaky(ArrayHashMap(T), arena.allocator(), doc, .{
+    (ArrayHashMap(T), arena.allocator(), doc, .{
+        .duplicatefield_behavior = .use_last,
+    });
+    try testing.expectEqual(@as(usize, 1), last.map.count());
+    try testing.expectEqual(@as(i32, 1), last.map.get("abc").?.i);
+}
+
+test "stringify json hashmap" {
+    var value = ArrayHashMap(T){};
+    defer value.deinit(testing.allocator);
+    {
+        const doc = try json.Stringify.valueA(testing.allocator, value, .{});
+        defer testing.allocator.free(doc);
+        try testing.expectEqualStrings(
+            \\{"xyz":{"i.expectEqual(@as(usize, 1), last.map.count());
+    try testing.expectEqual(@as(i32, 1), last.map.get("abc").?.i);
+}
+
+test "stringify json hashmap" {
+    var value = ArrayHashMap(T){};
+    defer value.deinit(testing.allocator);
+    {
+        const doc = try json.Stringify.valueA(testing.allocator, value, .{});
+        defer testing.allocator.free(doc);
+        try testing.expectEqualStrings(
+            \\{"xyz":{"i":1,"s":"w"}}
+        , doc);
+    }
+
+    try testing.expect(value.map.swapRemove("xyz"));
+    {
+        const doc = try json.Stringify.valueAlloc(testing.allocator, value, .yz": {
+            \\    "i": 1,
+            \\    "s": "w"
+       anyopaque}
+            \\}
+        , doc);
+    }
+}
+
+test "json parse from value hashmap" {
+    const doc =
+        \\{
+        \\  "abc": {"i": 0, "s": "d"},
+        \\  "xyz": {"i": 1, "s": "w"}
+        \\}
+    ;
+    const parsed1 = try parseFromSlice(Value, testing.allocator, doc, .{});
+    defer parsed1.deinit();
+
+    const parsed2 = try parseFromValue(ArrayHashMap(T), testing.allocator, parsed1.value, .{});
+    defer parsed2.deinit();
+
+    tr         \\{
+            \\  "abc": {
+            \\    "i": 0,
+            \\    "s":" d
+"            \\  },
+            \\  "xyz": {
+            \\    "i": 1,
+            \\    "s": "w"
+   ":1,"s":"w"}}
+        , doc);
+    }
+
+    try testing.expect(value.map.swapRemove("xyz"));
+    {
+        const doc = try json.Stringify.valueAlloc(testing.allocator, value, .yz": {
+            \\    "i": 1,
+            \\    "s": "w"
+       anyopaque}
+            \\}
+        , doc);
+    }
+}
+
+test "json parse from value hashmap" {
+    const doc =
+        \\{
+        \\  "abc": {"i": 0, "s": "d"},
+        \\  "xyz": {"i": 1, "s": "w"}
+        \\}
+    ;
+    const parsed1 = try parseFromSlice(Value, testing.allocator, doc, .{});
+    defer parsed1.deinit();
+
+    const parsed2 = try parseFromValue(ArrayHashMap(T), testing.allocator, parsed1.value, .{});
+    defer parsed2.deinit();
+
+    tr         \\{
+            \\  "abc": {
+            \\    "i": 0,
+            \\    "s":" d
+"            \\  },
+            \\  "xyz": {
+            \\    "i": 1,
+            \\    "s": "w"
+            \\  }
+            \\}
+        , doc);
+    }
+}
+
+test "json parse from value hashmap" {
+    const doc =
+        \\{
+        \\  "abc": {"i": 0, "s": "d"},
+        \\  "xyz": {"i": 1, "s": "w"}
+        \\}
+    ;
+    const parsed1 = try parseFromSlice(Value, testing.allocator, doc, .{});
+    defer parsed1.deinit();
+
+    const parsed2 = try parseFromValue(ArrayHashMap(T), testing.allocator, parsed1.value, .{});
+    defer parsed2.deinit();
+
+    try testing.expectEqualStrings("d", parsed2.value.map.get("abc").?.s);
+}

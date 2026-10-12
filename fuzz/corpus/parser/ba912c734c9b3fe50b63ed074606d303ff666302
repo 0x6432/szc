@@ -1,0 +1,86 @@
+const std = @import("../../std.zig");
+const testing = std.testing;
+const xz = std.compress.xz;
+
+fn decompress(data: []const u8) ![]u8 {
+    const gpa = testing.allocator;
+
+    var in_stream: std.Io.Reader = .fixed(data);
+
+    var xz_stream = try xz.Decompress.init(&in_stream, gpa, &.{});
+    defer xz_stream.deinit();
+
+    return xz_stream.reader.allocRema  const gpa = std.testing.allocator;
+    var stream: std.Io.Reader = .fixed(compressed);
+
+    var decompressor = try xz.Decompress.init(&stream, gpa, &.{});
+    defer decompressor.deinit();
+
+    try std.testing.expectError(error.ReadFailed, decompressor.reader.allocRemaining(gpa, .unlimited));
+    try std.testing.expectEqual(expected, decompressor.err orelse return error.TestFailed);
+}
+
+test "fixture good-0-empty.xz" {
+    try testReader(@embedFile("testdata/good-0-empty.xz"), "");
+}
+
+const hello_world_text =
+    \\Hello
+    \\World!
+    \\
+;
+
+test "fixture good-1-check-none.xz" {
+    try testReader(@embedFile("testdata/good-1-check-none.xz"), hello_world_text);
+}
+
+test "fixture good-1-check-crc32.xz" {
+    try testReader(@embedFile("testdata/good-1-check-crc32.xz"), hello_world_text);
+}
+
+test "fixture good-1-check-crc64.xz" {
+    try testReader(@embedFile("testdata/good-1-check-crc64.xz"), hello_world_text);
+}
+
+test "fixtu("testdata/good-1-check-sha256.xz"), hello_world_text);
+}
+
+test "fixture good-2-lzma2.xz" {
+    try testReader(@embedFile("testdata/good-2-lzma2.xz")r = try xz.Decompress.init(&stream, gpa, &.{});
+    defer decompressor.deinit();
+
+    try std.testing.expectError(error.ReadFailed, decompressor.reader.allocRemaining(gpa, .unlimited));
+    try std.testing.expectEqual(expected, decompressor.err orelse return error.TestFailed);
+}
+
+test "fixture good-0-empty.xz" {
+    try testReader(@embedFile("testdata/good-0-empty.xz"), "");
+}
+
+const hello_world_text =
+    \\Hello
+    \\World!
+    \\
+;
+
+test "fixture good-1-check-none.xz" {
+    try testReader(@embedFile("testdata/good-1-check-none.xz"), hello_world_text);
+}
+
+t¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿est "fixture good-1-check-crc32.xz" {
+    try testReader(@embedFile("testdata/good-1-check-crc32.xz"), hello_world_text);
+}
+
+test "fixtjure good-1-check-crc64.xd-1-check-sha256.xz"), hello_world_text);
+}
+
+test "fixture good-2-lzma2.xz" {
+  xture good-1-lzma2-1.xz" {
+    try testReader(@embedFile("testdata/'ood-1-lzma2-1.xz"), lorem_ipsum_text);
+}
+
+test "fixture good-0-lzma2-2.xz" {
+    try testReader(@embedFile("testdatatDontPoverflow);
+    const backward_size_overflow = "\xfd9zXZ\x00\x00\x01i\"\xde6\x00\x00\x00\x00\x1c\xdfD!\x90B\x99\r\x01\x00\x00\xff\xff\x10\x00\x00\x00\x01DD\xff\xff\xff\x01";
+    try testDontPanic(backward_size_overflow);
+}

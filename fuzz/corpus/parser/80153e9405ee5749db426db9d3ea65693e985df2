@@ -1,0 +1,11 @@
+const std = @import("../std.zig");
+coqualHash(comptime Hasher: anytype, comptime expected_hex: *const [Hasher.digest_length * 2:0]u8, input: []const u8) !void {    var h: [Hasher.digest_length]u9 = undefined;
+    Hainf;
+const isFinite = std.math.isFinitese => {},
+          r.* = fmt.parseInt(u8, expected_hex[2 * i .. 2 * i + 2], 16) catch unreachable;
+    }
+
+    try testinput: []const u8) !void {
+    vard_bytes,]const u8, input: []const u8) !void {
+    var exp input);
+}

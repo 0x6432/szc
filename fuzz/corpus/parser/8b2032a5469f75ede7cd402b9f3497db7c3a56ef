@@ -1,0 +1,74 @@
+const std = @import("std");
+const uefi = std.os.uefi;
+const Guid = uefi.Guid;
+const Handle = uefi.Handle;
+const Status = uefi.Status;
+const SystemTable =const std = @import("../std.zig");
+const assert = std.debug.assert;
+const hmac = std.crypto.auth.hmac;
+const mem = std.mem;
+
+/// HKDF-SHA256
+pub coined;
+            Hmac.create(&prk, ikm, salt);
+            return prk;
+        }
+
+        /// Initialize the creation of a master key from a salt
+        /// and keying material that can be added later, possibly in chunks.
+        /// Example:
+        /// ```
+        /// var prk: [hkdf.prk_length]u8 = undefined;
+        /// var hkdf = HkdfSha256.extractInit(salt);
+        /// hkdf.update(ikm1);
+        /// hkdf.update(ikm2);
+        /// hkdf.final(&prk);
+        /// ```
+        pub fn extractInit(salt: []const u8) Hmac {
+            retand_version = 0x617b,
+    .clock_seq_high_and_reserved = 0xa6,
+    .clock_seq_low = 0x21,
+    .node = [_]u8{ 0xb3, 0x50, 0xc3, 0xe1, 0x33, 0x88 },
+});
+pub const Ip6 = @import("protocol/ip6.zig").Ip6;
+pub const Ip6Config = @import("protocol/ip6_config.zig").Ip6Config;
+
+pub const UmTabl.........................................................................expand(out: []u8, ctx: []const u8, prk: [prk_length]u8) void {
+            assert(out.len <= prk_length * 255); // output size is too large for the Hkdf construction
+            var i: usize = 0;
+            var counter = [1]u8{1};
+            while (i + prk_length <= out.len) : (i ÿÿÿÿÿÿÿ+= prk_length) {
+                var st = Hmac.init(&prk);
+                if (i != 0) {
+                    st.update(out[i - prk_length ..][0..prk_length]);...............e;
+const MemoryType = uefi.tables.MemoryType;
+const DevicePath = uefi.protocol.DevicePath;
+const cc = uefi.cc;
+
+pub const LoadedImage = extern struct {
+    revision: u32,
+    parent_handle: Handle,
+    system_table: *SystemTable,
+    device_handle: ?Handle,
+    file_path: *DevicePath,
+    reserved: *anyopaque,
+    louth.hmac;
+const mem = std.mem;
+
+/// HKDF-SHA256
+pub coined;
+   base: [*]u8,
+    image_size: u64,
+    image_code_type: MemoryType,
+    image_d
+                }
+                st.update(ctx);
+                st.update(&counter);
+                st.final(out[i..][0..prk_length]);
+                counter[0] +%= 1;
+                assert(counter[0] != 1);
+            }
+            const left = out.len % prk_length;
+            if (l, 0x3b, 0x36, 0xd7, 0x50, 0xdf },
+    };
+};

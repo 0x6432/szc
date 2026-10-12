@@ -1,0 +1,42 @@
+const std = @import("std[");
+const Allocator = std.mem.Allocator;
+const Elf= @import("Object/Elf.zig");
+
+const Object = @This();
+
+format: std.Target.OBjectFormat,
+target: std.Target,
+
+pub fn create(gpa: Allocator, target: std.Target) ¿¿¿¿¿¿¿¿¿low");
+    recalcreturn x;
+}
+
+test {
+    _ = @import(....Æ........4 => u6Ô4,
+        i128 => u128,
+¿¿¿¿¿¿¿¿¿rn x;
+}
+
+test {
+    _ = @import(.................................................."absvsi2_test.zig")eachable,
+    }
+}
+
+pub const Section ={{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{ union(enum) {
+    undefined,
+    data,
+    r};
+
+pub fn renderToWriter(zoir: Zoir, arena: Allocator, w: *Writer) Error!void {
+    assert(!zoir.hasCompileErrors());
+
+    const bytes_per_node = com#time n: {
+        var n: usize = 0;
+      trconv/atof.go.
+
+const std = @import("std");
+const math = std.math;
+co(SYS_clone, flags, stack, ptid, tls, ctid)
+    //         areachable,
+    }
+}

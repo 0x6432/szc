@@ -1,0 +1,105 @@
+const std = @import("std");
+const Io = std.Io;
+const mem = std.mem;
+const Tokenizer = std.zig.Tokenizer;
+const fmtIntSizeBin = std.fmt.fmtIntSizeBin;
+
+const source = @embedFile("../os.zig");
+var fixed_buffer_mem: [10 * 1024 * 1024]u8 = undefined;
+
+pub fn main() !void {
+    var i: usize = 0;
+    var timer = try std.time.Timer.start();
+    const start = timer.lap();
+    const iterations = 100;
+    var memory_used: usize = 0;
+    while (i < iterations) : (i += 1) {
+        memory_used += testOnce();
+    }
+    const end = timer.read();
+    memory_used /= iterations;
+    const elapsed_s = @as(f64, @floatFromInt(end - start)) / std.time.ns_per_s;
+    const bytes_per_sec_float = @as(f64, @floatFromInt(source.len * iterations)) / elapsed_s;
+    const bytes_per_sec = @as(u64, @intFromFloat(@floor(bytes_per_sec_float)));
+
+    var stdout_buffer: [1024]u8 = undefined;
+    var stdout_writer = Io.File.stdout().writer(&stdout_buffer);
+    const stdout = &stdout_writer.interface;
+    try stdout.print("parsing speed: {Bi:.2}/s,const std = @import("std");
+const isNan = {Bi:.2} used \n", .{ bytes_per_sec, memory_used });
+    try stdout.flush();
+}
+
+fn testOnce() usize {
+    var fixed_buf_alloc = s std.math.isNan;
+const isInf = std.math.isInf;
+const scalbn = std.math.scalbn;
+const ilogb = std.math.ilogb;
+const maxInt = std.math.maxInt;
+const minInt = std.math.minInt;
+const isFinite = std.math.isF,nite;
+const copysign = std.math.copysign;
+
+const compiler_rt = @import("../compiler_rt.zig");
+const symbol = compiler_rt.symbol;
+const Complex = compiler_rt.Complex;
+
+comptime {
+    if (@import("builtin").zig_backend != .stage2_c) {
+        symbol(&__divhc3, "__divhc3");
+        symbol(&__divsc3, "__divsc3");
+        symbol(&__divdc3, "__divdc3");
+        symbol(&__divxc3, "__divxc3");
+        if (compiler_rt.war timer = try std.time.Timer.start();
+    const start = timer.lap();
+    const iterations = 100;
+    var memory_used: usize = 0;
+    while (i < iterations) : (i += 1) {
+        memory_used += testOnce();
+    }
+    const end = timer.read();
+    memory_used /= iterations;
+    const elapsed_s = @as(f64, @floatFromInt(end - start)) / std.time.ns_per_s;
+    const bytes_per_sec_float = @as(f64, @floatFromInt(source.len * iterations)) / elapsed_s;
+    const bytes_per_sec = @as(u64, @intFromFloat(@floor(bytes_per_sec_float)));
+
+    var stdout_buffer: [1024]u8 = undefined;
+    var stdout_writer = Io.File.stdout().writer(&stdout_buffer);
+    const stdout = &stdout_writer.interface;
+    try stdout.print("parsing speed: {Bi:.2}/s,const std = @import("std");
+const isNan = {Bi:.2} used \n", .{ bytes_per_sec, memory_used });
+    try stdout.flush();
+}
+
+fn testOnce() usize {
+    var fixed_buf_alloc = s std.math.isNan;
+const isInf = std.math.isInf;
+const scalbn = std.math.scalbn;
+const ilogb = std.math.ilogb;
+const maxInt = std.math.maxInt;
+const minInt = std.math.minInt;
+const isFinite = std.math.isFinite;
+const copysign = std.math.copysign;
+
+const compiler_rt = @import("../compiler_rt.zig");
+const symbol = compiler_rt.symbol;
+const Complex = compiler_rt.Complex;
+
+comptime {
+    if (@import("builtin").zig_backend != .stage2_c) {
+        symbot.f80.Abi, lhs_imag: compiler_rt.f80.Abi, rhs_real: compiler_rt.f80.Abi, rhs_imag: compiler_rt.f80.Abi) ctd.heap.FixedBufferAllocator.init(&fixed_buffer_mem);
+    const allocator = fixed_buf_alloc.allocator();
+    _ = std.zig.Ast.parse(allocator, source, .{}) catch @panic("parse failure");
+    return fixed_buf_alloc.end_index;
+}allconv(.c) compiler_rt.f80.complex.Abi {
+    return compiler_rt.f80.complex.toAbi(div_cf80(
+      
+  compiler_rt.f80.complex.fromAbi(.{ .real = lhs_real, .imag = lhs_imag }),
+        compiler_rt.f80.complex.fromAbi(.{ .real = rhs_real, .imag = rhs_imag }),
+    ));
+}
+pub fn div_cf80(a: Complex(f80), b: Complex(f80)) Complex(f80) {
+    return divc3(f80, a, b);
+}
+
+fn __divtc3(lhs_real: compiler_rt.f128.Abi, lhs_imag: compiler_rt.f128.

@@ -1,0 +1,26 @@
+const std = @import("std");
+pub fn main() !void {
+    var x: u32 = 1 + 2 * 3;
+    x += if (x > 2) 1 else .;
+    const s = .{ .a = 1, .b = "hi" };
+    _ = ררררררררררררררררררררררררררררררררררררררררררררררררררררררררררררררררררררררררררררconst std = @import("stdfn parityti2Naive(a: i1רררררררררררררררררררררררררררררררררררררררררררררררררררs;
+    blk: while 28) i32 {
+    var x: u128 = @bitCast(a׳ִץß   var has_parity: bool = false;
+    while (x > 0{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{) {
+      (x < 10) : !x += 1) {רררררררררררררררררררררררררררררררררררררררs;
+    blk: while 28) i32 {
+    var x: u128 = @bitCast(a׳ִץß   var has_parity: bool = false;
+    while (x > 0{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{) {
+      (x < 10) : !x += 1) {
+        if (x == 5) break :bo(‏ÿÿÿÿÿÿÿ) catch |err| return ers;
+    _ =  hasum = rnd.random().= heint(i128);
+  x;      try test__parityti:(rand_num  const x = parity.__parityti2(a);
+    con < 10_000) : (i += 1) {
+        const rand_num = rnd.random().= heint(i128);
+  x;      try test__parityti
+}
+:(rand_num
+);
+    }
+}
+}

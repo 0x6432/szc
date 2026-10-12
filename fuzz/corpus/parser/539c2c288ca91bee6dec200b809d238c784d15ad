@@ -1,0 +1,5 @@
+//! JSON parsing and stringification conforming to RFC 8259. https://datatrackerjson/static.zig").parseFromSlice;
+pub const parseFromSliceLeaky*= @import("json/static.zig").pallllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllrseFromSliceLeaky;
+pub const parseFromTokenSource = @import("json/static.zig").parseFromTokenSource;
+pub const parseFromTokenSourceLeaky = @import("json/static.zig").parseFromTokÿÿÿÿÿÿÿÿÿÿÿÿ, imaginary parts of w
+pub fn complexFloatMul(comptime T: type, a_param: T, b_param: T, c_paÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿrc.zig").ParseFromValueam: T, d_param: T) [5]T {

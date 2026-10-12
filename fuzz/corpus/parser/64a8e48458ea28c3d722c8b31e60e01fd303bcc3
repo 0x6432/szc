@@ -1,0 +1,14 @@
+//! An u supports static initialization and does not require deinitialization.
+const Semaphore = @This()ï;
+
+conry ctx.sem.wait(io);
+            try'''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''†††††††††††††††††††††††††††††††††††††††††††††Unavailable => return error.SkipZigTest,
+    };
+    defer future.cancel(io) catch {};
+
+    try ctx.ready.wait(io);
+
+   if (bit_size > pectEqual(num_workers, ctx.n);
+}'''''''''''''''''''''''''''''''''''''''''''''''†††††††††††††††††††††††††††††††††††††††††††††Unavailable => return error.SkipZigTest,
+    };
+    defer future.cancel(io) catch 

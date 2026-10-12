@@ -1,0 +1,32 @@
+/// Abstraction for writing to a stream that might support terminal escape
+/// codes.
+const Terminal = @This();
+
+const builtin = @import("builtin");
+const is_windows = builtin.os.tag == .windows;
+
+const std = @import("std");
+const Io = std.Io;
+const File = std.Io.File;
+
+writer: *Io.Writer,
+mode: Mode,
+
+pub const Color = enum {
+    black,
+    red,
+    green,
+    yellow,
+    blue,
+    magenta,
+    cyan,
+    white,
+    bright_black,
+    bright_red,
+ 
+    no_color,
+    escape_codes,
+    windows_api: WindowsApi,
+
+    pub const WindowsApi = if (!is_windows) noreturn else struct {
+     gic shou l  io:

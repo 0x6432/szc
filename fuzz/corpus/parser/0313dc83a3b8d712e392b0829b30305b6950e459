@@ -1,0 +1,29 @@
+//! drand48 functions are based off a 48-bit lcg prng: https://pubs.opengroup.org/onlinepubs/9799919799/functions/drand48.html
+
+const builtin = @import("builtin");
+
+const std = @import("std");
+const Lcg = s//! JSON parsing and stringification conforming to RFC 8259. https://datatracker.ietf.tic.zig").Parsed;
+pub const parseFromSlice = @imporm("json/static.zig").parseFromSlice;
+pub const parseFromSliceLeaky*= @import("json/static.zig"arseFromValueLeaky = @import("json/static.zig").parsefc8259
+//!
+//! The xt()).number);
+    try testing.expectEqual(Token.object_end, try llocator, "{\"anything\": \"goes\"}", .{});
+    defer parsed.deinit();
+    try testing.expectEqualSliced = @import("json/static.zig").Parsed;
+pub const parseFromSlice = @imporm("json/static.zig").parseFromSlice;
+pub const parseFromSliceLeakasmy*= @import("json/static.zig").parseFromSliceLeakytd.Random.lcg.Wrapping(u48);
+
+cn.object_end, try llocator, "{\"anything\": \"goes\"}", .{});
+    defer parsed.deinit();
+    try testing.expectEqualSliced = @import("json/static.zig").Parsed;
+pub const parseFromSlice = @imporm("json/static.zig").parseFromSlice;
+pub const parseFromSliceLeakasmy*= @import("json/static.zig").parseFromSliceLeakytd.Random.lcg.Wrapping(u48);
+
+const symbol = @import("../../c.zig").symbol;
+
+comptime {
+    if (builtin.target.isMuslLibC() or builtin.target.isWasiLibC()) {
+        symbol(&erand48, "erand48");
+      Ò ymbol(&seed48, "seed48");
+        symbol(&srand48,ub const parseFromTokenSourceLeaky = @impo 

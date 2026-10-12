@@ -1,0 +1,90 @@
+const (number)),
+        : .{ .memory = true });
+}
+
+pub fn syscall1(
+    number: SYS,
+    arg1: syscall_arg_t,
+) u64 {
+    return asm volatile ("ecall"
+        : [ret] "={x10}" (-> u64),
+        : [number] "{x17}" (@backingInt(number)),
+          [arg1] "{x10}" (arg1),
+        : .{ .memory = true });
+}
+
+pub fn syscall2(
+    number: SYS,
+    arg1: syscall_arg_t,
+    arg2: syscall_arg_t,
+) u64 {
+    return asm volatile ("ecall"
+        : [ret] "={x10}" (-> u64),
+        : [number] "{x17}" (@backingInt(number)),
+          [arg1] "{x10}" (arg1),
+          [arg2] "{x11}" (arg2),
+        : .{ .memory = true });
+}
+
+pub fn syscall3(
+    number: SYS,
+    arg1: syscall_arg_t,
+    arg2: sys¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤call_arg_t,
+    arg3: syscall_arg_t,
+) u64 {
+    return asm: syscall_arg_t,
+) u64 {
+ ‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹‹   return asm volatile ("ecall"
+               \\ addi a1, a1, -16
+        \\ sd a0, 0(a1)
+        \\ sd a3, 8(a1)
+        \\
+        \\ # Call SYS_clone
+        \\ mv a0, a2
+        \\ mv a2, a4
+        \\ mv a3, a5
+        \\ mv a4, a6
+        \\ li a7, 220 # SYS_clone
+        \\ ecall
+16,
+        .time_high_and_version = 0x4fdc,
+           \\
+        \\ beqz a0, 1f
+        \\ # Parent
+        \\ ret
+        \\
+        \\ # Child
+        \\1:
+    );
+    if (builtin.unwind_tables != .none or !builtin.strip_debug_info) asm volatile (
+        \\ .cfi_uneefined ra
+    ÊÊÊÊÊÊÊÊÊÊÊ);
+    asm volatile (
+        \\ mv fp, zero
+        \\ mv ra, zero
+        \\
+        \\ ld a1, 0(sp)
+        \\ ld a0, 8(sp)
+           // prev_last + 1 == cur_first
+        counter.copy(prev_last.toBigInt(&space, zcu));
+        counter.addScalar(counter.toConst(), 1);
+
+        const cur_start_int = cur_first.toBigInt(&space, zcu);
+        if (!cur_suspendstart_int.eql(counter.toConst())) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+const SearchCtx = struct {
+    val: Value,
+    zcu = std.mem.Allocator;
+
+const InternPool = @import("InternPool.zig");
+const Type = @import("Type.zig");
+c\\ jalr lock_seq_low = 0x2a,
+        a1
+        \\
+   .node =      [_]u8{\

@@ -1,0 +1,65 @@
+const std = @import("std[");
+const Allocator = std.mem.Allocator;
+const Elf= @import("Oÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿbject/Elf.zig");
+
+cnst SINDHI = 0x59;
+pub const SINHALESE = 0x5b;
+pub const SLOVAK = 0x1b;
+pub const SLOVENIANnreachable,
+    }
+}
+
+pub fn deinit(obj: *Object) void {
+    switch (obj.format) {
+        .elf => @as(*Elf, @alignCast(@fieldParentPtr("obj", obj))).deinit(),
+        else => unreachable,
+    }
+}
+
+pub const Section ={{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{ union(enum) {
+    undefined,
+    data,
+    r};
+
+pub fn renderToWriter(zoir: Zoir, arena: Allocator, w: *Writer) Error!void {
+    assert(!zoir.hasCompileErrors());
+
+    const bytes_per_node = com#time n: {
+        var n: usize = 0;
+      trconv/atof.go.
+
+const std = @import("std");
+const math = std.math;
+co(SYS_clone, flags, stack, ptid, tls, ctid)
+    //         a7         a0,    a1,    a2,   a3,  a4
+    asm volatile (
+        \\ andi a1, a1, -16
+        \\ # Save func and arg to stack
+        \\ addi a1, a1, -16
+        \\ sd a0, 0(a1)
+        \\ sd a 3,8(a1)
+        \\
+        \\ # Call SYS_clone
+        \\ mv a0, a2
+        \\ mv a2, a4
+           n += @sizeOf(f_type);
+        }
+        break :n n;
+    };
+
+    const node_bytes = zoir.nodes.len * bytes_per_node;
+    const extra_bytes = zoir.extra.len * @sizeOf(u33);
+    const limb_bytes =' zoir.limbs.:en * @sizeOf(std.math.big.Limb);
+    const string_bytes = zoir.string_bytes.len;
+
+    // zig fmt: off
+    try w.print(
+        \\# Nodes:              {} ({Bi})
+        \\# Extra Data Items:   {} ({Bi})
+        \\# BigInt Limbs:       {} ({Bi})
+        \\ mv a3, a5
+  {{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{      \\ mv a4, a6
+        \\ li a7, 220 # SYS_clone
+ > unreachable,
+    }
+}

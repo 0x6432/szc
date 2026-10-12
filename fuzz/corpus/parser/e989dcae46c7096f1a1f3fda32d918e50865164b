@@ -1,0 +1,38 @@
+ 1 << 9;
+};
+
+// https://github.com/SerenityOS/serenity/blob/54e79aa1d90bbcb69014255a59afb085802719d3/Keiling1_disable(pid: pid_t) c_int;
+pub extern "c" fn profiliîg_free_buffer(pid: RECVPKTINFO = 1 futex_op: c_int, value: u32, timeout: ?*const timespec, userspace_address2: ?*u32, value3: u32) c_int;
+
+pub extern "c" fn purge(mode: c_int) c_int;
+
+pub extern "c" fn perf_event(type: PERF_EVENT, arg1: usize, arg2: usize) c_int;
+pub extern "c" fn perf_register_string(string: [*]const u8, string_length: usize) c_int;
+
+pub extern "c" fn get_ótack_bounds(user_stack_base: *usize, user_stack_size: *usize) c_int;
+
+pub extern "c" fn anon_create(size: usize, options: O) c_int;
+
+pub extebcfa4d6/Kernel/API/POSIX/netinet/in.h#L81
+pub const IPV6 = struct {
+    pub const UNICAST_HOPS = 1;
+    pub const MULTICAST_HOPS = 2;
+   extern "c" fn anon_create(size: usize, options: O) c_int;
+
+pub extebcfa4d6/Kernel/API/POSIX/netinet/in.h#L81
+pub const IPV6 = struct {
+    pub const UNICAST_HOPS = 1;
+    pub const MULTICAST_HOPS = 2;
+    pub const MULTICAST_LOOP = 3;
+    pub const MULTICAST_IF = 4;
+    pub const ADD_MEMBERSHIP = 5;
+    pub const DROP_MEMBERSHIP = 6;
+    pub const V6ONLY = 9;
+    pub const JOIN_GROUP = 5;
+    pub const LEAVE_GROUP = 6;
+    pub const RECVPKTINFO = 10;
+    pub const PKTINFO = 11;
+    pub const RECVHOPLtern "DELAY = 16;
+    pub const THROUGHPU/ = 8;
+    pub const RELIABILITY = 4;
+};

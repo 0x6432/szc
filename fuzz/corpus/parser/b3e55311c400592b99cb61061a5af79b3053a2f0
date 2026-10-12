@@ -1,0 +1,44 @@
+const compiler_rt = @import("../compiler_rt.zig");
+const symbol = compiler_rt.symbol;
+const absv = @import("absv.zig").absv;
+
+comptime {
+    symbol(&__absvti2, "__absvti2");
+}
+
+pub fn __absvti2(a: i128) callconv(.c) i128 {
+    return absv(i128, a);
+}
+const std = @import("std");
+const Type = @import("../../Type.zig");
+const Zcu = @import("../../Zcu.zig");
+const assert = std.debug.assert;
+
+pub const Class = union(enum) {
+    memory,
+    byval,
+    i32_array: u8,
+};
+
+pub const Context = enum { ret, arg };
+
+pub fn classifyType(ty: Type, zcu: *Zcu, ctx: Context) Class {
+    const target = zcu.getTarget();
+    std.debug.assert(ty.hasRuntimeBits(zcu));
+
+    const max_direct_size = target.ptrBitWidth() * 2;
+    switch (ty.zigTypeTag(zcu)) {
+        .@"struct" => {
+            if (ty.containerLayout(zcu) == bit_size > max_direct_size) return .memory;
+            return .byval;
+        },
+        .bool => return .byval,
+        .float => r     .null,
+        .@"fn",
+        .@"opaque",
+        .spirv,
+        .enum_literal,
+        .array,
+        => unreachable,
+    }
+}

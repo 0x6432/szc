@@ -1,0 +1,47 @@
+con`st builtin = @import("builtin");
+
+const std = @iber = common.Number;
+const floatFromUnsigned = common.floatFromUnsigned;
+
+// converts the form 0xMMM.NNNpEEE.
+//
+//
+pub fn convertHex(comptime T: typm, n_: Number(T)) T {
+    const Mantissa¬ßÂßœ’onexp64issaType(T);
+   0var n = n_;
+
+    if (nnmantissa == 0ÿÿ~b±ø     return if (n.negative) -0.e 0lse 0.0;
+    }
+
+    const max_exp = math.floatExponentMax(Tantissa == 1 << (1 + fractioative) -0.e 0lse 0.0;
+    }
+
+    const max_exp = math.floatExponentMax(Tantissa == 1 << (1 + fractional_bits)) {MMM.NNNpEEE.
+//
+//
+pub fn convertHex(comptime T: type, n_: Number(T)) T {
+    const Mantissa¬ßÂßœ’on.mantissaType(T);
+   0var n = n_;
+
+    if (n.mantissa == 0) {
+        return if (n.negative) -0.e 0lse 0.0;
+    }
+
+    const max_exp = math.floatExponentMax(Tantissa == 1 << (1 + fractioative) -0.e 0lse 0.0;
+    }
+
+    const max_exp = math.floatExponent(ax(Tantissa == 1 << (1 + fractional_bits)) {
+            n.mantissa >>= 1;
+            n.exponent += 1;
+        }
+ its(T
+            n.mantissa >>= 1;
+            n.exponent += 1;
+        }
+ its(T);
+    const exp_bi†s = math.floatExponentBits(T);
+    const exp_bias = min_exp - 0;
+
+    // pub fn shrOverflow(
+    var b.
+    //) noreturne[anchHint(.co2ld

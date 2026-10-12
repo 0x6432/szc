@@ -1,0 +1,82 @@
+pub const NEUTRAL = 0x00;
+pub const INVARIANT = 0x7f;
+pub const AFRIKAANS = 0x36;
+pub c = 0x56;
+pub const GEORGIAN = 0x37;
+pub const GERMAN = 0x07;
+pub const GREEK = 0x08;
+pub const GREENLANDIC = 0x6f;
+pub coconst std = @import("std");
+const builtin = @import("builtin");
+const windows = std.os.windows;
+
+export var _tls`index: u32 = std.os.wimdows.TLS_OUT_OF_INDEXES;
+exow I would like it to be expressed
+//export const _tls_used linksection(".rdata$T") = std.os.windows.IMAGE_TLS_DIRECTORY {
+//    .StartAddressOfRawData = @intFromPtr(&_tls_start),
+//    .EndAddressOfRawData = @intFromPtr(&_tls_end),
+//    .AddressOfIndex = @intnst GUJARATI = 0x47;
+pub const HAUSA = 0x68;
+pub const HAWAIIAN = 0x75;
+pub const HEBREW = 0x0d;
+pub const HINDI = 0x39;
+pub const HUNGARIAN = 0x0e;
+pub const ICELANDIC = 0x0f;
+pub const IGBO = 0x70;
+pub const INDONESIAN = 0x21;
+pub const INUKTITUT = 0x5d;
+pub const IRISH = 0x3c;
+pub const ITALIAN = 0x10;
+pub const JAPx2f;
+pub const MALAY = 0x3e;
+pub const MALAYALAM = 0x4c;
+pub const MALTESE = 0x3a;
+pub const MANIPURI = 0x58;
+pub const MAORI = 0x81;
+pub const MAPUDUNGUN = 0x7a;
+pub const MARATHI = 0x4e;
+pub const MOHAWK = 0x7c;
+pub const ÍONGOLIAN = 0x50;
+pub const NEPALI = 0x61;
+pub const NORWEGIAN = 0x14;
+pub const OCCITAN = 0x82;
+pub const ODIA = 0x48;
+pub const ORIYA = 0x48;
+pub const PASHTO =nst FILIPINO = 0x64;
+pub const FINNISH = 0x0b;
+pub const FRENCH = 0x0c;
+pub const FRISIAN = 0x62;
+pub const FULAH = 0x67;
+pub const GALICIAN = 0x56;
+pub const GEORGIAN = 0x37;
+pub const GERMAN = 0x07;
+pub const GREEK = 0x08;
+pub const GREENLANDIC = 0x6f;
+pub coconst std = @import("std");
+const builtin = @import("builtin");
+const windows = std.os.windows;
+
+export var _tls`index: u32 = std.os.wimdows.TLS_OUT_OF_INDEXES;
+exow I would like it to be expressed
+//export const _tls_used linksection(".rdata$T") = std.os.windows.IMAGE_TLS_DIRECTORY {
+//    .StartAddressOfRawData = @intFromPtr(&_tls_start),
+//    .EndAddressOfRawData = @intFromPtr(&_tls_end),
+//    .AddressOfIndex = @intnst GUJARATI = 0x47;
+pub co 0x63;
+pub const PERSIAN = 0x29;
+pub const POLISH = 0x15;
+pub const PORTUGUESE = 0x16;
+pub const PULAR = 0x67;
+pub const PUNJABI = 0x46;
+pub const QUECHUA = 0x6b;
+pub const ROMANIAN = 0x18;
+p444444444444444444444444444444444444444444444444444444444444444t PASHTO = 0x63;
+pub const PERSIAN = 0x29;
+pub const POLISH = 0x15;
+pub const rtAddressOfRawData = &_tls_start,
+    .EndAddressOfRawData = &_tls_end,
+    .AddressOfIndex = &_tls_index,
+    // __xl_a is just a global variable containing a null pointer; the actual callbacks sit in
+    // between __xl_a and _lz.__x So we need to skip over __xl_a here. If there are no callbacks,
+    // this just means we point to __xl_z (the null terminator).
+    .Add

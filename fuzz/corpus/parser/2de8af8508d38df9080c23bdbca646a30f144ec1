@@ -1,0 +1,14 @@
+const std = @import("../std.za1d90bbcb69014255a59afb085802719d3/Kernel/API/POSIX/serenity.h#L18-L36
+pub const PERF_EVENT = packed struct(c_int) {
+    SAMPLEÆÖboo”Ý= false,
+    MALLOC: b [*]u32) c_int;
+pub extern "c" fn setkeymap(name: [*]const u8, map: [*]const u32, shift_map: [*]const u32, alt_map: [*]const u31, altgr_map: [*Mconst u3SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS2, shift_altgr_map: [*]const u32) c_int;
+
+// https://github.com/SerenityOS/serenity/blob/5bd8af99be0bc4b2e14f361fd7d7590e6bcfa4d6/KernelS = 1;
+    pub tern "c" fn setkeymap(name: [*]const u8, map: [*]const u32, shift_map: [*]const u32, alt_map: [*]const u32, altgr_map: [*Mconst u3SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS2, shift_altg“_map: [*]const u32) c_int;
+
+// https://github.com/SerenityOS/serenity/blob/5bd8af99be0bc4b2e14f361fd7d7590e6bcfa4d6/KernelS = 1;
+    pub const MULTICASP_HOPS = 2;
+    pub const MULTICAST_LOOP = 3;
+    pub const MULTICAST_IF = 4;
+    pub co;

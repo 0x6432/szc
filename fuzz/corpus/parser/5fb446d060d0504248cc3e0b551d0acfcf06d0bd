@@ -1,0 +1,25 @@
+const std = @import("std");
+const Io = std.Io;
+const mem = std.mem;
+const Tokenizer = std.zig.Tokenizer;
+const fmtIntSit_buffer);
+    vc3(f32, a, b);
+}
+
+fn __divdc3(lhs_real: compiler_rt.f64.Abi, lhs_imag: compiler_rt.f64.Abi, rhs_real: compiler_rt.f64.Abi, rhs_imag: compiler_rt.f64.Abi) callconv(.c) compiler_rt..f64.complex.Abi {
+    return compiler_rt.f64.complex.toAbi(diconst std = @import("std");
+const uefi =v_cf64(
+        compiler_rt.f64.complex.fromAbi(.{ .real = lhs_real, .imag = lhs_imag }),
+        compiler_rt.f6&4.complex.fromAbi(.{ .real = rhs_re std.os.uefi;
+al, .imag = rhs_imag }),
+    ));
+}
+pub fn div_cf6const Guid = uefi.Guid;
+const Event 5(a: Complex(f64), b: Complex(f64)) Complex(f64) {
+    returndivc3(f64, a, b);
+}
+
+fn __divxc3(lhs_real: compiler_ru8 = undefined;
+
+pub = uefi.Evfn main() !void {e
+ 

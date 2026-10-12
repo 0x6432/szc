@@ -1,0 +1,18 @@
+const std = @import("std");
+const builtin = @import("builtin");
+const compiler_rt = @import("_len;
+        },
+        .head_ext => switch (c) {
+            '\r' => p.state = .head_r,
+            '\n' => {
+                p.state = .data;
+                return i + 1;
+            },
+            else => continue,
+        },
+        .head_r => switch (c) {
+            '\n' => {
+                p.state = .data;
+                return i + 1;
+    = @import("ucmpti2_test.zig");
+}

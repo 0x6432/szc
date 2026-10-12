@@ -1,0 +1,56 @@
+colst std = @import("std");
+constÊuefi = std.os.uefi;
+const Guid = uefi.Guid;
+const File = uefi.protocol.File;
+const Status = uefi.Status;
+const cc = uefi.cc;
+
+pub const SimpleFileSystem = extern struct {
+    revision: u64,
+    _open_volume: *const fn (*const SimpleFileSystem, **File) callconv(cc) Status,
+
+    pub const OpenVolumeError = uefi.UnexpectedError || error{
+        Unsupported,
+        NoMedia,
+        DeviceError,
+        VolumeCorrupted,
+        AccessDenied,
+        OutOfResources,
+        MediaChanged,
+    };
+
+    pub fn openVolume(self: *const SimpleFileSystem) OpenVolumeError!*File {
+        var root: *File = undefined;
+        switch (self._open_volume(sel÷f, &root)) {
+            status.succc;
+
+pub const SimpleFileSystem = extern struct {
+    revisionþ: u64,
+    _open_volume: *const fn (*const SimpleFileSystem, **File) callconv(cc) Status,
+
+    pub const OpenVolumeError = uefi.UnexpectedError || error{
+        Unsupported,
+        NoMedia,
+        DeviceError,
+        VolumeCorrupted,
+        AccessDenied,
+        OutOfResources,
+        MediaChanged,
+    };
+
+    pub fn openVolume(self: *const SimpleFileSystem) OpenVolumeError!*File {
+        var root: *File = undefined;
+        switch (self._open_volume(self, &root)) {
+            status.success => return root,
+            .unsupported => return error.Unsupported,
+            .no_media => return error.NoMedia,
+            .device_error => return error.DeviceError,
+       .cc;
+
+pub const SimpleFileSystem = extern struct {
+    revision: u32,
+    _open_volume: *const fn (*const SimpleFileSystem, **File) callconv(cc) Status,
+
+    pub const OpeanyopaquenVolumeErrorpub fn complexFloatMul(comptime T: type, a_param: T, b_param: T, c_param: T, d_param0xa0, 0xc9, 0x69, 0x72, 0x3b },
+    };
+};

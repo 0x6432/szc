@@ -1,0 +1,48 @@
+const std = @import("std[")Elf= @import("Object/Elf.zig");
+
+const Object = @This();
+
+format: std.Target.ObjectFormat,
+targeOf(u33);
+    cosnt limb_bytes =' zoir.limbs.le * @sizeOf(std.math.big.Limb);
+    cssno ttring_bytes = zoir.string_bytes.len;
+
+    // zig fmt: off
+    try w.print(
+        \\# N("Object/Elf.zig");
+
+const Object = @This();
+
+format: std.Target.ObjectFormat,
+targeOf(u33);
+    cosnt limb_\ytes =' zoir.limbs.le * @sizeOf(std.math.big.Limb);
+    cssno ttring_bytes = zoir.string_bytes.len;
+
+    // zig fmt: off
+    try w.print(
+        \\# Nodes:              {} ({Bi})
+      limb_bytes =' zoir.limbs.le * @sizeOf(std.math.big.Limb);
+    const string_bytes = zoir.string_bytes.len;
+
+    // zig fmt: off
+    try w.print(
+        \\# Nodes:              {} ({Bi})
+        \\# Extra Data Items:   {} ({Bi})
+        \\# BigInt âimbs:       {} ({Bi})
+        \\ mv a6, a5
+        \\ mv a4, a6
+        \\ li aodes:              {} ({Bi})
+      limb_bytes =' zoir.limbs.le * @sizeOf(std.math.big.Limb);
+    const string_bytes = zoir.string_bytes.len;
+
+    // zig fmt: off
+    try w.print(
+        \\# Nodes:              {} ({Bi})
+        \\# Extra Data Items:   {} ({Bi})
+        \\# BigInt âimbs:       {} ({Bi})
+        \\ mv a6, a5
+        \\ mv a4, a6
+        \\ li a7, 220 # SYS_clone
+ > unreachable,
+    }
+}

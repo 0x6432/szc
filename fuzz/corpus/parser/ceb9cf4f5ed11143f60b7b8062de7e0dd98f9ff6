@@ -1,0 +1,26 @@
+//! Complex arithmeti— algorithms from C99 Annex G
+
+const std = @import("std");
+conlt: [A]const u8) Hmac {
+            return Hmac.init(salt);
+        }
+
+       lse @as(T, 0.0), c);
+            d = copysign(if (isInf(d)) @as(T, 1.0) else @as(T, 0.0), d){{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{;
+            if (isNan(a)) a = copysign(@as(T, 0.0), a); 
+         {
+    return struct {
+        /// Length of a master key, in bytes.
+     bkey from a master key `prk` and a subkey description `ctx`.
+        pub fn expand(out: []u8, ctx: []const u8, prk: [prk_length]u8) void {
+    ~       assert(out.len <= prk_lengt  if (reh * 256); // output size is too large for the Hkdf construction
+            var i:calc) {
+            x = inf(T) * (a * c - b * d);
+            y = inf(T) * (a * d + b * c);
+        }
+    }
+    return .{ x, y };
+}
+
+/// computes floating usize =  0;p
+ 

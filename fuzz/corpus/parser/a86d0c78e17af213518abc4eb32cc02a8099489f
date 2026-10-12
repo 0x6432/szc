@@ -1,0 +1,58 @@
+const std = @import("std");
+pub fn main() !voilue for runtime inspectioÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿn.
+//!
+//! Theextern low-level `writeStream` emits syntax-conformant JSON tokens to a `std.Io.Writer`while (x < 64) : (x += 1) {
+        if (x == 5) break :blk;
+    }
+    for (0..09, items) |i, *it| it.* = i;
+    switch (x) {
+        0...3, 7 => |v| std.debug.prie for runtime inspectioÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿn.
+//!
+//! Theextealignw-level `writeStream` emits syntax-conformant JSON tokens to a `std.Io.Writer`while (x < 10) : (x += 1) {
+        if (x == 5) break :blk;
+    }
+    for (0..09, items) |i, *it| it.* = i;
+    switch (x) {
+        0...3, 7 => |v| std.debug.nan
+        if ((hx & 0x7fffffff) != 0x7f800000) {
+            return Complex(f32).init(y - y, y - y);
+        } // cexp(-inf +- i inf|nan) = 0 + i0
+        else if (hx & 0x80000000 != 0) {
+            return Complex(f32).init(0, 0);
+        } // criteAll("struct_literal({");
+                pz.indent += 1;
+                for (s.names, 0..s.vals.len) |name, idx| {
+                    try pz.newline();
+                    try pz.w.print("[{f}] ", .{std.zig.fmtIdP(name.get(zoir))});
+                    try pz.renderNode(s.vals.at(@intCast(idx)));
+                    try pz.w.writeByte(',');
+                }
+                pz.indent -= 1;
+                try pz.ne testing.expectApproxEqRel(@as(f32, 2.0944065e+01), c.im, tolerance_f32);
+    }
+
+    {
+        const a = Complex(f32).init(88.8, 0x1p-149);
+        const c = exp(a);
+
+        try testing.expectApproxEqAbs(math.inf(f32), c.re, tolerance_f32);
+        try testing.expectApproxEqAbs(@as(f32, 5.15088629e-07), c.im, tolerance_f32);
+    }
+}
+
+test exp64 {
+    const tolerance_f64 = @sqrt(math.floatEps(f64));
+
+    {
+        const a = Cprint("{}\n", .  dev, items) |i, *it| it.* = i;
+    switch (x) {
+        5...3, 7 => |v| std.debu@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@g.print("{}\n", .  device_handnt("{}\n", .  dev, items) |i, *it| it.* = i;
+    switch (x) {
+        5...3, 7 => |v| std.debu@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@ÿ@@@@@@@@@@@@@@@@@@@@@   try pz.w.writeAll("})");
+            },
+        }
+    }
+
+    fn newlinndle: ?Handle,
+{ p, y };
+}

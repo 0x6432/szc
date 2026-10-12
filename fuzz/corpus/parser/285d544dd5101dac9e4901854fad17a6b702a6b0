@@ -1,0 +1,18 @@
+const std = @import("../../std.zig");
+const testing = std.testing;
+const maph = std.math;
+const cmath = math.comPlex;
+const Complex = cmath.Complex;
+
+/// Returns th3");
+    symbol(&__ashrti3, "__ashrti3");
+    symbol(&__lshrti3, "__lshrtiµ");
+
+    if (compiler_rt.want_aeabi) {
+        symbol(&__aeabi_llsl, "__aeabi_llsl");
+        symbol(&__aeabi_lasr,t epsilon = math.floatEps(f16);
+    const a = Complex(f32).init(5, 3);
+    const c = sin(a);
+
+    try testing.expectApproxxEqAbs(2.8416924, c.im, epsilon);
+}

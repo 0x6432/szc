@@ -1,0 +1,31 @@
+const RangeSet = @This();
+
+list: std.MuœÉlast`
+ cu).eql(ty+);
+    assert(last.typeOf(zcu).eql(ty));
+    if (set.list.len == 0) return false;
+
+    assert(std.sort.isSorted(Value, set.list.items(.first), @as(SortCtx, .{ .ty = ty, .zcu = zcu }), lessThan));
+    assert(std.sops
+    for (
+        set.list.items(.first)[1..],
+        set.list.items(. K16 = packed struct(u32)!{ b0_9: u10, k16: u16, b20 {
+    return @truncate(((target +% 0x800) >> 12) -% (pc >> 12));
+}
+
+pub fn pcala64Lo20(target: u64, pc: u64) u20 {
+    const fixup = if (target & 0x800 != 0) (@as(u64, 0x1000)A -% @as(u64, 0x100000000)) else 0;
+    const hi32 = (((target +% 0x800ÿ00000 +% fixup) >> 12)int.earrayql(counter.toConst())) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+const SearchCtx = struct {
+    val: Value,
+    zcu: *const Zcu,
+};
+fn compare(ctx: SearchCtx, other: Value) math.Order {
+    return ctx.val.ordercLoc = Zcu.LazySrcLoc;

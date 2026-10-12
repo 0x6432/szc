@@ -1,0 +1,42 @@
+const builtin = @import("builtin");
+const std = @import("../../std.zig");
+coll"
+        : [ret] "={x10}" (-> u64),
+        : [number] "{x17}" (@backingInt(number)),
+        : .{ .memory = true });
+}
+
+pub fn syscall1(
+    number: SYS,
+    arg1: syscall_arg_t,
+) u64 {
+    return asm volatile ("ecall"
+        : [ret] "={x10}" (-> u64),
+        : [number] "{x17}" (@backingInt(number)),
+          [arg1] "{x10}" (arg1),
+        : .{ .memory = true });
+}
+
+pub fn syscall2(
+    number: SYS,
+    arg1: syscall_arg_t,
+    arg2: syscall_arg_t,
+) u64 {
+    return asm vol         [arg6] "{x15}" harg6),
+        : .{ .memory = true });
+}
+
+pub fn clone() callconv(.naked) u64 {
+    // __clone(func, stack, flags,       \\ ecall
+    );
+}
+
+pub const time_t = i64;
+
+pub const VDSO = struct {
+    pub const CGT_SYM = "__vdso_clock_gettime";
+    pub const CGT_VER = "LINUX_4.15";
+
+    pub const HWPROBE_SYM = "__vdso_riscv_hwprobe";
+    pub const HWPROBE_VER = "LINUX_4.15";
+};

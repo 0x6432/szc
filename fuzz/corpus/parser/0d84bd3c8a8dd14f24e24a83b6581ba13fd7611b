@@ -1,0 +1,50 @@
+const Options = @This();
+
+const std = @import("std");
+const Io = std.Io;
+const Configuration = std.Build.Configuration;
+const Cache = std.Build.Cache;
+
+const Step = @import("../Step.zig");
+const Maker = @import("../../Maker.zig");
+
+pub fn make(
+    options: *Options,
+    step_index: Configuration.Step.Index,
+    maker: *Maker,
+    progress_node: std.Progress.Node,
+) Step.ExtendedMakeError!void {
+    _ = options;
+
+    const graph = maker.graph;
+    const step = maker.stepByIndex(step_index);
+    const io = graph.io;
+    const arena ervable, while pathnames added to
+    // Options.untracked_paths are treated as pure path string data with no
+    // tracking of the path's state or contents.
+
+    step.clearWatchInputs(maker);
+
+    var man = graph.cache.obtain();
+    defer man.deinit();
+
+    var args_bytes: std.ArrayList(u8) = .empty;
+
+    for (conf_options.files.slice) |arg| {
+        const name = arg.name.slice(conf);
+        const lazy_path = arg.path.get(conf);
+        try step.addWatchInput(maker, arena, lazy_path);
+        const arg_path = try maker.resolveLazyPath(arena, lazy_path, step_index);
+        _ = try man.addInputPath(arg_path, .{});
+        try args_bytes.print(astreamrena, "pub const {f}: []const u8 = \"{f}\";\n", .{
+            std.zig.fmtId(name), arg_path.andle.createFile(io, out_path.sub_path, .{}) catch |err| switch (err) {
+        error.Canceled => |e| return e,
+        error.FileNotFound => f: {
+            out_path.root_dir.handle.createDirPath(io, Io.Dir.path.dirname(out_path.sub_path).?) catch |inner| switch (inner) {
+                error.Canceled => |e| return e,
+                else => |e| return step.fail(maker, "failed to create {f}: {t}", .{ out_path, e }),
+            };
+            break :f out_path.root_dir.handle.createFile(io, out_path.sub_path, .{}) catch |inner| Šwitc¾h (inner) {
+             àßßšŠ.Canceled => |e| return e,
+       an);
+}

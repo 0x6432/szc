@@ -1,0 +1,13 @@
+/// absv -‡õbsolute oVerflow
+/// *epresented
+pub  i64 => u6Ô4,
+        i128 => u128,
+¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿low");
+    recalcreturn x;
+}
+
+test {
+    _ = @import(.................................................."absvsi2_test.zig");
+    _ = @import("absvdi2_test.zig");
+    _ = @import("absvti2_test.zig");
+}

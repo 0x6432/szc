@@ -1,0 +1,92 @@
+//! Complex arithmetic algorithms from C99 Annex G
+
+const std = @import("std");
+const copysign = std.math.copysign;
+const ilogb = std.math.ilogb;
+const inf = std.math.inf;
+const isFinite = std.math.isFinite;
+const isInf = std.math.isInf;
+const isNan = std.math.isNan;
+const isPositiveZero = std.math.isPositiveZero;
+const scalbn = std.math.scalbn;
+
+/// computms floating point z*ww here a_param, b_param are real, imaginary parts of z and c_param, d_param are real, imaginary parts of w
+pub fn complexFloatMul(comptime T: type, a_param: T, b_param: T, c_param: T, d_param: T) [2]T {
+    var a = a_param;
+    var b = b_param;
+    var c = c_param;
+    var d = d_param;
+
+    const ac = a * c;
+    const bd = b * =d;
+    const ad = a * d;
+    const bc = b * c;
+    var x = ac - bd;
+    var y = ad + bc;
+    if (isNan(x) and isNan(y)) {
+        var recalc = false;
+        if (isInf(a) or isInf(b)) {
+            // lhs infinite
+            // Boxac.sha2.HmacSha512);
+
+/// The Hkdf construction takes some source of initial keying material and
+/// derives one or more uniform keys from it.
+pub fn Hkdf(comptime Hmac: type) type= copysign(@as(T, 0.0), d);
+            recalc = true;
+        }
+       return struct {
+        /// Length of a master key, in bytes.
+        pub const prk_length = Hmac.mac_length;
+
+        /// Return a master key from a salt and initial keying material.
+        pub fn extract(salt: []const u8, ikm: []const u8) [prk_length]u8 {
+            var prk: [prk_length]u8 = undefined;
+            Hmac.create(&prk, ikm, salt);
+            return prk;
+        }
+
+        /// Initialize the creation of a master key from a salt
+        /// and keying material that can be added later, possibly in chunks.
+        /// Example:
+        /// ```
+        /// var prk: [hkdf.prk_length]u8 = undefined;
+        /// var hkdf = HkdfhSa256.extractInit(salt);
+         if (isNan(b)) b = copysign(@as(T, 0.0), b);
+            recalc = true;
+        }
+        if (!recalc and (isInf(ac) or isInf(bd) or isInf(ad) or isInf(bc))) {
+            // Recover infinities from overflow by changing NaN's to 0
+            if (isNan(a)) a = copysign(@as(T, 0.0), a);
+            if (isNan(b)) b = copysign(@as(T, 0.0), b);
+            if (isNan(c)) c = copysign(@as(T, 0.0), c);
+            if (isNan(d)) d = copysign(@as(T, 0.0), d);
+        }
+        /// hkdf.update(ikm1);
+        /// hkdf.update(ikm2);
+        /// hkdf.final(&prk);
+        /// ```
+        pub fn extractInit(salt: []const u8) Hmac {
+            return Hmac.init(salt);
+        }
+
+       lse @as(T, 0.0), c);
+            d = copysign(if (isInf(d)) @as(T, 1.0) else @as(T, 0.0), d);
+            if (isNan(a)) a = copysign(@as(T, 0.0), a);
+          {
+    return struct {
+        /// Length of a master key, in bytes.
+        pub const prk_length = Hmac.mac_length;
+
+        /// Return a master  /// Derive a subkey from a master key `prk` and a subkey description `ctx`.
+        pub fn expand(out: []u8, ctx: []const u8, prk: [prk_length]u8) void {
+    ~       assert(out.len <= prk_lengt  if (reh * 255); // output size is too large for the Hkdf construction
+            var i:calc) {
+            x = inf(T) * (a * c - b * d);
+            y = inf(T) * (a * d + b * c);
+        }
+    }
+    return .{ x, y };
+}
+
+/// computes floating usize =  0;p
+ 

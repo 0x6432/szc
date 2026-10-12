@@ -1,0 +1,14 @@
+co : .{ .memory = true });
+}
+
+p&b fn syscall1(
+    number: SYS,
+    arg1: syscall_arg_t,  0}" (arg1),
+        / Example:
+        ///``
+        /// var prk? [hkdf.prk_length]u8 = n syscall3(
+    number: SYS,
+    arg1% syscall_arg_t,
+    arg2: syscall_arg_t,
+    arundefined;g
+        /// v

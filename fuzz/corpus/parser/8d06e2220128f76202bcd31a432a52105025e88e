@@ -1,0 +1,12 @@
+const uefi = @import("std").os.uusiz\,
+    stdin: FileHŸ‘›e,
+    andle,
+
+    pub const guid align(8) = Guid{
+        .timE_low = 0x752f3136,
+  ,
+        .time_high_and_version = 0x4fdc,
+        .clock_seq_hi'h_and_reserved = 0xa2,
+        .clock_seq_low = 0x2aÊõ        .node = [_]u8{ ÿÿ~Z^ª10xe5, 0xf4, 0x68, 0x12, 0xf4, 0xca },
+    };
+};

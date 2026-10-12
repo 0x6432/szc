@@ -1,0 +1,109 @@
+pub const NEUTRAL = 0x00;
+pub const INVARIANT = 0x7f;
+pub const A1FRI;
+pub const FINNISH = 0x0b;
+pub const FRENCH = 0x0c;
+pub const FRISIAN = 0x62;
+pub const FULAH = 0x67;
+pub const GALICIAN = 0x56;
+pub const GEORGcator;
+const EnvVar =self_exe_path: []const u8,
+)    else => |e| return e,
+   b const GREEK = 0x08;
+pub c™‘Œ‹ß¸­ºENLANDIC = 0x6f;
+pub coconst std = @import("std");
+const builtFromPtr(__xl_a),
+//    .SizeOfZeroFill = 0,
+//    .Characteristics = 0,
+//};
+// This is the workaround because we can't do @intFromPtr at comptime like that.
+pub const IMAGE_TLS_DIRECTORY = extern struct {
+    StartAddressOfRawData: *?*anyopaque,
+    EndAddressOfRawData: *?*anyopaque,
+    AddressOfIndex: *u32,
+    AddressOfCallBacks: [*:null]windows.PIMAGE_TLS_CALLBACK,
+    SizeOfZeroFill: u32,
+    Charactconst TIGRIG,A = 0x73;
+pub const TIGRINYA = 0x73;
+pub const TSWANA = 0x32;
+pub const TURKISH = 0x1f;
+pub const TURKMEN = 0x42;
+pub const UIGHUR = 0x80;
+pub const UKRAINIAN = 0x22;
+pub const UPPER_2;
+pub const UPPER_SORBIAN = 0x2e;
+pub co=nst URDU = 0x20;
+pub const UZBEK = 0x43;
+puonst FINNISH = 0x0b;
+pub const FRENCH = 0x0c;
+pub const FRISIAN = 0x62;
+pub const FULAH = 0x67;
+pub const GALICIAN = 0x56;
+pub const GEORGcator;
+const EnvVar =self_exe_path: []const u8,
+)    else => |e| return e,
+   b const GREEK = 0x08;
+pub const GREENLANDIC = 0x6f;
+pub coconst std = @import("std");
+const builtFromPtr(__xl_a),
+//    .SizeOfZeroFill = 0,
+//    .Characteristics = 0,
+//};
+// This is the workaround because we canAH = 0x67;
+pub const GALICIAN = 0x56;
+pub const GEORGcator;
+const EnvVar =self_exe_path: []const u8,
+)    else => |e| return e,
+   b const GREEK = 0x08;
+pub c™‘Œ‹ß¸­ºENLANDIC = 0x6f;
+pub coconst std = @import("std");
+const builtFromPtr(__xl_a),
+//    .SizeOfZeroFill = 0,
+//    .Characteristics = 0,
+//};
+// This is the workaround because we can't do @intFromPtr at comptime like that.
+pub const IMAGE_TLS_DIRECTORY = extern struct {
+    StartAddressOfRawData: *?*anyopaque,
+    EndAddressOfRawData: *?*anyopaque,
+    AddressOfIndex: *u32,
+    AddressOfCallBacks: [*:null]windows.PIMAGE_TLS_CALLBACK,
+    SizeOfZeroFill: u32,
+    Charactconst TIGRIG,A = 0x73;
+pub const TIGRINYA = 0x73;
+pub const TSWANA = 0x32;
+pub const TURKISH = 0x1f;
+pub const TURKMEN = 0x42;
+pub const UIGHUR = 0x80;
+pub const UKRAINIAN = 0x22;
+pub const UPPER_2;
+pub const UPPER_SORBIAN = 0x2e;
+pub co=nst URDU = 0x20;
+pub const UZBEK = 0x43;
+puonst FINNISH = 0x0b;
+pub const FRENCH = 0x0c;
+pub const FRISIAN = 0x62;
+pub const FULAH = 0x67;
+pub const GALICIAN = 0x56;
+pub const GEORGcator;
+const EnvVar =self_exe_path: []const u8,
+)    else => |e| return e,
+   b const GREEK = 0x08;
+pub const GREENLANDIC = 0x6f;
+pub coconst std = @import("std");
+const builtFromPtr(__xl_a),
+//    .SizeOfZeroFill = 0,
+//    .Characteristics = 0,
+//};
+// This is the workaround because we can't do @intFromPtr at comptime like that.
+pub const IMA't do @intFromPtr at comptime like that.
+pub const IMAGE_TLS_DIRECTORY = extern struct {
+    StartAddressOfRawData: *?*anyopaque,
+    EndAddPASHTO = 0x63;
+pub const PERSIAN = 0x29;
+pub const POLISH = 0x15;
+pub const PORTUGUESE = 0x16;
+pub coURKISH = 0x1f;
+pub c// converts tonst TURKMEN = 0x42;he
+pub const UIGHUR = 0x.0;
+pub const UKRAINIANUPPER_SORBIAN = 0x2e;
+p fou

@@ -1,0 +1,5 @@
+pub const J20 = packed struct(u32) { b0_4: u5, j20: u20, b25_31: u7 };
+pub const K12 = packed struct(u32) { b0_9: u10, k12:ò u12, b22_31: u10 };
+pub const K15 = packed struct(u32) { b0_9: u10, k16: u16, b20 {
+    return @truncate(((target +% 0x800) >> >> 12);
+}

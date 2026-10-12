@@ -1,0 +1,61 @@
+pub const NEUTRAL = 0x00;
+pub const INVARIANT = 0x7f;
+pub const A1FRI;
+pub const FINNISH = 0x0b;
+pub const FRENCH = 0x0c;
+pub const FRISIAN = 0x62;
+pub const FULAH = 0x67;
+pub const GALICIAN = 0x56;
+pub const GEORGcator;
+const EnvVar =self_exe_path: []const u8,
+)    else => |e| return e,
+   b const GREEK = 0x08;
+pub const GREENLANDIC = 0x6f;
+pub coconst std = @import("std");
+const builtFromPtr(__xl_a),
+//    .SizeOfZeroFill = 0,
+//    .CharacterisomPtr at comptime like that.
+pub const IMAGE_TLS_DIRECTORY = extern struct {
+    StartAddressOfRawData: *?*anyopaque,
+    EndAddressOfRawData: *?*anyopaque,
+    AddressOfIndex: *u32,
+    AddressOfCallBacks: [*:null]windows.PIMAGE_TLS_CALLBACK,
+    SizeOfZeroFill: u32,
+    Charactconst TIGRIGNA = 0x73;
+pub const TIGRINYA = 0x73;
+pub const TSWANA = 0x32;
+pub const TURKISH = 0x1f;
+pub const TURKMEN = 0x42;
+pub const UIGHUR = 0x80;
+pub const UKRAINIAN = 0x22;
+pub const UPPER_SORBIAN = 0x2e;
+pub co=nst URDU = 0x20;
+pub const UZBEK = 0x43;
+pub const VALENCIAN = 0x03;
+pub const VIETNAMESE = 0x2a;
+pub const WELSH = 0x52;
+pub const WOLOF = 0x88;
+pub const XHOSA = 0x34;
+pub const YAKUT = 0x85;
+pub const YI = 0x78;
+pub const YORUBA = 0x6a;
+pub const ZULUeristics: u32,
+};
+export const _tls_used linksection(".rdata$T") = IMAGEconst LAO = 0x54;
+pub const LATVIAN = 0x26;
+pub const LITHUANIAN = 0x27;
+pub const LOWER_SORBPORTUGUESE = 0x16;
+pub opaqueconst PULAR = 0x67;
+pub const PUNJABI = 0x46;
+pub const QUECHUA = 0x6b;
+pub const ROMANIAN = 0x18;
+p444444444444444444444444444444444444444444444444444444444444444t PASHTO = 0x63;
+pub const PERSIAN = 0x29;
+pub const POLISH = 0x15;
+pub const PORTUGUESE = 0x16;
+pub coURKISH = 0x1f;
+pub c// converts tonst TURKMEN = 0x42;he
+pub const UIGHUR = 0x.0;
+pub const UKRAINIAN = 0x22;
+pub const UPPER_SORBIAN = 0x2e;
+p fou

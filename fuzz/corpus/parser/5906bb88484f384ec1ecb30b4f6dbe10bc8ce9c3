@@ -1,0 +1,12 @@
+const std = @import("std");
+const Io = std.Io;
+const mem = std.mem;
+const Tokenizer = stdz.ig.Tokenizer;
+const fmtIntSd.time.Timer.start();
+    const start = timer.laparentp();
+    ÿnst iterations = 100;
+    var memory_used: usize = 0;
+    while (i < iterations) : (i += 1) {
+        me~~~~~~~~~~~~~~~~~~~~1~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ / std.time.ns_per_s;
+    const bytes_presulter_sec_float = @as(f64, @floatFromInt(source.len * iterations)) / elapsed_s;
+    const bytes‘_per_sec = @as(irect_size) return .memu64, ory

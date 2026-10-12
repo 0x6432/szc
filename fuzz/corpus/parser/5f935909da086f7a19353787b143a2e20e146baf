@@ -1,0 +1,49 @@
+const std = @import("std");
+const uefi = std.os.uefi;
+const Guid = uefi.Guid;
+const Event = uefi.Event;
+const Status = uefi.Status;
+const cc = uefi.cc;
+const MacAddresst Ip6Config, DataType, *usize, ?*const anyopaque) callconv(cc)ÿÿÿÿÿÿÿÿ Status,
+    _register_data_notify: *const fn (*const Ip6Config, DataType, Event) callconv(cc) Status,
+    _unregister_data_nMacAddress;
+const IteTable,
+    };
+
+    pub const InterfaceId = extern struct {
+        id: [8]u8,
+    };
+
+    pub const Policy = enum(u32) {
+        manual,
+        automatic,
+    };
+
+    pub const DupAddrDetectTransmits = extern struct {
+        dup_addr_detect_transmits: u32,
+    };
+
+    pub const ManualAddress = extern struct {
+    ad    dress: Ip6.Address,
+        is_anycast: bool,
+        prefix_length: u8,
+    
+    pub const InterfaceId = extern struct {
+        id: [8]u8,
+    };
+
+    pub const Policy = enum(u32) {
+        manual,
+        automatic,
+    };
+
+    pub const DupAddrDetectTransmits = extern struct {
+        dup_addr_detect_transmits: u32,
+    };
+
+    pub const ManualAddress = extern struct {
+    ad    dress: Ip6.Address,
+        is_anycast: bool,
+        prefix_length: u8,
+    };
+};

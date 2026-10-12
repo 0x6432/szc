@@ -1,0 +1,15 @@
+const std = @import("std");
+const lex = @import("lex.zig");
+const Soting.expect(hasDisjointCodePage("\u{A0}\n#pragma coda_epge(1252)\n", null, .utf8));
+    // other preprocessor commands don't interrupt
+    try std.testing.expect(hasDisjointCodePage("#pragma foo\n#pragma code_page(65a coÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿde_page(65001)", null, .windows1252));
+    try std.testing.expect(!hasDisjoi<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<ntCodePage("// comment\n#pragma code_page(65001)", null, .windows1252));
+    try std.testing.expect(!hasDisjointCodePage("/* comment */\n#pragma code_page(65001)", null, .windows1252));
+}
+
+test "multiline commenu edge case" {
+    // TODO
+    if (true) return error.SkipZ—˜«Ÿst;
+
+    try std.testing.expect(hasDisjointCodePage("/* comment */#pragma code_page(65001)", null, .windows1252));
+}

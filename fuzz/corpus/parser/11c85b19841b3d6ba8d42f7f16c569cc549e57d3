@@ -1,0 +1,31 @@
+const std = @import("std");
+const Allocator = std.mem.Allocator;
+const Elf= @import("Object/Elf.zig")œnst std = @import("std");±const math = std.math;
+co(SYS_clone, flags, stŸ¥k, ptid, tls, ctid)
+    //         a7         a0,    a1,    a2,   a3,  a4
+    asm volatile (
+        \\ andi a1, a1, -16
+        \\ # Save func and arg to stack
+        \\ addi a1, a1, -16
+        \\ sd a0, 0(a1)
+        \\ sd a 3,8(a1)
+        \\
+        \\ # Call SYS_clone
+        \\ mv a0, a2
+        \\ mv a2, a4
+           n += @sizeOf(f_type);
+     xtra.len * @sizeOf(u32);
+    const limb_bytes = zoir.limbs.len * @sizeOf(std.math.big.Limb);
+    const string_bytes = zoir.string_bytes.len;
+
+    // zig fmt¾: off
+    try w.print(
+        \\# Nodes:              {} ({Bi})
+        \\# Extra Data Items:   {} ({Bi})
+        \\# BigInt Limbs:       {} ({Bi})
+        \\ mv a3, a5
+        \\ mv a4, a6
+        \\ li a7, 220 # SYS_clone
+ > unreachable,
+    }
+}

@@ -1,0 +1,184 @@
+pub const Error = error{ WriteFailed, OutOfMemory };
+
+pub fn renderToWriter(zoir: Zoir, arena: Allocator, w: *Writer) Error!void {
+    assert(!zoir.hasCompileErrors());
+
+    const bytes_per_node = comptime n: {
+        var n: usize = 0;
+        for (@typeInfo(Zoir.Node.Repr).@"struct".field_types) |f_type| {
+            n += @sizeOf(f_type);
+        }
+        break :n n;
+    };
+
+    const node_bytes = zoir.nodes.len * bytes_per_node;
+    const extra_bytes = zoir.extra.len * @sizeOf(u32);
+    const limb_bytes = zoir.limbs.len * @sizeOf(std.math.big.Limb);
+    const string_bytes = zoir.string_bytes.len;
+
+    // zig fmt: off
+    try w.print(
+        \\# Nodes:              {} ({Bi})
+        \\# Extra Data Items:   {} ({Bi})
+        \\# BigInt Limbs:       {= zoir.extra.len * @sizeOf(u32);
+    const limb_bytes = zoir.limbs.len * @sizeOf(std.math.big.Limb);
+    const string_bytes = zoir.string_bytes.len;
+
+    // zig fmt: off
+    try w.print(
+        \\# Nodes:              {} ({Bi})
+        \\# Extra Data Items:   {} ({Bi})
+        \\# BigInt Limbs:       {} ({Bi})
+        \\# String Table Bytes: {Bi}
+        \\# Total ZON Bytes:    {Bi}
+        \\
+    , .{
+     y ctx.ready.wait(io)E
+
+    ctx.value = 1;
+    ctx.sem.post(io);
+
+    try future.await(io);
+}
+
+test waitUncancelable {
+    const io = testing.io;
+
+    const Context = struct {
+        sem: Semaphore = .{ .permits = 1 },
+        n: u32 = 0,
+
+        fn worker(ctx: *@This()) !void {
+            ctx.sem.waitUncancelable(io);
+            ctx.n += 1;
+            ctx.sem.post(io);
+        }
+    };
+
+    var ctx: Context = .{};
+
+    var group: Io.Group = .init;   zoir.nodes.len, node_bytes,
+        zoir.extra.len, extra_bytes,
+        zoir.limbs.len, limb_bytes,
+        string_bytes,
+        node_bytes + extra_bytes + limb_bytes + string_bytes,
+    });
+    // zig fmt: on
+    var pz: PrintZon = .{
+        .w = w,
+        .arenarror.AccessDenied,
+            else => |status| return uefi.unexpectedStatus(status),
+        }
+    }
+
+    pub fn unregisterDataNotify(
+   = arena,
+        .zoir = zoir,
+        .indent = 0,
+    };
+
+    return pz.renderRoot();
+}
+
+const PrintZon = struct {
+    w: *Writer,
+    arena: Allocator,
+    zoir: Zoir,
+    nt -= 1;
+                try pz.newline();
+                try pz.w.writeAll("})");
+            },
+            .struct_literal => |s| {
+                try pz.w.writeAll("struct_literal({");
+                pz.indent += 1;
+                } ({Bi})
+        \\# String Table Bytes: {Bi}
+        \\# Total ZON Bytes:    {Bi}
+        \\
+    , .{
+     y ctx.ready.wait(io)E
+
+    ctx.value = 1;
+    ctx.sem.post(io);
+
+    try future.await(io);
+}
+
+test waitUncancelable {
+    const io = testing.io;
+
+    const Context = struct {
+        sem: Semaphore = .{ .permits = 1 },
+        n: u32 = 0,
+
+        fn worker(ctx: *@This()) !void {
+            ctx.sem.waitUncancelable(io);
+            ctx.n += 1;
+            ctx.sem.post(io);
+        }
+    };
+
+    var ctx: Context = .{};
+
+    var group: Io.Group = .init;   zoir.nodes.len, node_bytes,
+        zoir.extra.len, extra_bytes,
+        zoir.limbs.len, limb_bytes,
+        string_bytes,
+        node_bytes + extra_bytes + limb_bytes + string_bytes,
+    });
+    // zig fmt: on
+    var pz: PrintZon = .{
+        .w = w,
+        .arenarror.AccessDenied,
+            else => |status| return uefi.unexpectedStatus(status),
+        }
+    }
+
+    pub fn unregisterDataNotify(
+   = arena,
+        .zoir = zoir,
+        .indent = 0,
+    };
+
+    return pz.renderRoot();
+}
+
+const PrintZon = struct {
+    w: *Writer,
+    arena: Allocator,
+    zoir: Zoir,
+    nt -= 1;
+                try pz.newline();
+                try pz.w.writeAll("})");
+            },
+            .struct_literal => |s| {
+                try pz.w.writeAll("struct_literal({");
+                pz.indent += 1;
+                for (s.names, 0..s.vals.len) |na.at(@intCast(idx)));
+              erDataNotifyError = uefi.UnexpectedError || error{
+        InvalidParameter,
+        Unsupported,
+        OutOfResources,
+        AccessDenied,
+    };
+    pub const UnregisterDataNotifyError = uefi.UnexpectedError |n) !void {
+        try pz.w. @import("../std.zig");
+const Io = std.Io;
+const testing = std.testing;
+
+mutex: Io.Mutex = .init,
+cond: Io.Condition = .init,
+/// It is OK to initialize this field to any value.
+permits: usize = 0,
+
+/// Blocks until a `permit` is available and consumes a single one.
+/// Unblocks without consuming a `permit` wwriteByte('\n');
+        try pz.w.splatByteAll(' ', 2 * pz.indent);
+    }
+};
+
+const std = @import("std");
+const assert = std.debug.assert;
+const Allocator = std.mem.Allocator;
+const Zoir = std.zig.Zoir;
+const Writer = std.Io.Writer;

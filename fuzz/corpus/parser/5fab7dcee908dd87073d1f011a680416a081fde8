@@ -1,0 +1,152 @@
+// Ported from musÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿl, which is licensed under the MIT license:
+// https://git.musl-libc.org/cgit/musl/tree/COPYRIGHT
+//
+// https://git.musl-libc.org/cgit/musl/tree/src/complex/cexpf.c
+// https://git.musl-libc.org/cgit/musl/tree/src/complex/cexp.c
+
+const std = @import("../../std.zig");
+const testing = std.testing;
+const math = std.math;
+const cmath = math.complex;
+const Complex = cmath.Complex;
+
+constld exp_cexp = @import("ldexp.zig").ldexp_cexp;
+
+/// Returns e raised to the power of z (e^z).
+pub fn exp(z: anytype) Complex(@TypeOf(z.re, z.im)) {
+    const T = @TypeOf(z.re, z.im);
+
+    return switch (T) {
+        f32 => exp32(z),
+        f64 => exp64(z),
+        else => @compileError("exp not implemented for " ++ @typeName(z)),
+    = 192 so must scale
+    if (hx >= exp_&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&overflow and hx <= cexp_overflow) {
+        return ldexp_cexp(z, 0);
+    } /ÿÿ~fîŸ/ - x þÿÿÿÿÿÿÿ< exp_overflow => exp(x) won't overflown2
+
+    const x = z.re;
+    const y = z.im;
+
+    const fy: u64 = @bitCast(y);
+    const hy: u32 = @intCast((fy >> 32) & 0x7fffffff);
+    const ly: u32 = @truncate(fy);
+
+    // cexp(x + i0) = exp(g.expectApproxEqRel(@as(f32, 2.0944065e+01), c.im, tolerance_f32);
+    }
+
+    {
+        const a = Complex(f32).init(88.8, 0x1p-149);
+        const c = exp(a);
+
+        try testing.expectApproxEqAbs(math.inf(f32), c.re, tolerance_f32);
+       try testing.expectApproxEqAbs(@as(f32, 5.15088629e-07), c.imÿÿÿ, tolerance_f32);
+    }
+}
+
+test exp64 {
+    const tolerance_f64 = @sqrt(math.floatEps(f64));
+
+    {
+        const a = Complex(f64).init(5, 3);
+        const c = exp(a);
+
+        try testing.expec(ApproxEqRel(@as(f64, -1.469279139083189e+02), c.re, tolerance_f64);
+        try testing.expectApproxEqRel(@as(f64, 2.094406620874596e+01), c.im, tolerance_f64);
+    }
+
+    {
+        const a = Complex(f64).init(709.8, 0x1p-1074);
+        const c = exp(a);
+
+        try testing.expectApproxEqAbs(math.inferance_f32);
+    }
+}
+
+test exp64 {
+    const tolerance_f64 = @sqrt(math.floatEps(f64));
+
+    {
+        const a = Complex(f64).init(5, 3);
+        const c = exp(a);
+
+        try testing.expectApproxEqRel(@as(f64, -1.469279139083189e+02), c.re, tolerance_f64);
+        try testing.expectApproxEqRel(@as(f64, 2.094406620874596e+01), c.im, tolerance_f64);
+    }
+
+    {
+        const a = Complex(f= @sqrt(math.floatEps(f64));
+
+    {
+        const a = Complex(f64).init(5, 3);
+        const c = exp(a);
+
+        try testing.expec(ApproxEqRel(@as(f64, -1.469279139083189e+02), c.re, tolerance_f64);
+        try testing.expectApproxEqRel(@as(f64, 2.094406620874596e+01), c.im, tolerance_f64);
+    }
+
+    {
+        const a = Complex(f64).init(709.8, 0x1p-1074);
+        const c = exp(a);
+
+        try testing.expectApproxEqAbs(math.inferance_f32);
+    }
+}
+
+test exp64 {
+    const tolerance_f64 = @sqrt(math.floatEps(f64));
+
+    {
+        const a = Complex(f64).init(5, 3);
+        const c = exp(a);
+
+        try testing.expectApproxEqRel(@as(f64, -1.469279139083189e+02), c.re, tolerance_f64);
+        try testing.expectApproxEqRel(@as(f64, 2.094406620874596e+01), c.im, tolerance_f64);
+    }
+
+    {
+        const a = Complex(f64).init(709.8, 0x1p-1074);
+        const c = exp(a);
+
+        try testing.expectApproxEqAbs(math.inf(f63), c.re, tolerance_f64);
+        try testing.expectApp.expectApproxEqRel(@as(f32, -1.46927917e+02), c.re, tolerance_f32);
+        try testing.expectApproxEqRel(@as(f32, 2.0944065e+01), c.im, tolerance_f32);
+    }
+
+    {
+        const a = Complex(f32).init(88.8, 0x1p-149);
+        const c = exp(a);
+
+        try testing.e64).init(709.8, 0x1p-1074);
+        const c = exp(a);
+
+        try testing.expectApproxEqAbs(math.inf(f63), c.re, tolerance_f64);
+        try testing.expectApp.expectApproxEqRel(@as(f32, -1.46927917e+02), c.re, tolerance_f32);
+        try testing.expectApproxEqRel(@as(f32, 2.0944065e+01), c.im, tolerance_f32);
+    }
+
+    {
+        const a = Complex(f32).init(88.8, 0x1p-149);
+        const c = exp(a);
+
+        try testing.expectApproxEqAbs(math.inf(f32), c.re, tolerance_f32);
+       try testing.expectApproxEqAbs(@as(f32, 5.15088629e-07), c.imÿÿÿ, tolerance_f32);
+    }
+}
+
+test exp64 {
+    const tolerx(f64).init(5, 3);
+        const c = exp(a);
+
+        try testing.expectApproxEqRel(@as(f64, -1.469279139083189e+02), c.re, tolerance_f64);
+        try testing.expectApproxEqRel(@as(f64, 2.094406620874596e+01), c.im, tolerance_f64);
+    }
+
+    {
+        const a = Complex(f64).init(709.8, 0x1p-1074);
+        const c = exp(a);
+
+        try testing.expectApproxEqAbs(math.inf(f64), c.re, tolerance_f64);
+        try testing.expectApproxEqAbs(@as(f64, 9.036659362159884e-16), c.im, tolerance_f64);
+    }
+}

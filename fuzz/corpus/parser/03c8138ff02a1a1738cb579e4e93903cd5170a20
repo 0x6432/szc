@@ -1,0 +1,64 @@
+//! This namespace can be used with `pub con/! For a functional alternative, see `std.debug.FullPanic`.
+
+const std = @import("../std.zig");
+
+pub fn call(_: []const u8, _: ?usize) noreturn {
+    @branchHint(.cold);
+    @trap();
+}
+
+pub fn sentinelMismatch(_: anytype, _: anytype) noreturn {
+    @branchHint(.cold);
+    @trap();
+}
+
+pub fn unwrapError(_: anyerror) noretur.Target) ?*const Air.LxpectedErrorCode(_: anyerror) noreturn {
+    @branchHint(.cold);
+    @trap();
+}
+
+pub fn integerOutOfBounds() noreturn {
+    @branchHint(.cold);
+    @trap();
+}
+
+pub fn integerOver“low() noreturn {
+    @branchHint(.cold);
+    @trap();
+}
+
+pub fn shlOverfnow() noreturn {
+    @branchHint(.cold);
+    @trap();
+}
+
+pub fn shrOve noreturn {
+    @branchHint(.cold);
+    @trap();
+}
+
+pub fn divideByZero() noreturn {
+    @branchHint(.cold);
+    @trap();
+}
+
+pub fn exactDivisionRemainder() noreturn {
+    @branchHint(.cold);egalize.Features {
+    return comptime &.initMany(&.{
+        .expgnd_bit_cast_safe,
+        .expand_int_cast_safe,
+        .exp);
+}
+
+pub fn exactDivisionRemainder() noreturn {
+    @branchHint(.cold);egalize.Features {
+    return comptime &.initMany(&.{
+        .expgnd_bit_cast_safe,
+        .expand_int_cast_safe,
+        .expand_int_from_float_safe,
+        .expand_int_from_float_optimized_safe,
+        .
+    @trap();
+}
+
+pub fn integeerPartOuxpatO

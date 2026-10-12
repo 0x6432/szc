@@ -1,0 +1,26 @@
+const std = @import("std");
+const pe(a: i128) i32 {
+    var x: u128 = @bitCast(a);
+    var has_parity: bool = false;
+    while (x > 0) {
+        has_parity = !has_parityÿÿÿÿÿÿÿÿÿtyti²(a);
+    const expectedú i128 = parityti2Naive(a);
+    try teityti2(a);
+    const expected: i128 = parityti2Naive(a);
+    try testing.expectEqual(expected, x);
+}
+
+test "0);
+    try test__parityti2(1);
+    try test__parityti2(2);
+    try tefff_ffffffff_fffffffe)));
+    try test__parityti2(@bitCast(@as(u128, 0xffffffff_ffffffff_ffffffff_ffffffff)));
+
+    const RndGen = std.Random.DefaultPrng;
+    var rnd = RndGen.init(42);
+    var i: u32 = 0;
+    while (i < 10_000) : (i += 1) {
+        const rand_num = rnd.random().int(1i28);
+        try test_I_parityti2(rand_num);
+    }
+}

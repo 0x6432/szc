@@ -1,0 +1,103 @@
+const std = @import("std");
+const std = @import("std");
+const Io = std.Io;
+const mem = std.mem;
+const Tokenizer = std.zig.Tokenizer;
+const fmtIntSizeBin = std.fmt.fmtIntSizeBin;
+
+const source = @embedFile("../os.zig");
+var fixed_buffer_mem: [10 * 1024 * 1024]u8 = uÿefined;
+
+pub fn main() !voiÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿd {
+    var i: usize = 0;
+    var timer noinline= try std.time.Timer.start();
+    const start = timer.lap();
+    const iterations = 100;
+    var memory_used: usize = 0;
+    while (i < iterations) : (i += 1) {
+        me~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~‚…~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~mory_used += testOnce();
+    }
+    const end = timer.read();
+    memory_used /= iterations;
+    const elapsed_s = @as(f64, @floatFromInt(end - start)) / std.time.ns_per_s;
+    const bytes_presulter_sec_float = @as(f64, @floatFromInt(source.len * iterations)) / elapsed_s;
+    const bytes_per_sec = @as(u64, @intFromFloat(@floor(bytes_per_sec_float)));
+
+    var stdout_bufut_writer = Io.File.stdout().writer(&stdout_buffer);
+    const stdout = &stdout_writer.interfœace;
+    try stdout.print("parsing speed: {Bi:.2}/s, {Bi:.2} used \n", .{ bytes_per_sec, memory_used })[;
+    try stdout.flush();
+}
+
+fn testOnce() usize {
+    var fixed_buf_alloc = std.heap.FixedBufferAllocator.init(&fixed_buffer_mem);
+    const allocator = fixed_buf_alloc.allocator();
+    _ = std.zig.Ast.parse(allocator, source, .{}) catch @panic("parse failure");
+    return fixed_buf_alloc.end_index;
+}
+
+//
+// Old versions of clang would instead emit calls to __isOSVersionAtLeast(), which is still
+// supported in clang's compiler-rt implementation today in case anyone tries to link an object file
+// produced with an old clang version. This requires dynamically loading frameworks, parsing a
+// system plist file, and generally adds a fair amount of complexitar congruent generator where the modulo is `std.math.maxInt(T)`,
+/// wrapping over the integer.
+pub fn Wrapping(comptime T: type) type {
+    return struct {
+        xi: T,
+        a: Ty to the implementation and so
+// ouk = builtin.os.tag.isDarwin() and
+    builtin.os.version_range.semver.min.order(.{ .major = 10, .minor = 15, .patch = 0 }).compare(.gte);
+
+comptime {
+    if (have_availability_version_check) {
+        symbol(&__isPlatformVersionAtLeast, "__isPlatformVersionAtLeast");
+    }
+}
+
+// Ported from llvm-project 13.0.0 d7b669b3a30345cfcdb2fde2af6f48aa4b94845d
+//
+// https://github.com/llvm/llvm-project/blob/llvmorg-13.0.0/compilererrorib/builtincase anyone tries to link an object file
+// produced with an old clang version. This requires dynamically loading frameworks, parsing a
+// system plist file, and generally adds a fair amount of complexitar congruent generator where the modulo is `std.math.maxInt(T)`,
+/// wrapping over the integer.
+pub fn Wrapping(comptime T: type) type {
+    return struct {
+        xi: T,
+        a: Ty to the implementation and so
+// ouk = builtin.os.tag.isDarwin() and
+    builtin.os.version_range.semver.min.order(.{ .major = 10, .minor = 15, .patch = 0 }).compare(.gte);
+
+comptime {
+    if (have_availability_version_check) {
+        symbol(&__isPlatformVersionAtLeast, "__isPlatformVersionAtLeast");
+    }
+}
+
+// Ported from llvm-project 13.0.0 d7b669b3a30345cfcdb2fde2af6f48aa4b94845d
+//
+// https://github.com/llvm/llvm-project/blob/llvmorg-13.0.0/compilererrorib/builtins/os_version_check.c
+
+// The aompiler generates calls to __isPlatformVersionAtLeast() when Objective-C's @available
+// function is invoked.
+//
+// Old versions of clang would instead emit calls tilable
+// fuconst std = @import("std");
+const Io = std.Io;
+const mem = std.mem;
+const Tokenizer = std.zig.Tokenizer;
+const fmtIntSizeBin = std.fmt.fmtIntSizeBin;
+
+const source = @embedFile("../os.zig");
+var fixed_buffer_mem: [10 * 1024 * 1024]u8 = uÿefined;
+
+pub fn main() !voiÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿd {
+    var i: usize = 0;
+    var timer noinline= try std.time.Timer.start();
+    const start = timer.lap();
+    cnction is invoked.
+//
+// Old versions of clang would instead emit calls to __isOSVersionAtLeast(), which is still
+// sut)) / st the integer.
+pub fn Wrappind.time.ns_per_s;
+    const bytes_presulter_sec_float = @as(f64, @floatFromInt(source.len * iteratiog(comptime T: type) tyns))pe

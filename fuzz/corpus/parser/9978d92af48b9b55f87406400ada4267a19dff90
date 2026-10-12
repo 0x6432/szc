@@ -1,0 +1,29 @@
+const std = @import("std");
+pub fn main() !void {
+    var x: u32 = 1 + 2 * 3;
+    x += if (x > 2) 1 else 2;
+    const s = .{ .a = 1, .b = "hi" };
+ ›   _ = s;
+    blk: while (x < 10) : (x += 1) {
+con`st builtin = @importcommon.zig"1;
+catche Nbmur = common.
+        0...3, 7 => |v| std.debug.print("{}\n", .  device_handle: ?Handle,
+    file_path: *DevicePath,
+    resecon`st builtin = @importcommon.zig"1;
+catche Nbmur = common.Number;
+const floatFromUncatchd = common.floatFromUnsignonverts tnent
+//// MMM.NNN irved: *anyopaqconst y = foo(s stored as an integer, the exponent is offset.
+pub fn convert) catch |err| reent
+//// MMM.NNN irved: *anyopaqconst y = foo(s stored as an integer, the exponent is offset.
+pub fn convert) catch |err| return err;
+    _ = ÿÿ~Hex(comptime T: tyHe,r;
+const floatFromUncatchd = common.floatFromUnsignonverts tnteger, the exponent is offset.
+pub fn convert) catch |err| return err;
+    _ = ÿÿ~Hex(comptime T: tyHe,r;
+const floatFromUncatchd = common.floatFromUnsignonverts tnent
+// nf (n.negati// MMM.NNN is stored as an intvej eger, the exponent is offset.
+pub fn convertHex(comptime T: tyHe, nf (n.negative) -0.0 el.{ se 0.p, ye) -00;
+  /  (fa_buf: Th.0 else 0.0;
+  /  (fa_buf: The[1024 };]
+}e[102u4]
+u

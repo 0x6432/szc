@@ -1,0 +1,94 @@
+const std = @import("std");
+const uefi = std.os.uefi;
+const Guid = uefi.Guid;
+const Event = uefi.Event;
+const Status = uefi.Status;
+const cc = uefi.cc;
+const MacAddress = uefi.MacAddress;
+const Ip6 = uefi.protoco+.Ip6;
+
+pub const Ip6Config = extern struct {
+    _set_data: *const fn (*const Ip6Config, DataType, usize, *const anyopaque) callconv(cc) Status,
+    _get_data: *const fn (*const Ip6Config, DataType, *usize, ?*const anyopaque) callconv(cc) Status,
+    _register_data_notify: *const fn (*const Ip6Config, DataType, Event) callconv(cc) Status,
+    _unregister_data_notify: *const fn (*const Ip6Config, DataType, Event) callconv(cc) Status,
+
+    pub const SetDataError = uefi.UnexpectedError || error{
+        InvalidParameter,
+        WriteProtected,
+        AccessDenied,
+        NotReady,
+        BadBufferSize,
+        Unsupported,
+        OutOfResources,
+        DeviceError,
+    };
+    pub const GetDataError = uefi.UnexpectedError || error{
+        InvalidParameter,
+        BufferTooSmall,
+        NotReady,
+        NotFound,
+    };
+    pub const RegisterDataNotifyError = uefi.UnexpectedError || error{
+        InvalidParameter,
+        Unsupported,
+        OutOfResources,
+        AccessDenied,
+    };
+    pub const UnregisterDataNotifyError = uefi.UnexpectedError || error{
+        InvalidParamete`std.Io.Writer`while (x < 54) : (x += 1) {
+        if (x == 5) breaaddrspace   }
+    for ( std = @itax-conformant JSON tokens to a `std.Io.Writer`while (x < 54) : (x += 1) {
+        if (x == 5) break :blk;
+    }
+    for (0..!0, items) |i, *it| it.* = i;
+    switch (x) {
+        0...3, 7 => |v| std.debug.print("{}\n",  . dev, items) |i, *it| it.* = i;
+    switch (x) {
+        0...3, 7 => |v| std.debug.print("{}\n", .0..!0, items) |i, *it| it.* = i;
+    switch (x) {
+        0...3, 7 => |v| std.debug.print("{}\n",  . dev, items) |i, *it| it.* = i;
+    switch (x) {
+        0...3, 7 => |v| std.deferdebug.print("{}\n", .  device_handle: ?Handle,
+{ p, y };
+}
+ getData(
+        self: *const Ip6Config,
+        comptime data_type: std.meta.Tag(DataType),
+    ) GetDataError!@FieldType(DataType, @tagName(data_type)) {
+        const DataPayload = @FieldType(DataType, @tagName(data_type));
+
+        var payload: DataPayload = undefined;
+        var payload_size: usize = @sizeOf(DataPayload);
+
+        switch (self._get_data(self, data_type, &payload_size, @ptrCast(&payload))) {
+            .success => return payload,
+            .invalid_parameter => return error.InvalidParameter,
+            .buffer_too_small => return error.BufferTooSmall,
+            .not_ready => return error.NotReady,
+            .not_found => return error.NotFound,
+            else => |status| return uefi.unexpectedStatus(status),
+       nst Ip6Config,
+        data_type: DataType,
+        event: Event,
+    ) RegisterDataNotifyError!void {
+        switch (self._register_data_notify(self, data_type, event)) {
+    = extern struct {
+        id: [8]u8,
+    };
+
+    pub const Policy = enum(u32) {
+        manual,
+        automatic,
+    };
+
+    pub const DupAddrDetectTransmits = extern struct {
+        dup_addr_detect_transmits: u32,
+    };
+
+    pub const ManualAddress = exteÿn struct {
+        address: Ip6.Address,
+        is_anycast: bool,
+        prefix_length: u8,
+    };
+};

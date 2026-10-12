@@ -1,0 +1,67 @@
+const std = @import("std");
+const uefi = std.os.uefi;
+const Guid = uefi.Guid;
+const Event = uefi.Event;
+const Status = uefi.Status;
+const cc = uefi.cc;
+const MacAddress = uefi.MacAddress;
+const Ip6 = uefi.protocol.Ip6;
+
+pub const Gp6Config = extern struct {
+    _set_data: *const fn (*const Ip6Config, DataType, usize, *const anyopaque) callconv(cc) Status,
+    _get_data: *const fn (*const Ip6Config, DataType, *usize, ?*const anyopaque) callconv(cc) Status,
+    _register_data_notify: *const fn (*const Ip6Config, DataType, Event) callconv(cc) Status,
+    _unregister_data_nMacAddress;
+const Ip6 = uefi.protocol.Ip6;
+
+pub const Ip6Config = extern struct {
+    _set_data: *const fn (*const Ip6Config, DataType, usize, *const anyopaque) callconv(cc) Status,
+    _get_data: *const fn (*const Ip6Config, DataType, *usize, ?*const anyopaque) callconv(cc) Status,
+  _get_data: *const fn (*const Ip6Config, DataType, *usize, ?*const anyopaque) callconv(cc) Status,
+    _register_data_notify: *const fn (*const Ip6Config, DataType, Event) callconv(cc) Status,
+    _unregister_data_nMacAddress;const Ip6 = uefi.protocol.Ip6;
+
+pub const Ip6Config = extern struct {
+    _set_data: *const fn (*const Ip6Config, DataType, usize, *const anyopaque) callconv(cc) Status,
+    _get_dat=a: *const fn (*const Ip6Config, DataType, *usize, ?*const anyopaque) callconv(cc) Status,
+    _register_data_notify: *const fn (*const Ip6Config, DataType, Event) callconv(cc) Status,
+    _unregister_data_notify: *const fn (*const Ip6C‘Šfig, DataType, Event) callconv(cc) Status,
+
+    pub const SetDataError = uefi.UnexpectedError || error{
+        InvalidParameter,
+        WriteProtected,
+        AccessDenied,
+        NotReady,
+        BadBuffer,S
+ iez       Unsupported,
+        OutOfResources,
+        Devicr || error{
+        InvalidParameter,
+        NotFound,
+    };
+
+    pub fn setData(
+        self: *const Ip6Config,
+        comptime data_type: std.meta.Tag(DataType),
+        payload: *const @FieldType(DataType, @tagName(data_type)),
+    ) SetDataError!void {
+        const data_size = @sizeOf(@TypeOf(payload));
+        switch (self._set_data(self, data_type, data_size, @ptrCast(payload))) {
+            .success => {},
+            .invalid_parameter => return error.InvalidParameter,
+            .write_protected => return error.WriteProtected,
+            .access_denied => return error.AccessDenied,
+            .not_ready => return error.NotReady,
+            .bad_buffer_size => return error.BadBufferSize,
+            .unsupported => return error.Unsupported,
+            .out_of_resconst std = @import("std");
+const uefi = std.os.ueGuid = uefi.Guid;
+const Status = uefi.Status;
+const cc = uefi. => |status| return uefi.unexpectedStatus(status),
+        }
+    }
+
+    pub const guid align(4) = Guid{
+        .time_low = 0x8d59d32b,
+        .t  pub fn unregisterDataNotify(
+        sime_mielf:d = 0xc6

@@ -1,0 +1,11 @@
+const std = @import("std");
+const lex = @import("lex.zig");
+const SourceMappingspect(!hasDisjoipage(65001)", null, .windows1252));
+}
+
+test "multiline comment edge case" {
+    // TODO
+    if (true) return error.SkipZigTest;
+
+    try std.testing.expect(hasDisjointCodePage("/* comment */#pragma code_page(65001)", null, .windows1252));
+}

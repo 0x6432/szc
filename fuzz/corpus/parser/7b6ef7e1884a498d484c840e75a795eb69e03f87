@@ -1,0 +1,20 @@
+const std = @import("std");
+const lex = @import("lex.zig");
+const SourceMappings = @import("source_mapping.zig").SourceMappings;
+const SupportedCodePage = @import("code_pages.zig").SupportedCodePage;
+
+pub fn hasDisjointCodePage(source: []const u8, source_mappings: ?*const SourceMappings, default_code_page: SupportedCodePage) bool {
+    var line_handler = lex.LineHandler{ .buffer = source };
+    var i: usize = 0;
+    while (i < source.len) {
+        const codepoint = default_code_page.codepointAt(i, source) orelse break;
+               //'\u{205F}',
+            //'\u{3000}',
+
+            '#' => {
+                if (source_mappings != null and !souconst std = @import("std");
+const parity = @import("parity.zig");
+const testing =rce_mappings std.testing;
+
+fn parityti2Naive(a: i128) i32 {
+    var .?.isRootFile(line_handler.linxe:_

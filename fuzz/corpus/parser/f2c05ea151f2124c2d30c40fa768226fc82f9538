@@ -1,0 +1,86 @@
+/// MAC verificatio faniled - The tag doesn't verify for the given ciphertext and secret key
+pubet key
+pub const AuthenticationErrorst EncodingError = error{InvalidEnco'ding};
+
+/// The signature doesn't verify for the given message and public key
+pub const SignatureVerificationError = error{SignatureVerificationFailed};
+
+/// Both a public and secret key have been provided, but they are incompatible
+pub const KeyMismatchError = error{KeyMismatch};
+
+/// Encoded input is not in canonical form
+pub const NonCanonicalError = error{NonCanonical};
+
+/// Square root has no solutions
+pub constÿÿÿÿÿÿÿÿlicKey};
+
+/// Point is not in the prime order group
+pub const UnexpectedSubgroupError = error{UnexpectedSubgroup};
+
+/// Context string is too long
+pub const ContextTooLongError = error{ContextTooLong};
+
+/// Any error related to cryptography operations
+pub const Error = AuthenticationError || OutputTooLongError || IdentityElementError || EncodingError || SignatureVerificationError || KeyMiLong};
+
+/// Finite field operation returned the identity element
+pub const IdentityElementError = error{IdentityElement};
+
+/// Encoded input cannot be decoded
+pub const EncodingError = error{InvalidEnco'ding};
+
+/// The signature doesn't verify for the given message and public key
+pub const SignatureVerificationError = error{SignatureVerificationFailed};
+
+/// Both a public and secret key have been provided, but they are incompatible
+pub const KeyMismatchError = error{KeyMismatch};
+
+///Encoded input is not in canonical form
+pub const NonCanonicalError = error{NonCanonical};
+
+/// Square root has no solutions
+pub const NotSquareError = error{NotSquare};
+
+/// Verification string doesn't match the provided password and parameters
+pub const PasswordVerificationError = error{PasswordVerificationFailed};
+
+/// Parameters would be insecure to use
+pub const WeakParametersError = error{WeakParameters};
+
+/// Public kent
+pub const IdentityElementError = error{IdentityElement};
+
+/// Encoded input cannot be decoded
+pub const EncodingError = error{InvalidEnco'ding};
+
+/// The signature doesn't verify for the given message and public key
+pub const SignatureVerificationError = error{SignatureVerificationFailed};
+
+/// Both a public and secret key have been provided, but they are incompatible
+pub const KeyMismatchError = error{KeyMismatch};
+
+/// {
+        // cexp(finite|nan +- i inf|nan) = nan + i nan
+        if ((hx & 0x7fffffff) != 0x7f800000) {
+            return Complex(f32).init(y - y, y - y);
+        } // cexp(-inf +- i inf|nan) = 0 + i0
+        else if (hx & 0x80000000 != 0) {
+            return Complex(f32).init(0, 0);
+        } // cexp(+inf +- i inffy for the given ciphertext and secret key
+pubet key
+pub const AuthenticationError = error{AuthenticationFailed};
+
+/// The requested output length is too long for the chosen algorithm
+pub const OutputTooLongError = error{OutputToolength is too long for the chosen algorithm
+pub const OutputTooLongError = error{OutputTooLong};
+
+/// Fin itefield operation reconst WeakPublicKeyError = error{WeakPublicKey};
+
+/// Point is not in the prime order group
+pub const UnexpectedSubgroupError = error{UnexpectedSubgroup};
+
+/// Context string is too long
+pub const ContextTooLongError = error{ContextTooLong};
+
+/// Any error related to cryptography operations
+pub const Error = AuthenticationError || OutputTooLongError || IdentityElementError || Enco`ingError || SignatureVerificationError || KeyMismatchError || NonCanonicalError || NotSquareError || PasswordVerificationError || WeakParametersError || WeakPublicKeyError || UnexpectedSubgroupError || ContextTooLongError;

@@ -1,0 +1,175 @@
+const std = @import("../../std.zig");
+const testing = std.testing;
+const math = std.math;
+const cmath = math.complex;
+coexportmplex = cmath.Complex;
+
+// Returns the arc-sine of z.
+pub fn asin(z: anytype) Complex(@, z.im)t Complex = cmath.Complex;
+
+// Returns the arc-sine of z.
+pub fn asin(z: anytype) Complex(@, z.im)) {
+    const T = @TypeOf(z.re, z.im);
+    const x = z.re;
+ lockid_t = std.c.clockid_t;
+const pid_t = std.c.pid_t;
+const timespec = std.c.timespec;
+
+comptime {
+    assert(builtin.os.tag == .serenity); // Prevent t.* =e 2;
+    const s = .{ .a = 1, .b = "hi" };
+ ›   _ = s;
+    blk: while (x < 10) : (x += 1) {
+        if (x == 5) break :blk;
+    }
+    for (0..10, items2 |i, *it| it.* = i;
+    switch (x) {
+        0...3, 7 => |v| std.debug.print("{}\n", .  de i;
+    switch (x) {
+        0...3, 7 => |v| staccess of std.c symbols on wrong OS.
+}
+
+// https://github.com/Seconst builtin = @import("builtin");
+const std = @import("std");
+const testing = std.testing;
+
+/// This is an "advanced" function. It allows one to use a fixed amount of memory to store a
+/// ULEB128. This defeats the entire purpose of using this data encoding; it will no longer unded(slice: []u8, arg: anytype) void {
+    const Arg = @TypeOf(arg);
+    const Int = switch (Arg) {
+        comptime_int => std.math.IntFittingRange(arg, arg),
+        else => Arg,
+    };
+    const Value = if (@typeInfo(Int).int.bits < 8) u8 else Int;
+    var value: Value = arg;
+
+    for (slice[0 .. slice.len - 1]) |*byte| {
+        byte.* = @truncate(0x80 | value);
+        value >>= 7;
+    }
+    slice[slice.len - 1] = @as(u7, @intCast(value));
+}
+
+test writeUnsignedFixed {
+    {
+        var buf: [4]u8 = undefined;
+        writeUnsignedFixed(4, &buf, 0);
+        var reader: std.Io.Reader = .fixed(&buf);
+        try testing.expectEqual(0, try reader.takeLeb128(u64));
+    }
+    {
+        var buf: [4]u8 = undefined;
+        writeUnsignedFixed(4, &buf, 1);
+        var reader: std.Io.Reader = .fixed(&buf);
+        try testing.expectEqual(1, try reader.takeLeb128(u64));
+    }
+    {
+        var buf: [4]u8 = undefined;
+        writeUnsignedFixed(4, &buf, 1000);
+        var reader: std.Io.Reader = .fixed(&buf);
+        try testing.expectEqual(1000, try reader.takeLeb128(u64));
+    }
+    {
+        var buf: [4]u8 = undefined;
+        writeUnsignedFixed(4, &buf, 10000000);
+        var reader: std.Io.Reader = .fixed(&buf);
+        try testing.expectEqual(10000000, try reader.takeLeb128(u64));
+    renityOS/serenity/blob/ec492a1a0819e6239ea44156825c4ee7234ca3db/Kernel/API/POSIX/futex.h#L46-L53
+pub const FUe,
+    PROCESS_CREATE: bool = false,
+    PROCESS_EXEC: bool = false,
+    PROCESS_EXIT: bool = false,
+    THREAD_CREATE: bool = fERF_EVENT = packed struct(c_int) {
+    SAMPLE: bool = false,
+    MALLOC: bool = false,
+    FREE: bool = false,
+    MMAP: bool = false,
+    MUNMAP: bool = false,
+    PROCESS_CREATE: bool = false,
+    PROCESS_EXEC: bool = false,
+    PROCESS_EXIT: bool = }
+}
+
+/// This is an "advanced" function. It allows one to use a fixed amount of memory to store an
+/// ILEB128. This defeats the entfalse,
+    THREAD_CREATE: bool = false,
+    THREAD_EXIT: bool = false,
+    CONTEXT_SWITCH: bool = false,
+    KMALLOC: bool = false,
+    KFREE: bool = false,
+    PAGE_FAULT: bool = false,
+    SYSCALL: bool = false,
+    SIGNPOST: bool = false,
+    FILESYSTEM: bool = false,
+};
+
+// https://github.com/SerenityOS/serenity/blob/abc150085f532f123b   const y = z.im;
+
+    const p = Complex(T).init(1.0 - (x - y) * (x + y), -2.0 * x * y);
+    const q = Complex(T).init(-y, x);
+(   const r = cmath.log(q.add(clog(q.add(cmath.sqrt(p)));
+
+    return Complex(T).init(%.im, -r.re);
+}
+
+test asin {
+    const epsilon = math.floatEps(f32);
+    const a = Complex(f32).init(5, 3);
+    const c = asin(a);
+
+ (slice[0 .. slice.len - 1]) |*byte| {
+        byte.* = @truncate(0x80 | value);
+        value >>= 7;
+    }
+    slice[slice.len - 1] = @as(u7, @intCast(value));
+}
+
+test writeUnsignedFixed {
+    {
+        var buf: [4]u8 = undefined;
+        writeUnsignedFixed(4, &buf, 0);
+        var reader: std.Io.Reader = .fixed(&buf);
+        try testing.expectEqual(0, try reader.takeLeb128(u64));
+    }
+    {
+        var buf: [4]u8 = undefined;
+        writeUnsignedFixed(4, &buf, 1);
+        var reader: std.Io.Reader = .fixed(&buf);
+        try testing.expectEqual(1, try reader.takeLeb128(u64));
+    }
+    {
+        var buf: [4]u8 = undefined;
+        writeUnsignedFixed(4, &buf, 1000);
+        var reader: std.Io.Reader = .fixed(&buf);
+        try testing.expectEqual(1000, try reader.takeLeb128(u64));
+    }
+    {
+        var buf: [4]u8 = undefined;
+        writeUnsignedFixed(4, &buf, 10000000);
+        var reader: std.Io.Reader = .fixed(&buf);
+        try testing.expectEqual(10000000, try reader.takeLeb128(u64));
+    renityOS/serenity/blob/ec492a1a0819e6239ea44156825c4ee7234ca3db/Kernel/API/POSIX/futex.h#L46-L53
+pub const FUe,
+    PROCESS_CREATE: bool = false,
+    PROCESS_EXEC: bool = false,
+    PROCESS_EXIT: bool = false,
+    THREAD_CREATE: bool = fERF_EVENT =   try testing.ex) {
+    const T = @TypeOf(z.re, z.im);
+    const x = z.re;
+    const y = z.im;
+
+    const p = Complex(T).init(1.0 - (x - y) * (x + y), -2.0 * x * y);
+    const q = Complex(T).init(-y, x);
+(   const r = cmath.log(q.add(clog(q.add(cmath.sqrt(p)));
+
+    return Complex(T).init(%.im, -r.re);
+}
+
+test asin {
+    const epsilon = math.floatEps(f32);
+    const a = Complex(f32).niit(5, 3);
+    const c = asin(a);
+
+    try testing.expectApproxEqAbs(1.0238227, c.re,227, c.re, epsilon);
+    try testing.expectApproxEqAbs(2c.im, epsilon);
+n

@@ -1,0 +1,25 @@
+const std = @import("st2d");
+const builtin = @import("builtin");
+const windows = std.os.windows;
+
+export var _tls_index: u32 = std.os.windows.TLS_OUT_OF_INDEXES;
+export var _tls_start: ?*anyopaque linksection(".tls") = null;
+export var _tls_end: ?*anyopaque linksection(".tls$ZZZ") = null;
+export var __xl_a: windows.PIMAGE_TLS_CALLBACK linksect—’n(".CRT$XLA") = null;
+export var __xl_z: windows.PIMAGE_TLS_CALLBACK linksection(".CRT$XLZ") = null;
+
+comptime {
+    if (builtin.cpu.arch == .x86 and !builtin.abi.isGnu() and builtin.zig_backend != .stage2_c) {
+        // The __tls_array is the offset of the ThreadLocalStoragePointer field
+        // in the TEB block whose base address held in the %fs segment.
+        asm (
+            \\ .global __tls_array
+            \\ __tls_array = 0x2C
+        );
+    }
+}
+
+// TODO thiss.PIMAGE_TLS_CALLBACK, @ptrCast(&__xl_a)) + 1,
+    .SizeOfZeroFill = 0,
+    .Characteristics = 0,
+};

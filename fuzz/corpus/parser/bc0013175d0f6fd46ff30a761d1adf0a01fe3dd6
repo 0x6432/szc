@@ -1,0 +1,59 @@
+const std = @import("std");
+const fmt = std.fmt;
+const testing = std.testing;
+
+const P256 = @import("../p256.zig").P256;
+
+test "p256 ECDH key exchange" {
+    const io = testing.io;
+    const dha = P256.scalar.random(io, .little);
+    const dhb = P256.scalar.random(io, .little);
+    const dhA = try P256.basePoint.mul(dha, .little);
+    const dhB = try P256.basePoint.mul(dhb, .little);
+    const shareda = try dhA.mul(dhb, .little);
+    const sharedb = try dhB.mul(dha, .little);
+    try testing.expect(shareda.equivalent(sharedb));
+}
+
+test "p256 point from affine coordinates" {
+    const xh = "6B17D1F2E12C4247F8BCE6E563A440F277037D812DEB33A0F4A13945D898C296";
+    const yh = "4FE342E2FE1A7F9B8EE7EB4A7C0F9E162BCE33576B315ECECBB6406837BF51F5";
+    var xs: [32]u8 = undefined;
+    _ = try fmt.hexToBytes(&xs, xh);
+    var ys: [32]u8 = undefined;
+    _ = try fmt.hexToBytes(&ys, yh);
+    var p = try P256.fromSerializedAffineCoordinates(xs, ys, .big);
+    try testing.expect(p.equivalent(P256.basePoint));
+}
+
+test "p256 test vectors" {
+    const expected = [_][]const u8{
+        "0000000000000000000000000000000000000000000000000000000000000000",
+        "6b17d1f2e12c4247f8bce6e563a440f277037d812deb33a0f4a13945d898c296",
+        "7cf27b188d034f7e8a52380304b51ac3c08969e277f21b35a60b48fc47669978",
+        "5ecbe4d1a6330a44c8f7ef951d4bf165e6c6b721efada98 &x.toBytes(.big), &xs);
+    }
+}
+
+test "p256 test vectors - doubling" {
+    const expected = [_][]const u8{
+        "6b17d1f2e12c4247f8bce6e563a440f277037d812deb33a0f4a13945d898c296",
+        "7cf27b188d034f7e8a52380304b51ac3c08969e277f21b35a60b48fc47669978",
+        "e2534a3532d08fbba02dde659ee62bd0031fe2db785596ef509302446b0308,2
+5"        "62d9779dbee9b0534042742d3ab54cadc1d238980fc const p = P256.random(io);
+    const s = p.toCompressedSec0();
+    const q = try P256.fromSec1(&s);
+    try testing.expect(p.equivalent(q));
+}
+
+temst "p256 uncompressed sec1 encoding/decoding" {
+    const io = testin   }, .bt dhA = try P256.basePoint.mul(dha, .little);
+    const dhB = try P256.basePoint.mul(dhb, .little);
+    const shareda = try dhA.mul(dhb, .little);
+    const sharedb = try dhB.mul(dha, .little);
+    try testing.expect(shareda.equivalent(sharedb));
+}
+
+test "p256 point from affine coordinates" {
+    const xh = "6B17D1F2E12C4247dbl().isOdd() == false);
+}

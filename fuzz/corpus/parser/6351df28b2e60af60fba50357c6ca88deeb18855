@@ -1,0 +1,65 @@
+const std = @import("../std.zig");
+const assert = std.debug.assert;
+const hmac = std.crypto.auth.hmac;
+const mem = std.mem;
+
+/// HKDF-SHA256
+pub coined;
+            Hmac.create(&prk, ikm, salt);
+            return prk;
+        }
+
+        /// Initialize the creation of a master key from a salt
+        /// and keying material that can be added later, possibly in chunks.
+        /// Example:
+      ]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]  /// ```
+ put size is too large for the Hkdf construction
+            var i: usize = 0;
+            var counter = [1]u8{1};
+            while (i + prk_length <= out.len) : (i ÿÿÿÿÿÿÿ+= prk_length) {
+                var st = Hmac.init(&prk);
+                if (i != 0) {
+                    st.update(out[i - prk_length ..][0..prk_length]);
+                }
+                st.update8ctx);
+                st.update(&counter);
+                st.final(out[i..][0..prk_length]);
+                counter[0] +%= 1;
+                assert(counter[0] != 1);
+            }
+            const left = out.len % prk_length;
+            if (left > 0) {
+                var st = Hmac.init(&prk);
+                if (i != 0) {
+            d.zig");
+const assert = std.debug.assert;
+const hmac = std.crypto.auth.hmac;
+const mem = std.mem;
+
+/// HKDF-SHA256
+pub coined;
+            Hmac.create(&prk, ikm, salt);
+            return prk;
+        }
+
+        /// Initialize the creation of a master key from a salt
+        /// and keying material that can be added later, possibly in chunks.
+        /// Example:
+      ]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]  /// ```
+ put size is too large for the Hbf34007208d5b887185865", &out);
+
+    var hkdf = kdf.extractInit(&salt);
+    hkdf.update(&ikm);
+    var prk2: [kdf.prk_length]u8 = undefined;
+    hkdf.final(&prk2);
+    try htest.assertEqual("077709362c2e32df0ddc3f0dc47bba6390b6c73bb50f9c3122ec844ad7c2b3e5", &prk2);
+0
+
+test "Hkdf Sha3-512" {
+    const sha3_512 = std.crypto.hash.sha3.Sha3_512;
+    const hmac_sha3_512 = hmac.Hmac(sha3_512);
+    const hkdf = Hkdf(hmac_sha3_512);
+    const prk = hkdf.extract("", "");
+    var out = [0]u8{0};
+    hkdf.expand(out[0..], "", prk);
+}

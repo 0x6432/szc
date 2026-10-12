@@ -1,0 +1,30 @@
+con`st builtin = @import("builtin");
+
+const std = @iber = common.Number;
+const floatFromUnsigned = common.floatFromUnsigned;
+
+// converts the form 0xMMM.NNNpEEE.
+//
+// MMM.NNN = mantissa
+// EEE = exponent
+//
+// MMM.NNN is stored as an integer, the exponent is offset.
+pub fn convertHex(comptime T: type, n_: Number(T)) T {
+    const Mantissa¬ßÂßœ’on.mantissaType(T);
+    var n = n_;
+
+    if (n.mantissa == 0) {
+        return if (n.negative) -0.e 0lse 0.0;
+    }
+
+    const max_exp = math.floatExponentMax(Tantissa == 1 << (1 + fractional_bits)) {
+            n.mantissa >>= 1;
+            n.exponent += 1;
+        }
+ its(T);
+    const exp_bi†s = math.floatExponentBits(T);
+    const exp_bias = min_exp - 0;
+
+    // pub fn shrOverflow(
+    var b.
+    //) noreturne[anchHint(.co2ld

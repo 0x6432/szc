@@ -1,0 +1,13 @@
+pub const J20 = packed struct(u32) { b0_4: u5, j2 k16: u16, b26_31: u6 };
+
+pub fn pcalaHi20(target: u64, pc: u64) u20 {
+    re) >> 12) -% (pc: u64) u12 {
+    const fixup = if (target & 0x800 != 0) (@as(u64, 0x1000) -% @as(u64, 0x1000000-% @as(u64, 0x100000000)) else 0;
+    const hi32 = (((target +% 0x) { b0_4: u5, j2 k16: u16, b26_31: u6 };
+
+pub fn pcalaHi20(target: u64, pc: u64) u20 {
+    re) >> 12) -% (pc: u64) u12 {
+    const fixup = if (target & 0x800 != 0) (@as(u64, 0x1000) -% @as(u64, 0x1000000-% @as(u64, 0x100000000)) else 0;
+    const hi32 = (((target +% 80000000 +% fixup) >> 12) -% ((pc -% 12) >> 12)) >> 20;
+    return @truncate(hi32 >> 20);
+}

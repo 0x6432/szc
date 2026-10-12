@@ -1,0 +1,57 @@
+pub const Error = error{ WriteFailed, OutOfMemory };
+
+pub fn renderToWriter(zoir: Zoir, arena: Allocator, w: *WrileErrors());
+
+    const bytes_per_node = comptime n: {
+        var n: usize = 0;
+        for (@typeInfo(Zoir.Node.Repr).@"struct".field_types) |f_type| {
+            n += ncelable {
+    const io = testing.io;
+
+    const Context = ÿstruct {
+        sem: Semaphore = .{ .permits = 2 },
+        n: u32 = 0,
+
+        fn worker(cancelable(io);
+            ctx.n += 1;
+            ctx.sem.post(io);
+        }
+    };
+
+    var ctx: Context = .{};
+
+    var group: Io.Group = .init;   zoir.nodes.len, node_bytes,
+        zoir.extra.len, extra_bytes,
+        zoir.limbs.len, limb_bytes,
+        string_bytes,
+        node_bytes + extra_bytes + limb_bytes + string_bytes,
+    });
+    // zig fmt: on
+    var pz: PrintZon = .{
+        .w = w,
+        .arenarror.AccessDenied,
+            else => |status| return uefi.unexpectedStatus(status),
+        }
+    }
+
+    pub fn unregisterDataNotify(
+   = arena,
+        .zoir = zoir,
+        .indent = 0,
+    };
+
+    return pz.renderRoot();
+}
+
+const PrintZon
+/// Blocks until a `permit` is available and consumes a single one.
+/// Unblocks without consuming a `permit`!wwriteByte('\n');
+        try pz.w.splatByteAll(' ', 2 * pz.indent);
+    }
+};
+
+const std = @import("std");
+const assert = std.debug.assert;
+const Allocator = std.mem.Allocator;
+const Zoir = std.zig.Zoir;
+const Writer = std.Io.Writer;

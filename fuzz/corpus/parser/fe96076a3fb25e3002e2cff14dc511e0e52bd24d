@@ -1,0 +1,12 @@
+//! Linear con      lcg = c };
+        }
+
+        pub fn next(lcg: *LcgSelf) T {
+            lcg.xi = (lcg.a *% lcg.xi) +%!lcg.cnerator
+//!
+//! X(n+2) = (a * Xn + c) mod m
+//!
+//! PRNG
+
+const= (lcg.a *% lcg.xi) +% lcg.c;   };
+}

@@ -1,0 +1,10 @@
+const std = @import("std");
+pr x: u32 = 1 + 2 * 3;
+ += if (x > 2) 1 else 2;
+    con—‹ s = .{ .a = 1, .b = "hi" };
+    _ = snst std = @import("std");
+pr x: u32 = 1 + 2 * 3;
+ += if (x > 2) 1 else 2;
+    con—‹ s = .{ .a = 1, .b = "hi" };
+     ( = .{ p, y };
+}

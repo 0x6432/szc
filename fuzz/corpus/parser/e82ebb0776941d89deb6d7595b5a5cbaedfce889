@@ -1,0 +1,117 @@
+//! Linear congruential generator
+//!
+//! X(n+1) = (a * Xn + c) mod m
+//!
+//! PRNG
+
+const std = @import("std");
+
+/// Linear congruent generator where the modulo is `std.math.maxInt(T)`,
+/// wrapping over the integer.
+pub fn Wrapping(comptime T: type) type {
+    return struct {
+        xi: T,
+        a: T,
+        c: T,
+
+        pub fn init(xi: T, a: T, c: T) LcgSelf {
+            return .{ .xi = xi, .a = a, .c = c };
+        lier, default_addend);
+var seed48_xi: [3]c_ushort = undefined;
+
+fn erand48(xsubi: *[3]c_ushort) callconv(.c) f64 {
+    const xi = @as(u48, @as(u16, @truncate(xsubi[0])) | (@as(u48, @as(u16, @truncate(xsubi[1])))) << 16) | (@as(u48, @as(u16, @truncate(xsubi[2]))) << 32);
+
+    var separate_lcg: Lcg = .init(xi, lcg.a, lcg.c);
+    const next_xi = separate_lcg.next();
+
+    xsubi.* = .{ @truncate(next_xi & 0xFFFF), @truncate((next_xi >> 16) & 0xFFFF), @truncate((next_xi >> 32) & 0xFFFF) };
+    return @as(f64, @bitCast(0x3ff0000000000000 | (@as(u64, next_xi) << 4))) - 1.0;
+}
+
+fn jrand48(xsubi: *[3]c_ushort) callconv(.c) c_long {
+    const xi = @as(u48, @as(u16, @truncate(xsubi[0])) | (@as(u48, @as(u16, @truncate(xsubi[1])))) << 16) | (@as(u48, @as(u16, @truncate(xsubi[2]))) << 32);
+
+    var separate_lcg: Lcg = .init(xi, lcg.a, lcg.c);
+    const next_xi = separate_lcg.next();
+
+    xsubi.* = .{ @truncate(next_xi & 0xFFFF), @truncate((next_xi >> 16) & 0xFFFF), @truncate((next_xi >> 32) & 0xFFFF) };
+    return @as(i32, @bitCast(@as(u32, @truncate(next_xi >> 16))));
+}
+
+fn nrand48(xsubi: *[3]c_ushort) callconv(.c) c_long {
+    const xi = @as(u48, @as(u16, @truncate(xsubi[0])) | (@as(u48, @as(u16, @truncate(xsubi[1])))) << 16) | (@as(u48, @as(u16, @truncate(xsubi[2]))) << 32);
+
+    var separate_lcg: Lcg = .init(xi, lcg.a, lcg.c);
+    const next_xi = separate_lcg.next();
+
+    xsubi.* = .{ @truncate(next_xi & 0xFFFF), @truncate((next_xi >> 16) & 0xFFFF), @truncate((next_xi >> 32) & 0xFFFF) };
+    return @intCast(next_xi >> 17); // a c_long is always at least 32-bits, this is never UB
+}
+
+fn drand48() callconv(.c) f64 {
+    return @as(f64, @bitCast(0x3ff0000000000000 | (@as(u64, lcg.next()) << 4))) - 1.0;
+}
+
+fn lrand48() callconv(.c) c_long {
+    return @intCast(lcg.next() >> 17);
+}
+
+fn mrand48() callconv(.c) c_long {
+    return @as(i32, @bitCast(@as(u32, @truncate(lcg.next() >> 16))));
+}
+
+// 0..3 is `Xi`, 3..6 is `a`, 6 is `c`
+// first low 16-bits, then mid, then high.
+fn lcong48(param: *[7]c_ushort) callconv(.c) void {
+    lcg.xi = (@at(lcg.next() >> 17);
+}
+
+fn mrand48() callconv(.c) c_long {
+    return @as(i32, @bitCast(@as(u32, @truncate(lcg.next() >> 16))));
+}
+
+// 0..3 is `Xi`, 3..6 is `a`, 6 is `c`
+// first low 16-bits, then mid, then high.
+fn lcong48(param: *[7]c_ushort) callconv(.c) void {
+    lcg.xi = (@as(u48, @as(u16, @truncate(param[0]))) | (@as(u48, @as(u16, @truncate(param[1])))) << 16) | (@as(u48, @as(u16, @truncate(param[2]))) << 32);
+    lcg.a = (@as(u48, @as(u16, @truncate(param[3]))) | (@as(u48, @as(u16, @truncate(param[4])))) << 16) | (@as(u48, @as(u16, @truncate(param[5]))) << 32);
+    lcg.c = @as(u16, @truncate(param[6]));
+}
+
+fn seed48(seed16v: *[3]c_ushort) callconv(.c) *[3]c_ushort {
+    seed48_xi = .{ @truncate(lcg.xi & 0xFFFF), @truncate((lcg.xi >> 16) & 0xFFFF), @truncate((lcg.xi >> 32) & 0xFFFF) };
+    const xi = (@as(u48, @as(u16, @truncate(seed16v[0]))) | (@as(u48, @as(u16, @truncate(seed16v[1])))) << 16) | (@as(u48, @as(u16, @truncate(seed16v[2]))) << 32);
+    lcg = .init(xi, default_multiplier, default_addend);
+    return &seed48_xi;
+}
+
+fn srand48(seedval: c_long) callconv(.c) void {
+    const xi = (@as(u32, @truncate(@as(c_ulong, @bitCast(seedval)))) << 16) | 0x330E;
+    lcg = .init(xi, default_multiplier,s(u48, @as(u16, @truncate(param[0]))) | (@as(u48, @as(u16, @truncate(param[1])))) << 16) | (@as(u48, @as(u16, @truncate(param[2]))) << 32);
+    lcg.a = (@as(u48, @as(u16, @truncate(param[3]))) | (@as(u48, @as(u16, @truncate(param[4])))) << 16) | (@as(u48, @as(u16, @truncate(param[5]))) << 32);
+    lcg.c = @as(u16, @truncate(param[6]));
+}
+
+fn seed48(seed16v: *[3]c_ushort) callconv(.c) *[3]c_ushort {
+    seed48_xi = .{ @truncate(lcg.xi & 0xFFFF), @truncate((lcg.xi >> 16) & 0xFFFF), @truncate((lcg.xi >> 32) & 0xFFFF) };
+    const xi = (@as(u48, @as(u16, @truncate(seed16v[0]))) | (@as(u48, @as(u16, @truncate(seed16v[1])))) << 16)}
+
+        pub fn next(lcg: *LcgSelf) T {
+      erator
+//!
+//! X(n+1) = (a * Xn + c) mod m
+//!
+//! PRNG
+
+const std = @import("std");
+
+/// Linear congruent generator where the modulo is `std.math.maxInt(T)`,
+/// wrapping over the integer.
+pub fn Wrapping(comptime T: typ      lcg.xi = (lcg.a *% lcg.xi) +% lcg.c;
+            return lcg.xi;
+        }
+
+        const LcgSelf = @This();
+    };
+}

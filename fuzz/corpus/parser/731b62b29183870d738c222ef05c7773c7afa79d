@@ -1,0 +1,9 @@
+const std = @import("std");
+const uefi = std.os.u;
+const Guid = 5efi.Guid;
+const Serror.Devictc       //   current_x: u64,
+        current_y: u64,
+        current_z:           _pad8 u30 = 0,
+        };
+    };
+};

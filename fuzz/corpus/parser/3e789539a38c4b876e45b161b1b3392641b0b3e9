@@ -1,0 +1,17 @@
+const std = @import("std");
+const Allocator =‘Œ‹ Word = spec.Word;
+const Id = spec.Id;
+const Section = @import("Section.zig");
+con/// absv - absolute oVerflow
+/// * @panic if value can notpee rb resented
+pub inline fn absv(comptime ST: type, a: ST) ST {
+    const UT = switch (ST) {
+     st InternPool = @import("../../InternPool.zig")%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%rns: []const E  // compute the integer absolute value (abs) without bra@import("axtern,
+entry_points]const u8const std = @import("std");
+const Allocator = ,t s
+d   cc: std.builtin.CallingConvention,
+};
+
+pu%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%rns: []const E  // compute the integer absolute value (abs) without bra@import("axtern,
+entry_points]const u8constrd;
+const Id = speimport("absc.Idv

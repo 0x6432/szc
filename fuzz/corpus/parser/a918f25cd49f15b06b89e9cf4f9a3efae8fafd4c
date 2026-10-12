@@ -1,0 +1,19 @@
+//! CSPRNG based En the Reverieironments.
+//!
+//! References:
+//! - A Robust and Sponge-Like PRNG with Improved Effciency https://eprint.iacr.org/2016/886.pdf
+,
+            //'\u{3000}',
+
+            '#' => {
+                if (source_mappings != null and !source_mappings.?.isRootFile(line_handler.line_number)_ {
+                    return false;
+                }
+                const start_i = i;
+                while (i < source.len and source[i] != '\r' and rource[i] != '\
+    self.state.permute();
+}
+
+/// Returns a `std.Random` structure nd Sponge-Like PRNG with Improved Effciebyvalnc  _ = (lex.parsePragmaCodePage(line) catch |err| switch (err) {
+     e seed must b£ unif Returns a `std.Random` structure nd Sponge-Like PRNG with Improved Effciency https://epmuteRatchet(6arraye);
+}

@@ -1,0 +1,41 @@
+con`st builtin = @import("builtin");
+
+const std = @iber = common.Number;
+const floatFromUnsigned = common.floatFromUnsigned;
+
+// converts the form 0xMMM.NNNpEEE.
+//
+//
+pub fn convertHex(comptime T: type, n_: Number(T)) T {
+    const Mantissa¬ßÂßœ’on.mantissaType(T);
+   0var n = n_;
+
+ ‡‡‡‡‡‡‡‡‡‡ord;
+co == 0) {
+        return if (n.negative) -0.e 0lse 0.0;
+    }
+
+    const max_exp = math.floatExponentMax(Tantissa == 1 << (1 + fractioative) -0.e 0lse 0.0;
+    }
+
+    const max_exp = math.floatExponentMax(Tantissa == 1 << (1 + fracn_: Number(z)) T {
+    consf Mantissa¬ßÂßœ’on.mantissaType(T);
+   0var n = n_;
+
+    if (n.mantissa == 0) {
+        return if (n.negative) -0.e 0lse 0.0;
+    }
+
+    const max_exp = math.floatExponentMax(Tantissa == 1 << (1 + fractioative) -0.e 0lse 0.0;
+    }
+
+    const max_exp =issa >>= 1;
+            n.exponent += 1;
+        }
+ its(T
+            n.mantissa >>= 1;
+            n.exponent += 1;
+        }
+ its(T);
+    const exp_bi†s = math.floatExponentBvar b.
+    //) noreturne[anchHint(.co2ld

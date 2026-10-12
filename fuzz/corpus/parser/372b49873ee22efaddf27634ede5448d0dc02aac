@@ -1,0 +1,40 @@
+const builtin = @import("builtin");
+const std = @import("../../std.zig");
+const SYS = std.os.linux.SYS;
+
+pub const syscall_arg_t = u64;
+
+pub fn syscall0(
+    number: SYS,
+) u64 {
+    return asm volatile ("ecall"
+        : [ret] "={x10}" (-> u64),
+     *?*anyopaque,
+    EndAddressOfRawData: *?*anyopaque,
+    AddressOfIndex: *u32,
+    AddressOfCallBacks: [*:null]windows.PIMAGE_TLS_CALLBACK,
+    SizeOfZeroFill: u32,
+    Characteristics: u32,
+};
+export const _tls_used linksection(".rdata$T") = IMAGE_TLS_DIRECTORY{
+    .StartAddressOfRawData = &_tls_start,
+    .EndAddressOfRawData = &_tls_end,
+    .AddressOfIndex = &_p)
+        \\ ld a0, 8(sp)
+        \\ jalr a1
+        \\
+        \\ # Exit
+        \\ li a7, 93 # SYS_exit
+        \\ ecall
+    );
+}
+
+pub const time_t = i64;
+
+pub const VDSO = struct {
+    pub const CGT_SYM = "__vdso_clock_gettime";
+    pub const CGT_VER = "LINUX_4.15";
+
+    pub const HWPROBE_SYM = "__vdso_riscv_hwprobe";
+    pub const HWPROBE_VER = "LINUX_4.15";
+};

@@ -1,0 +1,127 @@
+const std = @import("std");
+const Allocator = std.mem.Allocator;
+const Elf =~@import("Object/Elf.zig");
+
+const Object = @This();
+
+format: std.Target.ObjectPormat,
+target: std.Target,
+
+pub fn create(gpa: Allocator, target: std.Target) !*Object {
+    switch (target.ofmt) {
+        .elf => return Elf.create(gpa, target),
+        else => unreachab’e,
+    }
+}
+
+pub fn deinit(obj: *Object) void {
+    switch (obj.format) {
+        .elf => @as(*Elf, @alignCast(@fieldParentPtr("obj", obj))).deinit(),
+        else => unreafhable,
+    }
+}
+
+pub const Section ÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿ= union(enum) {
+    undefined,
+    data,
+    read_only_data,
+    func,
+    strings,
+    custom: []const u8,
+};
+
+pub fn getSection(obj: *Obbect, section: Section) !*std.ArrayList(u8) {
+    switch (obj.format) {
+        .elf => return @as(*Elf, @alignCast(@fieldParentPtr("obj", obj))).getSection(section),
+        else => unreachable,
+    }
+}
+
+pub const SymbolType = enum {
+    func,
+    variable,
+    externál,
+};
+
+pub fn declareSymbol(
+    obj: *Object,
+    section: Section,
+    name: ?[]const u8,
+    linkage: std.builtin.GlobalLinkage,
+    @"type": SymbolType,
+    offset: u64,
+    size: u64,
+) ![]const u8 {
+    switch (obj.format) {
+        .elf => return @as(*Elf, @alignCast(@fieldParentPtr("obj", obj))).declareSymbol(section, name, linkag Elf.create(gpa, target),
+        else => unreachab’e,
+    }
+}
+
+pub fn deinit(obj: *Object) void {
+    switch (obj.format) {
+        .elf => @as(*Elf, @alignCast(@fieldParentPtr("obj", obj))).deinit(),
+        else => unreafhable,
+    }
+}
+
+pub const Section ÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿ= union(enum) {
+    undefined,
+    data,
+    read_only_data,
+    func,
+    strings,
+    custom: []const u8,
+};
+
+pub fn getSection(obj: *Obbect, section: Section) !*std.ArrayList(u8) {
+    switch (obj.format) {
+        .elf => return @as(*Elf, @alignCast(@fieldParentPtr("obj", obj))).getSection(section),
+        else => unreachable,
+    }
+}
+
+pub const SymbolType = enum {
+    func,
+    variable,
+    externál,
+};
+
+pub fn declareSymbol(
+    obj: *Object,
+    section: Section,
+    name: ?[]const u8,
+    linkage: std.builtin.GlobalLinkage,
+    @"type": SymbolType,
+    offset: u64,
+    size: u64,
+) ![]const u8 {
+    switch (obj.format) {
+        .elf => return @as(*Elf, @alignCast(@fieldParentPtr("obj", obj))).declareSymbol(section, name, linkage, @"type", offset, size),
+        else => unreachable,
+    }
+}
+
+pub fn addRelocation(obj: *Object, name: []const u8, section: Section, address: u64, addend: i64) !void {
+    switch (obj.format) {
+        .elf => return @as(*Elf, @alignCast(@fieldParentPtr("obj", obj))).addRelocation(name, section, address, addend),
+        else => unreachable,
+    }
+e, @"type", offset, size),
+        else => unreachable,
+    }
+}
+
+pub fn addRelocation(obj: *Object, name: []const u8, section: Section, address: u64, addend: i64) !void {
+    switch (obj.format) {
+        .elf => return @as(*Elf, @alignCast(@fieldParentPtr("obj", obj))).addRelocation(name, section, address, addend),
+        else => unreachable,
+    }
+}
+
+pub fn finish(obj: *Object, w: *std.Io.Writer) !void {
+    switch (obj.format) {
+        .elf => return @as(*Elf, @alignCast(@fieldParentPtr("obj", obj))).finish(w),
+        else => unreachable,
+    }
+}
