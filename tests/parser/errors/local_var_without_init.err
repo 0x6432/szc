@@ -1,0 +1,3 @@
+tests/parser/errors/local_var_without_init.zig:2:17: error: expected '=', found ';'
+    const x: u32;
+                ^

@@ -1,0 +1,100 @@
+container_decl struct
+  var_decl const std
+    init: builtin_call @import
+      arg: string_literal "std"
+  var_decl pub const A
+    init: container_decl struct
+      container_field x
+        type: identifier u32
+        value: number_literal 0
+      container_field y comptime
+        type: identifier u8
+        value: number_literal 1
+      container_field z
+        type: pointer_type one const
+          align: number_literal 4
+          identifier u8
+      fn_decl pub
+        proto: fn_proto get
+          param self
+            type: identifier A
+          return: identifier u32
+        body: block
+          return
+            field_access x
+              identifier self
+  var_decl const E
+    init: container_decl enum
+      arg: identifier u8
+      container_field
+        type: identifier a
+      container_field
+        type: identifier b
+        value: number_literal 2
+      container_field
+        type: identifier _
+  var_decl const U
+    init: container_decl union enum_tag
+      container_field int
+        type: identifier i64
+      container_field
+        type: identifier none
+  var_decl const P
+    init: container_decl packed struct
+      arg: identifier u16
+      container_field lo
+        type: identifier u8
+      container_field hi
+        type: identifier u8
+  var_decl const T
+    init: container_decl struct
+      container_field
+        type: identifier u32
+      container_field
+        type: identifier bool
+  fn_decl extern lib="c"
+    proto: fn_proto write
+      param fd
+        type: identifier c_int
+      param buf
+        type: pointer_type many const
+          identifier u8
+      param len
+        type: identifier usize
+      return: identifier isize
+  fn_decl export
+    proto: fn_proto exported
+      callconv: enum_literal c
+      return: identifier void
+    body: block
+  var_decl threadlocal var counter
+    type: identifier usize
+    init: number_literal 0
+  var_decl pub extern var errno
+    type: identifier c_int
+  fn_decl inline
+    proto: fn_proto twice
+      param comptime T2
+        type: identifier type
+      param x
+        type: identifier T2
+      return: identifier T2
+    body: block
+      return
+        binary *
+          identifier x
+          number_literal 2
+  fn_decl
+    proto: fn_proto generic var_args
+      param a anytype
+      return: identifier noreturn
+    body: block
+  test_decl "a test"
+    block
+  test_decl identifier_test
+    block
+  comptime_decl
+    block
+      assign =
+        identifier _
+        identifier A

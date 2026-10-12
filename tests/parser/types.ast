@@ -1,0 +1,49 @@
+container_decl struct
+  var_decl const A
+    init: optional_type
+      pointer_type one const
+        array_type
+          length: number_literal 4
+          sentinel: number_literal 0
+          identifier u8
+  var_decl const B
+    init: pointer_type slice volatile
+      align: number_literal 8
+      identifier u8
+  var_decl const C
+    init: pointer_type c allowzero
+      identifier u8
+  var_decl const D
+    init: pointer_type many const
+      sentinel: number_literal 0
+      identifier u8
+  var_decl const E
+    init: pointer_type one
+      align: number_literal 1
+      bit_offset: number_literal 2
+      host_size: number_literal 4
+      identifier u32
+  var_decl const F
+    init: error_union_type
+      error_set: error_set_decl
+        name: Oops
+      payload: identifier u32
+  var_decl const G
+    init: fn_proto
+      param
+        type: identifier u32
+      callconv: enum_literal c
+      return: identifier void
+  var_decl const H
+    init: anyframe_type
+      identifier u32
+  var_decl const I
+    init: pointer_type one
+      addrspace: enum_literal gs
+      identifier u8
+  var_decl const J
+    init: container_decl opaque
+  var_decl const K
+    init: builtin_call @Vector
+      arg: number_literal 4
+      arg: identifier f32

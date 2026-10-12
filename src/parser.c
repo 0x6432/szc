@@ -35,6 +35,7 @@ typedef struct Parser {
 	uint32_t   lookahead_first;
 	uint32_t   lookahead_count;
 	Token      previous;	/* last consumed token */
+	bool       has_previous;	/* false until the first token is consumed */
 	jmp_buf    *recovery;	/* innermost recovery point */
 	uint32_t   nesting;
 } Parser;
@@ -96,8 +97,6 @@ fetch_token(Parser *parser)
 {
 	for (;;) {
 		Token token = lexer_next(&parser->lexer);
-		if (token.kind == TK_DOC_COMMENT || token.kind == TK_CONTAINER_DOC_COMMENT)
-			continue;
 		if (token.kind == TK_INVALID) {
 			diag_report(parser->diag, DIAG_ERROR, parser->file, token.start, "invalid token");
 			continue;
@@ -139,6 +138,7 @@ advance(Parser *parser)
 	parser->lookahead_first = (parser->lookahead_first + 1) % LOOKAHEAD_SIZE;
 	parser->lookahead_count = parser->lookahead_count - 1;
 	parser->previous = token;
+	parser->has_previous = true;
 	return token;
 }
 
@@ -197,6 +197,33 @@ static void
 warn_at(Parser *parser, uint32_t offset, const char *message)
 {
 	diag_report(parser->diag, DIAG_ERROR, parser->file, offset, "%s", message);
+}
+
+/*
+ * Skips `///` doc comments where the grammar allows them (before container
+ * members, error set names and parameters). A doc comment on the same line as
+ * the previous token is an error and does not document anything. Returns true
+ * and sets `first` to the first documenting comment if there is one.
+ */
+static bool
+eat_doc_comments(Parser *parser, Token *first)
+{
+	if (peek(parser) != TK_DOC_COMMENT)
+		return false;
+	bool has_previous = parser->has_previous;
+	Token previous = parser->previous;
+	Token token = advance(parser);
+	bool on_same_line = has_previous && memchr(parser->source + previous.start, '\n', token.start - previous.start) == NULL;
+	if (on_same_line) {
+		warn_at(parser, token.start, "same line documentation comment");
+		if (peek(parser) != TK_DOC_COMMENT)
+			return false;
+		token = advance(parser);
+	}
+	*first = token;
+	while (peek(parser) == TK_DOC_COMMENT)
+		advance(parser);
+	return true;
 }
 
 static Token
@@ -316,7 +343,6 @@ can_start_expr(TokenKind kind)
 	case TK_L_BRACKET:
 	case TK_PERIOD:
 	case TK_ASTERISK:
-	case TK_ASTERISK_ASTERISK:
 	case TK_QUESTION_MARK:
 	case TK_ASM:
 	case TK_IF:
@@ -344,6 +370,20 @@ can_start_expr(TokenKind kind)
 	default:
 		return false;
 	}
+}
+
+/*
+ * Start offset of a loop: its label, else a preceding `inline` (the token just
+ * consumed), else the loop keyword itself.
+ */
+static uint32_t
+loop_start(Parser *parser, AstLabel label, bool is_inline)
+{
+	if (label.has_label)
+		return label.name.start;
+	if (is_inline)
+		return parser->previous.start;
+	return peek_token(parser, 0).start;
 }
 
 /* BlockLabel <- IDENTIFIER COLON, only when followed by something a label can name. */
@@ -477,7 +517,6 @@ static const BinaryOperator binary_operators[TK_COUNT] = {
 	[TK_ASTERISK] = {PREC_MULTIPLY, AST_OP_MUL, ASSOC_LEFT, false},
 	[TK_SLASH] = {PREC_MULTIPLY, AST_OP_DIV, ASSOC_LEFT, false},
 	[TK_PERCENT] = {PREC_MULTIPLY, AST_OP_MOD, ASSOC_LEFT, false},
-	[TK_ASTERISK_ASTERISK] = {PREC_MULTIPLY, AST_OP_ARRAY_MULT, ASSOC_LEFT, false},
 	[TK_ASTERISK_PERCENT] = {PREC_MULTIPLY, AST_OP_MUL_WRAP, ASSOC_LEFT, false},
 	[TK_ASTERISK_PIPE] = {PREC_MULTIPLY, AST_OP_MUL_SAT, ASSOC_LEFT, false},
 };
@@ -485,7 +524,8 @@ static const BinaryOperator binary_operators[TK_COUNT] = {
 static bool
 is_whitespace_byte(char c)
 {
-	return c == ' ' || c == '\t' || c == '\n' || c == '\r';
+	/* std.ascii.isWhitespace: space and '\t' through '\r' (includes VT and FF). */
+	return c == ' ' || (c >= '\t' && c <= '\r');
 }
 
 /*
@@ -535,8 +575,7 @@ parse_expr_precedence(Parser *parser, uint8_t min_precedence)
 		if (info.precedence == banned_precedence)
 			fail_at(parser, token.start, "comparison operators cannot be chained");
 		advance(parser);
-		if (token.kind != TK_CATCH && token.kind != TK_ORELSE && token.kind != TK_AND && token.kind != TK_OR)
-			check_operator_whitespace(parser, token);
+		check_operator_whitespace(parser, token);
 
 		if (info.is_catch) {
 			AstCatch *node = NEW_NODE(parser, AstCatch, AST_CATCH, token.start);
@@ -943,19 +982,6 @@ parse_type_expr(Parser *parser)
 		result = &pointer->base;
 		break;
 	}
-	case TK_ASTERISK_ASTERISK: {
-		/* `**T` is a pointer to a pointer; the modifiers belong to the inner pointer. */
-		advance(parser);
-		AstPointerType *outer = new_pointer(parser, AST_POINTER_ONE, token.start);
-		AstPointerType *inner = new_pointer(parser, AST_POINTER_ONE, token.start + 1);
-		inner->base.start = token.start;
-		parse_pointer_modifiers(parser, inner, true);
-		inner->child = parse_type_expr(parser);
-		finish(parser, &inner->base);
-		outer->child = &inner->base;
-		result = &outer->base;
-		break;
-	}
 	case TK_L_BRACKET: {
 		if (at_c_pointer(parser)) {
 			advance(parser);
@@ -1085,8 +1111,6 @@ parse_suffix_expr(Parser *parser)
 			advance(parser);
 			result = new_wrap(parser, AST_DEREF, token.start, result);
 			break;
-		case TK_INVALID_PERIODASTERISKS:
-			fail_at(parser, token.start, "'.*' cannot be followed by '*'; are you missing a space?");
 		case TK_PERIOD: {
 			TokenKind next = peek_at(parser, 1);
 			if (next == TK_IDENTIFIER) {
@@ -1195,6 +1219,8 @@ parse_error_set_decl(Parser *parser)
 	uint32_t capacity = 0;
 	expect(parser, TK_L_BRACE);
 	while (peek(parser) != TK_R_BRACE) {
+		Token doc;
+		eat_doc_comments(parser, &doc);
 		Span *name = GROW_ONE(parser, node->names, node->name_count, capacity, Span);
 		*name = token_span(expect(parser, TK_IDENTIFIER));
 		if (!accept(parser, TK_COMMA))
@@ -1429,7 +1455,8 @@ parse_if(Parser *parser, BodyMode mode)
 		if (accept(parser, TK_ELSE)) {
 			node->has_else_capture = parse_payload(parser, &node->else_capture);
 			node->else_branch = parse_statement(parser, false);
-			finish(parser, &node->base);
+			/* The else statement may have consumed a ';' that is not part of this node. */
+			node->base.end = node->else_branch->end;
 		} else {
 			finish(parser, &node->base);
 			if (needs_semicolon)
@@ -1458,8 +1485,10 @@ parse_if(Parser *parser, BodyMode mode)
 static AstNode *
 parse_while(Parser *parser, AstLabel label, bool is_inline, BodyMode mode)
 {
+	uint32_t start = loop_start(parser, label, is_inline);
 	Token while_token = expect(parser, TK_WHILE);
 	AstWhile *node = NEW_NODE(parser, AstWhile, AST_WHILE, while_token.start);
+	node->base.start = start;
 	node->label = label;
 	node->is_inline = is_inline;
 	node->condition = parse_paren_expr(parser);
@@ -1476,7 +1505,8 @@ parse_while(Parser *parser, AstLabel label, bool is_inline, BodyMode mode)
 		if (accept(parser, TK_ELSE)) {
 			node->has_else_capture = parse_payload(parser, &node->else_capture);
 			node->else_branch = parse_statement(parser, false);
-			finish(parser, &node->base);
+			/* The else statement may have consumed a ';' that is not part of this node. */
+			node->base.end = node->else_branch->end;
 		} else {
 			finish(parser, &node->base);
 			if (needs_semicolon)
@@ -1507,8 +1537,10 @@ parse_while(Parser *parser, AstLabel label, bool is_inline, BodyMode mode)
 static AstNode *
 parse_for(Parser *parser, AstLabel label, bool is_inline, BodyMode mode)
 {
+	uint32_t start = loop_start(parser, label, is_inline);
 	Token for_token = expect(parser, TK_FOR);
 	AstFor *node = NEW_NODE(parser, AstFor, AST_FOR, for_token.start);
+	node->base.start = start;
 	node->label = label;
 	node->is_inline = is_inline;
 
@@ -1544,7 +1576,8 @@ parse_for(Parser *parser, AstLabel label, bool is_inline, BodyMode mode)
 		node->body = parse_statement_body(parser, &needs_semicolon);
 		if (accept(parser, TK_ELSE)) {
 			node->else_branch = parse_statement(parser, false);
-			finish(parser, &node->base);
+			/* The else statement may have consumed a ';' that is not part of this node. */
+			node->base.end = node->else_branch->end;
 		} else {
 			finish(parser, &node->base);
 			if (needs_semicolon)
@@ -1591,6 +1624,8 @@ parse_switch(Parser *parser, AstLabel label)
 {
 	Token switch_token = expect(parser, TK_SWITCH);
 	AstSwitch *node = NEW_NODE(parser, AstSwitch, AST_SWITCH, switch_token.start);
+	if (label.has_label)
+		node->base.start = label.name.start;
 	node->label = label;
 	node->operand = parse_paren_expr(parser);
 	expect(parser, TK_L_BRACE);
@@ -1711,6 +1746,7 @@ parse_var_decl_proto(Parser *parser)
 		decl->addrspace = parse_paren_expr(parser);
 	if (accept(parser, TK_LINKSECTION))
 		decl->linksection = parse_paren_expr(parser);
+	finish(parser, &decl->base);
 	return decl;
 }
 
@@ -1774,8 +1810,9 @@ parse_var_assign_statement(Parser *parser, bool is_comptime)
 			expect(parser, TK_SEMICOLON);
 			return destructure;
 		}
-		if (accept(parser, TK_EQUAL))
-			decl->init = parse_expr(parser);
+		/* Unlike container-level declarations, local ones need an initializer. */
+		expect(parser, TK_EQUAL);
+		decl->init = parse_expr(parser);
 		finish(parser, &decl->base);
 		expect(parser, TK_SEMICOLON);
 		return &decl->base;
@@ -1858,11 +1895,13 @@ parse_statement(Parser *parser, bool allow_defer_and_var)
 	case TK_NOSUSPEND:
 		advance(parser);
 		result = new_wrap(parser, AST_NOSUSPEND, token.start, parse_block_expr_statement(parser));
+		result->end = AST_CAST(AstWrap, result, AST_NOSUSPEND)->operand->end;
 		break;
 	case TK_SUSPEND: {
 		advance(parser);
 		AstSuspend *node = NEW_NODE(parser, AstSuspend, AST_SUSPEND, token.start);
 		node->body = parse_block_expr_statement(parser);
+		node->base.end = node->body->end;
 		result = &node->base;
 		break;
 	}
@@ -1873,9 +1912,8 @@ parse_statement(Parser *parser, bool allow_defer_and_var)
 		advance(parser);
 		AstDefer *node = NEW_NODE(parser, AstDefer, AST_DEFER, token.start);
 		node->is_errdefer = token.kind == TK_ERRDEFER;
-		if (node->is_errdefer)
-			node->has_capture = parse_payload(parser, &node->capture);
 		node->body = parse_block_expr_statement(parser);
+		node->base.end = node->body->end;
 		result = &node->base;
 		break;
 	}
@@ -2006,6 +2044,8 @@ parse_block(Parser *parser, AstLabel label)
 {
 	Token brace = expect(parser, TK_L_BRACE);
 	AstBlock *node = NEW_NODE(parser, AstBlock, AST_BLOCK, brace.start);
+	if (label.has_label)
+		node->base.start = label.name.start;
 	node->label = label;
 
 	NodeBuilder statements = {0};
@@ -2030,6 +2070,8 @@ static void
 parse_param(Parser *parser, AstParam *param)
 {
 	param->kind = AST_PARAM_NORMAL;
+	Token doc;
+	eat_doc_comments(parser, &doc);
 	if (accept(parser, TK_NOALIAS))
 		param->kind = AST_PARAM_NOALIAS;
 	else if (accept(parser, TK_COMPTIME))
@@ -2102,6 +2144,7 @@ static AstNode *
 parse_decl(Parser *parser, bool is_pub)
 {
 	Token first = peek_token(parser, 0);
+	uint32_t decl_start = is_pub ? parser->previous.start : first.start;
 	AstFnModifier fn_modifier = AST_FN_MODIFIER_NONE;
 	AstVarModifier var_modifier = AST_VAR_MODIFIER_NONE;
 	bool has_extern_lib = false;
@@ -2139,11 +2182,13 @@ parse_decl(Parser *parser, bool is_pub)
 
 	if (peek(parser) == TK_FN) {
 		AstFnDecl *decl = NEW_NODE(parser, AstFnDecl, AST_FN_DECL, first.start);
+		decl->base.start = decl_start;
 		decl->is_pub = is_pub;
 		decl->modifier = fn_modifier;
 		decl->has_extern_lib = has_extern_lib;
 		decl->extern_lib = extern_lib;
 		decl->proto = parse_fn_proto(parser);
+		decl->proto->base.start = decl_start;
 		if (accept(parser, TK_SEMICOLON))
 			return finish(parser, &decl->base);
 		if (fn_modifier == AST_FN_MODIFIER_EXTERN)
@@ -2161,6 +2206,7 @@ parse_decl(Parser *parser, bool is_pub)
 
 	AstVarDecl *decl = parse_var_decl_proto(parser);
 	decl->base.offset = first.start;
+	decl->base.start = decl_start;
 	decl->is_pub = is_pub;
 	decl->is_threadlocal = is_threadlocal;
 	decl->modifier = var_modifier;
@@ -2168,8 +2214,9 @@ parse_decl(Parser *parser, bool is_pub)
 	decl->extern_lib = extern_lib;
 	if (accept(parser, TK_EQUAL))
 		decl->init = parse_expr(parser);
+	finish(parser, &decl->base);
 	expect(parser, TK_SEMICOLON);
-	return finish(parser, &decl->base);
+	return &decl->base;
 }
 
 /* ContainerField <- doc_comment? KEYWORD_comptime? (IDENTIFIER COLON)? TypeExpr ByteAlign? (EQUAL Expr)? */
@@ -2340,28 +2387,80 @@ parse_member_recovering(Parser *parser)
 	return member;
 }
 
+/* Where a container's members are relative to its fields. */
+typedef enum FieldState {
+	FIELDS_NONE,	/* no field seen yet */
+	FIELDS_SEEN,	/* in the run of fields */
+	FIELDS_ENDED,	/* a declaration followed the fields */
+	FIELDS_REPORTED,	/* a declaration between fields was already reported */
+} FieldState;
+
+typedef struct FieldOrder {
+	FieldState state;
+	uint32_t   decl_offset;	/* FIELDS_ENDED: the declaration after the fields */
+} FieldOrder;
+
+/* Fields must be contiguous: reports a declaration that separates two fields. */
+static void
+track_field_order(Parser *parser, FieldOrder *order, const AstNode *member)
+{
+	bool is_field = member->kind == AST_CONTAINER_FIELD;
+
+	switch (order->state) {
+	case FIELDS_NONE:
+		if (is_field)
+			order->state = FIELDS_SEEN;
+		break;
+	case FIELDS_SEEN:
+		if (!is_field) {
+			order->state = FIELDS_ENDED;
+			order->decl_offset = member->offset;
+		}
+		break;
+	case FIELDS_ENDED:
+		if (is_field) {
+			warn_at(parser, order->decl_offset, "declarations are not allowed between container fields");
+			order->state = FIELDS_REPORTED;
+		}
+		break;
+	case FIELDS_REPORTED:
+		break;
+	}
+}
+
 /*
  * ContainerMembers <- container_doc_comment? ContainerDecl* ContainerMembersRest
- * Stops at '}' (or EOF). At the root a stray '}' is reported and skipped.
+ * Stops at '}' (or EOF). At the root a stray '}' is reported and ends the parse.
  */
 static AstNodeList
 parse_container_members(Parser *parser, bool is_root)
 {
 	NodeBuilder members = {0};
+	FieldOrder field_order = {FIELDS_NONE, 0};
+
+	while (peek(parser) == TK_CONTAINER_DOC_COMMENT)
+		advance(parser);
 	for (;;) {
+		Token doc;
+		bool has_doc = eat_doc_comments(parser, &doc);
 		Token token = peek_token(parser, 0);
-		if (token.kind == TK_EOF)
+		if (token.kind == TK_EOF || token.kind == TK_R_BRACE) {
+			if (has_doc)
+				warn_at(parser, doc.start, "unattached documentation comment");
+			/* Like the reference parser, stop at a stray '}' in the root: what follows is likely garbage. */
+			if (token.kind == TK_R_BRACE && is_root)
+				warn_at(parser, token.start, "unexpected '}'");
 			break;
-		if (token.kind == TK_R_BRACE) {
-			if (!is_root)
-				break;
-			warn_at(parser, token.start, "unexpected '}'");
-			advance(parser);
-			continue;
 		}
+		if (has_doc && token.kind == TK_TEST)
+			warn_at(parser, doc.start, "documentation comments cannot be attached to tests");
+		if (has_doc && token.kind == TK_COMPTIME && peek_at(parser, 1) == TK_L_BRACE)
+			warn_at(parser, doc.start, "documentation comments cannot be attached to comptime blocks");
 		AstNode *member = parse_member_recovering(parser);
-		if (member != NULL)
-			node_builder_push(parser, &members, member);
+		if (member == NULL)
+			continue;
+		node_builder_push(parser, &members, member);
+		track_field_order(parser, &field_order, member);
 	}
 	return node_builder_finish(&members);
 }

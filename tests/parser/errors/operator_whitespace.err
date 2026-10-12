@@ -1,0 +1,3 @@
+tests/parser/errors/operator_whitespace.zig:1:13: error: binary operator has whitespace on one side, but not the other
+const a = 1 +2;
+            ^

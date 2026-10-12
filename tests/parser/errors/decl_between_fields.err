@@ -1,0 +1,3 @@
+tests/parser/errors/decl_between_fields.zig:2:1: error: declarations are not allowed between container fields
+const b = 1;
+^

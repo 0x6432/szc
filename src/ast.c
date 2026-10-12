@@ -86,7 +86,6 @@ static const char *const binary_op_names[AST_BINARY_OP_COUNT] = {
 	[AST_OP_MOD] = "%",
 	[AST_OP_MUL_WRAP] = "*%",
 	[AST_OP_MUL_SAT] = "*|",
-	[AST_OP_ARRAY_MULT] = "**",
 };
 
 static const char *const unary_op_names[AST_UNARY_OP_COUNT] = {
@@ -732,11 +731,6 @@ dump_body(const Dumper *dumper, const AstNode *node, uint32_t depth)
 	case AST_DEFER: {
 		AstDefer *defer = AST_CAST(AstDefer, mutable_node, AST_DEFER);
 		dump_flag(dumper, "errdefer", defer->is_errdefer);
-		if (defer->has_capture) {
-			fputs(" |", dumper->out);
-			print_span(dumper, defer->capture);
-			fputc('|', dumper->out);
-		}
 		fputc('\n', dumper->out);
 		dump_node(dumper, defer->body, child, NULL);
 		return;
@@ -766,4 +760,249 @@ ast_dump(FILE *out, const SourceFile *file, const AstNode *root)
 	dumper.out = out;
 	dumper.file = file;
 	dump_node(&dumper, root, 0, NULL);
+}
+
+/* ---------- Child traversal ---------- */
+
+static void
+visit(AstChildVisitor visitor, void *context, AstNode *child)
+{
+	if (child != NULL)
+		visitor(context, child);
+}
+
+static void
+visit_list(AstChildVisitor visitor, void *context, const AstNodeList *list)
+{
+	for (uint32_t i = 0; i < list->count; i++)
+		visit(visitor, context, list->items[i]);
+}
+
+static void
+visit_fn_proto(AstChildVisitor visitor, void *context, AstFnProto *proto)
+{
+	for (uint32_t i = 0; i < proto->param_count; i++)
+		visit(visitor, context, proto->params[i].type);
+	visit(visitor, context, proto->align);
+	visit(visitor, context, proto->addrspace);
+	visit(visitor, context, proto->linksection);
+	visit(visitor, context, proto->callconv);
+	visit(visitor, context, proto->return_type);
+}
+
+void
+ast_visit_children(AstNode *node, AstChildVisitor visitor, void *context)
+{
+	switch (node->kind) {
+	case AST_CONTAINER_DECL: {
+		AstContainerDecl *decl = AST_CAST(AstContainerDecl, node, AST_CONTAINER_DECL);
+		visit(visitor, context, decl->arg);
+		visit_list(visitor, context, &decl->members);
+		break;
+	}
+	case AST_CONTAINER_FIELD: {
+		AstContainerField *field = AST_CAST(AstContainerField, node, AST_CONTAINER_FIELD);
+		visit(visitor, context, field->type);
+		visit(visitor, context, field->align);
+		visit(visitor, context, field->default_value);
+		break;
+	}
+	case AST_FN_DECL: {
+		AstFnDecl *decl = AST_CAST(AstFnDecl, node, AST_FN_DECL);
+		visit(visitor, context, &decl->proto->base);
+		visit(visitor, context, decl->body);
+		break;
+	}
+	case AST_VAR_DECL: {
+		AstVarDecl *decl = AST_CAST(AstVarDecl, node, AST_VAR_DECL);
+		visit(visitor, context, decl->type);
+		visit(visitor, context, decl->align);
+		visit(visitor, context, decl->addrspace);
+		visit(visitor, context, decl->linksection);
+		visit(visitor, context, decl->init);
+		break;
+	}
+	case AST_TEST_DECL:
+		visit(visitor, context, AST_CAST(AstTestDecl, node, AST_TEST_DECL)->body);
+		break;
+	case AST_COMPTIME_DECL:
+		visit(visitor, context, AST_CAST(AstComptimeDecl, node, AST_COMPTIME_DECL)->body);
+		break;
+	case AST_IDENTIFIER:
+	case AST_NUMBER_LITERAL:
+	case AST_CHAR_LITERAL:
+	case AST_STRING_LITERAL:
+	case AST_MULTILINE_STRING_LITERAL:
+	case AST_ENUM_LITERAL:
+	case AST_ERROR_VALUE:
+	case AST_UNREACHABLE:
+	case AST_ANYFRAME_LITERAL:
+	case AST_ERROR_SET_DECL:
+		break;
+	case AST_BINARY: {
+		AstBinary *binary = AST_CAST(AstBinary, node, AST_BINARY);
+		visit(visitor, context, binary->lhs);
+		visit(visitor, context, binary->rhs);
+		break;
+	}
+	case AST_CATCH: {
+		AstCatch *catch_node = AST_CAST(AstCatch, node, AST_CATCH);
+		visit(visitor, context, catch_node->lhs);
+		visit(visitor, context, catch_node->rhs);
+		break;
+	}
+	case AST_UNARY:
+		visit(visitor, context, AST_CAST(AstUnary, node, AST_UNARY)->operand);
+		break;
+	case AST_GROUPED:
+	case AST_DEREF:
+	case AST_UNWRAP_OPTIONAL:
+	case AST_OPTIONAL_TYPE:
+	case AST_COMPTIME:
+	case AST_NOSUSPEND:
+	case AST_RESUME:
+		visit(visitor, context, AST_CAST(AstWrap, node, node->kind)->operand);
+		break;
+	case AST_CALL: {
+		AstCall *call = AST_CAST(AstCall, node, AST_CALL);
+		visit(visitor, context, call->callee);
+		visit_list(visitor, context, &call->args);
+		break;
+	}
+	case AST_BUILTIN_CALL:
+		visit_list(visitor, context, &AST_CAST(AstBuiltinCall, node, AST_BUILTIN_CALL)->args);
+		break;
+	case AST_FIELD_ACCESS:
+		visit(visitor, context, AST_CAST(AstFieldAccess, node, AST_FIELD_ACCESS)->lhs);
+		break;
+	case AST_INDEX: {
+		AstIndex *index = AST_CAST(AstIndex, node, AST_INDEX);
+		visit(visitor, context, index->lhs);
+		visit(visitor, context, index->index);
+		break;
+	}
+	case AST_SLICE: {
+		AstSlice *slice = AST_CAST(AstSlice, node, AST_SLICE);
+		visit(visitor, context, slice->lhs);
+		visit(visitor, context, slice->start);
+		visit(visitor, context, slice->end);
+		visit(visitor, context, slice->sentinel);
+		break;
+	}
+	case AST_INIT_LIST: {
+		AstInitList *init = AST_CAST(AstInitList, node, AST_INIT_LIST);
+		visit(visitor, context, init->type);
+		for (uint32_t i = 0; i < init->field_count; i++)
+			visit(visitor, context, init->fields[i].value);
+		visit_list(visitor, context, &init->elements);
+		break;
+	}
+	case AST_POINTER_TYPE: {
+		AstPointerType *pointer = AST_CAST(AstPointerType, node, AST_POINTER_TYPE);
+		visit(visitor, context, pointer->sentinel);
+		visit(visitor, context, pointer->align);
+		visit(visitor, context, pointer->bit_offset);
+		visit(visitor, context, pointer->host_size);
+		visit(visitor, context, pointer->addrspace);
+		visit(visitor, context, pointer->child);
+		break;
+	}
+	case AST_ARRAY_TYPE: {
+		AstArrayType *array = AST_CAST(AstArrayType, node, AST_ARRAY_TYPE);
+		visit(visitor, context, array->length);
+		visit(visitor, context, array->sentinel);
+		visit(visitor, context, array->child);
+		break;
+	}
+	case AST_ERROR_UNION_TYPE: {
+		AstErrorUnionType *error_union = AST_CAST(AstErrorUnionType, node, AST_ERROR_UNION_TYPE);
+		visit(visitor, context, error_union->error_set);
+		visit(visitor, context, error_union->payload);
+		break;
+	}
+	case AST_ANYFRAME_TYPE:
+		visit(visitor, context, AST_CAST(AstAnyframeType, node, AST_ANYFRAME_TYPE)->result);
+		break;
+	case AST_FN_PROTO:
+		visit_fn_proto(visitor, context, AST_CAST(AstFnProto, node, AST_FN_PROTO));
+		break;
+	case AST_BLOCK:
+		visit_list(visitor, context, &AST_CAST(AstBlock, node, AST_BLOCK)->statements);
+		break;
+	case AST_IF: {
+		AstIf *if_node = AST_CAST(AstIf, node, AST_IF);
+		visit(visitor, context, if_node->condition);
+		visit(visitor, context, if_node->then_branch);
+		visit(visitor, context, if_node->else_branch);
+		break;
+	}
+	case AST_WHILE: {
+		AstWhile *while_node = AST_CAST(AstWhile, node, AST_WHILE);
+		visit(visitor, context, while_node->condition);
+		visit(visitor, context, while_node->continue_expr);
+		visit(visitor, context, while_node->body);
+		visit(visitor, context, while_node->else_branch);
+		break;
+	}
+	case AST_FOR: {
+		AstFor *for_node = AST_CAST(AstFor, node, AST_FOR);
+		for (uint32_t i = 0; i < for_node->input_count; i++) {
+			visit(visitor, context, for_node->inputs[i].expr);
+			visit(visitor, context, for_node->inputs[i].range_end);
+		}
+		visit(visitor, context, for_node->body);
+		visit(visitor, context, for_node->else_branch);
+		break;
+	}
+	case AST_SWITCH: {
+		AstSwitch *switch_node = AST_CAST(AstSwitch, node, AST_SWITCH);
+		visit(visitor, context, switch_node->operand);
+		for (uint32_t i = 0; i < switch_node->prong_count; i++) {
+			AstSwitchProng *prong = &switch_node->prongs[i];
+			for (uint32_t j = 0; j < prong->item_count; j++) {
+				visit(visitor, context, prong->items[j].value);
+				visit(visitor, context, prong->items[j].range_end);
+			}
+			visit(visitor, context, prong->body);
+		}
+		break;
+	}
+	case AST_BREAK:
+	case AST_CONTINUE:
+		visit(visitor, context, AST_CAST(AstJump, node, node->kind)->value);
+		break;
+	case AST_RETURN:
+		visit(visitor, context, AST_CAST(AstReturn, node, AST_RETURN)->value);
+		break;
+	case AST_SUSPEND:
+		visit(visitor, context, AST_CAST(AstSuspend, node, AST_SUSPEND)->body);
+		break;
+	case AST_ASM: {
+		AstAsm *asm_node = AST_CAST(AstAsm, node, AST_ASM);
+		visit(visitor, context, asm_node->template_expr);
+		for (uint32_t i = 0; i < asm_node->output_count; i++)
+			visit(visitor, context, asm_node->outputs[i].type);
+		for (uint32_t i = 0; i < asm_node->input_count; i++)
+			visit(visitor, context, asm_node->inputs[i].value);
+		visit(visitor, context, asm_node->clobbers);
+		break;
+	}
+	case AST_ASSIGN: {
+		AstAssign *assign = AST_CAST(AstAssign, node, AST_ASSIGN);
+		visit(visitor, context, assign->target);
+		visit(visitor, context, assign->value);
+		break;
+	}
+	case AST_ASSIGN_DESTRUCTURE: {
+		AstAssignDestructure *assign = AST_CAST(AstAssignDestructure, node, AST_ASSIGN_DESTRUCTURE);
+		visit_list(visitor, context, &assign->targets);
+		visit(visitor, context, assign->value);
+		break;
+	}
+	case AST_DEFER:
+		visit(visitor, context, AST_CAST(AstDefer, node, AST_DEFER)->body);
+		break;
+	case AST_KIND_COUNT:
+		break;
+	}
 }

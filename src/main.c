@@ -4,9 +4,11 @@
  *   szc tokens <file>        print every token (kind, position, text)
  *   szc tokens-kinds <file>  print only token kinds (used by tests)
  *   szc ast <file>           parse and print the syntax tree
+ *   szc ast-spans <file>     print "start end" byte spans of all syntax nodes
  *   szc parse <file>...      parse files and report syntax errors only
  *   szc version
  */
+#include <inttypes.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -34,6 +36,7 @@ print_usage(FILE *out)
 	      "  tokens <file>        dump tokens with positions and text\n"
 	      "  tokens-kinds <file>  dump token kinds only\n"
 	      "  ast <file>           dump the syntax tree\n"
+	      "  ast-spans <file>     print byte spans of all syntax nodes\n"
 	      "  parse <file>...      check files for syntax errors\n"
 	      "  version              print version\n", out);
 }
@@ -111,8 +114,24 @@ command_tokens(const char *path, TokenDumpMode mode)
 
 typedef enum ParseMode {
 	PARSE_DUMP_AST,
+	PARSE_DUMP_SPANS,
 	PARSE_CHECK_ONLY,
 } ParseMode;
+
+/*
+ * Prints "start end" for a node and its descendants, matching what
+ * tools/ast_spans.zig prints for std.zig.Ast: a function declaration without
+ * a body is only a prototype there, so it is not printed itself.
+ */
+static void
+print_spans(void *context, AstNode *node)
+{
+	FILE *out = context;
+	bool is_prototype_only = node->kind == AST_FN_DECL && AST_CAST(AstFnDecl, node, AST_FN_DECL)->body == NULL;
+	if (!is_prototype_only)
+		fprintf(out, "%" PRIu32 " %" PRIu32 "\n", node->start, node->end);
+	ast_visit_children(node, print_spans, out);
+}
 
 /* Parses each file; prints the tree in PARSE_DUMP_AST mode. Returns 1 if any file had errors. */
 static int
@@ -136,6 +155,8 @@ command_parse(char **paths, int count, ParseMode mode)
 		AstContainerDecl *root = parse_file(&arena, &diag, &sources, file_id);
 		if (mode == PARSE_DUMP_AST)
 			ast_dump(stdout, source_get(&sources, file_id), &root->base);
+		if (mode == PARSE_DUMP_SPANS)
+			ast_visit_children(&root->base, print_spans, stdout);
 		diag_print(&diag, stderr);
 		if (diag_has_errors(&diag))
 			status = 1;
@@ -178,6 +199,13 @@ main(int argc, char **argv)
 			return 2;
 		}
 		return command_parse(argv + 2, 1, PARSE_DUMP_AST);
+	}
+	if (strcmp(command, "ast-spans") == 0) {
+		if (argc != 3) {
+			print_usage(stderr);
+			return 2;
+		}
+		return command_parse(argv + 2, 1, PARSE_DUMP_SPANS);
 	}
 	if (strcmp(command, "parse") == 0) {
 		if (argc < 3) {

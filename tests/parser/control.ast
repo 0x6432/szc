@@ -1,0 +1,82 @@
+container_decl struct
+  fn_decl
+    proto: fn_proto f inferred_error
+      return: identifier void
+    body: block
+      if
+        condition: identifier a
+        capture: x
+        then: block
+          call
+            callee: identifier use
+            arg: identifier x
+        else_capture: err
+        else: block
+          return
+            identifier err
+      while
+        condition: binary <
+          identifier i
+          number_literal 10
+        continue: assign +=
+          identifier i
+          number_literal 1
+        body: block
+          continue
+      while label=outer
+        condition: call
+          callee: field_access next
+            identifier it
+        capture: item
+        body: block
+          if
+            condition: identifier item
+            then: break label=outer
+        else: unreachable
+      for
+        input: identifier items
+        range_start: number_literal 0
+        capture: item
+        capture: index
+        body: block
+          assign =
+            identifier _
+            init_list array
+              identifier item
+              identifier index
+      for inline
+        input: identifier fields
+        capture: *field
+        body: assign =
+          deref
+            identifier field
+          number_literal 0
+      defer
+        call
+          callee: identifier cleanup
+      defer errdefer
+        call
+          callee: identifier log
+          arg: number_literal 0
+      var_decl comptime var count
+        init: number_literal 0
+      nosuspend
+        call
+          callee: identifier call
+      block label=label
+        break label=label
+      switch
+        operand: identifier x
+        prong else
+          body: block
+      if
+        condition: identifier a
+        then: call
+          callee: identifier b
+        else: if
+          condition: identifier c
+          then: call
+            callee: identifier d
+          else: call
+            callee: identifier e
+      return

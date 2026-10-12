@@ -1,0 +1,9 @@
+tests/parser/errors/recovery.zig:2:15: error: expected an expression, found ';'
+    const a = ;
+              ^
+tests/parser/errors/recovery.zig:4:1: error: expected ';', found '}'
+}
+^
+tests/parser/errors/recovery.zig:6:7: error: expected an expression, found '{'
+fn g( {}
+      ^

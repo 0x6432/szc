@@ -1,0 +1,3 @@
+tests/parser/errors/same_line_doc_comment.zig:1:14: error: same line documentation comment
+const a = 1; /// same line
+             ^

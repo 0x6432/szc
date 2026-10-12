@@ -1,0 +1,3 @@
+tests/parser/errors/missing_comma_after_field.zig:2:1: error: expected ',' after field, found an identifier 'b'
+b: u32,
+^

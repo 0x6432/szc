@@ -1,0 +1,3 @@
+tests/parser/errors/unattached_doc_comment.zig:2:1: error: unattached documentation comment
+/// unattached
+^

@@ -1,0 +1,179 @@
+container_decl struct
+  fn_decl
+    proto: fn_proto f
+      return: identifier void
+    body: block
+      var_decl const a
+        init: binary -
+          binary +
+            number_literal 1
+            binary *
+              number_literal 2
+              number_literal 3
+          binary %
+            binary /
+              number_literal 4
+              number_literal 5
+            number_literal 6
+      var_decl const b
+        init: binary ^
+          binary |
+            binary &
+              binary >>
+                binary <<
+                  identifier a
+                  number_literal 1
+                number_literal 2
+              number_literal 3
+            number_literal 4
+          number_literal 5
+      var_decl const c
+        init: binary or
+          binary and
+            binary ==
+              identifier a
+              identifier b
+            binary !=
+              identifier a
+              identifier b
+          unary !
+            grouped
+              binary <
+                identifier a
+                identifier b
+      var_decl const d
+        init: catch |err|
+          binary orelse
+            identifier x
+            identifier y
+          call
+            callee: identifier handle
+            arg: identifier err
+      var_decl const e
+        init: binary <<|
+          binary -|
+            binary +|
+              binary -%
+                binary +%
+                  unary -
+                    identifier a
+                  identifier b
+                binary *%
+                  identifier c
+                  identifier d
+              identifier e
+            binary *|
+              identifier f
+              identifier g
+          number_literal 1
+      var_decl const g
+        init: binary &
+          unary ~
+            identifier a
+          unary -%
+            identifier b
+      var_decl const h
+        init: unary &
+          unwrap_optional
+            deref
+              field_access c
+                field_access b
+                  identifier a
+      var_decl const i
+        init: slice
+          slice
+            slice
+              index
+                identifier arr
+                index: number_literal 1
+              start: number_literal 2
+            start: number_literal 3
+            end: number_literal 4
+          start: number_literal 0
+          sentinel: number_literal 0
+      var_decl const j
+        init: init_list struct
+          field: x
+            number_literal 1
+          field: y
+            init_list struct
+      var_decl const k
+        init: init_list array
+          type: array_type
+            length: identifier _
+            identifier u8
+          number_literal 1
+          number_literal 2
+          number_literal 3
+      var_decl const l
+        init: init_list struct
+          type: identifier Point
+          field: x
+            number_literal 1
+      var_decl const m
+        init: builtin_call @as
+          arg: identifier u32
+          arg: builtin_call @intCast
+            arg: identifier z
+      var_decl const n
+        init: binary ++
+          binary ++
+            unary try
+              call
+                callee: identifier foo
+                arg: identifier bar
+                arg: identifier baz
+            string_literal "s"
+          multiline_string_literal
+            line: \\multi
+            line: \\line
+      var_decl const o
+        init: error_value Oops
+      var_decl const p
+        init: enum_literal enum_literal
+      var_decl const q
+        init: char_literal 'c'
+      var_decl const r
+        init: binary ||
+          error_set_decl
+            name: A
+            name: B
+          identifier E2
+      var_decl const s
+        init: if
+          condition: identifier a
+          then: identifier b
+          else: identifier c
+      var_decl const t
+        init: switch
+          operand: identifier a
+          prong
+            item: number_literal 1
+            item: number_literal 2
+            body: identifier b
+          prong
+            item: number_literal 3
+            range_end: number_literal 5
+            capture: v
+            body: identifier v
+          prong inline else
+            capture: v
+            index_capture: tag
+            body: identifier tag
+      var_decl const u
+        init: block label=blk
+          break label=blk
+            number_literal 1
+      assign_destructure
+        target: identifier a
+        target: var_decl var v
+        target: var_decl const w
+        value: identifier tuple
+      assign +=
+        field_access b
+          identifier a
+        number_literal 1
+      assign <<|=
+        field_access c
+          identifier a
+        number_literal 2

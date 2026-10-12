@@ -1,0 +1,3 @@
+tests/parser/errors/ampersand_ampersand.zig:1:13: error: ambiguous use of '&&'; use 'and' for logical AND, or change whitespace to ' & &' for bitwise AND
+const a = b && c;
+            ^

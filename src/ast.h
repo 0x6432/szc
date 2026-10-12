@@ -301,7 +301,6 @@ typedef enum AstBinaryOp {
 	AST_OP_MOD,
 	AST_OP_MUL_WRAP,
 	AST_OP_MUL_SAT,
-	AST_OP_ARRAY_MULT,
 	AST_BINARY_OP_COUNT
 } AstBinaryOp;
 
@@ -606,8 +605,6 @@ typedef struct AstAssignDestructure {
 typedef struct AstDefer {
 	AstNode base;
 	bool    is_errdefer;
-	bool    has_capture;
-	Span    capture;
 	AstNode *body;
 } AstDefer;
 

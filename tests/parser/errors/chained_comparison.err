@@ -1,0 +1,3 @@
+tests/parser/errors/chained_comparison.zig:1:18: error: comparison operators cannot be chained
+const a = b == c == d;
+                 ^

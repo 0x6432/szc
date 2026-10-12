@@ -1,0 +1,25 @@
+container_decl struct
+  fn_decl
+    proto: fn_proto syscall0
+      param number
+        type: identifier usize
+      return: identifier usize
+    body: block
+      return
+        asm volatile
+          template: string_literal "syscall"
+          output [ret] "={rax}" ->
+            identifier usize
+          input [number] "{rax}"
+            identifier number
+          clobbers: init_list struct
+            field: rcx
+              identifier true
+            field: r11
+              identifier true
+  fn_decl
+    proto: fn_proto nop
+      return: identifier void
+    body: block
+      asm volatile
+        template: string_literal "nop"

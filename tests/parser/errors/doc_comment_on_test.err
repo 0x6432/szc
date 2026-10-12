@@ -1,0 +1,3 @@
+tests/parser/errors/doc_comment_on_test.zig:1:1: error: documentation comments cannot be attached to tests
+/// doc
+^
