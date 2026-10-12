@@ -25,10 +25,27 @@ add_file(SourceTable *table, const char *path, const char *text, uint32_t length
 		table->capacity = new_capacity;
 	}
 
+	uint32_t line_count = 1;
+	for (uint32_t i = 0; i < length; i++) {
+		if (text[i] == '\n')
+			line_count = line_count + 1;
+	}
+	uint32_t *line_starts = arena_alloc(table->arena, (size_t)line_count * sizeof(uint32_t), alignof(uint32_t));
+	uint32_t line = 0;
+	line_starts[line] = 0;
+	for (uint32_t i = 0; i < length; i++) {
+		if (text[i] == '\n') {
+			line = line + 1;
+			line_starts[line] = i + 1;
+		}
+	}
+
 	FileId id = table->count;
 	table->files[id].path = path;
 	table->files[id].text = text;
 	table->files[id].length = length;
+	table->files[id].line_starts = line_starts;
+	table->files[id].line_count = line_count;
 	table->count = table->count + 1;
 	return id;
 }
@@ -101,17 +118,21 @@ source_get(SourceTable *table, FileId id)
 LineColumn
 source_line_column(const SourceFile *file, uint32_t offset)
 {
-	LineColumn result = {1, 1};
-
 	if (offset > file->length)
 		offset = file->length;
-	for (uint32_t i = 0; i < offset; i++) {
-		if (file->text[i] == '\n') {
-			result.line = result.line + 1;
-			result.column = 1;
-		} else {
-			result.column = result.column + 1;
-		}
+
+	/* Binary search for the last line starting at or before `offset`. */
+	uint32_t low = 0;
+	uint32_t high = file->line_count;
+	while (high - low > 1) {
+		uint32_t middle = low + (high - low) / 2;
+		if (file->line_starts[middle] <= offset)
+			low = middle;
+		else
+			high = middle;
 	}
+	LineColumn result;
+	result.line = low + 1;
+	result.column = offset - file->line_starts[low] + 1;
 	return result;
 }

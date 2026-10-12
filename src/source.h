@@ -11,6 +11,8 @@ typedef struct SourceFile {
 	const char *path;
 	const char *text;
 	uint32_t   length;
+	uint32_t   *line_starts;	/* byte offset of the start of each line */
+	uint32_t   line_count;
 } SourceFile;
 
 typedef uint32_t FileId;
