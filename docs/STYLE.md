@@ -20,3 +20,4 @@
 - No clever shortcuts: simple, readable code, one thing per line.
 - Never compare token text to identify syntax; compare `TokenKind`.
 - Every parser function begins with a comment giving the grammar rule it implements.
+  The Pratt binary-expression function lists every rule it covers (BoolOrExpr … MultiplyExpr).

@@ -27,7 +27,7 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
 
 - [ ] **M2.1 AST node structs + `szc ast` dumper skeleton**; token lookahead buffer in the parser.
 - [ ] **M2.2 Top level**: ContainerMembers, `const`/`var` decls, FnProto, TestDecl, ComptimeDecl.
-- [ ] **M2.3 Expression precedence ladder**: BoolOr … MultiplyExpr, PrefixExpr (one function per level).
+- [ ] **M2.3 Binary expressions (Pratt)**: one `parse_expr_precedence(min_prec)` driven by an operator table covering BoolOr … MultiplyExpr (the grammar rules are listed in its comment), non-associative comparisons, `catch |e|` payload; PrefixExpr stays recursive descent.
 - [ ] **M2.4 Primary/suffix expressions**: literals, identifiers, calls, field access, `.*`, `.?`, indexing, slicing, builtin calls.
 - [ ] **M2.5 Type expressions**: pointers, slices, arrays, optionals, error unions, `fn` types, ptr modifiers.
 - [ ] **M2.6 Statements + blocks**: var decls, assignments (incl. destructuring), defer/errdefer, labeled blocks.

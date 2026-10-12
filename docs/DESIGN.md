@@ -27,7 +27,8 @@ Support files: `arena.c` (memory), `diag.c` (error collection), `source.c`
 | Lexer | Hand-written state machine. The parser pulls one token at a time (`lexer_next`). Tokens are `{kind, start, end}`: no copied text |
 | Keywords | Recognized once, in the lexer (switch on length, then a compare). Parser only compares `TokenKind` values, e.g. `TK_PUB`; it never compares strings |
 | AST | Separate struct per node kind (`AstFnDecl`, `AstBinary`, …), all with a common `AstNode` header holding the kind and token. Children are typed pointers |
-| Parser | Recursive descent. Each function has a comment with the PEG rule it implements (from `docs/grammar.peg`). One function per precedence level |
+| Parser | Recursive descent. Each function has a comment with the PEG rule it implements (from `docs/grammar.peg`). Binary operators use Pratt parsing (precedence climbing), like `std.zig.Ast`'s `parseExprPrecedence` |
+| Operator table | One table maps each binary `TokenKind` to {precedence, AST operator, associativity}. Comparison is non-associative (`a == b == c` is an error), like the reference parser |
 | Lookahead | Small ring buffer of tokens filled on demand from the lexer |
 | Errors | Collected (not fatal); the parser resyncs at `;`, `}` or next declaration. Exit status is non-zero if any error was reported |
 | Memory | Arena allocators. Nothing is freed individually; arenas are freed whole. Must be ASan/LSan clean |
