@@ -1,6 +1,7 @@
 /build/
 *.o
 *.ssa
+!tests/codegen/*.ssa
 *.s
 !tests/**/*.s
 /fuzz/crash-*

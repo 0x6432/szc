@@ -21,6 +21,12 @@ jobs:
         run: make clean && make CC=${{ matrix.cc }} EXTRA_CFLAGS=-Werror release
       - name: Tests under ASan + UBSan
         run: make CC=${{ matrix.cc }} EXTRA_CFLAGS=-Werror test
+      - name: Build pinned QBE
+        run: |
+          CC=${{ matrix.cc }} tools/build_qbe.sh
+          echo "PATH=$PWD/build/qbe-src:$PATH" >> "$GITHUB_ENV"
+      - name: End-to-end and driver tests under ASan + UBSan
+        run: make CC=${{ matrix.cc }} EXTRA_CFLAGS=-Werror e2e-test
       - name: Standalone fuzz replay
         run: make CC=${{ matrix.cc }} fuzz-standalone
 
@@ -59,6 +65,12 @@ jobs:
         run: |
           make
           "$ZIG" build-exe tools/ast_spans.zig -OReleaseFast -femit-bin=build/ast_spans
+      - name: Build pinned QBE
+        run: |
+          tools/build_qbe.sh
+          echo "PATH=$PWD/build/qbe-src:$PATH" >> "$GITHUB_ENV"
+      - name: Compare native programs with Zig 0.17.0
+        run: make e2e-test
       - name: Compare AST node spans with std.zig.Ast over the Zig lib
         run: |
           find zig-x86_64-linux-0.17.0/lib -name '*.zig' | sort > build/zig-files.txt

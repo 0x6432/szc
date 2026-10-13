@@ -20,7 +20,7 @@ LIB_SOURCES = src/arena.c src/source.c src/diag.c src/intern.c src/lexer.c src/a
 HEADERS     = $(wildcard src/*.h)
 FUZZERS     = lexer parser irgen sema
 
-.PHONY: all release asan test unit-test golden-test fuzz fuzz-run fuzz-standalone clean
+.PHONY: all release asan test unit-test golden-test e2e-test fuzz fuzz-run fuzz-standalone clean
 
 all: build/szc
 
@@ -48,6 +48,14 @@ golden-test: build/asan/szc
 	./tests/run_golden.sh build/asan/szc
 
 test: unit-test golden-test
+
+build/integer-widths.zig: tools/generate_integer_tests.py
+	python3 $< $@
+
+# QBE must be on PATH (or SZC_QBE). ZIG enables reference-compiler checks.
+e2e-test: build/asan/szc build/integer-widths.zig
+	./tests/run_e2e.sh build/asan/szc tests/run/*.zig build/integer-widths.zig
+	./tests/run_driver.sh build/asan/szc
 
 # libFuzzer builds (clang)
 build/fuzz/fuzz_%: fuzz/fuzz_%.c $(LIB_SOURCES) $(HEADERS)

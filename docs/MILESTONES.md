@@ -45,7 +45,7 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
 - [x] **M3.2 irgen for functions, integer literals, `return`, params, locals.**
 - [x] **M3.3 Typed IR + minimal sema**: `void`, `bool`, `i32`/`u8`/`usize` etc., coercion of comptime_int literals.
 - [x] **M3.4 QBE codegen**: functions, arithmetic, calls; driver runs `qbe` and `cc`.
-- [ ] **M3.5 End-to-end test harness** (`tests/run/*.zig` check exit code/stdout).
+- [x] **M3.5 End-to-end test harness** (`tests/run/*.zig` check exit code/stdout).
 - [ ] **M3.6 Arithmetic semantics**: wrapping/saturating ops, division, shifts, safety checks → panic stub.
 
 ## Phase 4: Control flow
@@ -112,6 +112,34 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
 ## Completed milestone log
 
 (newest first; each entry: what, limitations, interactions)
+
+### M3.5 End-to-end test harness (`tests/run_e2e.sh`, `tests/run_driver.sh`)
+- **What**: `make e2e-test` compiles each `tests/run/*.zig` program with szc,
+  verifies its first-line `// exit: N` and optional byte-exact `.stdout` sidecar,
+  rejects unexpected stderr,
+  checks retained IL/assembly, and exercises `szc run` independently. If `ZIG` is
+  set, every source is also compiled and executed by official Zig (compilation
+  success is checked separately from program exit). Deterministic generated tests
+  cover all 128 signed/unsigned 1–64-bit integer types: wrapping ops, bitwise ops,
+  shifts, comparisons, locals and unsigned division/remainder. Driver boundary tests
+  check tool overrides/failures, no subprocess after a compile error, paths with
+  spaces, argument forwarding, temporary cleanup, invalid CLI and output failures.
+  `tools/build_qbe.sh` fetches and builds the pinned official QBE revision.
+  CI gcc/clang jobs run native sanitizer e2e tests; the differential job additionally
+  checks exit/stdout with official Zig 0.17.0. Existing fuzz schedules remain intact.
+  Validation: fresh GCC and Clang `-Werror` ASan/UBSan builds pass all 366
+  goldens, nine e2e inputs (including the generated 128-type suite) and 12 driver
+  boundary tests. Negative harness checks reject compile failures and stdout
+  mismatches. The QBE clone/build script succeeds using the canonical Git transport.
+  New GitHub CI runs await restoring Git push authentication.
+- **Limitations**: current programs produce no stdout (string/runtime output support
+  awaits M5); sidecars support future output tests. Only successful programs with
+  deterministic exits are covered; panic tests arrive in M3.6. Generated tests use
+  one deterministic seed by default (the generator accepts `--seed`). Ten-second
+  execution timeouts prevent a bad compiled program from hanging the suite.
+- **Interactions**: `make test` stays independent of QBE; `make e2e-test` requires
+  QBE on PATH or `SZC_QBE`. Reference validation is optional locally, enabled in CI
+  by `ZIG`. Generated source stays in ignored `build/`, not in the checked-in corpus.
 
 ### M3.4 QBE codegen (`src/codegen.[ch]`, `src/driver.[ch]`)
 - **What**: typed IR to QBE IL, integer/bool functions and direct calls, arithmetic,

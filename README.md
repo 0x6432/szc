@@ -17,6 +17,7 @@ through typed IR and QBE to native executables; arithmetic safety is next.
 ```sh
 make                 # build/szc
 make test            # unit + golden tests under ASan/UBSan
+make e2e-test        # executable + driver tests (needs qbe)
 make fuzz-standalone # replay fuzz corpus + random mutations (gcc ok)
 make fuzz fuzz-run   # libFuzzer (clang)
 ```
@@ -32,6 +33,19 @@ build/szc run file.zig
 QBE must be on `PATH` (or set `SZC_QBE`); `SZC_CC` selects the system C compiler.
 Both variables name executables, not shell commands. QBE revision used for testing:
 `e786f06032fefa2e3790d6b1c9e31ed138f475a6`.
+
+```sh
+tools/build_qbe.sh
+PATH="$PWD/build/qbe-src:$PATH" make e2e-test
+# Also compare every program's exit status/stdout with official Zig:
+PATH="$PWD/build/qbe-src:$PATH" ZIG=/path/to/zig make e2e-test
+```
+
+Executable tests start with `// exit: N`; an optional matching `.stdout` file
+specifies byte-exact stdout (otherwise it must be empty). Tests distinguish
+compilation failures from nonzero program exits. Generated tests exercise all
+signed/unsigned widths from 1 to 64 bits; driver tests cover tool failures,
+intermediate retention/cleanup and paths containing spaces.
 
 ## Layout
 
