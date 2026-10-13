@@ -5,6 +5,8 @@
 #   tests/parser/NAME.zig + NAME.ast        -> compare `szc ast` (must succeed)
 #   tests/parser/errors/NAME.zig + NAME.err -> compare `szc parse` diagnostics (must fail)
 #   tests/ir/NAME.zig + NAME.ir             -> compare `szc ir` (must succeed)
+#   tests/tir/NAME.zig + NAME.tir           -> compare `szc tir` (must succeed)
+#   tests/tir/errors/NAME.zig + NAME.err    -> compare `szc tir` diagnostics (must fail)
 # usage: tests/run_golden.sh path/to/szc
 set -u
 export ASAN_OPTIONS="${ASAN_OPTIONS:-exitcode=99}"
@@ -44,8 +46,10 @@ for input in $(find tests/lexer -name '*.zig' | sort); do
 done
 
 check_errors() {
-	# $1 = input, $2 = expected diagnostics
-	"$SZC" parse "$1" >/dev/null 2>"$tmp"
+	# $1 = command, $2 = input, $3 = expected diagnostics
+	command=$1
+	shift
+	"$SZC" "$command" "$1" >/dev/null 2>"$tmp"
 	status=$?
 	if [ $status -ne 1 ]; then
 		echo "FAIL (exit status $status, expected 1): $1"
@@ -68,7 +72,13 @@ for input in $(find tests/ir -name '*.zig' | sort); do
 	check ir "$input" "${input%.zig}.ir"
 done
 for input in $(find tests/parser/errors -name '*.zig' | sort); do
-	check_errors "$input" "${input%.zig}.err"
+	check_errors parse "$input" "${input%.zig}.err"
+done
+for input in $(find tests/tir -maxdepth 1 -name '*.zig' | sort); do
+	check tir "$input" "${input%.zig}.tir"
+done
+for input in $(find tests/tir/errors -name '*.zig' | sort); do
+	check_errors tir "$input" "${input%.zig}.err"
 done
 
 echo "golden: $pass passed, $fail failed"

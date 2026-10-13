@@ -6,6 +6,7 @@
  *   szc ast <file>           parse and print the syntax tree
  *   szc ast-spans <file>     print "start end" byte spans of all syntax nodes
  *   szc ir <file>            print the untyped IR
+ *   szc tir <file>           analyse <file> as an executable and print the typed IR
  *   szc parse <file>...      parse files and report syntax errors only
  *   szc version
  */
@@ -20,6 +21,7 @@
 #include "ir.h"
 #include "lexer.h"
 #include "parser.h"
+#include "sema.h"
 #include "source.h"
 
 #define SZC_VERSION "0.0.1"
@@ -41,6 +43,7 @@ print_usage(FILE *out)
 	      "  ast <file>           dump the syntax tree\n"
 	      "  ast-spans <file>     print byte spans of all syntax nodes\n"
 	      "  ir <file>            print the untyped IR\n"
+	      "  tir <file>           print the typed IR of an executable\n"
 	      "  parse <file>...      check files for syntax errors\n"
 	      "  version              print version\n", out);
 }
@@ -120,6 +123,7 @@ typedef enum ParseMode {
 	PARSE_DUMP_AST,
 	PARSE_DUMP_SPANS,
 	PARSE_DUMP_IR,
+	PARSE_DUMP_TIR,
 	PARSE_CHECK_ONLY,
 } ParseMode;
 
@@ -167,6 +171,16 @@ command_parse(char **paths, int count, ParseMode mode)
 			intern_init(&interner, &arena);
 			IrFile *ir = irgen_file(&arena, &diag, &interner, source_get(&sources, file_id), file_id, root);
 			ir_dump(stdout, ir, &interner);
+		}
+		if (mode == PARSE_DUMP_TIR && !diag_has_errors(&diag)) {
+			Interner interner;
+			intern_init(&interner, &arena);
+			IrFile *ir = irgen_file(&arena, &diag, &interner, source_get(&sources, file_id), file_id, root);
+			if (!diag_has_errors(&diag)) {
+				Sema *sema = sema_create(&arena, &diag, &interner, &sources);
+				sema_analyze_executable(sema, file_id, ir);
+				sema_dump(stdout, sema);
+			}
 		}
 		diag_print(&diag, stderr);
 		if (diag_has_errors(&diag))
@@ -217,6 +231,13 @@ main(int argc, char **argv)
 			return 2;
 		}
 		return command_parse(argv + 2, 1, PARSE_DUMP_IR);
+	}
+	if (strcmp(command, "tir") == 0) {
+		if (argc != 3) {
+			print_usage(stderr);
+			return 2;
+		}
+		return command_parse(argv + 2, 1, PARSE_DUMP_TIR);
 	}
 	if (strcmp(command, "ast-spans") == 0) {
 		if (argc != 3) {

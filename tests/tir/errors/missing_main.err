@@ -1,0 +1,3 @@
+tests/tir/errors/missing_main.zig:1:1: error: root source file struct 'missing_main' has no member named 'main'
+const x = 1;
+^

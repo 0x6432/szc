@@ -43,7 +43,7 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
 
 - [x] **M3.1 Untyped IR (ZIR-like) design + `szc ir` dump.**
 - [x] **M3.2 irgen for functions, integer literals, `return`, params, locals.**
-- [ ] **M3.3 Typed IR + minimal sema**: `void`, `bool`, `i32`/`u8`/`usize` etc., coercion of comptime_int literals.
+- [x] **M3.3 Typed IR + minimal sema**: `void`, `bool`, `i32`/`u8`/`usize` etc., coercion of comptime_int literals.
 - [ ] **M3.4 QBE codegen**: functions, arithmetic, calls; driver runs `qbe` and `cc`.
 - [ ] **M3.5 End-to-end test harness** (`tests/run/*.zig` check exit code/stdout).
 - [ ] **M3.6 Arithmetic semantics**: wrapping/saturating ops, division, shifts, safety checks → panic stub.
@@ -112,6 +112,35 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
 ## Completed milestone log
 
 (newest first; each entry: what, limitations, interactions)
+
+### M3.3 Typed IR + minimal sema (`src/tir.h`, `src/sema.[ch]`, `src/comptime.[ch]`)
+- **What**: typed IR (`tir.h`): per-function instruction array, every instruction typed,
+  bodies as in the untyped IR, comptime-known operands as `const` instructions holding a
+  `ValueId`. `comptime.c`: arbitrary-precision `BigInt` (add/sub/mul/truncating divmod/shifts/
+  two's-complement bitwise ops/wrap/fits/decimal) and an interned value table (void, bool,
+  int, type, function, undefined). `sema.c`: interned structural types (builtin types have the
+  TypeId of their well-known IR ref; structs are nominal), namespaces from `struct_decl`,
+  lazy declaration resolution with dependency-loop detection, function signatures (`func`
+  instruction), function bodies analysed from a queue starting at `pub fn main` (and exported
+  functions), instruction map from IR instruction to operand (comptime value or runtime typed
+  instruction). Operations with comptime-known operands are folded (overflow and division by
+  zero are compile errors; wrapping ops wrap; saturating ops clamp); comptime_int coerces to
+  integer types with range checks, runtime integers widen with `int_cast`; peer types for
+  integer binary ops; comparisons against out-of-range constants are folded; signed `/`/`%`
+  errors like Zig; shift amounts coerce to `Log2Int`; `and`/`or` become `block`+`condbr`
+  only when the left side is runtime-known; noreturn calls end the block. `szc tir`
+  dumper, goldens `tests/tir/*.tir` and `tests/tir/errors/*.err`, BigInt unit tests against
+  128-bit arithmetic, `fuzz_sema` target (parse → irgen → sema → dump).
+- **Limitations**: no generic functions, comptime calls, comptime variables, container-level
+  variables, struct fields, callconv, floats, pointers other than local `alloc`s, function
+  pointers (all report "not supported by szc yet"). Runtime arithmetic has no safety checks
+  yet (M3.6). Declaration lookup scans the namespace linearly. Error locations of a few
+  errors differ from Zig (e.g. implicit return is reported at the closing brace).
+- **Interactions**: codegen reads `SemaFunc` (symbol, type, `tir`) for every function in
+  state `FUNC_ANALYSED` (or extern + queued) and `sema_type_size/align`; `TIR_REF_NONE` is
+  the operand of a `ret` in a `void` function; `br` targets a `block` instruction;
+  `condbr` payload is `TirCondbr`; `call` payload is `TirCall` + argument refs. Zig's `main`
+  gets an internal symbol (`szc.main.N`); codegen must emit the C `main` wrapper.
 
 ### M3.1–M3.2 Untyped IR + irgen basics (`src/ir.h`, `src/irgen.c`, `src/intern.[ch]`)
 - **What**: IR design in `docs/IR.md`: per-file instruction array + `extra` words, refs with

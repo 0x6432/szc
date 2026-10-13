@@ -1,0 +1,24 @@
+tests/tir/errors/generic.zig:6:11: error: not supported by szc yet: calls of generic functions
+    _ = id(u8, 1);
+          ^
+tests/tir/errors/generic.zig:7:8: error: expected 0 argument(s), found 1
+    bad(1);
+       ^
+tests/tir/errors/generic.zig:10:11: error: type 'u3' cannot represent integer value '8'
+    v = v << 8;
+          ^
+tests/tir/errors/generic.zig:12:11: error: division with 'i32' and 'i32': signed integers must use @divTrunc, @divFloor, @divCeil, or @divExact
+    s = s / 2;
+          ^
+tests/tir/errors/generic.zig:13:11: error: remainder division with 'i32' and 'i32': signed integers and floats must use @rem or @mod
+    s = s % 2;
+          ^
+tests/tir/errors/generic.zig:15:11: error: incompatible types: 'u8' and 'bool'
+    _ = n == true;
+          ^
+tests/tir/errors/generic.zig:16:10: error: expected type 'bool', found 'i32'
+    _ = !s;
+         ^
+tests/tir/errors/generic.zig:17:9: error: unable to perform binary not operation on type 'comptime_int'
+    _ = ~5;
+        ^

@@ -4,6 +4,7 @@
 #include <string.h>
 
 #include "arena.h"
+#include "comptime.h"
 #include "lexer.h"
 
 static uint32_t failures = 0;
@@ -174,6 +175,89 @@ test_bom_and_embedded_nul(void)
 	CHECK(lexer_next(&lexer).kind == TK_EOF);
 }
 
+/* ---------- Big integers, checked against 128-bit arithmetic ---------- */
+
+__extension__ typedef __int128 Int128;
+
+static BigInt
+bigint_from_i64(Arena *arena, int64_t value)
+{
+	uint64_t magnitude = value < 0 ? (uint64_t)0 - (uint64_t)value : (uint64_t)value;
+	BigInt result = bigint_from_u64(arena, magnitude);
+	if (value < 0)
+		result = bigint_negate(arena, &result);
+	return result;
+}
+
+/* Converts a big integer that fits in 127 bits. */
+static Int128
+bigint_to_i128(const BigInt *a)
+{
+	Int128 magnitude = 0;
+	for (uint32_t i = a->limb_count; i > 0; i--)
+		magnitude = (magnitude << 32) | a->limbs[i - 1];
+	return a->negative ? -magnitude : magnitude;
+}
+
+static uint64_t
+next_random(uint64_t *state)
+{
+	*state = *state * 6364136223846793005u + 1442695040888963407u;
+	return *state >> 11;
+}
+
+static void
+test_bigint_random(void)
+{
+	Arena arena;
+	arena_init(&arena);
+	uint64_t state = 12345;
+	uint32_t mismatches = 0;
+	for (uint32_t round = 0; round < 2000; round++) {
+		int64_t x = (int64_t)(next_random(&state) >> (next_random(&state) % 52)) - (int64_t)(next_random(&state) >> 20);
+		int64_t y = (int64_t)(next_random(&state) >> (next_random(&state) % 52)) - (int64_t)(next_random(&state) >> 20);
+		BigInt a = bigint_from_i64(&arena, x);
+		BigInt b = bigint_from_i64(&arena, y);
+		BigInt r = bigint_add(&arena, &a, &b);
+		mismatches += bigint_to_i128(&r) != (Int128)x + y;
+		r = bigint_sub(&arena, &a, &b);
+		mismatches += bigint_to_i128(&r) != (Int128)x - y;
+		r = bigint_mul(&arena, &a, &b);
+		mismatches += bigint_to_i128(&r) != (Int128)x * y;
+		BigInt q;
+		BigInt m;
+		if (y != 0 && bigint_divmod_trunc(&arena, &a, &b, &q, &m)) {
+			mismatches += bigint_to_i128(&q) != (Int128)x / y;
+			mismatches += bigint_to_i128(&m) != (Int128)x % y;
+		}
+		uint32_t shift = (uint32_t)(next_random(&state) % 60);
+		r = bigint_shl(&arena, &a, shift);
+		mismatches += bigint_to_i128(&r) != (Int128)x * ((Int128)1 << shift);
+		r = bigint_shr(&arena, &a, shift);
+		mismatches += bigint_to_i128(&r) != (Int128)(x >> shift);
+		r = bigint_bitop(&arena, &a, &b, BIGINT_AND);
+		mismatches += bigint_to_i128(&r) != (Int128)(x & y);
+		r = bigint_bitop(&arena, &a, &b, BIGINT_OR);
+		mismatches += bigint_to_i128(&r) != (Int128)(x | y);
+		r = bigint_bitop(&arena, &a, &b, BIGINT_XOR);
+		mismatches += bigint_to_i128(&r) != (Int128)(x ^ y);
+		r = bigint_not(&arena, &a);
+		mismatches += bigint_to_i128(&r) != (Int128)~x;
+		r = bigint_wrap(&arena, &a, true, 16);
+		mismatches += bigint_to_i128(&r) != (Int128)(int16_t)(uint16_t)(uint64_t)x;
+		r = bigint_wrap(&arena, &a, false, 32);
+		mismatches += bigint_to_i128(&r) != (Int128)(uint32_t)(uint64_t)x;
+		mismatches += bigint_fits(&a, true, 32) != (x >= INT32_MIN && x <= INT32_MAX);
+		mismatches += bigint_fits(&a, false, 16) != (x >= 0 && x <= UINT16_MAX);
+		char expected[32];
+		snprintf(expected, sizeof(expected), "%lld", (long long)x);
+		mismatches += strcmp(bigint_to_string(&arena, &a), expected) != 0;
+		mismatches += bigint_compare(&a, &b) != (x < y ? -1 : x > y ? 1 : 0);
+	}
+	CHECK(mismatches == 0);
+	arena_free(&arena);
+}
+
 int
 main(void)
 {
@@ -184,6 +268,7 @@ main(void)
 	test_keyword_lookup();
 	test_eof_is_sticky();
 	test_bom_and_embedded_nul();
+	test_bigint_random();
 
 	printf("unit: %u checks, %u failed\n", checks, failures);
 	return failures == 0 ? 0 : 1;

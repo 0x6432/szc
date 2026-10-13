@@ -1,0 +1,30 @@
+tests/tir/errors/basics.zig:4:19: error: type 'u8' cannot represent integer value '300'
+    const y: u8 = 300;
+                  ^
+tests/tir/errors/basics.zig:5:5: error: variable of type 'comptime_int' must be const or comptime
+    var z = 5;
+    ^
+tests/tir/errors/basics.zig:7:19: error: expected type 'u8', found 'i32'
+    const q: u8 = w;
+                  ^
+tests/tir/errors/basics.zig:8:11: error: division by zero here causes illegal behavior
+    _ = x / 0;
+          ^
+tests/tir/errors/basics.zig:10:11: error: overflow of integer type 'u8' with value '256'
+    _ = m + 1;
+          ^
+tests/tir/errors/basics.zig:11:9: error: negation of type 'u8'
+    _ = -x;
+        ^
+tests/tir/errors/basics.zig:2:11: error: dependency loop detected
+const B = A;
+          ^
+tests/tir/errors/basics.zig:13:10: error: expected 1 argument(s), found 2
+    _ = f(1, 2);
+         ^
+tests/tir/errors/basics.zig:17:1: error: function with non-void return type 'u8' implicitly returns
+}
+^
+tests/tir/errors/basics.zig:18:13: error: function with non-void return type 'u32' implicitly returns
+fn g() u32 {}
+            ^

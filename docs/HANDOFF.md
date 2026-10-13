@@ -19,7 +19,9 @@ Read this first when resuming work (the sandbox resets often).
 - Done: M0 (infrastructure), M1 (lexer), M2 (AST + parser, differential-tested against
   `std.zig.Ast`).
 - Done: M3.1–M3.2 (untyped IR + irgen basics, `szc ir`).
-- Next: **M3.3** typed IR + minimal sema (`src/sema.c`), then M3.4 QBE codegen.
+- Done: M3.3 (typed IR + minimal sema, `szc tir`).
+- Next: **M3.4** QBE codegen (`src/codegen.c`: TIR -> QBE IL; driver `szc build-exe`/`run`
+  writes `.ssa`, runs `qbe` (PATH or `$QBE`), then `cc`), then M3.5 end-to-end tests.
 
 ## Notes for the next steps
 
