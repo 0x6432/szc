@@ -1,0 +1,3 @@
+tests/tir/errors/break_outside.zig:1:22: error: break expression outside loop
+pub fn main() void { break; }
+                     ^

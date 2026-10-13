@@ -1,0 +1,68 @@
+function w $szc.main.1() {
+@start
+	%t3 =w call $szc.choose.2(w 3, w 7, w 300)
+	%t4 =w copy %t3
+	%t4 =w and %t4, 255
+	ret %t4
+}
+
+function w $szc.choose.2(w %t0, w %t1, w %t2) {
+@start
+	%t3 =l alloc4 1
+	storeb 0, %t3
+@l7
+	%t8 =w loadub %t3
+	%t9 =w cultw %t8, %t0
+	jnz %t9, @c34_then, @c34_else
+@c34_then
+	%t11 =w loadub %t3
+	%t13 =w ceqw %t11, 0
+	jnz %t13, @c17_then, @c17_else
+@c17_then
+	jmp @b10
+@c17_else
+	jmp @b14
+@b14
+	%t18 =w loadub %t3
+	%t20 =w ceqw %t18, 2
+	jnz %t20, @c24_then, @c24_else
+@c24_then
+	%t35 =w copy %t1
+	%t6 =w copy %t35
+	jmp @b6
+@c24_else
+	jmp @b21
+@b21
+	jmp @b10
+@b10
+	%t28 =w loadub %t3
+	%t30 =w add %t28, 1
+	%t30 =w and %t30, 255
+	%g30_overflow =w cultw %t30, %t28
+	jnz %g30_overflow, @g30_overflow_panic, @g30_overflow_ok
+@g30_overflow_panic
+	call $szc.panic.0()
+	hlt
+@g30_overflow_ok
+	storeb %t30, %t3
+	jmp @l7
+@c34_else
+	%t6 =w copy %t2
+	jmp @b6
+@b6
+	ret %t6
+}
+
+data $szc.panic.msg.0 = { b "integer overflow\n", b 0 }
+function $szc.panic.0() {
+@start
+	call $write(w 2, l $szc.panic.msg.0, l 17)
+	call $abort()
+	hlt
+}
+
+export function w $main() {
+@start
+	%status =w call $szc.main.1()
+	ret %status
+}

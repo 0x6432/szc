@@ -13,7 +13,9 @@ See [docs/MILESTONES.md](docs/MILESTONES.md). The lexer and parser are complete.
 through typed IR and QBE to native executables with checked arithmetic and
 integer casts, saturating operations and explicit division/remainder builtins.
 Source-level `if`/`else`, comparisons and boolean short-circuiting work, including
-value-producing branches and early returns. Loops are next.
+value-producing branches and early returns. Runtime `while`, labeled break/continue,
+continue expressions, loop else/values and compound assignments also work.
+Labeled blocks, for loops and defer are next.
 
 ## Build & test
 
@@ -48,7 +50,7 @@ PATH="$PWD/build/qbe-src:$PATH" ZIG=/path/to/zig make e2e-test
 Executable tests start with `// exit: N`; an optional matching `.stdout` file
 specifies byte-exact stdout (otherwise it must be empty). Tests distinguish
 compilation failures from nonzero program exits. Generated tests exercise all
-signed/unsigned widths from 1 to 64 bits, including conditional result joins; driver tests cover tool failures,
+signed/unsigned widths from 1 to 64 bits, including conditional/loop result joins; driver tests cover tool failures,
 intermediate retention/cleanup and paths containing spaces. Runtime safety tests
 check panic signals/messages; when `ZIG` is set they also validate behavior against
 the official compiler. `tests/run_szc` separately records known reference-backend

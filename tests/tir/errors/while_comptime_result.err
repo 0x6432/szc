@@ -1,0 +1,3 @@
+tests/tir/errors/while_comptime_result.zig:1:30: error: value with comptime-only type 'comptime_int' depends on runtime control flow
+fn f(c: bool) u8 { const x = while (c) { break 1; } else 2; return x; }
+                             ^

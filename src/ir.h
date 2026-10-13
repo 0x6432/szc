@@ -141,6 +141,7 @@ typedef enum IrDataKind {
 	X(AS, "as", IR_DATA_BIN)	/* coerce rhs to type lhs */ \
 	X(TYPEOF, "typeof", IR_DATA_UN)	/* type of operand */ \
 	X(ELEM_TYPE, "elem_type", IR_DATA_UN)	/* pointee type of pointer value operand */ \
+	X(LOG2_INT_TYPE, "log2_int_type", IR_DATA_UN)	/* shift amount type for integer value operand */ \
 	X(RET_TYPE, "ret_type", IR_DATA_NONE)	/* return type of the function being analysed */ \
 	X(ARG_TYPE, "arg_type", IR_DATA_BIN)	/* type of parameter rhs (index) of the call instruction lhs */ \
 	/* Casts (builtins) */ \
@@ -194,7 +195,7 @@ typedef enum IrDataKind {
 	X(CONDBR, "condbr", IR_DATA_PAYLOAD)	/* condition ref, then body, else body */ \
 	X(IF, "if", IR_DATA_PAYLOAD)	/* IrCondbr; branches yield via break_inline BODY_RESULT */ \
 	X(LOOP, "loop", IR_DATA_PAYLOAD)	/* body (ends with repeat) */ \
-	X(REPEAT, "repeat", IR_DATA_NONE)	/* jump back to the start of the innermost loop */ \
+	X(REPEAT, "repeat", IR_DATA_UN)	/* loop instruction ref */ \
 	X(CALL, "call", IR_DATA_PAYLOAD)	/* callee ref, modifier, arg count, arg bodies */ \
 	X(RET, "ret", IR_DATA_UN)	/* return operand */ \
 	X(RET_IMPLICIT, "ret_implicit", IR_DATA_NONE)	/* end of a function body */ \

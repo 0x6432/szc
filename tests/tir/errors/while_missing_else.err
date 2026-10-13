@@ -1,0 +1,3 @@
+tests/tir/errors/while_missing_else.zig:1:27: error: expected type 'u8', found 'void'
+fn f(c: bool) u8 { return while (c) { break 1; }; }
+                          ^

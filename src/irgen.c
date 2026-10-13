@@ -33,6 +33,7 @@ typedef enum ScopeKind {
 	SCOPE_NAMESPACE,	/* container: its declaration names */
 	SCOPE_LOCAL,	/* one local constant, variable or parameter */
 	SCOPE_BODY,	/* an instruction body being built */
+	SCOPE_LOOP,	/* break/continue targets and optional label */
 } ScopeKind;
 
 typedef struct Scope {
@@ -82,6 +83,17 @@ typedef struct ResultInfo {
 	ResultKind kind;
 	IrRef      ref;
 } ResultInfo;
+
+typedef struct LoopScope {
+	Scope base;
+	StringId label;
+	IrInstIndex break_target;
+	IrInstIndex continue_target;
+	ResultInfo result;
+	bool allow_unlabeled;
+	bool allow_continue;
+	bool label_used;
+} LoopScope;
 
 static const ResultInfo result_none = {RESULT_NONE, IR_REF_NONE};
 
@@ -898,6 +910,111 @@ block_expr(GenBody *body, Scope *scope, ResultInfo info, AstNode *node)
 
 static void assign(GenBody *body, Scope *scope, AstAssign *node);
 
+static IrRef
+jump_expr(GenBody *body, Scope *scope, AstNode *node)
+{
+	AstJump *jump = AST_CAST(AstJump, node, node->kind);
+	bool is_continue = node->kind == AST_CONTINUE;
+	StringId label = jump->label.has_label ? intern_span(body->gen, jump->label.name) : STRING_NONE;
+	if (is_continue && label == STRING_NONE && jump->value != NULL) {
+		error_at(body->gen, node->offset, "%s", "cannot continue with operand without label");
+		return IR_REF_VOID_VALUE;
+	}
+	for (Scope *current = scope; current != NULL && current->kind != SCOPE_NAMESPACE; current = current->parent) {
+		if (current->kind != SCOPE_LOOP)
+			continue;
+		LoopScope *loop = (LoopScope *)current;
+		if (label == STRING_NONE ? !loop->allow_unlabeled : loop->label != label)
+			continue;
+		if (label != STRING_NONE)
+			loop->label_used = true;
+		if (is_continue && !loop->allow_continue) {
+			error_at(body->gen, node->offset, "%s", "continue outside of loop or labeled switch expression");
+			return IR_REF_VOID_VALUE;
+		}
+		if (is_continue && jump->value != NULL) {
+			error_at(body->gen, node->offset, "%s", label == STRING_NONE ? "cannot continue with operand without label" : "cannot continue loop with operand");
+			return IR_REF_VOID_VALUE;
+		}
+		IrRef value = IR_REF_VOID_VALUE;
+		if (!is_continue)
+			value = jump->value == NULL ? rvalue(body, loop->result, value, node->offset) : expr(body, scope, loop->result, jump->value);
+		if (!body_is_terminated(body))
+			emit_break(body, IR_BREAK, node->offset, is_continue ? loop->continue_target : loop->break_target, value);
+		return IR_REF_VOID_VALUE;
+	}
+	if (label != STRING_NONE)
+		error_at(body->gen, jump->label.name.start, "label not found: '%s'", intern_text(body->gen->interner, label));
+	else
+		error_at(body->gen, node->offset, "%s", is_continue ? "continue expression outside loop" : "break expression outside loop");
+	return IR_REF_VOID_VALUE;
+}
+
+static IrRef
+while_expr(GenBody *body, Scope *scope, ResultInfo info, AstNode *node)
+{
+	AstWhile *loop = AST_CAST(AstWhile, node, AST_WHILE);
+	IrGen *gen = body->gen;
+	if (loop->is_inline || loop->has_capture || loop->has_else_capture) {
+		unsupported(body, node, loop->is_inline ? "inline while" : "while payload captures");
+		return IR_REF_VOID_VALUE;
+	}
+	IrRef result = emit_payload(body, IR_BLOCK, node->offset, 0);
+	GenBody outer;
+	body_init(&outer, gen, scope, body->is_comptime);
+	IrRef repeat = emit_payload(&outer, IR_LOOP, node->offset, 0);
+	GenBody condition;
+	body_init(&condition, gen, &outer.base, body->is_comptime);
+	IrCondbr branch;
+	branch.condition = expr(&condition, &condition.base, result_type(IR_REF_TYPE_BOOL), loop->condition);
+	GenBody then_body;
+	body_init(&then_body, gen, &condition.base, body->is_comptime);
+	IrRef continuation = emit_payload(&then_body, IR_BLOCK, node->offset, 0);
+	LoopScope control;
+	memset(&control, 0, sizeof(control));
+	control.base.kind = SCOPE_LOOP;
+	control.base.parent = &then_body.base;
+	control.label = loop->label.has_label ? intern_span(gen, loop->label.name) : STRING_NONE;
+	if (control.label != STRING_NONE) {
+		for (Scope *current = scope; current != NULL && current->kind != SCOPE_NAMESPACE; current = current->parent) {
+			if (current->kind == SCOPE_LOOP && ((LoopScope *)current)->label == control.label) {
+				error_at(gen, loop->label.name.start, "redefinition of label '%s'", intern_text(gen->interner, control.label));
+				break;
+			}
+		}
+	}
+	control.break_target = ir_ref_inst(result);
+	control.continue_target = ir_ref_inst(continuation);
+	control.result = info;
+	control.allow_unlabeled = true;
+	control.allow_continue = true;
+	GenBody iteration;
+	body_init(&iteration, gen, &control.base, body->is_comptime);
+	expr(&iteration, &iteration.base, result_type(IR_REF_TYPE_VOID), loop->body);
+	if (!body_is_terminated(&iteration))
+		emit_break(&iteration, IR_BREAK, node->offset, control.continue_target, IR_REF_VOID_VALUE);
+	gen->ir->insts[control.continue_target].data.payload = body_finish(&iteration);
+	if (loop->continue_expr != NULL)
+		expr(&then_body, &control.base, result_type(IR_REF_TYPE_VOID), loop->continue_expr);
+	if (!body_is_terminated(&then_body))
+		emit_un(&then_body, IR_REPEAT, node->offset, repeat);
+	branch.then_body = body_finish(&then_body);
+	GenBody else_body;
+	control.allow_unlabeled = false;
+	control.allow_continue = false;
+	body_init(&else_body, gen, &control.base, body->is_comptime);
+	IrRef value = loop->else_branch == NULL ? rvalue(&else_body, info, IR_REF_VOID_VALUE, node->offset) : expr(&else_body, &else_body.base, info, loop->else_branch);
+	if (!body_is_terminated(&else_body))
+		emit_break(&else_body, IR_BREAK, node->offset, control.break_target, value);
+	branch.else_body = body_finish(&else_body);
+	emit_payload(&condition, IR_CONDBR, node->offset, APPEND_EXTRA(gen, branch));
+	gen->ir->insts[ir_ref_inst(repeat)].data.payload = body_finish(&condition);
+	gen->ir->insts[control.break_target].data.payload = body_finish(&outer);
+	if (control.label != STRING_NONE && !control.label_used)
+		error_at(gen, loop->label.name.start, "%s", "unused while loop label");
+	return result;
+}
+
 /* Each arm yields a value, unless it ends in return/unreachable. */
 static IrBody
 if_branch(GenBody *body, Scope *scope, ResultInfo info, AstNode *node, uint32_t src)
@@ -953,6 +1070,11 @@ expr(GenBody *body, Scope *scope, ResultInfo info, AstNode *node)
 		return block_expr(body, scope, info, node);
 	case AST_IF:
 		return if_expr(body, scope, info, node);
+	case AST_WHILE:
+		return while_expr(body, scope, info, node);
+	case AST_BREAK:
+	case AST_CONTINUE:
+		return jump_expr(body, scope, node);
 	case AST_ASSIGN:
 		assign(body, scope, AST_CAST(AstAssign, node, AST_ASSIGN));
 		return rvalue(body, info, IR_REF_VOID_VALUE, node->offset);
@@ -1010,14 +1132,55 @@ local_var_decl(GenBody *body, Scope *scope, AstVarDecl *decl)
 	return &local->base;
 }
 
+static IrOp
+assignment_op(AstAssignOp op)
+{
+	switch (op) {
+	case AST_ASSIGN_ADD:
+		return IR_ADD;
+	case AST_ASSIGN_SUB:
+		return IR_SUB;
+	case AST_ASSIGN_MUL:
+		return IR_MUL;
+	case AST_ASSIGN_DIV:
+		return IR_DIV;
+	case AST_ASSIGN_MOD:
+		return IR_MOD;
+	case AST_ASSIGN_ADD_WRAP:
+		return IR_ADD_WRAP;
+	case AST_ASSIGN_SUB_WRAP:
+		return IR_SUB_WRAP;
+	case AST_ASSIGN_MUL_WRAP:
+		return IR_MUL_WRAP;
+	case AST_ASSIGN_ADD_SAT:
+		return IR_ADD_SAT;
+	case AST_ASSIGN_SUB_SAT:
+		return IR_SUB_SAT;
+	case AST_ASSIGN_MUL_SAT:
+		return IR_MUL_SAT;
+	case AST_ASSIGN_SHL:
+		return IR_SHL;
+	case AST_ASSIGN_SHL_SAT:
+		return IR_SHL_SAT;
+	case AST_ASSIGN_SHR:
+		return IR_SHR;
+	case AST_ASSIGN_BIT_AND:
+		return IR_BIT_AND;
+	case AST_ASSIGN_BIT_OR:
+		return IR_BIT_OR;
+	case AST_ASSIGN_BIT_XOR:
+		return IR_BIT_XOR;
+	case AST_ASSIGN_PLAIN:
+	case AST_ASSIGN_OP_COUNT:
+		return IR_OP_COUNT;
+	}
+	return IR_OP_COUNT;
+}
+
 static void
 assign(GenBody *body, Scope *scope, AstAssign *node)
 {
-	if (node->op != AST_ASSIGN_PLAIN) {
-		unsupported(body, &node->base, "compound assignment");
-		return;
-	}
-	if (node->target->kind == AST_IDENTIFIER) {
+	if (node->op == AST_ASSIGN_PLAIN && node->target->kind == AST_IDENTIFIER) {
 		AstIdentifier *target = AST_CAST(AstIdentifier, node->target, AST_IDENTIFIER);
 		if (target->name.end - target->name.start == 1 && body->gen->source[target->name.start] == '_') {
 			/* `_ = x;` discards the value. */
@@ -1029,7 +1192,20 @@ assign(GenBody *body, Scope *scope, AstAssign *node)
 	ResultInfo info;
 	info.kind = RESULT_PTR_ELEM;
 	info.ref = pointer;
-	IrRef value = expr(body, scope, info, node->value);
+	IrRef value;
+	if (node->op == AST_ASSIGN_PLAIN) {
+		value = expr(body, scope, info, node->value);
+	} else {
+		IrOp op = assignment_op(node->op);
+		IrRef lhs = emit_un(body, IR_LOAD, node->base.offset, pointer);
+		ResultInfo rhs_info = info;
+		if (op == IR_SHL || op == IR_SHR)
+			rhs_info = result_type(emit_un(body, IR_LOG2_INT_TYPE, node->base.offset, lhs));
+		else if (op == IR_SHL_SAT)
+			rhs_info = result_none;
+		IrRef rhs = expr(body, scope, rhs_info, node->value);
+		value = rvalue(body, info, emit_bin(body, op, node->base.offset, lhs, rhs), node->base.offset);
+	}
 	emit_bin(body, IR_STORE, node->base.offset, pointer, value);
 }
 

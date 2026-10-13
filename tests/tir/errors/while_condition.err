@@ -1,0 +1,3 @@
+tests/tir/errors/while_condition.zig:1:29: error: expected type 'bool', found 'comptime_int'
+pub fn main() void { while (1) {} }
+                            ^

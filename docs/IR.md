@@ -46,6 +46,7 @@ generation, like AstGen: "no result type", "coerce to type ref T", or "the
 pointee type of pointer ref P" (assignment). When an expression needs its result
 type, irgen materializes it (`elem_type` of the pointer's type, the param type
 of a call argument, the function's `ret_type`, a field's type, …).
+Ordinary shift assignments use `log2_int_type value` for the RHS result type.
 
 ## Declarations
 
@@ -74,8 +75,14 @@ return type is a body too, so it may depend on comptime parameters.
   block with `condbr` and `br`; an arm that returns does not contribute a value.
   Two runtime exits cannot merge comptime-only types. One constant exit remains
   known while a void result block preserves the runtime control effects.
-- `loop` has a body that ends with `repeat`; leaving the loop is a `break` of
-  an enclosing block.
+- `loop` has a body that ends with `repeat loop_ref`; leaving the loop is a
+  `break` of an enclosing block. Source while wraps the loop in a result block;
+  its condition body ends with condbr. The true arm has a body-exit block (the
+  continue target), followed by the continue expression and repeat; the false
+  arm yields the else result to the outer result block. Break skips else.
+- Sema collects block exits using an analysis-local control-target chain. Each
+  exit reserves a noreturn typed block whose body is filled after peer typing
+  with any needed coercion and br. This keeps runtime operands in their branch.
 - `and`/`or` are `bool_and`/`bool_or` with a right-hand body (short-circuit).
 - `ret value`, `ret_implicit` (falling off the end of a `void` function).
 

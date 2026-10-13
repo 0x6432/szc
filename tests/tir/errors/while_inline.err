@@ -1,0 +1,3 @@
+tests/tir/errors/while_inline.zig:1:29: error: not supported by szc yet: inline while
+pub fn main() void { inline while (false) {} }
+                            ^

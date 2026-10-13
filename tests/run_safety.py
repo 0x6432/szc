@@ -21,6 +21,12 @@ def binary_case(name, integer_type, operator, lhs, rhs, message="integer overflo
 
 
 def cases():
+    source = ("fn operation(a: u8) u8 { var x = a; while (true) { x += 1; if (x == 0) break; } return x; }\n"
+              "pub fn main() void { _ = operation(255); }\n")
+    yield "loop_body_overflow", source, "integer overflow"
+    source = ("fn operation(a: u8) u8 { var x = a; var i: u8 = 0; while (i < 2) : (x += 1) { i += 1; } return x; }\n"
+              "pub fn main() void { _ = operation(255); }\n")
+    yield "loop_continue_overflow", source, "integer overflow"
     for bits in (1, 5, 8, 32, 33, 64):
         unsigned = f"u{bits}"
         signed = f"i{bits}"

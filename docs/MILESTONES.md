@@ -53,7 +53,7 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
 ## Phase 4: Control flow
 
 - [x] **M4.1 if/else, comparisons, `and`/`or` short-circuit.**
-- [ ] **M4.2 while/break/continue, continue expressions, labeled loops.**
+- [x] **M4.2 while/break/continue, continue expressions, labeled loops.**
 - [ ] **M4.3 Blocks as expressions, labeled break with value.**
 - [ ] **M4.4 for over ranges, `defer`.**
 - [ ] **M4.5 unreachable, noreturn, `@panic` minimal runtime.**
@@ -114,6 +114,44 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
 ## Completed milestone log
 
 (newest first; each entry: what, limitations, interactions)
+
+### M4.2 Runtime while, break/continue and labeled loops
+- **What**: boolean `while`, block/unbraced bodies, continue expressions, nested
+  loops, named and unnamed break/continue, loop `else` and value-producing breaks.
+  Loop conditions are reevaluated each iteration. Continue branches to a body-exit
+  block, then executes the continue expression before repeating; break skips both
+  the continue expression and else. Else-side unnamed jumps target an outer loop;
+  a named break may target the exhausted loop, but named continue may not.
+  Duplicate/unused/missing labels and invalid jump operands are diagnosed.
+- **Compound assignments**: checked/wrapping/saturating arithmetic, bitwise and
+  shift assignments use load/operation/store. Ordinary shifts provide the RHS's
+  Log2Int result type (including @intCast); saturating shifts accept arbitrary
+  integer amounts, matching the actual 0.17 AstGen assignment rules.
+- **Result joins**: sema tracks explicit control targets. Break operands are
+  gathered before peer typing, then coerced in deferred noreturn exit bodies;
+  this preserves branch-local operands without inserting a widening cast outside
+  its dominating branch. A sole constant exit remains known. Nonreturning loops
+  stop sema analysis, and the existing QBE loop/repeat/block/br operations suffice.
+- **Testing**: IR/TIR/QBE goldens, reference-checked diagnostics, nested labeled
+  loops, early return/break from continue expressions, zero iterations, skipped
+  runtime division guards, stack-local reinitialization and typed loop values.
+  `tools/generate_loop_tests.py` exercises all 128 signed/unsigned 1–64-bit types,
+  included in e2e and CI. Two new panic cases verify checked overflow in a loop
+  body and continue expression. GCC/Clang sanitizer suites: 518 unit checks,
+  409 goldens, 21 ordinary e2e inputs plus one szc-only edge input, 12 driver
+  checks and 117 panic cases; ordinary programs match the official 0.17 binary.
+  Four 60-second fuzz runs, final irgen/sema 60-second runs and standalone
+  corpus replay are clean.
+- **Limitations**: inline/comptime loop evaluation is deferred to Phase 7; even
+  a zero-iteration loop in a container-level comptime initializer is not evaluated
+  yet. Optional/error-union while captures await M6.3/M6.5. Labeled value blocks
+  are M4.3, for/defer M4.4; unused locals/results and full diagnostic notes remain
+  unsupported. Arithmetic safety remains always enabled.
+- **Interactions**: IR_REPEAT now carries an explicit loop ref. Source while
+  lowers to an outer result IR_BLOCK, IR_LOOP, condition IR_CONDBR, and a separate
+  body-exit IR_BLOCK for continue. ControlTarget chains are analysis-local (no
+  static state); nested IR_IF/boolean branches inherit them. The same block-merge
+  infrastructure can be reused by M4.3's labeled blocks.
 
 ### M4.1 Source if/else, comparisons and boolean short-circuit
 - **What**: source statement/expression `if`, optional `else`, else-if chains,

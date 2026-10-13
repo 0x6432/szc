@@ -1,0 +1,3 @@
+tests/tir/errors/continue_operand.zig:1:37: error: cannot continue with operand without label
+pub fn main() void { while (true) { continue 1; } }
+                                    ^

@@ -1,0 +1,6 @@
+tests/tir/errors/while_both_invalid.zig:1:45: error: type 'u8' cannot represent integer value '256'
+fn f(c: bool) u8 { return while (c) { break 256; } else 257; }
+                                            ^
+tests/tir/errors/while_both_invalid.zig:1:57: error: type 'u8' cannot represent integer value '257'
+fn f(c: bool) u8 { return while (c) { break 256; } else 257; }
+                                                        ^

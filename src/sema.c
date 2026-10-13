@@ -92,6 +92,22 @@ typedef struct InstMap {
 	uint32_t     capacity;	/* power of two */
 } InstMap;
 
+typedef struct BreakExit {
+	Operand value;
+	TirRef wrapper;	/* deferred noreturn body: coercion followed by br */
+	uint32_t src;
+} BreakExit;
+
+typedef struct ControlTarget {
+	struct ControlTarget *parent;
+	IrInstIndex ir_index;
+	TirRef tir_ref;
+	bool is_loop;
+	BreakExit *exits;
+	uint32_t count;
+	uint32_t capacity;
+} ControlTarget;
+
 typedef struct Block {
 	Sema          *sema;
 	SemaNamespace *namespace_scope;
@@ -104,6 +120,7 @@ typedef struct Block {
 	TirRef        *insts;	/* typed-IR body being built */
 	uint32_t      count;
 	uint32_t      capacity;
+	ControlTarget *control;
 } Block;
 
 /* How the analysis of a body ended. */
@@ -1702,6 +1719,8 @@ analyze_unary(Block *block, const IrInst *inst)
 	return runtime_operand(type, emit_tir_un(block, op == IR_NEGATE_WRAP ? TIR_NEGATE_WRAP : TIR_NEGATE, type, src, operand.inst));
 }
 
+/* ---------- Analysis: control flow ---------- */
+
 /* `and` / `or` with a short-circuiting right-hand side. */
 static Operand
 analyze_bool_br(Block *block, const IrInst *inst)
@@ -1832,6 +1851,135 @@ analyze_if(Block *block, const IrInst *inst)
 	if (type == T_VOID)
 		return void_operand(sema);
 	return runtime_operand(type, merge);
+}
+
+static ControlTarget *
+find_control(Block *block, IrInstIndex index)
+{
+	for (ControlTarget *target = block->control; target != NULL; target = target->parent) {
+		if (target->ir_index == index)
+			return target;
+	}
+	return NULL;
+}
+
+/* Break operands are coerced after all exits establish the block's peer type. */
+static void
+analyze_break(Block *block, const IrInst *inst)
+{
+	ControlTarget *target = find_control(block, inst->data.brk.block);
+	if (target == NULL || target->is_loop) {
+		sema_error(block, inst->src, "invalid break target");
+		return;
+	}
+	Operand value = resolve_ref(block, inst->data.brk.operand);
+	if (value.kind == OPERAND_NONE)
+		return;
+	if (target->count == target->capacity) {
+		uint32_t capacity = target->capacity == 0 ? 4 : target->capacity * 2;
+		target->exits = arena_grow_array(block->sema->arena, target->exits, target->count, capacity, sizeof(BreakExit), alignof(BreakExit));
+		target->capacity = capacity;
+	}
+	BreakExit *exit = &target->exits[target->count++];
+	exit->value = value;
+	exit->src = inst->src;
+	exit->wrapper = emit_tir(block, TIR_BLOCK, T_NORETURN, inst->src);
+}
+
+static Operand
+analyze_control_block(Block *block, IrInstIndex index)
+{
+	const IrInst *inst = &block->ir->insts[index];
+	if (!require_runtime(block, inst->src))
+		return operand_none;
+	ControlTarget target;
+	memset(&target, 0, sizeof(target));
+	target.parent = block->control;
+	target.ir_index = index;
+	target.tir_ref = emit_tir(block, TIR_BLOCK, T_VOID, inst->src);
+	Block inner;
+	block_init_child(&inner, block);
+	inner.control = &target;
+	analyze_body(&inner, inst->data.payload);
+	TypeId type = T_NORETURN;
+	if (target.count > 0)
+		type = target.exits[0].value.type;
+	for (uint32_t i = 1; i < target.count; i++) {
+		Operand lhs = target.exits[0].value;
+		lhs.type = type;
+		if (!peer_type(block, lhs, target.exits[i].value, inst->src, &type))
+			return operand_none;
+	}
+	if (target.count > 1 && is_comptime_only_type(block->sema, type)) {
+		sema_error(block, inst->src, "value with comptime-only type '%s' depends on runtime control flow", sema_type_name(block->sema, type));
+		return operand_none;
+	}
+	bool known = target.count == 1 && target.exits[0].value.kind == OPERAND_COMPTIME;
+	TypeId merge_type = known ? T_VOID : type;
+	block->tir->insts[target.tir_ref].type = merge_type;
+	for (uint32_t i = 0; i < target.count; i++) {
+		BreakExit exit = target.exits[i];
+		Block branch;
+		block_init_child(&branch, block);
+		Operand value = coerce(&branch, exit.value, type, exit.src);
+		if (value.kind == OPERAND_NONE)
+			continue;
+		TirRef operand = merge_type == T_VOID ? TIR_REF_NONE : materialize(&branch, value, exit.src);
+		emit_tir_bin(&branch, TIR_BR, T_NORETURN, exit.src, target.tir_ref, operand);
+		block->tir->insts[exit.wrapper].data.payload = block_finish(&branch);
+	}
+	block->tir->insts[target.tir_ref].data.payload = block_finish(&inner);
+	if (known)
+		return target.exits[0].value;
+	if (type == T_VOID)
+		return void_operand(block->sema);
+	return runtime_operand(type, target.tir_ref);
+}
+
+static void
+analyze_loop(Block *block, IrInstIndex index)
+{
+	const IrInst *inst = &block->ir->insts[index];
+	if (!require_runtime(block, inst->src))
+		return;
+	ControlTarget target;
+	memset(&target, 0, sizeof(target));
+	target.parent = block->control;
+	target.ir_index = index;
+	target.is_loop = true;
+	target.tir_ref = emit_tir(block, TIR_LOOP, T_NORETURN, inst->src);
+	Block inner;
+	block_init_child(&inner, block);
+	inner.control = &target;
+	analyze_body(&inner, inst->data.payload);
+	block->tir->insts[target.tir_ref].data.payload = block_finish(&inner);
+}
+
+static void
+analyze_condbr(Block *block, const IrInst *inst)
+{
+	IrCondbr payload;
+	IR_READ(block->ir, inst->data.payload, &payload);
+	Operand condition = coerce(block, resolve_ref(block, payload.condition), T_BOOL, inst->src);
+	if (condition.kind == OPERAND_NONE)
+		return;
+	if (condition.kind == OPERAND_COMPTIME) {
+		if (check_defined(block, condition, inst->src))
+			analyze_body(block, operand_value(block, condition)->as.boolean ? payload.then_body : payload.else_body);
+		return;
+	}
+	Block arms[2];
+	IrBody bodies[2] = {payload.then_body, payload.else_body};
+	for (uint32_t i = 0; i < 2; i++) {
+		block_init_child(&arms[i], block);
+		analyze_body(&arms[i], bodies[i]);
+	}
+	TirCondbr branch;
+	branch.condition = condition.inst;
+	branch.then_body = block_finish(&arms[0]);
+	branch.else_body = block_finish(&arms[1]);
+	TirRef ref = emit_tir(block, TIR_CONDBR, T_NORETURN, inst->src);
+	block->tir->insts[ref].data.payload = tir_extra(block->tir, block->sema->arena, &branch, TIR_WORDS(TirCondbr));
 }
 
 /* ---------- Analysis: functions and calls ---------- */
@@ -2163,6 +2311,17 @@ analyze_inst(Block *block, IrInstIndex index, Operand *break_value)
 			result = type_operand(sema, sema->types[pointer.type].as.pointer.child);
 		break;
 	}
+	case IR_LOG2_INT_TYPE: {
+		Operand operand = resolve_ref(block, inst->data.un.operand);
+		if (operand.kind == OPERAND_NONE)
+			break;
+		if (!is_int(sema, operand.type)) {
+			sema_error(block, src, "expected integer type, found '%s'", sema_type_name(sema, operand.type));
+			break;
+		}
+		result = type_operand(sema, type_int(sema, false, log2_int_bits(sema->types[operand.type].as.integer.bits)));
+		break;
+	}
 	case IR_RET_TYPE:
 		if (block->func == NULL) {
 			sema_error(block, src, "'return' outside function scope");
@@ -2255,6 +2414,28 @@ analyze_inst(Block *block, IrInstIndex index, Operand *break_value)
 		if (result.type == T_NORETURN)
 			return INST_NORETURN;
 		break;
+	case IR_BLOCK:
+		result = analyze_control_block(block, index);
+		if (result.type == T_NORETURN)
+			return INST_NORETURN;
+		break;
+	case IR_BREAK:
+		analyze_break(block, inst);
+		return INST_NORETURN;
+	case IR_CONDBR:
+		analyze_condbr(block, inst);
+		return INST_NORETURN;
+	case IR_LOOP:
+		analyze_loop(block, index);
+		return INST_NORETURN;
+	case IR_REPEAT: {
+		ControlTarget *target = ir_ref_is_inst(inst->data.un.operand) ? find_control(block, ir_ref_inst(inst->data.un.operand)) : NULL;
+		if (target == NULL || !target->is_loop)
+			sema_error(block, src, "invalid repeat target");
+		else
+			emit_tir_un(block, TIR_REPEAT, T_NORETURN, src, target->tir_ref);
+		return INST_NORETURN;
+	}
 	case IR_BREAK_INLINE:
 		if (inst->data.brk.block == IR_BODY_RESULT) {
 			*break_value = resolve_ref(block, inst->data.brk.operand);
@@ -2302,14 +2483,7 @@ analyze_inst(Block *block, IrInstIndex index, Operand *break_value)
 	case IR_STR:
 	case IR_ENUM_LITERAL:
 	case IR_DECL_REF:
-	case IR_BLOCK:
-	case IR_BREAK:
-	case IR_CONDBR:
-	case IR_LOOP:
-	case IR_REPEAT:
 		result = unsupported_inst(block, inst);
-		if (inst->op == IR_BREAK || inst->op == IR_CONDBR || inst->op == IR_REPEAT)
-			return INST_NORETURN;
 		break;
 	case IR_OP_COUNT:
 		break;
