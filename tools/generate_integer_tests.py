@@ -30,6 +30,13 @@ def generate(seed):
                 ("|", wrap(a | b)), ("^", wrap(a ^ b)),
             ):
                 checks.append(f"(a {op} b) == {value}")
+            minimum = -(1 << (bits - 1)) if signed else 0
+            maximum = (1 << (bits - (1 if signed else 0))) - 1
+            for op, value in (("+", a + b), ("-", a - b), ("*", a * b)):
+                if minimum <= value <= maximum:
+                    checks.append(f"(a {op} b) == {value}")
+            if signed and a != minimum:
+                checks.append(f"-a == {-a}")
             checks += [f"~a == {wrap(~a)}",
                        f"(a << shift) == {wrap(a << shift)}",
                        f"(a >> shift) == {a >> shift}"]

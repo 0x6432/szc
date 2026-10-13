@@ -10,14 +10,16 @@ builtins the Zig compiler and its std need. There are no SPIR-V, wasm or other b
 ## Status
 
 See [docs/MILESTONES.md](docs/MILESTONES.md). The lexer and parser are complete. Minimal integer/bool programs compile
-through typed IR and QBE to native executables; arithmetic safety is next.
+through typed IR and QBE to native executables with checked arithmetic and
+integer casts. Runtime saturation and explicit division builtins are next.
 
 ## Build & test
 
 ```sh
 make                 # build/szc
 make test            # unit + golden tests under ASan/UBSan
-make e2e-test        # executable + driver tests (needs qbe)
+make e2e-test        # executable + driver + panic tests (needs qbe)
+make safety-test     # runtime panic checks only (needs qbe)
 make fuzz-standalone # replay fuzz corpus + random mutations (gcc ok)
 make fuzz fuzz-run   # libFuzzer (clang)
 ```
@@ -45,7 +47,9 @@ Executable tests start with `// exit: N`; an optional matching `.stdout` file
 specifies byte-exact stdout (otherwise it must be empty). Tests distinguish
 compilation failures from nonzero program exits. Generated tests exercise all
 signed/unsigned widths from 1 to 64 bits; driver tests cover tool failures,
-intermediate retention/cleanup and paths containing spaces.
+intermediate retention/cleanup and paths containing spaces. Runtime safety tests
+check panic signals/messages; when `ZIG` is set they also validate behavior against
+the official compiler.
 
 ## Layout
 

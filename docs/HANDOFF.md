@@ -22,7 +22,8 @@ Read this first when resuming work (the sandbox resets often).
 - Done: M3.3 (typed IR + minimal sema, `szc tir`).
 - Done: M3.4 QBE codegen + driver (`emit-qbe`, `build-exe`, `run`), integer casts.
 - Done: M3.5 executable/driver harness + generated integer-width tests and CI.
-- Next: **M3.6** arithmetic safety, saturating operations and panic stub.
+- Done: M3.6a checked arithmetic, casts, unsigned division/shift guards and panic stub.
+- Next: **M3.6b** runtime saturation and explicit signed division/remainder builtins.
 - Run `PATH=/data/tools/bin:$PATH ZIG=/data/zig/zig-x86_64-linux-0.17.0/zig make e2e-test`
   locally. `tools/build_qbe.sh` builds the pinned QBE into `build/qbe-src` on CI.
 - Tools: `SZC_QBE`/`qbe`, `SZC_CC`/`cc`; pinned QBE revision
@@ -30,7 +31,18 @@ Read this first when resuming work (the sandbox resets often).
 - Restored sandbox needed libasan/libubsan/clang/compiler-rt reinstalled. Git
   credentials are not persisted; use transient authentication for future pushes.
 - M3.4 (`1882ced`) and M3.5 (`7b36edd`) are pushed to `main`.
-- CI for previous M3.3 commit `2b0d0ca`: completed successfully.
+- CI for M3.5 and its handoff update (`7b36edd`, `bd46941`): completed successfully.
+
+## Validation at M3.6a
+
+- Fresh GCC/Clang `-Werror` sanitizer builds: 515 unit checks, 369 goldens,
+  ten e2e inputs, 12 driver checks, 77 generated panic cases; reference validation
+  passes with official Zig 0.17.0. GCC optimized build is warning-clean too.
+- Standalone fuzz replay and four 60-second libFuzzer runs pass.
+- Generated width tests now also exercise non-overflowing checked arithmetic;
+  `tests/run/safety_boundaries.zig` covers minima/maxima, zero products, narrowing
+  casts and u0. The panic harness checks widths 1/5/8/32/33/64 and compiler success
+  separately from SIGABRT/message validation.
 
 ## Validation at M3.5
 
@@ -52,8 +64,11 @@ Read this first when resuming work (the sandbox resets often).
   `tools/diff_parse_errors.py build/szc build/ast_spans <file-list> [count] [seed]`.
   `zig fmt --check file.zig` shows the reference's parse error for a mutant.
 - Number literals are lexed loosely (like the reference). Validate them when decoding (M3.x).
-- M3.6 needs to distinguish checked vs wrapping arithmetic in typed IR (currently
-  both lower to `TIR_ADD/SUB/MUL/NEGATE`); range-check narrowing/signedness-changing
-  `TIR_INT_CAST`, add saturating runtime ops and division/shift safety as appropriate.
-  Always verify these semantics against the 0.17.0 Sema/arith sources and binary.
+- M3.6b: implement runtime +|/-|/*|/<<| and @divTrunc/@divFloor/@divCeil/
+  @divExact/@rem/@mod. Checked vs wrapping TIR ops are now distinct. Signed
+  division needs min/-1 guards; floor/mod/exact/ceil need their respective
+  adjustments/checks. Verify 0.17.0 Sema/arith and debug panic messages first.
+- `make safety-test` checks generated runtime panic cases; setting `ZIG` enables
+  reference validation. Checks are always enabled in szc for now. Panic stubs
+  print one line via libc write, then abort; explicit unreachable still uses hlt.
 - Pending user decision: how to build the Zig compiler source (M10.2).

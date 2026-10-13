@@ -69,26 +69,62 @@ function w $szc.main.1() {
 	%t59 =w copy %t58
 	%t60 =w add %t57, %t59
 	%t60 =w and %t60, 255
+	%g60_overflow =w cultw %t60, %t57
+	jnz %g60_overflow, @g60_overflow_panic, @g60_overflow_ok
+@g60_overflow_panic
+	call $szc.panic.0()
+	hlt
+@g60_overflow_ok
 	%t61 =w copy %t18
 	%t62 =w copy %t61
 	%t63 =w add %t60, %t62
 	%t63 =w and %t63, 255
+	%g63_overflow =w cultw %t63, %t60
+	jnz %g63_overflow, @g63_overflow_panic, @g63_overflow_ok
+@g63_overflow_panic
+	call $szc.panic.0()
+	hlt
+@g63_overflow_ok
 	%t64 =w copy %t27
 	%t65 =w copy %t64
 	%t66 =w add %t63, %t65
 	%t66 =w and %t66, 255
+	%g66_overflow =w cultw %t66, %t63
+	jnz %g66_overflow, @g66_overflow_panic, @g66_overflow_ok
+@g66_overflow_panic
+	call $szc.panic.0()
+	hlt
+@g66_overflow_ok
 	%t67 =w copy %t43
 	%t68 =w copy %t67
 	%t69 =w add %t66, %t68
 	%t69 =w and %t69, 255
+	%g69_overflow =w cultw %t69, %t66
+	jnz %g69_overflow, @g69_overflow_panic, @g69_overflow_ok
+@g69_overflow_panic
+	call $szc.panic.0()
+	hlt
+@g69_overflow_ok
 	%t70 =w copy %t52
 	%t71 =w copy %t70
 	%t72 =w add %t69, %t71
 	%t72 =w and %t72, 255
+	%g72_overflow =w cultw %t72, %t69
+	jnz %g72_overflow, @g72_overflow_panic, @g72_overflow_ok
+@g72_overflow_panic
+	call $szc.panic.0()
+	hlt
+@g72_overflow_ok
 	%t73 =w copy %t55
 	%t74 =w copy %t73
 	%t75 =w add %t72, %t74
 	%t75 =w and %t75, 255
+	%g75_overflow =w cultw %t75, %t72
+	jnz %g75_overflow, @g75_overflow_panic, @g75_overflow_ok
+@g75_overflow_panic
+	call $szc.panic.0()
+	hlt
+@g75_overflow_ok
 	ret %t75
 }
 
@@ -113,6 +149,14 @@ function w $szc.combine.4(w %t0, w %t1) {
 	jmp @b2
 @b2
 	ret %t2
+}
+
+data $szc.panic.msg.0 = { b "integer overflow\n", b 0 }
+function $szc.panic.0() {
+@start
+	call $write(w 2, l $szc.panic.msg.0, l 17)
+	call $abort()
+	hlt
 }
 
 export function w $main() {

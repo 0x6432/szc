@@ -21,9 +21,12 @@ typedef uint32_t TirBody;	/* extra index of a body, 0 = none */
 #define TIR_OP_LIST(X) \
 	X(ARG, "arg")	/* data.index: parameter number */ \
 	X(CONST, "const")	/* data.value */ \
-	X(ADD, "add")	/* bin: wrapping integer ops for now */ \
+	X(ADD, "add")	/* bin: checked integer arithmetic */ \
+	X(ADD_WRAP, "add_wrap") \
 	X(SUB, "sub") \
+	X(SUB_WRAP, "sub_wrap") \
 	X(MUL, "mul") \
+	X(MUL_WRAP, "mul_wrap") \
 	X(DIV_TRUNC, "div_trunc") \
 	X(REM, "rem") \
 	X(BIT_AND, "bit_and") \
@@ -38,7 +41,8 @@ typedef uint32_t TirBody;	/* extra index of a body, 0 = none */
 	X(CMP_LTE, "cmp_lte") \
 	X(CMP_GTE, "cmp_gte") \
 	X(NOT, "not")	/* un: bool not / bitwise not */ \
-	X(NEGATE, "negate")	/* un: wrapping negation */ \
+	X(NEGATE, "negate")	/* un: checked negation */ \
+	X(NEGATE_WRAP, "negate_wrap") \
 	X(INT_CAST, "int_cast")	/* un: widen/narrow integer to `type` */ \
 	X(TRUNCATE, "truncate")	/* un: discard high integer bits */ \
 	X(INT_FROM_BOOL, "int_from_bool")	/* un: bool -> u1 */ \

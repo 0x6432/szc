@@ -20,7 +20,7 @@ LIB_SOURCES = src/arena.c src/source.c src/diag.c src/intern.c src/lexer.c src/a
 HEADERS     = $(wildcard src/*.h)
 FUZZERS     = lexer parser irgen sema
 
-.PHONY: all release asan test unit-test golden-test e2e-test fuzz fuzz-run fuzz-standalone clean
+.PHONY: all release asan test unit-test golden-test e2e-test safety-test fuzz fuzz-run fuzz-standalone clean
 
 all: build/szc
 
@@ -56,6 +56,10 @@ build/integer-widths.zig: tools/generate_integer_tests.py
 e2e-test: build/asan/szc build/integer-widths.zig
 	./tests/run_e2e.sh build/asan/szc tests/run/*.zig build/integer-widths.zig
 	./tests/run_driver.sh build/asan/szc
+	python3 tests/run_safety.py build/asan/szc
+
+safety-test: build/asan/szc
+	python3 tests/run_safety.py build/asan/szc
 
 # libFuzzer builds (clang)
 build/fuzz/fuzz_%: fuzz/fuzz_%.c $(LIB_SOURCES) $(HEADERS)

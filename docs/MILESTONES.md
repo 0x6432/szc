@@ -46,7 +46,9 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
 - [x] **M3.3 Typed IR + minimal sema**: `void`, `bool`, `i32`/`u8`/`usize` etc., coercion of comptime_int literals.
 - [x] **M3.4 QBE codegen**: functions, arithmetic, calls; driver runs `qbe` and `cc`.
 - [x] **M3.5 End-to-end test harness** (`tests/run/*.zig` check exit code/stdout).
-- [ ] **M3.6 Arithmetic semantics**: wrapping/saturating ops, division, shifts, safety checks → panic stub.
+- [~] **M3.6 Arithmetic semantics**: wrapping/saturating ops, division, shifts, safety checks → panic stub.
+  - [x] **M3.6a Checked arithmetic and panic stub**: overflow, cast, unsigned division and shift guards.
+  - [ ] **M3.6b Runtime saturation and explicit division builtins**.
 
 ## Phase 4: Control flow
 
@@ -112,6 +114,35 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
 ## Completed milestone log
 
 (newest first; each entry: what, limitations, interactions)
+
+### M3.6a Checked runtime arithmetic and panic stub
+- **What**: typed IR preserves checked vs wrapping add/sub/mul/negation. QBE guards
+  detect unsigned carry/borrow and signed overflow after canonical normalization;
+  multiplication checks unsigned operand magnitudes against a division threshold,
+  including signed minima and zero operands, without relying on wider native integers.
+  Checked negation rejects the signed minimum. Integer casts enforce destination
+  bounds and signedness, including u0; truncate and wrapping operations remain unchecked.
+  Unsigned division/remainder guard zero divisors; shifts guard non-power-of-two
+  widths. Panic stubs emit the matching Zig 0.17.0 message to stderr and abort.
+  Fixed comptime left shifts to truncate to their fixed width, and reject `i0` as
+  Zig does. Added safe boundary regressions, generated checked-op cases over all
+  128 integer types, error goldens and runtime panic checks against official Zig.
+  The safety harness runs in `make e2e-test` (and independently with `make safety-test`).
+  Fresh GCC/Clang `-Werror` sanitizer builds pass 515 unit checks, 369 goldens,
+  ten e2e inputs, 12 driver checks and 77 panic cases; reference validation passes
+  against official Zig. Standalone fuzz replay is also clean, and all four
+  libFuzzer targets completed 60 seconds each without failures.
+- **Limitations**: runtime saturation and explicit signed division/remainder builtins
+  remain M3.6b; integers wider than 64 bits are still rejected. Runtime checks are
+  always enabled: no optimization-mode switch or `@setRuntimeSafety` yet. The panic
+  stub has no stack trace, custom panic handler or std integration; explicit
+  `unreachable` still uses QBE `hlt` until M4.5. A panic's single stderr write does
+  not retry short/interrupted writes.
+- **Interactions**: codegen alone lowers safety checks and emits only needed panic
+  helpers (libc write/abort through the separate system-cc link). Typed-IR wrapping
+  op names differ from checked ops so later optimization modes can preserve semantics.
+  The safety harness compiles each source separately, checks SIGABRT and exact szc
+  stderr, and checks official Zig's signal/message without depending on stack traces.
 
 ### M3.5 End-to-end test harness (`tests/run_e2e.sh`, `tests/run_driver.sh`)
 - **What**: `make e2e-test` compiles each `tests/run/*.zig` program with szc,

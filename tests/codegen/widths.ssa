@@ -6,6 +6,12 @@ function w $szc.main.1() {
 	%t5 =l call $szc.wrap_u33.2(l 8589934591)
 	%t6 =l copy %t5
 	%t7 =l add %t3, %t6
+	%g7_overflow =w cultl %t7, %t3
+	jnz %g7_overflow, @g7_overflow_panic, @g7_overflow_ok
+@g7_overflow_panic
+	call $szc.panic.0()
+	hlt
+@g7_overflow_ok
 	storel %t7, %t0
 	%t10 =l call $szc.wrap_i40.3(l 549755813887)
 	%t12 =l call $szc.widen_signed.4(w -1)
@@ -13,39 +19,154 @@ function w $szc.main.1() {
 	%t16 =w call $szc.shl_u8.5(w 255, w 4)
 	%t17 =l extuw %t16
 	%t18 =l add %t13, %t17
+	%g18_overflow =w cultl %t18, %t13
+	jnz %g18_overflow, @g18_overflow_panic, @g18_overflow_ok
+@g18_overflow_panic
+	call $szc.panic.0()
+	hlt
+@g18_overflow_ok
 	storel %t18, %t0
 	%t20 =l loadl %t0
 	%t23 =w call $szc.rem_u16.7(w 1000, w 7)
 	%t24 =l call $szc.widen.6(w %t23)
 	%t25 =l add %t20, %t24
+	%g25_overflow =w cultl %t25, %t20
+	jnz %g25_overflow, @g25_overflow_panic, @g25_overflow_ok
+@g25_overflow_panic
+	call $szc.panic.0()
+	hlt
+@g25_overflow_ok
 	storel %t25, %t0
 	%t27 =l loadl %t0
 	%t30 =l call $szc.div_u64.8(l 1099511627776, l 274877906944)
 	%t31 =l add %t27, %t30
+	%g31_overflow =w cultl %t31, %t27
+	jnz %g31_overflow, @g31_overflow_panic, @g31_overflow_ok
+@g31_overflow_panic
+	call $szc.panic.0()
+	hlt
+@g31_overflow_ok
 	storel %t31, %t0
 	%t33 =l loadl %t0
 	%t35 =w call $szc.not_u5.9(w 1)
 	%t36 =l extuw %t35
 	%t37 =l add %t33, %t36
+	%g37_overflow =w cultl %t37, %t33
+	jnz %g37_overflow, @g37_overflow_panic, @g37_overflow_ok
+@g37_overflow_panic
+	call $szc.panic.0()
+	hlt
+@g37_overflow_ok
 	storel %t37, %t0
 	%t41 =w call $szc.shr_i16.10(w -64, w 3)
 	%t44 =w call $szc.xor_i32.11(w -1, w 5)
 	%t45 =w copy %t41
 	%t46 =w add %t45, %t44
+	%g46_same =w xor %t45, %t44
+	%g46_same =w xor %g46_same, -1
+	%g46_change =w xor %t45, %t46
+	%g46_change =w and %g46_same, %g46_change
+	%g46_overflow =w csltw %g46_change, 0
+	jnz %g46_overflow, @g46_overflow_panic, @g46_overflow_ok
+@g46_overflow_panic
+	call $szc.panic.0()
+	hlt
+@g46_overflow_ok
 	%t47 =l extsw %t46
 	%t48 =l add %t47, %t12
+	%g48_same =l xor %t47, %t12
+	%g48_same =l xor %g48_same, -1
+	%g48_change =l xor %t47, %t48
+	%g48_change =l and %g48_same, %g48_change
+	%g48_overflow =w csltl %g48_change, 0
+	jnz %g48_overflow, @g48_overflow_panic, @g48_overflow_ok
+@g48_overflow_panic
+	call $szc.panic.0()
+	hlt
+@g48_overflow_ok
 	%t49 =l copy %t10
 	%t50 =l add %t48, %t49
+	%g50_same =l xor %t48, %t49
+	%g50_same =l xor %g50_same, -1
+	%g50_change =l xor %t48, %t50
+	%g50_change =l and %g50_same, %g50_change
+	%g50_overflow =w csltl %g50_change, 0
+	jnz %g50_overflow, @g50_overflow_panic, @g50_overflow_ok
+@g50_overflow_panic
+	call $szc.panic.0()
+	hlt
+@g50_overflow_ok
 	%t52 =l add %t50, 549755813888
+	%g52_same =l xor %t50, 549755813888
+	%g52_same =l xor %g52_same, -1
+	%g52_change =l xor %t50, %t52
+	%g52_change =l and %g52_same, %g52_change
+	%g52_overflow =w csltl %g52_change, 0
+	jnz %g52_overflow, @g52_overflow_panic, @g52_overflow_ok
+@g52_overflow_panic
+	call $szc.panic.0()
+	hlt
+@g52_overflow_ok
 	%t54 =l add %t52, 15
+	%g54_same =l xor %t52, 15
+	%g54_same =l xor %g54_same, -1
+	%g54_change =l xor %t52, %t54
+	%g54_change =l and %g54_same, %g54_change
+	%g54_overflow =w csltl %g54_change, 0
+	jnz %g54_overflow, @g54_overflow_panic, @g54_overflow_ok
+@g54_overflow_panic
+	call $szc.panic.0()
+	hlt
+@g54_overflow_ok
 	%t56 =l add %t54, 100
+	%g56_same =l xor %t54, 100
+	%g56_same =l xor %g56_same, -1
+	%g56_change =l xor %t54, %t56
+	%g56_change =l and %g56_same, %g56_change
+	%g56_overflow =w csltl %g56_change, 0
+	jnz %g56_overflow, @g56_overflow_panic, @g56_overflow_ok
+@g56_overflow_panic
+	call $szc.panic.0()
+	hlt
+@g56_overflow_ok
 	%t58 =l sub %t56, 280
+	%g58_same =l xor %t56, 280
+	%g58_change =l xor %t56, %t58
+	%g58_change =l and %g58_same, %g58_change
+	%g58_overflow =w csltl %g58_change, 0
+	jnz %g58_overflow, @g58_overflow_panic, @g58_overflow_ok
+@g58_overflow_panic
+	call $szc.panic.0()
+	hlt
+@g58_overflow_ok
 	%t59 =l loadl %t0
 	%t61 =l sub %t59, 280
+	%g61_overflow =w cultl %t59, 280
+	jnz %g61_overflow, @g61_overflow_panic, @g61_overflow_ok
+@g61_overflow_panic
+	call $szc.panic.0()
+	hlt
+@g61_overflow_ok
 	storel %t61, %t0
 	%t63 =l loadl %t0
 	%t65 =l add %t63, 100
+	%g65_overflow =w cultl %t65, %t63
+	jnz %g65_overflow, @g65_overflow_panic, @g65_overflow_ok
+@g65_overflow_panic
+	call $szc.panic.0()
+	hlt
+@g65_overflow_ok
 	%t67 =l add %t58, 180
+	%g67_same =l xor %t58, 180
+	%g67_same =l xor %g67_same, -1
+	%g67_change =l xor %t58, %t67
+	%g67_change =l and %g67_same, %g67_change
+	%g67_overflow =w csltl %g67_change, 0
+	jnz %g67_overflow, @g67_overflow_panic, @g67_overflow_ok
+@g67_overflow_panic
+	call $szc.panic.0()
+	hlt
+@g67_overflow_ok
 	%t68 =w call $szc.to_u8.12(l %t65, l %t67)
 	ret %t68
 }
@@ -73,6 +194,12 @@ function l $szc.widen_signed.4(w %t0) {
 
 function w $szc.shl_u8.5(w %t0, w %t1) {
 @start
+	%g2_shift =w cugew %t1, 8
+	jnz %g2_shift, @g2_shift_panic, @g2_shift_ok
+@g2_shift_panic
+	call $szc.panic.3()
+	hlt
+@g2_shift_ok
 	%t2 =w shl %t0, %t1
 	%t2 =w and %t2, 255
 	ret %t2
@@ -86,12 +213,24 @@ function l $szc.widen.6(w %t0) {
 
 function w $szc.rem_u16.7(w %t0, w %t1) {
 @start
+	%g2_zero =w ceqw %t1, 0
+	jnz %g2_zero, @g2_zero_panic, @g2_zero_ok
+@g2_zero_panic
+	call $szc.panic.2()
+	hlt
+@g2_zero_ok
 	%t2 =w urem %t0, %t1
 	ret %t2
 }
 
 function l $szc.div_u64.8(l %t0, l %t1) {
 @start
+	%g2_zero =w ceql %t1, 0
+	jnz %g2_zero, @g2_zero_panic, @g2_zero_ok
+@g2_zero_panic
+	call $szc.panic.2()
+	hlt
+@g2_zero_ok
 	%t2 =l udiv %t0, %t1
 	ret %t2
 }
@@ -105,6 +244,12 @@ function w $szc.not_u5.9(w %t0) {
 
 function w $szc.shr_i16.10(w %t0, w %t1) {
 @start
+	%g2_shift =w cugew %t1, 16
+	jnz %g2_shift, @g2_shift_panic, @g2_shift_ok
+@g2_shift_panic
+	call $szc.panic.3()
+	hlt
+@g2_shift_ok
 	%t2 =w sar %t0, %t1
 	ret %t2
 }
@@ -121,6 +266,12 @@ function w $szc.to_u8.12(l %t0, l %t1) {
 	%t3 =w call $szc.low_signed.14(l %t1)
 	%t4 =w add %t2, %t3
 	%t4 =w and %t4, 255
+	%g4_overflow =w cultw %t4, %t2
+	jnz %g4_overflow, @g4_overflow_panic, @g4_overflow_ok
+@g4_overflow_panic
+	call $szc.panic.0()
+	hlt
+@g4_overflow_ok
 	ret %t4
 }
 
@@ -133,9 +284,53 @@ function w $szc.low.13(l %t0) {
 
 function w $szc.low_signed.14(l %t0) {
 @start
+	%g1_negative =w csltl %t0, 0
+	jnz %g1_negative, @g1_negative_panic, @g1_negative_ok
+@g1_negative_panic
+	call $szc.panic.1()
+	hlt
+@g1_negative_ok
+	%g1_high =w csgtl %t0, 255
+	jnz %g1_high, @g1_high_panic, @g1_high_ok
+@g1_high_panic
+	call $szc.panic.1()
+	hlt
+@g1_high_ok
 	%t1 =w copy %t0
 	%t1 =w and %t1, 255
 	ret %t1
+}
+
+data $szc.panic.msg.0 = { b "integer overflow\n", b 0 }
+function $szc.panic.0() {
+@start
+	call $write(w 2, l $szc.panic.msg.0, l 17)
+	call $abort()
+	hlt
+}
+
+data $szc.panic.msg.1 = { b "integer does not fit in destination type\n", b 0 }
+function $szc.panic.1() {
+@start
+	call $write(w 2, l $szc.panic.msg.1, l 41)
+	call $abort()
+	hlt
+}
+
+data $szc.panic.msg.2 = { b "division by zero\n", b 0 }
+function $szc.panic.2() {
+@start
+	call $write(w 2, l $szc.panic.msg.2, l 17)
+	call $abort()
+	hlt
+}
+
+data $szc.panic.msg.3 = { b "shift amount is greater than the type size\n", b 0 }
+function $szc.panic.3() {
+@start
+	call $write(w 2, l $szc.panic.msg.3, l 43)
+	call $abort()
+	hlt
 }
 
 export function w $main() {

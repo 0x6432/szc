@@ -1209,7 +1209,7 @@ int_result(Block *block, IrOp op, TypeId type, BigInt value, uint32_t src)
 	if (sema->types[type].kind == TYPE_INT) {
 		bool is_signed = sema->types[type].as.integer.is_signed;
 		uint32_t bits = sema->types[type].as.integer.bits;
-		if (is_wrapping_op(op) || op == IR_NEGATE_WRAP) {
+		if (is_wrapping_op(op) || op == IR_NEGATE_WRAP || op == IR_SHL) {
 			value = bigint_wrap(sema->arena, &value, is_signed, bits);
 		} else if (is_saturating_op(op) || op == IR_SHL_SAT) {
 			BigInt min;
@@ -1232,14 +1232,17 @@ tir_arith_op(IrOp op)
 {
 	switch (op) {
 	case IR_ADD:
-	case IR_ADD_WRAP:
 		return TIR_ADD;
+	case IR_ADD_WRAP:
+		return TIR_ADD_WRAP;
 	case IR_SUB:
-	case IR_SUB_WRAP:
 		return TIR_SUB;
+	case IR_SUB_WRAP:
+		return TIR_SUB_WRAP;
 	case IR_MUL:
-	case IR_MUL_WRAP:
 		return TIR_MUL;
+	case IR_MUL_WRAP:
+		return TIR_MUL_WRAP;
 	case IR_DIV:
 		return TIR_DIV_TRUNC;
 	case IR_MOD:
@@ -1429,6 +1432,13 @@ analyze_shift(Block *block, const IrInst *inst)
 			sema_error(block, src, "shift by negative amount '%s'", bigint_to_string(sema->arena, &amount));
 			return operand_none;
 		}
+		if (op != IR_SHL_SAT && is_int(sema, type) && !bigint_is_zero(&amount)) {
+			BigInt bits = bigint_from_u64(sema->arena, sema->types[type].as.integer.bits);
+			if (bigint_compare(&amount, &bits) >= 0) {
+				sema_error(block, src, "shift amount '%s' is too large for operand type '%s'", bigint_to_string(sema->arena, &amount), sema_type_name(sema, type));
+				return operand_none;
+			}
+		}
 		if (lhs.kind == OPERAND_COMPTIME) {
 			if (!check_defined(block, lhs, src))
 				return operand_none;
@@ -1617,7 +1627,7 @@ analyze_unary(Block *block, const IrInst *inst)
 		BigInt result = bigint_negate(sema->arena, &operand_value(block, operand)->as.integer);
 		return int_result(block, op, type, result, src);
 	}
-	return runtime_operand(type, emit_tir_un(block, TIR_NEGATE, type, src, operand.inst));
+	return runtime_operand(type, emit_tir_un(block, op == IR_NEGATE_WRAP ? TIR_NEGATE_WRAP : TIR_NEGATE, type, src, operand.inst));
 }
 
 /* `and` / `or` with a short-circuiting right-hand side. */
@@ -1962,6 +1972,10 @@ analyze_inst(Block *block, IrInstIndex index, Operand *break_value)
 	case IR_INT_TYPE: {
 		bool is_signed = (inst->data.integer & 0x10000u) != 0;
 		uint32_t bits = (uint32_t)(inst->data.integer & 0xffffu);
+		if (is_signed && bits == 0) {
+			sema_error(block, src, "signed integer cannot have bit width 0");
+			break;
+		}
 		result = type_operand(sema, type_int(sema, is_signed, bits));
 		break;
 	}
@@ -2364,6 +2378,7 @@ dump_tir_inst(FILE *out, Sema *sema, const TirFunc *tir, TirRef ref, uint32_t de
 		return;
 	case TIR_NOT:
 	case TIR_NEGATE:
+	case TIR_NEGATE_WRAP:
 	case TIR_INT_CAST:
 	case TIR_TRUNCATE:
 	case TIR_INT_FROM_BOOL:

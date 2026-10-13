@@ -1,0 +1,3 @@
+tests/tir/errors/signed_zero.zig:1:12: error: signed integer cannot have bit width 0
+fn zero(a: i0) void {
+           ^
