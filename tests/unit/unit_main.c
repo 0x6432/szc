@@ -229,6 +229,29 @@ test_bigint_random(void)
 		if (y != 0 && bigint_divmod_trunc(&arena, &a, &b, &q, &m)) {
 			mismatches += bigint_to_i128(&q) != (Int128)x / y;
 			mismatches += bigint_to_i128(&m) != (Int128)x % y;
+			Int128 quotient = (Int128)x / y;
+			Int128 remainder = (Int128)x % y;
+			if (remainder != 0 && (x < 0) != (y < 0)) {
+				quotient -= 1;
+				remainder += y;
+			}
+			mismatches += !bigint_divmod(&arena, &a, &b, BIGINT_DIV_FLOOR, &q, &m);
+			mismatches += bigint_to_i128(&q) != quotient;
+			mismatches += bigint_to_i128(&m) != remainder;
+			BigInt alias_a = a;
+			BigInt alias_b = b;
+			mismatches += !bigint_divmod(&arena, &alias_a, &alias_b, BIGINT_DIV_FLOOR, &alias_a, &alias_b);
+			mismatches += bigint_to_i128(&alias_a) != quotient;
+			mismatches += bigint_to_i128(&alias_b) != remainder;
+			quotient = (Int128)x / y;
+			remainder = (Int128)x % y;
+			if (remainder != 0 && (x < 0) == (y < 0)) {
+				quotient += 1;
+				remainder -= y;
+			}
+			mismatches += !bigint_divmod(&arena, &a, &b, BIGINT_DIV_CEIL, &q, &m);
+			mismatches += bigint_to_i128(&q) != quotient;
+			mismatches += bigint_to_i128(&m) != remainder;
 		}
 		uint32_t shift = (uint32_t)(next_random(&state) % 60);
 		r = bigint_shl(&arena, &a, shift);
@@ -258,6 +281,21 @@ test_bigint_random(void)
 	arena_free(&arena);
 }
 
+static void
+test_bigint_div_zero(void)
+{
+	Arena arena;
+	arena_init(&arena);
+	BigInt one = bigint_from_u64(&arena, 1);
+	BigInt zero = bigint_from_u64(&arena, 0);
+	BigInt quotient = bigint_from_u64(&arena, 99);
+	BigInt remainder = bigint_from_u64(&arena, 98);
+	CHECK(!bigint_divmod(&arena, &one, &zero, BIGINT_DIV_CEIL, &quotient, &remainder));
+	CHECK(bigint_to_i128(&quotient) == 99);
+	CHECK(bigint_to_i128(&remainder) == 98);
+	arena_free(&arena);
+}
+
 int
 main(void)
 {
@@ -269,6 +307,7 @@ main(void)
 	test_eof_is_sticky();
 	test_bom_and_embedded_nul();
 	test_bigint_random();
+	test_bigint_div_zero();
 
 	printf("unit: %u checks, %u failed\n", checks, failures);
 	return failures == 0 ? 0 : 1;

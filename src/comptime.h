@@ -85,6 +85,16 @@ BigInt bigint_shl(Arena *arena, const BigInt *a, uint32_t shift);
 BigInt bigint_shr(Arena *arena, const BigInt *a, uint32_t shift);	/* floor(a / 2^shift) */
 bool   bigint_divmod_trunc(Arena *arena, const BigInt *a, const BigInt *b, BigInt *quotient, BigInt *remainder);
 
+typedef enum BigIntDivRound {
+	BIGINT_DIV_TRUNC,
+	BIGINT_DIV_FLOOR,
+	BIGINT_DIV_CEIL,
+} BigIntDivRound;
+
+/* Rounded quotient/remainder; distinct outputs may alias inputs.
+ * A zero divisor leaves both outputs untouched and returns false. */
+bool bigint_divmod(Arena *arena, const BigInt *a, const BigInt *b, BigIntDivRound round, BigInt *quotient, BigInt *remainder);
+
 typedef enum BigIntBitOp {
 	BIGINT_AND,
 	BIGINT_OR,

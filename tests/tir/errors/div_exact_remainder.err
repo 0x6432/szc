@@ -1,0 +1,3 @@
+tests/tir/errors/div_exact_remainder.zig:2:12: error: exact division produced remainder
+    return @divExact(5, 2);
+           ^

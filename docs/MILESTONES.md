@@ -46,9 +46,9 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
 - [x] **M3.3 Typed IR + minimal sema**: `void`, `bool`, `i32`/`u8`/`usize` etc., coercion of comptime_int literals.
 - [x] **M3.4 QBE codegen**: functions, arithmetic, calls; driver runs `qbe` and `cc`.
 - [x] **M3.5 End-to-end test harness** (`tests/run/*.zig` check exit code/stdout).
-- [~] **M3.6 Arithmetic semantics**: wrapping/saturating ops, division, shifts, safety checks → panic stub.
+- [x] **M3.6 Arithmetic semantics**: wrapping/saturating ops, division, shifts, safety checks → panic stub.
   - [x] **M3.6a Checked arithmetic and panic stub**: overflow, cast, unsigned division and shift guards.
-  - [ ] **M3.6b Runtime saturation and explicit division builtins**.
+  - [x] **M3.6b Runtime saturation and explicit division builtins**.
 
 ## Phase 4: Control flow
 
@@ -114,6 +114,38 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
 ## Completed milestone log
 
 (newest first; each entry: what, limitations, interactions)
+
+### M3.6b Runtime saturation and explicit division builtins
+- **What**: runtime +|/-|/*| clamp overflow to integer bounds; <<| checks the
+  original (possibly u64) amount before narrowing it, handles zero/large shifts,
+  and detects truncation by shifting the normalized result back. Added @divTrunc,
+  @divFloor, @divCeil, @divExact, @rem and @mod with peer typing and comptime
+  evaluation. Signed division guards min/-1; floor/ceil correct truncating results
+  according to operand signs and nonzero remainder; exact division guards remainder.
+  Modulo follows floor division, including negative denominators as in Zig 0.17.0.
+  `comptime.c` owns rounded BigInt quotient/remainder computation, with alias-safe
+  output descriptors; zero divisors leave outputs untouched. Known u0 divisors
+  and undefined operands are rejected during sema. Matched the reference's special
+  max-bound result for nonzero comptime saturating shifts with an amount beyond u64.
+  New typed-IR/QBE/error goldens and sema fuzz seeds. Generated all-width tests now
+  include saturation and explicit division; panic coverage grows to 115 cases.
+- **Validation**: 518 unit checks (including 2,000 randomized BigInt round/alias
+  trials), 377 goldens, 12 ordinary e2e inputs, one szc-only edge input, 12 driver
+  checks and 115 panic cases pass under GCC/Clang sanitizers. Ordinary e2e and
+  panic cases match official Zig 0.17.0; three additional generated seeds also match.
+  Four local libFuzzer targets complete 60 seconds each without failures.
+- **Limitations / reference discrepancy**: the official x86_64 runtime backend
+  traps on @rem/@mod(i64.min, -1), although its comptime evaluator returns zero and
+  Sema adds no division-overflow guard for remainder. szc returns zero without
+  issuing a trapping hardware division. This deliberate edge difference is covered
+  in `tests/run_szc/remainder_minimum.zig`, run with ZIG unset; it is not silently
+  included in the ordinary differential suite. Runtime integers wider than 64 bits,
+  floats, vectors, optimization-mode safety switches and full panic/std integration
+  remain later milestones.
+- **Interactions**: builtin names lower through the irgen table to distinct IR/TIR
+  operations; codegen shares overflow predicates between checked and saturating
+  arithmetic, and emits only needed libc-backed panic helpers. Existing CI
+  test/e2e targets include the new goldens, width cases and panic checks.
 
 ### M3.6a Checked runtime arithmetic and panic stub
 - **What**: typed IR preserves checked vs wrapping add/sub/mul/negation. QBE guards

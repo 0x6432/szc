@@ -57,6 +57,21 @@ def cases():
     for integer_type in ("u32", "u64"):
         for op, label in (("/", "div"), ("%", "rem")):
             yield binary_case(f"{label}_zero_{integer_type}", integer_type, op, 123, 0, "division by zero")
+
+    for builtin in ("divTrunc", "divFloor", "divCeil", "divExact", "rem", "mod"):
+        for integer_type in ("i8", "i64", "u64"):
+            source = (f"fn operation(a: {integer_type}, b: {integer_type}) {integer_type} {{ return @{builtin}(a, b); }}\n"
+                      "pub fn main() void { _ = operation(3, 0); }\n")
+            yield f"{builtin}_zero_{integer_type}", source, "division by zero"
+    for builtin in ("divTrunc", "divFloor", "divCeil", "divExact"):
+        for bits in (1, 8, 33, 64):
+            source = (f"fn operation(a: i{bits}, b: i{bits}) i{bits} {{ return @{builtin}(a, b); }}\n"
+                      f"pub fn main() void {{ _ = operation({-(1 << (bits - 1))}, -1); }}\n")
+            yield f"{builtin}_overflow_i{bits}", source, "integer overflow"
+    for integer_type in ("u8", "u64", "i8", "i64"):
+        source = (f"fn operation(a: {integer_type}, b: {integer_type}) {integer_type} {{ return @divExact(a, b); }}\n"
+                  "pub fn main() void { _ = operation(5, 2); }\n")
+        yield f"exact_remainder_{integer_type}", source, "exact division produced remainder"
     for bits in (5, 33):
         for op, label in (("<<", "shl"), (">>", "shr")):
             source = (f"fn operation(a: u{bits}, b: u{(bits - 1).bit_length()}) u{bits} {{\n"

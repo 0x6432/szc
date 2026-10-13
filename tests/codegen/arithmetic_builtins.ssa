@@ -1,0 +1,135 @@
+function w $szc.main.1() {
+@start
+	%t3 =w call $szc.operation.2(w 4, w 2, w 0)
+	%g4_negative =w csltw %t3, 0
+	jnz %g4_negative, @g4_negative_panic, @g4_negative_ok
+@g4_negative_panic
+	call $szc.panic.1()
+	hlt
+@g4_negative_ok
+	%t4 =w copy %t3
+	%t4 =w and %t4, 255
+	ret %t4
+}
+
+function w $szc.operation.2(w %t0, w %t1, w %t2) {
+@start
+	%t3 =w add %t0, %t1
+	%t3 =w extsb %t3
+	%g3_same =w xor %t0, %t1
+	%g3_same =w xor %g3_same, -1
+	%g3_change =w xor %t0, %t3
+	%g3_change =w and %g3_same, %g3_change
+	%g3_overflow =w csltw %g3_change, 0
+	jnz %g3_overflow, @g3_saturate, @g3_saturated
+@g3_saturate
+	%g3_clamp =w sar %t0, 31
+	%t3 =w xor %g3_clamp, 127
+	jmp @g3_saturated
+@g3_saturated
+	%g4_a =w copy %t3
+	%g4_a_sign =w sar %g4_a, 31
+	%g4_a =w xor %g4_a, %g4_a_sign
+	%g4_a =w sub %g4_a, %g4_a_sign
+	%g4_b =w copy %t1
+	%g4_b_sign =w sar %g4_b, 31
+	%g4_b =w xor %g4_b, %g4_b_sign
+	%g4_b =w sub %g4_b, %g4_b_sign
+	%g4_sign =w xor %g4_a_sign, %g4_b_sign
+	%g4_sign =w and %g4_sign, 1
+	%g4_limit =w add 127, %g4_sign
+	%g4_nonzero =w cnew %g4_b, 0
+	jnz %g4_nonzero, @g4_mul_check, @g4_mul_zero
+@g4_mul_check
+	%g4_limit =w udiv %g4_limit, %g4_b
+	%g4_overflow =w cugtw %g4_a, %g4_limit
+	jmp @g4_mul_done
+@g4_mul_zero
+	%g4_overflow =w copy 0
+	jmp @g4_mul_done
+@g4_mul_done
+	%t4 =w mul %t3, %t1
+	%t4 =w extsb %t4
+	jnz %g4_overflow, @g4_saturate, @g4_saturated
+@g4_saturate
+	%g4_clamp =w neg %g4_sign
+	%t4 =w xor %g4_clamp, 127
+	jmp @g4_saturated
+@g4_saturated
+	%g5_large =w cugew %t2, 8
+	jnz %g5_large, @g5_shift_large, @g5_shift_small
+@g5_shift_large
+	%t5 =w copy 0
+	%g5_overflow =w cnew %t4, 0
+	jmp @g5_shift_done
+@g5_shift_small
+	%g5_amount =w copy %t2
+	%t5 =w shl %t4, %g5_amount
+	%t5 =w extsb %t5
+	%g5_back =w sar %t5, %g5_amount
+	%g5_overflow =w cnew %g5_back, %t4
+	jmp @g5_shift_done
+@g5_shift_done
+	jnz %g5_overflow, @g5_saturate, @g5_saturated
+@g5_saturate
+	%g5_clamp =w sar %t4, 31
+	%t5 =w xor %g5_clamp, 127
+	jmp @g5_saturated
+@g5_saturated
+	%g6_zero =w ceqw %t1, 0
+	jnz %g6_zero, @g6_zero_panic, @g6_zero_ok
+@g6_zero_panic
+	call $szc.panic.2()
+	hlt
+@g6_zero_ok
+	%g6_minus_one =w ceqw %t1, -1
+	%g6_min =w ceqw %t5, -128
+	%g6_overflow =w and %g6_min, %g6_minus_one
+	jnz %g6_overflow, @g6_overflow_panic, @g6_overflow_ok
+@g6_overflow_panic
+	call $szc.panic.0()
+	hlt
+@g6_overflow_ok
+	%t6 =w div %t5, %t1
+	%g6_remainder =w rem %t5, %t1
+	%g6_nonzero =w cnew %g6_remainder, 0
+	%g6_sign =w xor %t5, %t1
+	%g6_adjust =w csltw %g6_sign, 0
+	%g6_adjust =w and %g6_adjust, %g6_nonzero
+	jnz %g6_adjust, @g6_div_adjust, @g6_div_done
+@g6_div_adjust
+	%t6 =w sub %t6, 1
+	jmp @g6_div_done
+@g6_div_done
+	ret %t6
+}
+
+data $szc.panic.msg.0 = { b "integer overflow\n", b 0 }
+function $szc.panic.0() {
+@start
+	call $write(w 2, l $szc.panic.msg.0, l 17)
+	call $abort()
+	hlt
+}
+
+data $szc.panic.msg.1 = { b "integer does not fit in destination type\n", b 0 }
+function $szc.panic.1() {
+@start
+	call $write(w 2, l $szc.panic.msg.1, l 41)
+	call $abort()
+	hlt
+}
+
+data $szc.panic.msg.2 = { b "division by zero\n", b 0 }
+function $szc.panic.2() {
+@start
+	call $write(w 2, l $szc.panic.msg.2, l 17)
+	call $abort()
+	hlt
+}
+
+export function w $main() {
+@start
+	%status =w call $szc.main.1()
+	ret %status
+}

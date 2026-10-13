@@ -765,19 +765,27 @@ typedef enum Builtin {
 	BUILTIN_INT_CAST,
 	BUILTIN_TRUNCATE,
 	BUILTIN_INT_FROM_BOOL,
+	BUILTIN_ARITH,
 } Builtin;
 
 typedef struct BuiltinInfo {
 	const char *name;	/* without '@' */
 	Builtin		builtin;
 	uint32_t	arg_count;
+	IrOp			arith_op;
 } BuiltinInfo;
 
 static const BuiltinInfo builtin_table[] = {
-	{"as", BUILTIN_AS, 2},
-	{"intCast", BUILTIN_INT_CAST, 1},
-	{"truncate", BUILTIN_TRUNCATE, 1},
-	{"intFromBool", BUILTIN_INT_FROM_BOOL, 1},
+	{"as", BUILTIN_AS, 2, IR_OP_COUNT},
+	{"intCast", BUILTIN_INT_CAST, 1, IR_OP_COUNT},
+	{"truncate", BUILTIN_TRUNCATE, 1, IR_OP_COUNT},
+	{"intFromBool", BUILTIN_INT_FROM_BOOL, 1, IR_OP_COUNT},
+	{"divTrunc", BUILTIN_ARITH, 2, IR_DIV_TRUNC},
+	{"divFloor", BUILTIN_ARITH, 2, IR_DIV_FLOOR},
+	{"divCeil", BUILTIN_ARITH, 2, IR_DIV_CEIL},
+	{"divExact", BUILTIN_ARITH, 2, IR_DIV_EXACT},
+	{"rem", BUILTIN_ARITH, 2, IR_REM},
+	{"mod", BUILTIN_ARITH, 2, IR_MOD_BUILTIN},
 };
 
 static const BuiltinInfo *
@@ -842,6 +850,11 @@ builtin_call(GenBody *body, Scope *scope, ResultInfo info, AstNode *node)
 			return IR_REF_VOID_VALUE;
 		IrOp op = builtin->builtin == BUILTIN_INT_CAST ? IR_INT_CAST : IR_TRUNCATE;
 		return emit_bin(body, op, node->offset, type, operand);
+	}
+	case BUILTIN_ARITH: {
+		IrRef lhs = expr(body, scope, result_none, args[0]);
+		IrRef rhs = expr(body, scope, result_none, args[1]);
+		return rvalue(body, info, emit_bin(body, builtin->arith_op, node->offset, lhs, rhs), node->offset);
 	}
 	case BUILTIN_INT_FROM_BOOL: {
 		IrRef operand = expr(body, scope, result_none, args[0]);

@@ -1178,6 +1178,24 @@ is_saturating_op(IrOp op)
 	return op == IR_ADD_SAT || op == IR_SUB_SAT || op == IR_MUL_SAT;
 }
 
+static bool
+is_division_op(IrOp op)
+{
+	switch (op) {
+	case IR_DIV:
+	case IR_MOD:
+	case IR_DIV_TRUNC:
+	case IR_DIV_FLOOR:
+	case IR_DIV_CEIL:
+	case IR_DIV_EXACT:
+	case IR_REM:
+	case IR_MOD_BUILTIN:
+		return true;
+	default:
+		return false;
+	}
+}
+
 /* Smallest and largest value of an integer type. */
 static void
 int_type_bounds(Sema *sema, TypeId type, BigInt *min, BigInt *max)
@@ -1235,18 +1253,34 @@ tir_arith_op(IrOp op)
 		return TIR_ADD;
 	case IR_ADD_WRAP:
 		return TIR_ADD_WRAP;
+	case IR_ADD_SAT:
+		return TIR_ADD_SAT;
 	case IR_SUB:
 		return TIR_SUB;
 	case IR_SUB_WRAP:
 		return TIR_SUB_WRAP;
+	case IR_SUB_SAT:
+		return TIR_SUB_SAT;
 	case IR_MUL:
 		return TIR_MUL;
 	case IR_MUL_WRAP:
 		return TIR_MUL_WRAP;
+	case IR_MUL_SAT:
+		return TIR_MUL_SAT;
 	case IR_DIV:
+	case IR_DIV_TRUNC:
 		return TIR_DIV_TRUNC;
+	case IR_DIV_FLOOR:
+		return TIR_DIV_FLOOR;
+	case IR_DIV_CEIL:
+		return TIR_DIV_CEIL;
+	case IR_DIV_EXACT:
+		return TIR_DIV_EXACT;
 	case IR_MOD:
+	case IR_REM:
 		return TIR_REM;
+	case IR_MOD_BUILTIN:
+		return TIR_MOD;
 	case IR_BIT_AND:
 		return TIR_BIT_AND;
 	case IR_BIT_OR:
@@ -1255,6 +1289,8 @@ tir_arith_op(IrOp op)
 		return TIR_BIT_XOR;
 	case IR_SHL:
 		return TIR_SHL;
+	case IR_SHL_SAT:
+		return TIR_SHL_SAT;
 	case IR_SHR:
 		return TIR_SHR;
 	case IR_CMP_EQ:
@@ -1300,6 +1336,8 @@ analyze_arith(Block *block, const IrInst *inst)
 	Operand rhs = resolve_ref(block, inst->data.bin.rhs);
 	if (lhs.kind == OPERAND_NONE || rhs.kind == OPERAND_NONE)
 		return operand_none;
+	/* u0 is known zero even when peer coercion widens it. */
+	bool rhs_is_zero_type = is_int(sema, rhs.type) && sema->types[rhs.type].as.integer.bits == 0;
 	TypeId type;
 	if (!peer_type(block, lhs, rhs, src, &type))
 		return operand_none;
@@ -1312,10 +1350,8 @@ analyze_arith(Block *block, const IrInst *inst)
 	rhs = coerce(block, rhs, type, src);
 	if (lhs.kind == OPERAND_NONE || rhs.kind == OPERAND_NONE)
 		return operand_none;
-	if (is_saturating_op(op) && !(lhs.kind == OPERAND_COMPTIME && rhs.kind == OPERAND_COMPTIME)) {
-		sema_error(block, src, "not supported by szc yet: runtime saturating arithmetic");
-		return operand_none;
-	}
+	if (is_saturating_op(op) && (operand_is_undefined(block, lhs) || operand_is_undefined(block, rhs)))
+		return comptime_operand(type, value_undefined(&sema->values, type));
 	if ((op == IR_DIV || op == IR_MOD) && is_signed_type(sema, type)) {
 		bool known_positive = is_comptime_known(block, lhs) && is_comptime_known(block, rhs) && !operand_value(block, lhs)->as.integer.negative && !operand_value(block, rhs)->as.integer.negative;
 		if (!known_positive) {
@@ -1328,7 +1364,13 @@ analyze_arith(Block *block, const IrInst *inst)
 			return operand_none;
 		}
 	}
-	if (op == IR_DIV || op == IR_MOD) {
+	if (is_division_op(op)) {
+		if (!check_defined(block, lhs, src) || !check_defined(block, rhs, src))
+			return operand_none;
+		if (rhs_is_zero_type) {
+			sema_error(block, src, "division by zero here causes illegal behavior");
+			return operand_none;
+		}
 		if (is_comptime_known(block, rhs) && bigint_is_zero(&operand_value(block, rhs)->as.integer)) {
 			sema_error(block, src, "division by zero here causes illegal behavior");
 			return operand_none;
@@ -1360,9 +1402,21 @@ analyze_arith(Block *block, const IrInst *inst)
 			break;
 		case IR_DIV:
 		case IR_MOD:
-			bigint_divmod_trunc(sema->arena, &a, &b, &quotient, &remainder);
-			result = op == IR_DIV ? quotient : remainder;
+		case IR_DIV_TRUNC:
+		case IR_DIV_FLOOR:
+		case IR_DIV_CEIL:
+		case IR_DIV_EXACT:
+		case IR_REM:
+		case IR_MOD_BUILTIN: {
+			BigIntDivRound round = op == IR_DIV_FLOOR || op == IR_MOD_BUILTIN ? BIGINT_DIV_FLOOR : op == IR_DIV_CEIL ? BIGINT_DIV_CEIL : BIGINT_DIV_TRUNC;
+			bigint_divmod(sema->arena, &a, &b, round, &quotient, &remainder);
+			if (op == IR_DIV_EXACT && !bigint_is_zero(&remainder)) {
+				sema_error(block, src, "exact division produced remainder");
+				return operand_none;
+			}
+			result = op == IR_MOD || op == IR_REM || op == IR_MOD_BUILTIN ? remainder : quotient;
 			break;
+		}
 		case IR_BIT_AND:
 			result = bigint_bitop(sema->arena, &a, &b, BIGINT_AND);
 			break;
@@ -1408,13 +1462,14 @@ analyze_shift(Block *block, const IrInst *inst)
 		return operand_none;
 	}
 	TypeId type = lhs.type;
-	if (sema->types[type].kind == TYPE_INT) {
-		if (op == IR_SHL_SAT) {
-			if (!(lhs.kind == OPERAND_COMPTIME && rhs.kind == OPERAND_COMPTIME)) {
-				sema_error(block, src, "not supported by szc yet: runtime saturating shift");
-				return operand_none;
-			}
-		} else {
+	if (op == IR_SHL_SAT && (operand_is_undefined(block, lhs) || operand_is_undefined(block, rhs)))
+		return comptime_operand(type, value_undefined(&sema->values, type));
+	if (op == IR_SHL_SAT && rhs.kind == OPERAND_RUNTIME && is_signed_type(sema, rhs.type)) {
+		sema_error(block, src, "shift by signed type '%s'", sema_type_name(sema, rhs.type));
+		return operand_none;
+	}
+	if (is_int(sema, type)) {
+		if (op != IR_SHL_SAT) {
 			TypeId amount_type = type_int(sema, false, log2_int_bits(sema->types[type].as.integer.bits));
 			rhs = coerce(block, rhs, amount_type, src);
 			if (rhs.kind == OPERAND_NONE)
@@ -1438,6 +1493,23 @@ analyze_shift(Block *block, const IrInst *inst)
 				sema_error(block, src, "shift amount '%s' is too large for operand type '%s'", bigint_to_string(sema->arena, &amount), sema_type_name(sema, type));
 				return operand_none;
 			}
+		}
+		if (op == IR_SHL_SAT && is_int(sema, type)) {
+			/* Match 0.17 arith.intShlSat: a comptime amount beyond u64
+			 * saturates every nonzero value to max, even a negative lhs. */
+			if (lhs.kind == OPERAND_COMPTIME && !bigint_fits(&amount, false, 64)) {
+				BigInt a = operand_value(block, lhs)->as.integer;
+				BigInt min;
+				BigInt max;
+				int_type_bounds(sema, type, &min, &max);
+				return comptime_operand(type, value_int(&sema->values, type, bigint_is_zero(&a) ? &a : &max));
+			}
+			uint32_t bits = sema->types[type].as.integer.bits;
+			BigInt limit = bigint_from_u64(sema->arena, bits);
+			if (bigint_compare(&amount, &limit) > 0)
+				amount = limit;
+			TypeId amount_type = type_int(sema, false, log2_int_bits(bits + 1));
+			rhs = comptime_operand(amount_type, value_int(&sema->values, amount_type, &amount));
 		}
 		if (lhs.kind == OPERAND_COMPTIME) {
 			if (!check_defined(block, lhs, src))
@@ -2026,6 +2098,12 @@ analyze_inst(Block *block, IrInstIndex index, Operand *break_value)
 	case IR_MUL:
 	case IR_DIV:
 	case IR_MOD:
+	case IR_DIV_TRUNC:
+	case IR_DIV_FLOOR:
+	case IR_DIV_CEIL:
+	case IR_DIV_EXACT:
+	case IR_REM:
+	case IR_MOD_BUILTIN:
 	case IR_ADD_WRAP:
 	case IR_SUB_WRAP:
 	case IR_MUL_WRAP:

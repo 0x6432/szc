@@ -55,6 +55,7 @@ build/integer-widths.zig: tools/generate_integer_tests.py
 # QBE must be on PATH (or SZC_QBE). ZIG enables reference-compiler checks.
 e2e-test: build/asan/szc build/integer-widths.zig
 	./tests/run_e2e.sh build/asan/szc tests/run/*.zig build/integer-widths.zig
+	env -u ZIG ./tests/run_e2e.sh build/asan/szc tests/run_szc/*.zig
 	./tests/run_driver.sh build/asan/szc
 	python3 tests/run_safety.py build/asan/szc
 

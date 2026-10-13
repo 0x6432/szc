@@ -1,0 +1,329 @@
+fn szc.main.1: fn () u8 {
+  %0: i64 = const -5
+  %1: i64 = const 2
+  %2: i64 = call szc.trunc.2(%0, %1)
+  %3: i64 = const -2
+  %4: bool = cmp_eq %2, %3
+  %5: bool = block {
+    %14: noreturn = condbr %4 then {
+      %6: i64 = const 5
+      %7: i64 = const -2
+      %8: i64 = call szc.trunc.2(%6, %7)
+      %9: i64 = const -2
+      %10: bool = cmp_eq %8, %9
+      %11: noreturn = br %5, %10
+    } else {
+      %12: bool = const false
+      %13: noreturn = br %5, %12
+    }
+  }
+  %15: bool = block {
+    %24: noreturn = condbr %5 then {
+      %16: i64 = const -5
+      %17: i64 = const 2
+      %18: i64 = call szc.floor.3(%16, %17)
+      %19: i64 = const -3
+      %20: bool = cmp_eq %18, %19
+      %21: noreturn = br %15, %20
+    } else {
+      %22: bool = const false
+      %23: noreturn = br %15, %22
+    }
+  }
+  %25: bool = block {
+    %34: noreturn = condbr %15 then {
+      %26: i64 = const 5
+      %27: i64 = const -2
+      %28: i64 = call szc.floor.3(%26, %27)
+      %29: i64 = const -3
+      %30: bool = cmp_eq %28, %29
+      %31: noreturn = br %25, %30
+    } else {
+      %32: bool = const false
+      %33: noreturn = br %25, %32
+    }
+  }
+  %35: bool = block {
+    %44: noreturn = condbr %25 then {
+      %36: i64 = const -5
+      %37: i64 = const -2
+      %38: i64 = call szc.floor.3(%36, %37)
+      %39: i64 = const 2
+      %40: bool = cmp_eq %38, %39
+      %41: noreturn = br %35, %40
+    } else {
+      %42: bool = const false
+      %43: noreturn = br %35, %42
+    }
+  }
+  %45: bool = block {
+    %54: noreturn = condbr %35 then {
+      %46: i64 = const -5
+      %47: i64 = const 2
+      %48: i64 = call szc.ceil.4(%46, %47)
+      %49: i64 = const -2
+      %50: bool = cmp_eq %48, %49
+      %51: noreturn = br %45, %50
+    } else {
+      %52: bool = const false
+      %53: noreturn = br %45, %52
+    }
+  }
+  %55: bool = block {
+    %64: noreturn = condbr %45 then {
+      %56: i64 = const 5
+      %57: i64 = const -2
+      %58: i64 = call szc.ceil.4(%56, %57)
+      %59: i64 = const -2
+      %60: bool = cmp_eq %58, %59
+      %61: noreturn = br %55, %60
+    } else {
+      %62: bool = const false
+      %63: noreturn = br %55, %62
+    }
+  }
+  %65: bool = block {
+    %74: noreturn = condbr %55 then {
+      %66: i64 = const -5
+      %67: i64 = const -2
+      %68: i64 = call szc.ceil.4(%66, %67)
+      %69: i64 = const 3
+      %70: bool = cmp_eq %68, %69
+      %71: noreturn = br %65, %70
+    } else {
+      %72: bool = const false
+      %73: noreturn = br %65, %72
+    }
+  }
+  %75: bool = block {
+    %84: noreturn = condbr %65 then {
+      %76: i64 = const -5
+      %77: i64 = const 2
+      %78: i64 = call szc.rem.5(%76, %77)
+      %79: i64 = const -1
+      %80: bool = cmp_eq %78, %79
+      %81: noreturn = br %75, %80
+    } else {
+      %82: bool = const false
+      %83: noreturn = br %75, %82
+    }
+  }
+  %85: bool = block {
+    %94: noreturn = condbr %75 then {
+      %86: i64 = const 5
+      %87: i64 = const -2
+      %88: i64 = call szc.rem.5(%86, %87)
+      %89: i64 = const 1
+      %90: bool = cmp_eq %88, %89
+      %91: noreturn = br %85, %90
+    } else {
+      %92: bool = const false
+      %93: noreturn = br %85, %92
+    }
+  }
+  %95: bool = block {
+    %104: noreturn = condbr %85 then {
+      %96: i64 = const -5
+      %97: i64 = const 2
+      %98: i64 = call szc.mod.6(%96, %97)
+      %99: i64 = const 1
+      %100: bool = cmp_eq %98, %99
+      %101: noreturn = br %95, %100
+    } else {
+      %102: bool = const false
+      %103: noreturn = br %95, %102
+    }
+  }
+  %105: bool = block {
+    %114: noreturn = condbr %95 then {
+      %106: i64 = const 5
+      %107: i64 = const -2
+      %108: i64 = call szc.mod.6(%106, %107)
+      %109: i64 = const -1
+      %110: bool = cmp_eq %108, %109
+      %111: noreturn = br %105, %110
+    } else {
+      %112: bool = const false
+      %113: noreturn = br %105, %112
+    }
+  }
+  %115: bool = block {
+    %124: noreturn = condbr %105 then {
+      %116: i64 = const -5
+      %117: i64 = const -2
+      %118: i64 = call szc.mod.6(%116, %117)
+      %119: i64 = const -1
+      %120: bool = cmp_eq %118, %119
+      %121: noreturn = br %115, %120
+    } else {
+      %122: bool = const false
+      %123: noreturn = br %115, %122
+    }
+  }
+  %125: bool = block {
+    %134: noreturn = condbr %115 then {
+      %126: i64 = const -9223372036854775808
+      %127: i64 = const 1
+      %128: i64 = call szc.rem.5(%126, %127)
+      %129: i64 = const 0
+      %130: bool = cmp_eq %128, %129
+      %131: noreturn = br %125, %130
+    } else {
+      %132: bool = const false
+      %133: noreturn = br %125, %132
+    }
+  }
+  %135: bool = block {
+    %144: noreturn = condbr %125 then {
+      %136: i64 = const -9223372036854775808
+      %137: i64 = const 1
+      %138: i64 = call szc.mod.6(%136, %137)
+      %139: i64 = const 0
+      %140: bool = cmp_eq %138, %139
+      %141: noreturn = br %135, %140
+    } else {
+      %142: bool = const false
+      %143: noreturn = br %135, %142
+    }
+  }
+  %145: bool = block {
+    %154: noreturn = condbr %135 then {
+      %146: i64 = const -6
+      %147: i64 = const 2
+      %148: i64 = call szc.exact.7(%146, %147)
+      %149: i64 = const -3
+      %150: bool = cmp_eq %148, %149
+      %151: noreturn = br %145, %150
+    } else {
+      %152: bool = const false
+      %153: noreturn = br %145, %152
+    }
+  }
+  %155: bool = block {
+    %164: noreturn = condbr %145 then {
+      %156: i64 = const 6
+      %157: i64 = const -2
+      %158: i64 = call szc.exact.7(%156, %157)
+      %159: i64 = const -3
+      %160: bool = cmp_eq %158, %159
+      %161: noreturn = br %155, %160
+    } else {
+      %162: bool = const false
+      %163: noreturn = br %155, %162
+    }
+  }
+  %165: bool = block {
+    %174: noreturn = condbr %155 then {
+      %166: i64 = const -9223372036854775808
+      %167: i64 = const 1
+      %168: i64 = call szc.exact.7(%166, %167)
+      %169: i64 = const -9223372036854775808
+      %170: bool = cmp_eq %168, %169
+      %171: noreturn = br %165, %170
+    } else {
+      %172: bool = const false
+      %173: noreturn = br %165, %172
+    }
+  }
+  %175: bool = block {
+    %184: noreturn = condbr %165 then {
+      %176: u64 = const 18446744073709551615
+      %177: u64 = const 2
+      %178: u64 = call szc.unsigned_ceil.8(%176, %177)
+      %179: u64 = const 9223372036854775808
+      %180: bool = cmp_eq %178, %179
+      %181: noreturn = br %175, %180
+    } else {
+      %182: bool = const false
+      %183: noreturn = br %175, %182
+    }
+  }
+  %185: bool = block {
+    %194: noreturn = condbr %175 then {
+      %186: u64 = const 18446744073709551615
+      %187: u64 = const 1
+      %188: u64 = call szc.unsigned_ceil.8(%186, %187)
+      %189: u64 = const 18446744073709551615
+      %190: bool = cmp_eq %188, %189
+      %191: noreturn = br %185, %190
+    } else {
+      %192: bool = const false
+      %193: noreturn = br %185, %192
+    }
+  }
+  %195: bool = block {
+    %204: noreturn = condbr %185 then {
+      %196: i8 = const -5
+      %197: u7 = const 2
+      %198: i8 = call szc.mixed.9(%196, %197)
+      %199: i8 = const -2
+      %200: bool = cmp_eq %198, %199
+      %201: noreturn = br %195, %200
+    } else {
+      %202: bool = const false
+      %203: noreturn = br %195, %202
+    }
+  }
+  %205: bool = block {
+    %210: noreturn = condbr %195 then {
+      %206: bool = const true
+      %207: noreturn = br %205, %206
+    } else {
+      %208: bool = const false
+      %209: noreturn = br %205, %208
+    }
+  }
+  %211: bool = not %205
+  %212: u1 = int_from_bool %211
+  %213: u8 = int_cast %212
+  %214: noreturn = ret %213
+}
+fn szc.trunc.2: fn (i64, i64) i64 {
+  %0: i64 = arg 0
+  %1: i64 = arg 1
+  %2: i64 = div_trunc %0, %1
+  %3: noreturn = ret %2
+}
+fn szc.floor.3: fn (i64, i64) i64 {
+  %0: i64 = arg 0
+  %1: i64 = arg 1
+  %2: i64 = div_floor %0, %1
+  %3: noreturn = ret %2
+}
+fn szc.ceil.4: fn (i64, i64) i64 {
+  %0: i64 = arg 0
+  %1: i64 = arg 1
+  %2: i64 = div_ceil %0, %1
+  %3: noreturn = ret %2
+}
+fn szc.rem.5: fn (i64, i64) i64 {
+  %0: i64 = arg 0
+  %1: i64 = arg 1
+  %2: i64 = rem %0, %1
+  %3: noreturn = ret %2
+}
+fn szc.mod.6: fn (i64, i64) i64 {
+  %0: i64 = arg 0
+  %1: i64 = arg 1
+  %2: i64 = mod %0, %1
+  %3: noreturn = ret %2
+}
+fn szc.exact.7: fn (i64, i64) i64 {
+  %0: i64 = arg 0
+  %1: i64 = arg 1
+  %2: i64 = div_exact %0, %1
+  %3: noreturn = ret %2
+}
+fn szc.unsigned_ceil.8: fn (u64, u64) u64 {
+  %0: u64 = arg 0
+  %1: u64 = arg 1
+  %2: u64 = div_ceil %0, %1
+  %3: noreturn = ret %2
+}
+fn szc.mixed.9: fn (i8, u7) i8 {
+  %0: i8 = arg 0
+  %1: u7 = arg 1
+  %2: i8 = int_cast %1
+  %3: i8 = div_trunc %0, %2
+  %4: noreturn = ret %3
+}

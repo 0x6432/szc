@@ -28,6 +28,7 @@ typedef enum PanicKind {
 	PANIC_INT_CAST,
 	PANIC_DIV_ZERO,
 	PANIC_SHIFT,
+	PANIC_EXACT,
 	PANIC_COUNT,
 } PanicKind;
 
@@ -203,6 +204,7 @@ static const char *const panic_messages[PANIC_COUNT] = {
 	"integer does not fit in destination type",
 	"division by zero",
 	"shift amount is greater than the type size",
+	"exact division produced remainder",
 };
 
 /* Bounds as canonical 64-bit bit patterns; wider types have already errored. */
@@ -306,7 +308,7 @@ emit_add_sub_overflow(Codegen *cg, TirRef ref, QbeClass cls)
 	const TirInst *inst = inst_at(cg, ref);
 	FILE *out = cg->out;
 	char c = class_char(cls);
-	bool is_add = inst->op == TIR_ADD;
+	bool is_add = inst->op == TIR_ADD || inst->op == TIR_ADD_SAT;
 	if (!type_is_signed(cg, inst->type)) {
 		fprintf(out, "\t%%g%u_overflow =w cult%c ", ref, c);
 		if (is_add)
@@ -330,6 +332,132 @@ emit_add_sub_overflow(Codegen *cg, TirRef ref, QbeClass cls)
 	fprintf(out, ", %%t%u\n", ref);
 	fprintf(out, "\t%%g%u_change =%c and %%g%u_same, %%g%u_change\n", ref, c, ref, ref);
 	fprintf(out, "\t%%g%u_overflow =w cslt%c %%g%u_change, 0\n", ref, c, ref);
+}
+
+/* Clamp a normalized arithmetic result when %gN_overflow is true. */
+static void
+emit_saturate(Codegen *cg, TirRef ref, QbeClass cls, bool is_mul, bool is_sub)
+{
+	const TirInst *inst = inst_at(cg, ref);
+	FILE *out = cg->out;
+	char c = class_char(cls);
+	fprintf(out, "\tjnz %%g%u_overflow, @g%u_saturate, @g%u_saturated\n@g%u_saturate\n", ref, ref, ref, ref);
+	if (type_is_signed(cg, inst->type)) {
+		if (is_mul)
+			fprintf(out, "\t%%g%u_clamp =%c neg %%g%u_sign\n", ref, c, ref);
+		else {
+			fprintf(out, "\t%%g%u_clamp =%c sar ", ref, c);
+			print_operand(cg, inst->data.bin.lhs);
+			fprintf(out, ", %u\n", class_bits(cls) - 1);
+		}
+		fprintf(out, "\t%%t%u =%c xor %%g%u_clamp, %" PRId64 "\n", ref, c, ref, (int64_t)int_max_bits(type_bits(cg, inst->type), true));
+	} else {
+		fprintf(out, "\t%%t%u =%c copy %" PRId64 "\n", ref, c, is_sub ? 0 : (int64_t)int_max_bits(type_bits(cg, inst->type), false));
+	}
+	fprintf(out, "\tjmp @g%u_saturated\n@g%u_saturated\n", ref, ref);
+}
+
+static void
+emit_saturating_shift(Codegen *cg, TirRef ref, QbeClass cls)
+{
+	const TirInst *inst = inst_at(cg, ref);
+	FILE *out = cg->out;
+	char c = class_char(cls);
+	TirRef lhs = inst->data.bin.lhs;
+	TirRef rhs = inst->data.bin.rhs;
+	QbeClass amount_class = type_class(cg, inst_at(cg, rhs)->type, inst->src);
+	fprintf(out, "\t%%g%u_large =w cuge%c ", ref, class_char(amount_class));
+	print_operand(cg, rhs);
+	fprintf(out, ", %u\n\tjnz %%g%u_large, @g%u_shift_large, @g%u_shift_small\n", type_bits(cg, inst->type), ref, ref, ref);
+	fprintf(out, "@g%u_shift_large\n\t%%t%u =%c copy 0\n\t%%g%u_overflow =w cne%c ", ref, ref, c, ref, c);
+	print_operand(cg, lhs);
+	fprintf(out, ", 0\n\tjmp @g%u_shift_done\n@g%u_shift_small\n", ref, ref);
+	fprintf(out, "\t%%g%u_amount =w copy ", ref);
+	print_operand(cg, rhs);
+	fputs("\n", out);
+	print_dest(cg, ref, cls);
+	fputs("shl ", out);
+	print_operand(cg, lhs);
+	fprintf(out, ", %%g%u_amount\n", ref);
+	normalize(cg, ref, inst->type, cls);
+	fprintf(out, "\t%%g%u_back =%c %s %%t%u, %%g%u_amount\n", ref, c, type_is_signed(cg, inst->type) ? "sar" : "shr", ref, ref);
+	fprintf(out, "\t%%g%u_overflow =w cne%c %%g%u_back, ", ref, c, ref);
+	print_operand(cg, lhs);
+	fprintf(out, "\n\tjmp @g%u_shift_done\n@g%u_shift_done\n", ref, ref);
+	emit_saturate(cg, ref, cls, false, false);
+}
+
+static void
+emit_division(Codegen *cg, TirRef ref, QbeClass cls)
+{
+	const TirInst *inst = inst_at(cg, ref);
+	FILE *out = cg->out;
+	char c = class_char(cls);
+	TirRef lhs = inst->data.bin.lhs;
+	TirRef rhs = inst->data.bin.rhs;
+	bool is_signed = type_is_signed(cg, inst->type);
+	bool is_rem = inst->op == TIR_REM || inst->op == TIR_MOD;
+	emit_bound_check(cg, ref, rhs, "zero", "ceq", 0, PANIC_DIV_ZERO);
+	if (is_signed) {
+		fprintf(out, "\t%%g%u_minus_one =w ceq%c ", ref, c);
+		print_operand(cg, rhs);
+		fputs(", -1\n", out);
+		if (is_rem) {
+			/* Remainders are zero for divisor -1, including min/-1.
+			 * Avoid the hardware division exception without a false panic.
+			 */
+			fprintf(out, "\tjnz %%g%u_minus_one, @g%u_rem_zero, @g%u_rem_compute\n", ref, ref, ref);
+			fprintf(out, "@g%u_rem_zero\n\t%%t%u =%c copy 0\n\tjmp @g%u_div_done\n@g%u_rem_compute\n", ref, ref, c, ref, ref);
+		} else {
+			fprintf(out, "\t%%g%u_min =w ceq%c ", ref, c);
+			print_operand(cg, lhs);
+			fprintf(out, ", %" PRId64 "\n", (int64_t)int_min_bits(type_bits(cg, inst->type)));
+			fprintf(out, "\t%%g%u_overflow =w and %%g%u_min, %%g%u_minus_one\n", ref, ref, ref);
+			emit_guard(cg, ref, "overflow", PANIC_OVERFLOW);
+		}
+	}
+	emit_binary(cg, ref, cls, is_rem ? (is_signed ? "rem" : "urem") : (is_signed ? "div" : "udiv"), lhs, rhs);
+	bool needs_remainder = inst->op == TIR_DIV_EXACT || inst->op == TIR_DIV_CEIL || (is_signed && inst->op == TIR_DIV_FLOOR);
+	bool needs_adjust = inst->op == TIR_DIV_CEIL || (is_signed && (inst->op == TIR_DIV_FLOOR || inst->op == TIR_MOD));
+	if (needs_remainder) {
+		fprintf(out, "\t%%g%u_remainder =%c %s ", ref, c, is_signed ? "rem" : "urem");
+		print_operand(cg, lhs);
+		fputs(", ", out);
+		print_operand(cg, rhs);
+		fputs("\n", out);
+	}
+	if (needs_adjust || inst->op == TIR_DIV_EXACT) {
+		fprintf(out, "\t%%g%u_nonzero =w cne%c %%%c%u%s, 0\n", ref, c, is_rem ? 't' : 'g', ref, is_rem ? "" : "_remainder");
+		if (inst->op == TIR_DIV_EXACT) {
+			emit_guard(cg, ref, "nonzero", PANIC_EXACT);
+		} else {
+			if (is_signed) {
+				fprintf(out, "\t%%g%u_sign =%c xor ", ref, c);
+				print_operand(cg, lhs);
+				fputs(", ", out);
+				print_operand(cg, rhs);
+				fputs("\n", out);
+				fprintf(out, "\t%%g%u_adjust =w cslt%c %%g%u_sign, 0\n", ref, c, ref);
+				if (inst->op == TIR_DIV_CEIL)
+					fprintf(out, "\t%%g%u_adjust =w xor %%g%u_adjust, 1\n", ref, ref);
+				fprintf(out, "\t%%g%u_adjust =w and %%g%u_adjust, %%g%u_nonzero\n", ref, ref, ref);
+			} else {
+				fprintf(out, "\t%%g%u_adjust =w copy %%g%u_nonzero\n", ref, ref);
+			}
+			fprintf(out, "\tjnz %%g%u_adjust, @g%u_div_adjust, @g%u_div_done\n@g%u_div_adjust\n", ref, ref, ref, ref);
+			fprintf(out, "\t%%t%u =%c %s %%t%u, ", ref, c, inst->op == TIR_DIV_FLOOR ? "sub" : "add", ref);
+			if (is_rem)
+				print_operand(cg, rhs);
+			else
+				fputs("1", out);
+			fprintf(out, "\n\tjmp @g%u_div_done\n", ref);
+		}
+	}
+	if (needs_adjust || (is_signed && is_rem)) {
+		if (!needs_adjust)
+			fprintf(out, "\tjmp @g%u_div_done\n", ref);
+		fprintf(out, "@g%u_div_done\n", ref);
+	}
 }
 
 static void
@@ -421,18 +549,25 @@ emit_inst(Codegen *cg, TirRef ref)
 	case TIR_MUL:
 	case TIR_ADD_WRAP:
 	case TIR_SUB_WRAP:
+	case TIR_ADD_SAT:
+	case TIR_SUB_SAT:
+	case TIR_MUL_SAT:
 	case TIR_MUL_WRAP: {
-		bool is_mul = inst->op == TIR_MUL || inst->op == TIR_MUL_WRAP;
+		bool is_mul = inst->op == TIR_MUL || inst->op == TIR_MUL_WRAP || inst->op == TIR_MUL_SAT;
 		bool checked = inst->op == TIR_ADD || inst->op == TIR_SUB || inst->op == TIR_MUL;
-		const char *op = is_mul ? "mul" : inst->op == TIR_ADD || inst->op == TIR_ADD_WRAP ? "add" : "sub";
-		if (checked && is_mul)
+		bool saturating = inst->op == TIR_ADD_SAT || inst->op == TIR_SUB_SAT || inst->op == TIR_MUL_SAT;
+		const char *op = is_mul ? "mul" : inst->op == TIR_ADD || inst->op == TIR_ADD_WRAP || inst->op == TIR_ADD_SAT ? "add" : "sub";
+		if ((checked || saturating) && is_mul)
 			emit_mul_overflow(cg, ref, cls);
 		emit_binary(cg, ref, cls, op, inst->data.bin.lhs, inst->data.bin.rhs);
 		normalize(cg, ref, inst->type, cls);
-		if (checked) {
+		if (checked || saturating) {
 			if (!is_mul)
 				emit_add_sub_overflow(cg, ref, cls);
-			emit_guard(cg, ref, "overflow", PANIC_OVERFLOW);
+			if (saturating)
+				emit_saturate(cg, ref, cls, is_mul, inst->op == TIR_SUB_SAT);
+			else
+				emit_guard(cg, ref, "overflow", PANIC_OVERFLOW);
 		}
 		return;
 	}
@@ -441,13 +576,16 @@ emit_inst(Codegen *cg, TirRef ref)
 		emit_binary(cg, ref, cls, "shl", inst->data.bin.lhs, inst->data.bin.rhs);
 		normalize(cg, ref, inst->type, cls);
 		return;
-	case TIR_DIV_TRUNC:
-		emit_bound_check(cg, ref, inst->data.bin.rhs, "zero", "ceq", 0, PANIC_DIV_ZERO);
-		emit_binary(cg, ref, cls, type_is_signed(cg, inst->type) ? "div" : "udiv", inst->data.bin.lhs, inst->data.bin.rhs);
+	case TIR_SHL_SAT:
+		emit_saturating_shift(cg, ref, cls);
 		return;
+	case TIR_DIV_TRUNC:
+	case TIR_DIV_FLOOR:
+	case TIR_DIV_CEIL:
+	case TIR_DIV_EXACT:
 	case TIR_REM:
-		emit_bound_check(cg, ref, inst->data.bin.rhs, "zero", "ceq", 0, PANIC_DIV_ZERO);
-		emit_binary(cg, ref, cls, type_is_signed(cg, inst->type) ? "rem" : "urem", inst->data.bin.lhs, inst->data.bin.rhs);
+	case TIR_MOD:
+		emit_division(cg, ref, cls);
 		return;
 	case TIR_BIT_AND:
 		emit_binary(cg, ref, cls, "and", inst->data.bin.lhs, inst->data.bin.rhs);

@@ -1,0 +1,3 @@
+tests/tir/errors/div_zero_type.zig:2:12: error: division by zero here causes illegal behavior
+    return @divFloor(a, b);
+           ^

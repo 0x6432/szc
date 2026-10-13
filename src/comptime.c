@@ -439,6 +439,28 @@ from_twos_complement(Arena *arena, uint32_t *limbs, uint32_t count)
 }
 
 /* Bitwise and/or/xor with infinite two's complement semantics. */
+bool
+bigint_divmod(Arena *arena, const BigInt *a, const BigInt *b, BigIntDivRound round, BigInt *quotient, BigInt *remainder)
+{
+	/* Preserve inputs when the output descriptors alias a or b. */
+	BigInt lhs = *a;
+	BigInt rhs = *b;
+	if (!bigint_divmod_trunc(arena, &lhs, &rhs, quotient, remainder))
+		return false;
+	if (bigint_is_zero(remainder))
+		return true;
+	bool negative = lhs.negative != rhs.negative;
+	BigInt one = bigint_from_u64(arena, 1);
+	if (round == BIGINT_DIV_FLOOR && negative) {
+		*quotient = bigint_sub(arena, quotient, &one);
+		*remainder = bigint_add(arena, remainder, &rhs);
+	} else if (round == BIGINT_DIV_CEIL && !negative) {
+		*quotient = bigint_add(arena, quotient, &one);
+		*remainder = bigint_sub(arena, remainder, &rhs);
+	}
+	return true;
+}
+
 BigInt
 bigint_bitop(Arena *arena, const BigInt *a, const BigInt *b, BigIntBitOp op)
 {

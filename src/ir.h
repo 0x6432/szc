@@ -153,6 +153,12 @@ typedef enum IrDataKind {
 	X(MUL, "mul", IR_DATA_BIN) \
 	X(DIV, "div", IR_DATA_BIN) \
 	X(MOD, "mod", IR_DATA_BIN) \
+	X(DIV_TRUNC, "div_trunc", IR_DATA_BIN) \
+	X(DIV_FLOOR, "div_floor", IR_DATA_BIN) \
+	X(DIV_CEIL, "div_ceil", IR_DATA_BIN) \
+	X(DIV_EXACT, "div_exact", IR_DATA_BIN) \
+	X(REM, "rem", IR_DATA_BIN) \
+	X(MOD_BUILTIN, "mod_builtin", IR_DATA_BIN) \
 	X(ADD_WRAP, "add_wrap", IR_DATA_BIN) \
 	X(SUB_WRAP, "sub_wrap", IR_DATA_BIN) \
 	X(MUL_WRAP, "mul_wrap", IR_DATA_BIN) \

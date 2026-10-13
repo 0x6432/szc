@@ -1,0 +1,3 @@
+tests/tir/errors/saturating_shift_signed.zig:2:14: error: shift by signed type 'i8'
+    return a <<| b;
+             ^

@@ -1,0 +1,3 @@
+tests/tir/errors/div_builtin_overflow.zig:2:9: error: overflow of integer type 'i8' with value '128'
+    _ = @divTrunc(@as(i8, -128), @as(i8, -1));
+        ^

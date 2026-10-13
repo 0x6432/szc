@@ -11,7 +11,8 @@ builtins the Zig compiler and its std need. There are no SPIR-V, wasm or other b
 
 See [docs/MILESTONES.md](docs/MILESTONES.md). The lexer and parser are complete. Minimal integer/bool programs compile
 through typed IR and QBE to native executables with checked arithmetic and
-integer casts. Runtime saturation and explicit division builtins are next.
+integer casts, saturating operations and explicit division/remainder builtins.
+Source-level control flow is next.
 
 ## Build & test
 
@@ -49,7 +50,8 @@ compilation failures from nonzero program exits. Generated tests exercise all
 signed/unsigned widths from 1 to 64 bits; driver tests cover tool failures,
 intermediate retention/cleanup and paths containing spaces. Runtime safety tests
 check panic signals/messages; when `ZIG` is set they also validate behavior against
-the official compiler.
+the official compiler. `tests/run_szc` separately records known reference-backend
+edge discrepancies (currently signed minimum remainder by -1).
 
 ## Layout
 

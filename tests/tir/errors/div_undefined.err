@@ -1,0 +1,3 @@
+tests/tir/errors/div_undefined.zig:2:12: error: use of undefined value here causes illegal behavior
+    return @rem(a, undefined);
+           ^

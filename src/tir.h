@@ -23,16 +23,24 @@ typedef uint32_t TirBody;	/* extra index of a body, 0 = none */
 	X(CONST, "const")	/* data.value */ \
 	X(ADD, "add")	/* bin: checked integer arithmetic */ \
 	X(ADD_WRAP, "add_wrap") \
+	X(ADD_SAT, "add_sat") \
 	X(SUB, "sub") \
 	X(SUB_WRAP, "sub_wrap") \
+	X(SUB_SAT, "sub_sat") \
 	X(MUL, "mul") \
 	X(MUL_WRAP, "mul_wrap") \
+	X(MUL_SAT, "mul_sat") \
 	X(DIV_TRUNC, "div_trunc") \
+	X(DIV_FLOOR, "div_floor") \
+	X(DIV_CEIL, "div_ceil") \
+	X(DIV_EXACT, "div_exact") \
 	X(REM, "rem") \
+	X(MOD, "mod") \
 	X(BIT_AND, "bit_and") \
 	X(BIT_OR, "bit_or") \
 	X(BIT_XOR, "bit_xor") \
 	X(SHL, "shl") \
+	X(SHL_SAT, "shl_sat") \
 	X(SHR, "shr") \
 	X(CMP_EQ, "cmp_eq")	/* bin, type bool; operand type in the lhs instruction */ \
 	X(CMP_NEQ, "cmp_neq") \

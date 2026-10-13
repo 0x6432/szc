@@ -1,0 +1,3 @@
+tests/tir/errors/saturating_shift_negative.zig:2:14: error: shift by negative amount '-1'
+    return a <<| -1;
+             ^

@@ -37,6 +37,25 @@ def generate(seed):
                     checks.append(f"(a {op} b) == {value}")
             if signed and a != minimum:
                 checks.append(f"-a == {-a}")
+            for op, value in (("+|", a + b), ("-|", a - b), ("*|", a * b)):
+                checks.append(f"(a {op} b) == {max(minimum, min(maximum, value))}")
+            large_shift = bits + 65
+            # Large saturating shifts must distinguish zero, positive and negative.
+            saturated = 0 if a == 0 else minimum if a < 0 else maximum
+            checks.append(f"(a <<| large_shift) == {saturated}")
+            checks.append(f"(a <<| shift) == {max(minimum, min(maximum, a << shift))}")
+            if b != 0 and not (signed and a == minimum and b == -1):
+                quotient = abs(a) // abs(b)
+                if (a < 0) != (b < 0):
+                    quotient = -quotient
+                remainder = a - quotient * b
+                checks.append(f"@divTrunc(a, b) == {quotient}")
+                checks.append(f"@divFloor(a, b) == {a // b}")
+                checks.append(f"@divCeil(a, b) == {-((-a) // b)}")
+                checks.append(f"@rem(a, b) == {remainder}")
+                checks.append(f"@mod(a, b) == {a % b}")
+                if remainder == 0:
+                    checks.append(f"@divExact(a, b) == {quotient}")
             checks += [f"~a == {wrap(~a)}",
                        f"(a << shift) == {wrap(a << shift)}",
                        f"(a >> shift) == {a >> shift}"]
@@ -52,13 +71,13 @@ def generate(seed):
             shift_bits = (bits - 1).bit_length()
             condition = f"saved == {wrap(a + b)} and " + " and ".join(checks)
             lines += [
-                f"fn check_{name}(a: {name}, b: {name}, shift: u{shift_bits}) u8 {{",
+                f"fn check_{name}(a: {name}, b: {name}, shift: u{shift_bits}, large_shift: u64) u8 {{",
                 f"    var saved: {name} = a;",
                 "    saved = saved +% b;",
                 f"    return @intFromBool(!({condition}));",
                 "}",
             ]
-            calls.append(f"    errors = errors + check_{name}({a}, {b}, {shift});")
+            calls.append(f"    errors = errors + check_{name}({a}, {b}, {shift}, {large_shift});")
     # Each of the 128 checks returns at most one, so the u8 sum cannot overflow.
     lines += ["pub fn main() u8 {", "    var errors: u8 = 0;"]
     lines += calls + ["    return errors;", "}"]
