@@ -135,6 +135,7 @@ function w $szc.identity.2(w %t0) {
 
 function w $szc.fail.3() {
 @start
+	call $szc.panic.6()
 	hlt
 }
 
@@ -155,6 +156,14 @@ data $szc.panic.msg.0 = { b "integer overflow\n", b 0 }
 function $szc.panic.0() {
 @start
 	call $write(w 2, l $szc.panic.msg.0, l 17)
+	call $abort()
+	hlt
+}
+
+data $szc.panic.msg.6 = { b "reached unreachable code\n", b 0 }
+function $szc.panic.6() {
+@start
+	call $write(w 2, l $szc.panic.msg.6, l 25)
 	call $abort()
 	hlt
 }

@@ -1,0 +1,3 @@
+tests/tir/errors/noreturn_return_void.zig:1:22: error: function declared 'noreturn' returns
+fn stop() noreturn { return; }
+                     ^

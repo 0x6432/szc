@@ -56,7 +56,7 @@
         %34 = ret_type
         %35 = load %5
         %36 = add_wrap %6, %35
-        %37 = as %34, %36
+        %37 = as_return %34, %36
         %38 = ret %37
       }
     }
@@ -80,7 +80,7 @@
           %50 = as %48, %49
           %51 = break_inline result, %50
         }
-        %52 = as %42, %44
+        %52 = as_return %42, %44
         %53 = ret %52
       }
     }

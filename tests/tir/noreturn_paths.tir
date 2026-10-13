@@ -1,0 +1,38 @@
+fn szc.main.1: fn () u8 {
+  %0: bool = const true
+  %1: u8 = const 7
+  %2: u8 = call szc.choose.2(%0, %1)
+  %3: bool = const false
+  %4: u8 = call szc.cleanup.3(%3)
+  %5: u8 = add %2, %4
+  %6: noreturn = ret %5
+}
+fn szc.choose.2: fn (bool, u8) u8 {
+  %0: bool = arg 0
+  %1: u8 = arg 1
+  %2: u8 = block {
+    %6: noreturn = condbr %0 then {
+      %5: noreturn = br %2, %1
+    } else {
+      %3: noreturn = call szc.stop.4()
+      %4: noreturn = trap
+    }
+  }
+  %7: noreturn = ret %2
+}
+fn szc.cleanup.3: fn (bool) u8 {
+  %0: bool = arg 0
+  %1: void = block {
+    %5: noreturn = condbr %0 then {
+      %2: noreturn = call szc.stop.4()
+      %3: noreturn = trap
+    } else {
+      %4: noreturn = br %1
+    }
+  }
+  %6: u8 = const 2
+  %7: noreturn = ret %6
+}
+fn szc.stop.4: fn () noreturn {
+  %0: noreturn = unreachable
+}

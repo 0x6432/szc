@@ -21,7 +21,7 @@
           %9 = break_inline result, %5
         }
         %11 = ret_type
-        %12 = as %11, %10
+        %12 = as_return %11, %10
         %13 = ret %12
       }
     }
@@ -43,11 +43,11 @@
         } else {
           %22 = ret_type
           %23 = int 8
-          %24 = as %22, %23
+          %24 = as_return %22, %23
           %25 = ret %24
         }
         %27 = ret_type
-        %28 = as %27, %26
+        %28 = as_return %27, %26
         %29 = ret %28
       }
     }
@@ -66,12 +66,12 @@
         %44 = if %35 then {
           %36 = ret_type
           %37 = int 9
-          %38 = as %36, %37
+          %38 = as_return %36, %37
           %39 = ret %38
         } else {
           %40 = ret_type
           %41 = int 10
-          %42 = as %40, %41
+          %42 = as_return %40, %41
           %43 = ret %42
         }
         %45 = ret_implicit

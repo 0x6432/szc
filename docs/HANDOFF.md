@@ -29,7 +29,8 @@ Read this first when resuming work (the sandbox resets often).
 - Done: M4.3 labeled block expressions, nested named exits and constant-only comptime blocks.
 - Done: M4.4a runtime range-based for, multi-input length checks and usize captures.
 - Done: M4.4b scope-exit defer across fallthrough, return, break and continue.
-- Next: **M4.5** unreachable/noreturn and minimal explicit @panic runtime.
+- Done: M4.5a safe explicit unreachable, noreturn return/cast diagnostics and terminating joins.
+- Next: **M4.5b** explicit @panic, with proper message-value/string prerequisites.
 - Run `PATH=/data/tools/bin:$PATH ZIG=/data/zig/zig-x86_64-linux-0.17.0/zig make e2e-test`
   locally. `tools/build_qbe.sh` builds the pinned QBE into `build/qbe-src` on CI.
 - Tools: `SZC_QBE`/`qbe`, `SZC_CC`/`cc`; pinned QBE revision
@@ -37,7 +38,31 @@ Read this first when resuming work (the sandbox resets often).
 - Restored sandbox needed libasan/libubsan/clang/compiler-rt reinstalled. Git
   credentials are not persisted; use transient authentication for future pushes.
 - M3.4 (`1882ced`) and M3.5 (`7b36edd`) are pushed to `main`.
-- CI through M4.4a (`a3199b3`): completed successfully. Check the M4.4b push run.
+- CI through M4.4b (`e9c3c6c`): completed successfully. Check the M4.5a push run.
+
+## Validation at M4.5a
+
+- GCC/Clang warning-clean sanitizer suites: 518 unit checks, 479 goldens,
+  35 ordinary/reference executable inputs plus one szc-only input, 12 driver checks
+  and 138 panic cases. Optimized GCC is warning-clean. The noreturn generator
+  exercises 128 integer result types and both value/noreturn cleanup paths.
+- Four 60-second libFuzzer targets and standalone 20,000 mutations per target pass.
+- TIR_UNREACHABLE is now exclusively the explicit source safety violation: it
+  calls the outlined "reached unreachable code" panic helper and aborts. TIR_TRAP
+  is the backend-only terminator after known noreturn calls/internal fallback.
+  Don't replace every backend hlt with a source safety panic. Indirect calls have
+  different reference noreturn-returned rules; check them when adding pointers.
+- IR_AS_RETURN marks only the final direct return-result coercion; nested result
+  coercions remain IR_AS. This distinguishes "function declared 'noreturn' returns"
+  from "cannot cast to noreturn". Undefined returns do not bypass the former.
+  A syntactically terminating return operand reports unreachable code.
+- Noreturn callees/cleanup stop sema before pending transfers; value joins omit
+  terminating exits. The official 0.17 binary accepts source after a statically
+  typed noreturn call in the probe; don't add speculative rejection from memory.
+- Explicit @panic expects a slice message in actual Sema.zirPanic. Implement the
+  necessary first-class read-only byte/string values before lowering it; do not
+  add an AST-only literal shortcut. General memory features remain Phase 5.
+  No user panic overrides, stack traces or alternate safety/optimization modes yet.
 
 ## Validation at M4.4b
 
@@ -206,5 +231,6 @@ Read this first when resuming work (the sandbox resets often).
   reference first.
 - `make safety-test` checks generated runtime panic cases; setting `ZIG` enables
   reference validation. Checks are always enabled in szc for now. Panic stubs
-  print one line via libc write, then abort; explicit unreachable still uses hlt.
+  print one line via libc write, then abort; explicit unreachable uses this runtime.
+  Only backend-only trap/known noreturn-call terminators use hlt.
 - Pending user decision: how to build the Zig compiler source (M10.2).

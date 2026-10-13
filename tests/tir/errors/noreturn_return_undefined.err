@@ -1,0 +1,3 @@
+tests/tir/errors/noreturn_return_undefined.zig:1:29: error: function declared 'noreturn' returns
+fn stop() noreturn { return undefined; }
+                            ^

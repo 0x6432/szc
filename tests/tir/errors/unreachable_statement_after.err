@@ -1,0 +1,3 @@
+tests/tir/errors/unreachable_statement_after.zig:1:37: error: unreachable code
+pub fn main() void { unreachable; _ = 1; }
+                                    ^

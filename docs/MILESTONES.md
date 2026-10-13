@@ -59,6 +59,8 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
   - [x] **M4.4a Runtime range-based for loops**: captures, multiple inputs, length safety, labels and else/values.
   - [x] **M4.4b defer**: scope-exit execution across fallthrough and control transfers.
 - [ ] **M4.5 unreachable, noreturn, `@panic` minimal runtime.**
+  - [x] **M4.5a Safe unreachable and noreturn checks**: safety panic, return/cast diagnostics, terminating calls/joins.
+  - [ ] **M4.5b Explicit @panic**: message-value prerequisites and minimal runtime.
 
 ## Phase 5: Memory
 
@@ -116,6 +118,41 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
 ## Completed milestone log
 
 (newest first; each entry: what, limitations, interactions)
+
+### M4.5a Safe unreachable and noreturn checks
+- **What**: explicit source unreachable now uses the existing outlined safety
+  runtime, printing "reached unreachable code" and aborting, rather than executing
+  raw hlt. Constant-evaluation unreachable remains a compilation error. A distinct
+  TIR_TRAP terminates the backend after statically known noreturn calls and for
+  internal fallback bodies; it does not claim a source safety violation.
+- **Diagnostics**: explicit value/void/undefined returns from noreturn functions
+  report "function declared 'noreturn' returns". Implicit return points at the
+  signature type. Ordinary casts (including nested result-location coercions)
+  report "cannot cast to noreturn". A syntactically noreturn return operand,
+  including direct unreachable, is unreachable-code error, like AstGen.reachableExpr.
+- **Tests**: warning-clean GCC/Clang ASan/UBSan: 518 unit checks, 479 goldens,
+  35 ordinary/reference execution inputs plus one szc-only input, 12 driver checks,
+  138 panic cases. Optimized GCC builds cleanly. Generated noreturn joins check all
+  128 signed/unsigned 1–64-bit result types, dead panic arms and noreturn cleanup.
+  Eight new panic cases cover entry points, calls, branches, loops and cleanup
+  suppression. Four 60-second libFuzzer runs and standalone 20,000-mutation replays
+  per target pass. Only affected return-IR and short-circuit QBE goldens changed.
+- **Reference**: actual 0.17 Sema.zirUnreachable/analyzeAs/coerceExtra, AstGen.ret
+  and std.debug.FullPanic.unreach, plus binary execution and diagnostic comparisons.
+  Known direct noreturn calls end in backend unreach, not a source-unreachable
+  panic; indirect noreturn-returned checks await function-pointer support.
+- **Limitations**: explicit @panic remains M4.5b. Its slice-message requirement
+  needs proper read-only byte/string value support, not a literal-only AST shortcut.
+  General arrays/slices/strings remain Phase 5; user panic overrides, stack traces,
+  runtime-safety toggles and other optimization modes are not implemented.
+  Comptime function calls and richer coercion diagnostics retain the existing
+  Phase 7/aggregate limitations.
+- **Interactions**: IR_AS_RETURN distinguishes the outermost direct return-result
+  coercion from ordinary IR_AS propagated into branches. Sema uses return-specific
+  diagnostics only for the former; return operands are still checked before defer.
+  Explicit unreachable alone uses TIR_UNREACHABLE's safety panic. Existing control
+  join logic discards noreturn exits, and noreturn cleanup suppresses pending
+  transfers. No changes to parser, external QBE invocation or panic unwinding.
 
 ### M4.4b Scope-exit defer
 - **What**: expression/block defer, reverse registration order, nested cleanup,

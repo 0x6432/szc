@@ -1,0 +1,67 @@
+function w $szc.main.1() {
+@start
+	%t2 =w call $szc.choose.2(w 1, w 7)
+	%t4 =w call $szc.cleanup.3(w 0)
+	%t5 =w add %t2, %t4
+	%t5 =w and %t5, 255
+	%g5_overflow =w cultw %t5, %t2
+	jnz %g5_overflow, @g5_overflow_panic, @g5_overflow_ok
+@g5_overflow_panic
+	call $szc.panic.0()
+	hlt
+@g5_overflow_ok
+	ret %t5
+}
+
+function w $szc.choose.2(w %t0, w %t1) {
+@start
+	jnz %t0, @c6_then, @c6_else
+@c6_then
+	%t2 =w copy %t1
+	jmp @b2
+@c6_else
+	call $szc.stop.4()
+	hlt
+@b2
+	ret %t2
+}
+
+function w $szc.cleanup.3(w %t0) {
+@start
+	jnz %t0, @c5_then, @c5_else
+@c5_then
+	call $szc.stop.4()
+	hlt
+@c5_else
+	jmp @b1
+@b1
+	ret 2
+}
+
+function $szc.stop.4() {
+@start
+	call $szc.panic.6()
+	hlt
+}
+
+data $szc.panic.msg.0 = { b "integer overflow\n", b 0 }
+function $szc.panic.0() {
+@start
+	call $write(w 2, l $szc.panic.msg.0, l 17)
+	call $abort()
+	hlt
+}
+
+data $szc.panic.msg.6 = { b "reached unreachable code\n", b 0 }
+function $szc.panic.6() {
+@start
+	call $write(w 2, l $szc.panic.msg.6, l 25)
+	call $abort()
+	hlt
+}
+
+export function w $main() {
+@start
+	%status =w call $szc.main.1()
+	ret %status
+}

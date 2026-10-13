@@ -1,0 +1,104 @@
+%63 = struct_decl (flags=0) {
+  decl fn "stop" value {
+    %2 = func "stop" {
+      ret type {
+        %0 = break_inline result, @type_noreturn
+      }
+      body insts {
+        %1 = unreachable
+      }
+    }
+    %3 = break_inline result, %2
+  }
+  decl fn "choose" value {
+    %19 = func "choose" {
+      %5 = param "c" type {
+        %4 = break_inline result, @type_bool
+      }
+      %7 = param "x" type {
+        %6 = break_inline result, @type_u8
+      }
+      ret type {
+        %8 = break_inline result, @type_u8
+      }
+      body insts {
+        %9 = ret_type
+        %10 = as @type_bool, %5
+        %17 = if %10 then {
+          %11 = as %9, %7
+          %12 = break_inline result, %11
+        } else {
+          %13 = decl_val "stop"
+          %14 = call %13
+          %15 = as %9, %14
+          %16 = break_inline result, %15
+        }
+        %18 = ret %17
+      }
+    }
+    %20 = break_inline result, %19
+  }
+  decl fn "cleanup" value {
+    %40 = func "cleanup" {
+      %22 = param "c" type {
+        %21 = break_inline result, @type_bool
+      }
+      ret type {
+        %23 = break_inline result, @type_u8
+      }
+      body insts {
+        %24 = as @type_bool, %22
+        %35 = if %24 then {
+          %29 = ret_type
+          %30 = int 1
+          %31 = as_return %29, %30
+          %32 = defer  {
+            %25 = decl_val "stop"
+            %26 = call %25
+            %27 = ensure_result %26
+            %28 = break_inline result, @void_value
+          }
+          %33 = ret %31
+        } else {
+          %34 = break_inline result, @void_value
+        }
+        %36 = ret_type
+        %37 = int 2
+        %38 = as_return %36, %37
+        %39 = ret %38
+      }
+    }
+    %41 = break_inline result, %40
+  }
+  decl fn "main" pub value {
+    %61 = func "main" {
+      ret type {
+        %42 = break_inline result, @type_u8
+      }
+      body insts {
+        %43 = ret_type
+        %44 = decl_val "choose"
+        %45 = call %44 arg0 {
+          %46 = arg_type %45, 0
+          %47 = as %46, @true
+          %48 = break_inline result, %47
+        } arg1 {
+          %49 = arg_type %45, 1
+          %50 = int 7
+          %51 = as %49, %50
+          %52 = break_inline result, %51
+        }
+        %53 = decl_val "cleanup"
+        %54 = call %53 arg0 {
+          %55 = arg_type %54, 0
+          %56 = as %55, @false
+          %57 = break_inline result, %56
+        }
+        %58 = add %45, %54
+        %59 = as_return %43, %58
+        %60 = ret %59
+      }
+    }
+    %62 = break_inline result, %61
+  }
+}

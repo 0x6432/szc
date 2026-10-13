@@ -1,0 +1,3 @@
+tests/tir/errors/noreturn_dead_return.zig:1:49: error: function declared 'noreturn' returns
+fn stop(c: bool) noreturn { if (c) unreachable; return; }
+                                                ^

@@ -138,6 +138,7 @@ typedef enum IrDataKind {
 	X(ENUM_LITERAL, "enum_literal", IR_DATA_NAME)	/* .name */ \
 	X(INT_TYPE, "int_type", IR_DATA_INT)	/* bit 16 = signed, bits 0..15 = bit count */ \
 	/* Result types and coercion */ \
+	X(AS_RETURN, "as_return", IR_DATA_BIN)	/* direct return-value coercion */ \
 	X(AS, "as", IR_DATA_BIN)	/* coerce rhs to type lhs */ \
 	X(TYPEOF, "typeof", IR_DATA_UN)	/* type of operand */ \
 	X(ELEM_TYPE, "elem_type", IR_DATA_UN)	/* pointee type of pointer value operand */ \

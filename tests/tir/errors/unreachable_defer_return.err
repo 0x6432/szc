@@ -1,0 +1,3 @@
+tests/tir/errors/unreachable_defer_return.zig:1:31: error: unreachable code
+pub fn main() void { defer {} return unreachable; }
+                              ^

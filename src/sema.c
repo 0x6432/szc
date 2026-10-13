@@ -1063,6 +1063,17 @@ coerce(Block *block, Operand operand, TypeId dest, uint32_t src)
 	return operand_none;
 }
 
+/* Return-result coercion has a distinct noreturn diagnostic, even for undefined. */
+static Operand
+coerce_return(Block *block, Operand operand, TypeId dest, uint32_t src)
+{
+	if (dest == T_NORETURN && operand.kind != OPERAND_NONE && operand.type != T_NORETURN) {
+		sema_error(block, src, "function declared 'noreturn' returns");
+		return operand_none;
+	}
+	return coerce(block, operand, dest, src);
+}
+
 /* Integer casts use a result type supplied by irgen. */
 static Operand
 analyze_cast(Block *block, const IrInst *inst)
@@ -2201,7 +2212,7 @@ analyze_call(Block *block, IrInstIndex index, Operand *out)
 	TirRef ref = emit_tir(block, TIR_CALL, fn.ret, src);
 	block->tir->insts[ref].data.payload = payload;
 	if (fn.ret == T_NORETURN) {
-		emit_tir(block, TIR_UNREACHABLE, T_NORETURN, src);
+		emit_tir(block, TIR_TRAP, T_NORETURN, src);
 		return INST_NORETURN;
 	}
 	*out = runtime_operand(fn.ret, ref);
@@ -2331,7 +2342,8 @@ analyze_inst(Block *block, IrInstIndex index, Operand *break_value)
 		result = type_operand(sema, type_int(sema, is_signed, bits));
 		break;
 	}
-	case IR_AS: {
+	case IR_AS:
+	case IR_AS_RETURN: {
 		Operand dest = resolve_ref(block, inst->data.bin.lhs);
 		Operand value = resolve_ref(block, inst->data.bin.rhs);
 		if (dest.kind == OPERAND_NO_RESULT_TYPE) {
@@ -2341,7 +2353,11 @@ analyze_inst(Block *block, IrInstIndex index, Operand *break_value)
 		TypeId type;
 		if (value.kind == OPERAND_NONE || !operand_to_type(block, dest, src, &type))
 			break;
-		result = coerce(block, value, type, src);
+		if (inst->op == IR_AS && type == T_NORETURN) {
+			sema_error(block, src, "cannot cast to noreturn");
+			break;
+		}
+		result = inst->op == IR_AS_RETURN ? coerce_return(block, value, type, src) : coerce(block, value, type, src);
 		break;
 	}
 	case IR_DEFER: {
@@ -2526,7 +2542,7 @@ analyze_inst(Block *block, IrInstIndex index, Operand *break_value)
 		}
 		Operand value = resolve_ref(block, inst->data.un.operand);
 		TypeId ret = sema->types[block->func->type].as.fn.ret;
-		value = coerce(block, value, ret, src);
+		value = coerce_return(block, value, ret, src);
 		if (value.kind == OPERAND_NONE)
 			return INST_NORETURN;
 		TirRef operand = ret == T_VOID ? TIR_REF_NONE : materialize(block, value, src);
@@ -2537,8 +2553,12 @@ analyze_inst(Block *block, IrInstIndex index, Operand *break_value)
 		if (block->func == NULL || block->tir == NULL)
 			return INST_NORETURN;
 		TypeId ret = sema->types[block->func->type].as.fn.ret;
-		if (ret == T_NORETURN)
-			sema_error(block, src, "function declared 'noreturn' implicitly returns");
+		if (ret == T_NORETURN) {
+			IrBody type_body = block->func->header.ret_type_body;
+			uint32_t type_count = ir_body_count(block->ir, type_body);
+			uint32_t type_src = type_count == 0 ? src : block->ir->insts[ir_body_insts(block->ir, type_body)[type_count - 1]].src;
+			sema_error(block, type_src, "function declared 'noreturn' implicitly returns");
+		}
 		else if (ret != T_VOID)
 			sema_error(block, src, "function with non-void return type '%s' implicitly returns", sema_type_name(sema, ret));
 		emit_tir_un(block, TIR_RET, T_NORETURN, src, TIR_REF_NONE);
@@ -2616,7 +2636,7 @@ analyze_func_body(Sema *sema, FuncId id)
 	}
 	BodyResult result = analyze_body(&block, func->header.body);
 	if (result.end != BODY_NORETURN)
-		emit_tir(&block, TIR_UNREACHABLE, T_NORETURN, func->ir->insts[func->func_inst].src);
+		emit_tir(&block, TIR_TRAP, T_NORETURN, func->ir->insts[func->func_inst].src);
 	func->tir.body = block_finish(&block);
 	func->state = FUNC_ANALYSED;
 }
@@ -2839,6 +2859,7 @@ dump_tir_inst(FILE *out, Sema *sema, const TirFunc *tir, TirRef ref, uint32_t de
 		break;
 	}
 	case TIR_ALLOC:
+	case TIR_TRAP:
 	case TIR_UNREACHABLE:
 		fputs("\n", out);
 		return;

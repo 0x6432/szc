@@ -21,6 +21,17 @@ def binary_case(name, integer_type, operator, lhs, rhs, message="integer overflo
 
 
 def cases():
+    for label, source in (
+        ("direct", "pub fn main() void { unreachable; }"),
+        ("noreturn_main", "pub fn main() noreturn { unreachable; }"),
+        ("noreturn_call", "fn stop() noreturn { unreachable; }\npub fn main() void { stop(); }"),
+        ("runtime_branch", "fn operation(c: bool) void { if (c) unreachable; }\npub fn main() void { operation(true); }"),
+        ("loop", "fn operation(n: usize) void { for (0..n) |_| { unreachable; } }\npub fn main() void { operation(1); }"),
+        ("skip_cleanup", "fn operation(x: u8) void { var a = x; defer a += 1; unreachable; }\npub fn main() void { operation(255); }"),
+        ("cleanup", "fn operation(x: u8) void { var a = x; defer a += 1; defer unreachable; }\npub fn main() void { operation(255); }"),
+        ("cleanup_call", "fn stop() noreturn { unreachable; }\nfn operation(x: u8) void { var a = x; defer a += 1; defer stop(); }\npub fn main() void { operation(255); }"),
+    ):
+        yield f"unreachable_{label}", source + "\n", "reached unreachable code"
     for label, exit_stmt in (("return", "return a;"), ("fallthrough", ""), ("break", "break;"), ("continue", "continue;")):
         if label == "return":
             operation = f"fn operation(x: u8) u8 {{ var a = x; defer a += 1; {exit_stmt} }}"

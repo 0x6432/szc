@@ -30,6 +30,7 @@ typedef enum PanicKind {
 	PANIC_SHIFT,
 	PANIC_EXACT,
 	PANIC_FOR_LEN,
+	PANIC_UNREACHABLE,
 	PANIC_COUNT,
 } PanicKind;
 
@@ -207,6 +208,7 @@ static const char *const panic_messages[PANIC_COUNT] = {
 	"shift amount is greater than the type size",
 	"exact division produced remainder",
 	"for loop over objects with non-equal lengths",
+	"reached unreachable code",
 };
 
 /* Bounds as canonical 64-bit bit patterns; wider types have already errored. */
@@ -751,6 +753,10 @@ emit_inst(Codegen *cg, TirRef ref)
 		fprintf(out, "\tjmp @l%u\n", (unsigned)inst->data.un.operand);
 		return;
 	case TIR_UNREACHABLE:
+		cg->panic_used[PANIC_UNREACHABLE] = true;
+		fprintf(out, "\tcall $szc.panic.%u()\n\thlt\n", (unsigned)PANIC_UNREACHABLE);
+		return;
+	case TIR_TRAP:
 		fputs("\thlt\n", out);
 		return;
 	case TIR_OP_COUNT:

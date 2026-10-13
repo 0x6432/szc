@@ -108,7 +108,15 @@ return type is a body too, so it may depend on comptime parameters.
   exit reserves a noreturn typed block whose body is filled after peer typing
   with any needed coercion and br. This keeps runtime operands in their branch.
 - `and`/`or` are `bool_and`/`bool_or` with a right-hand body (short-circuit).
+- `as_return type, value` marks the outermost direct return-value coercion;
+  ordinary `as` instructions propagated into branches remain casts. This preserves
+  the reference distinction between invalid noreturn returns and casts. Source
+  return operands must be syntactically reachable before scope-exit cleanup.
 - `ret value`, `ret_implicit` (falling off the end of a `void` function).
+- Explicit source `unreachable` is a comptime error or runtime TIR_UNREACHABLE,
+  which aborts through the safety panic helper. Internal TIR_TRAP after statically
+  known noreturn calls/fallback bodies emits only QBE hlt. Noreturn exits contribute
+  no value to branch/block joins. Neither termination path unwinds defer cleanup.
 
 ## Instruction set
 

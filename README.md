@@ -20,7 +20,9 @@ constant-only comptime evaluation. Runtime range-based `for` supports multiple
 inputs, unbounded companion counters, captures, labels and loop else/values.
 `defer` runs in reverse registration order across scope fallthrough, return,
 break and continue. Array/slice iteration, inline/comptime loops and `errdefer`
-remain pending; explicit `@panic` support is next.
+remain pending. Explicit `unreachable` aborts through the safety panic runtime;
+noreturn return/cast diagnostics are checked against Zig 0.17. Explicit `@panic`
+and its message-value support are next.
 
 ## Build & test
 

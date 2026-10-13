@@ -917,6 +917,16 @@ return_expr(GenBody *body, Scope *scope, AstNode *node)
 	if (return_node->value != NULL) {
 		IrRef type = emit_none(body, IR_RET_TYPE, node->offset);
 		value = expr(body, scope, result_type(type), return_node->value);
+		if (body_is_terminated(body)) {
+			error_at(body->gen, node->offset, "%s", "unreachable code");
+			return IR_REF_VOID_VALUE;
+		}
+		/* Nested result-location coercions remain ordinary `as` operations. */
+		if (ir_ref_is_inst(value)) {
+			IrInst *inst = &body->gen->ir->insts[ir_ref_inst(value)];
+			if (inst->op == IR_AS && inst->data.bin.lhs == type)
+				inst->op = IR_AS_RETURN;
+		}
 	}
 	if (!body_is_terminated(body)) {
 		emit_defers(body, scope, NULL);
