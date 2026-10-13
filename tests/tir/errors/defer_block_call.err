@@ -1,0 +1,3 @@
+tests/tir/errors/defer_block_call.zig:2:35: error: value of type 'u8' ignored
+pub fn main() void { defer { value(); } }
+                                  ^

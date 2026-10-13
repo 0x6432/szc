@@ -1,0 +1,6 @@
+tests/tir/errors/defer_named_continue.zig:1:51: error: cannot continue out of defer expression
+pub fn main() void { outer: while (false) { defer continue :outer; } }
+                                                  ^
+tests/tir/errors/defer_named_continue.zig:1:22: error: unused while loop label
+pub fn main() void { outer: while (false) { defer continue :outer; } }
+                     ^

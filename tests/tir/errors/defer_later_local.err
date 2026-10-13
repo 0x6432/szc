@@ -1,0 +1,3 @@
+tests/tir/errors/defer_later_local.zig:1:34: error: use of undeclared identifier 'later'
+pub fn main() void { defer { _ = later; } const later = 1; _ = later; }
+                                 ^

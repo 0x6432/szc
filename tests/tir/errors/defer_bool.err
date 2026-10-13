@@ -1,0 +1,3 @@
+tests/tir/errors/defer_bool.zig:1:28: error: value of type 'bool' ignored
+pub fn main() void { defer true; }
+                           ^

@@ -94,6 +94,16 @@ return type is a body too, so it may depend on comptime parameters.
   common length, binds immutable captures as checked start+index, and increments
   after the body-exit block before repeat. For reuses while's outer result block
   and separate continue target; break skips increment/else. Else cannot see captures.
+- Source `defer` registers a reusable cleanup body without executing it. Lexical
+  scopes after registration retain its body and source position. Scope exits
+  emit `defer` payload instructions in reverse order, but only for crossed scopes.
+  Return/break values are evaluated before cleanup. The body ends in
+  `break_inline BODY_RESULT, void` or a noreturn terminator; escaping control is
+  forbidden during irgen. `ensure_result` requires discarded cleanup values to
+  be void/noreturn. Sema expands each body in a fresh operand-map overlay whose
+  parent resolves captured refs. Cleanup-local operands stay private to that
+  expansion; typed instructions append to the exit's current body. No new TIR
+  cleanup operation is needed, and panic/unreachable do not unwind defers.
 - Sema collects block exits using an analysis-local control-target chain. Each
   exit reserves a noreturn typed block whose body is filled after peer typing
   with any needed coercion and br. This keeps runtime operands in their branch.

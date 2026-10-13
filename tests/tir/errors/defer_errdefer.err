@@ -1,0 +1,3 @@
+tests/tir/errors/defer_errdefer.zig:1:22: error: not supported by szc yet: errdefer
+pub fn main() void { errdefer {} }
+                     ^

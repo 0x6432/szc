@@ -55,9 +55,9 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
 - [x] **M4.1 if/else, comparisons, `and`/`or` short-circuit.**
 - [x] **M4.2 while/break/continue, continue expressions, labeled loops.**
 - [x] **M4.3 Blocks as expressions, labeled break with value.**
-- [ ] **M4.4 for over ranges, `defer`.**
+- [x] **M4.4 for over ranges, `defer`.**
   - [x] **M4.4a Runtime range-based for loops**: captures, multiple inputs, length safety, labels and else/values.
-  - [ ] **M4.4b defer**: scope-exit execution across fallthrough and control transfers.
+  - [x] **M4.4b defer**: scope-exit execution across fallthrough and control transfers.
 - [ ] **M4.5 unreachable, noreturn, `@panic` minimal runtime.**
 
 ## Phase 5: Memory
@@ -116,6 +116,41 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
 ## Completed milestone log
 
 (newest first; each entry: what, limitations, interactions)
+
+### M4.4b Scope-exit defer
+- **What**: expression/block defer, reverse registration order, nested cleanup,
+  lexical names resolved at registration, and delayed evaluation of cleanup loads
+  and call arguments. Defers execute for block fallthrough, implicit void return,
+  explicit return, and named/unnamed break/continue. Return/break operands are
+  evaluated before cleanup. Continue cleanup precedes the loop increment or
+  continue expression; only scopes crossed by the transfer are cleaned up.
+- **Control rules**: return from a defer body and break/continue escaping it are
+  rejected, including dead conditional paths. Local block/loop control within
+  cleanup is allowed. Cleanup can itself be noreturn; subsequent cleanup and the
+  pending transfer are then omitted by sema. Panic/unreachable do not unwind defers.
+  Non-void discarded cleanup expressions (including cleanup block statements) are
+  errors. Errdefer remains an explicit unsupported feature until error unions.
+- **Tests**: 518 unit checks, 466 goldens, 33 ordinary/reference executable inputs
+  plus one szc-only edge input, 12 driver checks and 130 panic cases. GCC/Clang
+  warning-clean sanitizer validation and optimized GCC builds pass. Generated
+  snapshots exercise all 128 signed/unsigned 1–64-bit types on both exit paths.
+  Stress coverage grows cleanup operand maps beyond their initial capacity;
+  panic cases verify each exit kind, cleanup order and operand-before-cleanup.
+  Four 60-second fuzz runs, final irgen/sema fuzz rechecks and standalone
+  20,000-mutation replays per target pass.
+- **Reference**: checked against Zig 0.17 AstGen.deferStmt/genDefers/ret and
+  Sema.ensureResultUsed, with execution and diagnostic comparisons using its binary.
+- **Limitations**: errdefer/error return traces await Phase 6; mutable comptime
+  storage and calls await Phase 7 (constant-only empty cleanup already works).
+  Full diagnostic notes and ordinary unused-result/local checks outside cleanup
+  remain incomplete, as does quoted identifier canonicalization.
+- **Interactions**: arena DeferScope registrations retain one untyped cleanup
+  body, while a dedicated defer-body scope blocks escaping control transfers.
+  Each scope exit emits IR_DEFER with that reusable body. Sema expands it into
+  ordinary typed instructions using a fresh operand-map overlay whose parent
+  exposes captured outer refs; cleanup-local operands never leak between exits.
+  Map growth preserves its parent. IR_ENSURE_RESULT validates ignored cleanup
+  values. Existing TIR/QBE control flow needs no new operation or runtime stack.
 
 ### M4.4a Runtime range-based for loops
 - **What**: bounded integer ranges, multiple range inputs, unbounded companion

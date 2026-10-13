@@ -142,6 +142,8 @@ typedef enum IrDataKind {
 	X(TYPEOF, "typeof", IR_DATA_UN)	/* type of operand */ \
 	X(ELEM_TYPE, "elem_type", IR_DATA_UN)	/* pointee type of pointer value operand */ \
 	X(LOG2_INT_TYPE, "log2_int_type", IR_DATA_UN)	/* shift amount type for integer value operand */ \
+	X(DEFER, "defer", IR_DATA_PAYLOAD)	/* reusable cleanup body, ending in break_inline */ \
+	X(ENSURE_RESULT, "ensure_result", IR_DATA_UN)	/* discarded expression must be void or noreturn */ \
 	X(FOR_LEN, "for_len", IR_DATA_PAYLOAD)	/* count, then bounded input length refs */ \
 	X(RET_TYPE, "ret_type", IR_DATA_NONE)	/* return type of the function being analysed */ \
 	X(ARG_TYPE, "arg_type", IR_DATA_BIN)	/* type of parameter rhs (index) of the call instruction lhs */ \

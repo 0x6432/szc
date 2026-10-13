@@ -87,6 +87,7 @@ typedef struct InstMapEntry {
 } InstMapEntry;
 
 typedef struct InstMap {
+	const struct InstMap *parent;	/* captured operands outside a reusable body */
 	InstMapEntry *entries;
 	uint32_t     count;
 	uint32_t     capacity;	/* power of two */
@@ -595,6 +596,7 @@ operand_value(const Block *block, Operand operand)
 static void
 inst_map_init(InstMap *map, Arena *arena)
 {
+	map->parent = NULL;
 	map->capacity = 64;
 	map->count = 0;
 	map->entries = arena_alloc(arena, map->capacity * sizeof(InstMapEntry), alignof(InstMapEntry));
@@ -613,6 +615,7 @@ inst_map_put(InstMap *map, Arena *arena, IrInstIndex key, Operand operand)
 {
 	if ((map->count + 1) * 2 > map->capacity) {
 		InstMap bigger;
+		bigger.parent = map->parent;
 		bigger.capacity = map->capacity * 2;
 		bigger.count = 0;
 		bigger.entries = arena_alloc(arena, bigger.capacity * sizeof(InstMapEntry), alignof(InstMapEntry));
@@ -644,7 +647,7 @@ inst_map_get(const InstMap *map, IrInstIndex key, Operand *out)
 			return true;
 		}
 	}
-	return false;
+	return map->parent != NULL && inst_map_get(map->parent, key, out);
 }
 
 /* The operand of an IR ref in this block. */
@@ -2339,6 +2342,27 @@ analyze_inst(Block *block, IrInstIndex index, Operand *break_value)
 		if (value.kind == OPERAND_NONE || !operand_to_type(block, dest, src, &type))
 			break;
 		result = coerce(block, value, type, src);
+		break;
+	}
+	case IR_DEFER: {
+		/* Each exit gets fresh cleanup operands; captured outer refs remain visible. */
+		InstMap map;
+		inst_map_init(&map, sema->arena);
+		InstMap *outer = block->map;
+		map.parent = outer;
+		block->map = &map;
+		BodyResult cleanup = analyze_body(block, inst->data.payload);
+		block->map = outer;
+		if (cleanup.end == BODY_NORETURN)
+			return INST_NORETURN;
+		result = void_operand(sema);
+		break;
+	}
+	case IR_ENSURE_RESULT: {
+		Operand value = resolve_ref(block, inst->data.un.operand);
+		if (value.kind != OPERAND_NONE && value.type != T_VOID && value.type != T_NORETURN)
+			sema_error(block, src, "value of type '%s' ignored", sema_type_name(sema, value.type));
+		result = void_operand(sema);
 		break;
 	}
 	case IR_FOR_LEN:

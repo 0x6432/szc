@@ -27,13 +27,16 @@ typedef struct IrGen {
 
 /*
  * Scopes form a chain from the innermost scope outwards. They live on the C
- * stack of the function that opens them.
+ * stack for body/control boundaries, or in the arena for sequential locals
+ * and defer registrations.
  */
 typedef enum ScopeKind {
 	SCOPE_NAMESPACE,	/* container: its declaration names */
 	SCOPE_LOCAL,	/* one local constant, variable or parameter */
 	SCOPE_BODY,	/* an instruction body being built */
 	SCOPE_CONTROL,	/* block/loop targets and optional label */
+	SCOPE_DEFER,	/* registered cleanup, visible after its declaration */
+	SCOPE_DEFER_BODY,	/* control transfers cannot cross this boundary */
 } ScopeKind;
 
 typedef struct Scope {
@@ -61,6 +64,12 @@ typedef struct LocalScope {
 	IrRef     ref;
 	uint32_t  src;
 } LocalScope;
+
+typedef struct DeferScope {
+	Scope base;
+	IrBody body;
+	uint32_t src;
+} DeferScope;
 
 typedef struct GenBody {
 	Scope       base;
@@ -878,6 +887,18 @@ builtin_call(GenBody *body, Scope *scope, ResultInfo info, AstNode *node)
 	return IR_REF_VOID_VALUE;
 }
 
+/* Emit only the cleanup registrations crossed by this scope exit, newest first. */
+static void
+emit_defers(GenBody *body, Scope *scope, const Scope *stop)
+{
+	for (Scope *current = scope; current != stop && current != NULL && current->kind != SCOPE_NAMESPACE; current = current->parent) {
+		if (current->kind == SCOPE_DEFER) {
+			DeferScope *defer_scope = (DeferScope *)current;
+			emit_payload(body, IR_DEFER, defer_scope->src, defer_scope->body);
+		}
+	}
+}
+
 static IrRef
 return_expr(GenBody *body, Scope *scope, AstNode *node)
 {
@@ -886,12 +907,21 @@ return_expr(GenBody *body, Scope *scope, AstNode *node)
 		error_at(body->gen, node->offset, "%s", "'return' outside function scope");
 		return IR_REF_VOID_VALUE;
 	}
+	for (Scope *current = scope; current != NULL && current->kind != SCOPE_NAMESPACE; current = current->parent) {
+		if (current->kind == SCOPE_DEFER_BODY) {
+			error_at(body->gen, node->offset, "%s", "cannot return from defer expression");
+			return IR_REF_VOID_VALUE;
+		}
+	}
 	IrRef value = IR_REF_VOID_VALUE;
 	if (return_node->value != NULL) {
 		IrRef type = emit_none(body, IR_RET_TYPE, node->offset);
 		value = expr(body, scope, result_type(type), return_node->value);
 	}
-	emit_un(body, IR_RET, node->offset, value);
+	if (!body_is_terminated(body)) {
+		emit_defers(body, scope, NULL);
+		emit_un(body, IR_RET, node->offset, value);
+	}
 	return IR_REF_VOID_VALUE;
 }
 
@@ -955,6 +985,10 @@ jump_expr(GenBody *body, Scope *scope, AstNode *node)
 		return IR_REF_VOID_VALUE;
 	}
 	for (Scope *current = scope; current != NULL && current->kind != SCOPE_NAMESPACE; current = current->parent) {
+		if (current->kind == SCOPE_DEFER_BODY) {
+			error_at(body->gen, node->offset, "%s", is_continue ? "cannot continue out of defer expression" : "cannot break out of defer expression");
+			return IR_REF_VOID_VALUE;
+		}
 		if (current->kind != SCOPE_CONTROL)
 			continue;
 		ControlScope *control = (ControlScope *)current;
@@ -977,8 +1011,10 @@ jump_expr(GenBody *body, Scope *scope, AstNode *node)
 			error_at(body->gen, node->offset, "%s", "unreachable code");
 			return IR_REF_VOID_VALUE;
 		}
-		if (!body_is_terminated(body))
+		if (!body_is_terminated(body)) {
+			emit_defers(body, scope, current);
 			emit_break(body, IR_BREAK, node->offset, is_continue ? control->continue_target : control->break_target, value);
+		}
 		return IR_REF_VOID_VALUE;
 	}
 	if (label != STRING_NONE)
@@ -1367,6 +1403,30 @@ assign(GenBody *body, Scope *scope, AstAssign *node)
 	emit_bin(body, IR_STORE, node->base.offset, pointer, value);
 }
 
+/* Lower once at registration, with lexical names and a control-transfer barrier. */
+static Scope *
+defer_stmt(GenBody *body, Scope *scope, AstDefer *node)
+{
+	if (node->is_errdefer) {
+		unsupported(body, &node->base, "errdefer");
+		return scope;
+	}
+	Scope barrier = {SCOPE_DEFER_BODY, scope};
+	GenBody cleanup;
+	body_init(&cleanup, body->gen, &barrier, body->is_comptime);
+	IrRef value = expr(&cleanup, &cleanup.base, result_none, node->body);
+	if (!body_is_terminated(&cleanup)) {
+		emit_un(&cleanup, IR_ENSURE_RESULT, node->body->offset, value);
+		emit_break(&cleanup, IR_BREAK_INLINE, node->base.offset, IR_BODY_RESULT, IR_REF_VOID_VALUE);
+	}
+	DeferScope *registration = ARENA_NEW(body->gen->arena, DeferScope);
+	registration->base.kind = SCOPE_DEFER;
+	registration->base.parent = scope;
+	registration->body = body_finish(&cleanup);
+	registration->src = node->base.offset;
+	return &registration->base;
+}
+
 static void
 block_statements(GenBody *body, Scope *scope, AstBlock *block)
 {
@@ -1381,14 +1441,28 @@ block_statements(GenBody *body, Scope *scope, AstBlock *block)
 		case AST_VAR_DECL:
 			inner = local_var_decl(body, inner, AST_CAST(AstVarDecl, statement, AST_VAR_DECL));
 			break;
+		case AST_DEFER:
+			inner = defer_stmt(body, inner, AST_CAST(AstDefer, statement, AST_DEFER));
+			break;
 		case AST_ASSIGN:
 			assign(body, inner, AST_CAST(AstAssign, statement, AST_ASSIGN));
 			break;
-		default:
-			expr(body, inner, result_none, statement);
+		default: {
+			IrRef value = expr(body, inner, result_none, statement);
+			/* Cleanup blocks obey the same discarded-result rule as the defer operand. */
+			for (Scope *current = inner; current != NULL && current->kind != SCOPE_NAMESPACE; current = current->parent) {
+				if (current->kind == SCOPE_DEFER_BODY) {
+					if (!body_is_terminated(body) && value != IR_REF_VOID_VALUE)
+						emit_un(body, IR_ENSURE_RESULT, statement->offset, value);
+					break;
+				}
+			}
 			break;
 		}
+		}
 	}
+	if (!body_is_terminated(body))
+		emit_defers(body, inner, scope);
 }
 
 /* ---------- Declarations ---------- */
@@ -2019,6 +2093,7 @@ dump_inst(const IrDumper *dumper, IrInstIndex index, uint32_t depth)
 	}
 	case IR_BLOCK:
 	case IR_LOOP:
+	case IR_DEFER:
 		dump_labeled_body(dumper, "", inst->data.payload, depth);
 		break;
 	case IR_CONDBR:

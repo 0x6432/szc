@@ -1,0 +1,6 @@
+tests/tir/errors/defer_named_break.zig:1:39: error: cannot break out of defer expression
+pub fn main() void { outer: { defer { break :outer; } } }
+                                      ^
+tests/tir/errors/defer_named_break.zig:1:22: error: unused block label
+pub fn main() void { outer: { defer { break :outer; } } }
+                     ^

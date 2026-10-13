@@ -1,0 +1,89 @@
+%56 = struct_decl (flags=0) {
+  decl fn "choose" value {
+    %39 = func "choose" {
+      %1 = param "c" type {
+        %0 = break_inline result, @type_bool
+      }
+      %3 = param "x" type {
+        %2 = break_inline result, @type_u8
+      }
+      ret type {
+        %4 = break_inline result, @type_u8
+      }
+      body insts {
+        %5 = alloc type=inferred init=%3
+        %6 = block  {
+          %15 = as @type_bool, %1
+          %21 = if %15 then {
+            %16 = load %5
+            %17 = as @type_u8, %16
+            %18 = defer  {
+              %7 = load %5
+              %8 = int 1
+              %9 = add_wrap %7, %8
+              %10 = elem_type %5
+              %11 = as %10, %9
+              %12 = store %5, %11
+              %13 = ensure_result @void_value
+              %14 = break_inline result, @void_value
+            }
+            %19 = break %6, %17
+          } else {
+            %20 = break_inline result, @void_value
+          }
+          %22 = load %5
+          %23 = int 2
+          %24 = elem_type %5
+          %25 = as %24, %23
+          %26 = add_wrap %22, %25
+          %27 = elem_type %5
+          %28 = as %27, %26
+          %29 = store %5, %28
+          %30 = load %5
+          %31 = as @type_u8, %30
+          %32 = defer  {
+            %7 = load %5
+            %8 = int 1
+            %9 = add_wrap %7, %8
+            %10 = elem_type %5
+            %11 = as %10, %9
+            %12 = store %5, %11
+            %13 = ensure_result @void_value
+            %14 = break_inline result, @void_value
+          }
+          %33 = break %6, %31
+        }
+        %34 = ret_type
+        %35 = load %5
+        %36 = add_wrap %6, %35
+        %37 = as %34, %36
+        %38 = ret %37
+      }
+    }
+    %40 = break_inline result, %39
+  }
+  decl fn "main" pub value {
+    %54 = func "main" {
+      ret type {
+        %41 = break_inline result, @type_u8
+      }
+      body insts {
+        %42 = ret_type
+        %43 = decl_val "choose"
+        %44 = call %43 arg0 {
+          %45 = arg_type %44, 0
+          %46 = as %45, @true
+          %47 = break_inline result, %46
+        } arg1 {
+          %48 = arg_type %44, 1
+          %49 = int 3
+          %50 = as %48, %49
+          %51 = break_inline result, %50
+        }
+        %52 = as %42, %44
+        %53 = ret %52
+      }
+    }
+    %55 = break_inline result, %54
+  }
+}

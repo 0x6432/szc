@@ -19,7 +19,7 @@ FUZZ_SECONDS ?= 60
 LIB_SOURCES = src/arena.c src/source.c src/diag.c src/intern.c src/lexer.c src/ast.c src/parser.c src/irgen.c src/comptime.c src/sema.c src/codegen.c src/driver.c
 HEADERS     = $(wildcard src/*.h)
 FUZZERS     = lexer parser irgen sema
-GENERATED_RUN_TESTS = build/integer-widths.zig build/conditional-widths.zig build/loop-widths.zig build/block-widths.zig build/for-widths.zig
+GENERATED_RUN_TESTS = build/integer-widths.zig build/conditional-widths.zig build/loop-widths.zig build/block-widths.zig build/for-widths.zig build/defer-widths.zig
 
 .PHONY: all release asan test unit-test golden-test e2e-test safety-test fuzz fuzz-run fuzz-standalone clean
 
@@ -63,6 +63,9 @@ build/block-widths.zig: tools/generate_block_tests.py
 	python3 $< $@
 
 build/for-widths.zig: tools/generate_for_tests.py
+	python3 $< $@
+
+build/defer-widths.zig: tools/generate_defer_tests.py
 	python3 $< $@
 
 # QBE must be on PATH (or SZC_QBE). ZIG enables reference-compiler checks.

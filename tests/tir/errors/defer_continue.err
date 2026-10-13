@@ -1,0 +1,3 @@
+tests/tir/errors/defer_continue.zig:1:45: error: cannot continue out of defer expression
+pub fn main() void { for (0..1) |_| { defer continue; } }
+                                            ^

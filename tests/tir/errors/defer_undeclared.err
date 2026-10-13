@@ -1,0 +1,3 @@
+tests/tir/errors/defer_undeclared.zig:1:28: error: use of undeclared identifier 'missing'
+pub fn main() void { defer missing(); }
+                           ^

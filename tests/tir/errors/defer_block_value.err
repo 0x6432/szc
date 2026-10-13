@@ -1,0 +1,3 @@
+tests/tir/errors/defer_block_value.zig:1:30: error: value of type 'comptime_int' ignored
+pub fn main() void { defer { 1; } }
+                             ^

@@ -21,6 +21,21 @@ def binary_case(name, integer_type, operator, lhs, rhs, message="integer overflo
 
 
 def cases():
+    for label, exit_stmt in (("return", "return a;"), ("fallthrough", ""), ("break", "break;"), ("continue", "continue;")):
+        if label == "return":
+            operation = f"fn operation(x: u8) u8 {{ var a = x; defer a += 1; {exit_stmt} }}"
+        elif label == "fallthrough":
+            operation = f"fn operation(x: u8) void {{ var a = x; defer a += 1; {exit_stmt} }}"
+        else:
+            operation = f"fn operation(x: u8) void {{ for (0..1) |_| {{ var a = x; defer a += 1; {exit_stmt} }} }}"
+        source = operation + "\npub fn main() void { _ = operation(255); }\n"
+        yield f"defer_{label}_overflow", source, "integer overflow"
+    source = ("fn operation(x: u8, n: u8, d: u8) void { var a = x; defer a += 1; defer _ = @divTrunc(n, d); }\n"
+              "pub fn main() void { operation(255, 3, 0); }\n")
+    yield "defer_panic_order", source, "division by zero"
+    source = ("fn operation(x: u8, n: u8, d: u8) u8 { var a = x; defer a += 1; return @divTrunc(n, d); }\n"
+              "pub fn main() void { _ = operation(255, 3, 0); }\n")
+    yield "defer_return_operand_panic", source, "division by zero"
     source = ("fn operation(start: usize, end: usize) void { for (start..end) |_| {} }\n"
               "pub fn main() void { operation(2, 1); }\n")
     yield "for_reversed", source, "integer overflow"

@@ -1,0 +1,3 @@
+tests/tir/errors/defer_nested_return.zig:1:47: error: cannot return from defer expression
+pub fn main() void { defer { for (0..1) |_| { return; } } }
+                                              ^

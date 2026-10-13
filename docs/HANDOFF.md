@@ -28,7 +28,8 @@ Read this first when resuming work (the sandbox resets often).
 - Done: M4.2 runtime while/break/continue, labels, loop else/values and compound assignments.
 - Done: M4.3 labeled block expressions, nested named exits and constant-only comptime blocks.
 - Done: M4.4a runtime range-based for, multi-input length checks and usize captures.
-- Next: **M4.4b** defer (errdefer remains Phase 6).
+- Done: M4.4b scope-exit defer across fallthrough, return, break and continue.
+- Next: **M4.5** unreachable/noreturn and minimal explicit @panic runtime.
 - Run `PATH=/data/tools/bin:$PATH ZIG=/data/zig/zig-x86_64-linux-0.17.0/zig make e2e-test`
   locally. `tools/build_qbe.sh` builds the pinned QBE into `build/qbe-src` on CI.
 - Tools: `SZC_QBE`/`qbe`, `SZC_CC`/`cc`; pinned QBE revision
@@ -36,7 +37,35 @@ Read this first when resuming work (the sandbox resets often).
 - Restored sandbox needed libasan/libubsan/clang/compiler-rt reinstalled. Git
   credentials are not persisted; use transient authentication for future pushes.
 - M3.4 (`1882ced`) and M3.5 (`7b36edd`) are pushed to `main`.
-- CI through M4.3 (`72ef1b6`): completed successfully. Check the M4.4a push run.
+- CI through M4.4a (`a3199b3`): completed successfully. Check the M4.4b push run.
+
+## Validation at M4.4b
+
+- GCC/Clang warning-clean sanitizer suites: 518 unit checks, 466 goldens,
+  33 ordinary/reference executable inputs plus one szc-only edge input,
+  12 driver checks and 130 panic cases. Optimized GCC is warning-clean.
+  The defer generator checks all 128 signed/unsigned 1–64-bit types, both
+  runtime exit paths and operand snapshots before cleanup mutations.
+- Four 60-second fuzz targets, final irgen/sema rechecks and standalone replay
+  (20,000 mutations per target) pass. Cleanup map-growth regression checks
+  parent preservation and repeated expansion at different exits.
+- DeferScope retains a reusable IrBody lowered once with registration-time
+  lexical names. IR_DEFER expands it per exit; sema uses a fresh InstMap overlay
+  with captured outer operands visible through parent lookup. Never share the
+  cleanup's local map between exits or lose parent when growing it.
+- emit_defers traverses from the current lexical scope to the transfer target,
+  newest first. Block fallthrough stops at the original block scope; return
+  stops at the namespace; break/continue stops at ControlScope. Return/break
+  operands are generated before cleanup. Panic/unreachable do not unwind.
+- SCOPE_DEFER_BODY blocks escaping break/continue and any return, but allows
+  internal labeled blocks and loops. IR_ENSURE_RESULT enforces ignored-result
+  rules for cleanup expressions and statements. Outside cleanup, full ordinary
+  unused-result checking remains incomplete; don't claim it is implemented.
+- No new TIR/QBE operation is required: normal instructions and existing control
+  joins represent cleanup. Noreturn cleanup stops pending transfers in sema.
+- Errdefer and error-return tracing await Phase 6, mutable comptime storage/calls
+  Phase 7. Constant-only empty cleanup works. Check actual Zig 0.17 sources for
+  future panic semantics; current safety panics already have outlined helpers.
 
 ## Validation at M4.4a
 
@@ -166,14 +195,15 @@ Read this first when resuming work (the sandbox resets often).
   `tools/diff_parse_errors.py build/szc build/ast_spans <file-list> [count] [seed]`.
   `zig fmt --check file.zig` shows the reference's parse error for a mutant.
 - Number literals are lexed loosely (like the reference). Validate them when decoding (M3.x).
-- Phase 4: parser has defer AST nodes; these still need irgen/sema.
-  Runtime range for is implemented; array/slice inputs and comptime loops remain pending.
+- Phase 4: runtime range for and scope-exit defer are implemented.
+  Explicit @panic is next; array/slice inputs and comptime loops remain pending.
   Source if is now IR_IF with IrCondbr payload and break_inline BODY_RESULT arm
   exits. It lowers to TIR block/condbr/br. IR_CONDBR is still a terminator.
   Known conditions select one arm; a sole surviving constant stays known, while
   two runtime exits of comptime-only type are rejected even for equal values.
   Noreturn blocks omit QBE join labels. Reuse the block/loop control targets
-  for range loops and defer, checking the actual 0.17.0 reference first.
+  for future array/slice loops and error cleanup, checking the actual 0.17.0
+  reference first.
 - `make safety-test` checks generated runtime panic cases; setting `ZIG` enables
   reference validation. Checks are always enabled in szc for now. Panic stubs
   print one line via libc write, then abort; explicit unreachable still uses hlt.
