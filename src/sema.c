@@ -1043,6 +1043,74 @@ coerce(Block *block, Operand operand, TypeId dest, uint32_t src)
 	return operand_none;
 }
 
+/* Integer casts use a result type supplied by irgen. */
+static Operand
+analyze_cast(Block *block, const IrInst *inst)
+{
+	Sema *sema = block->sema;
+	Operand dest = resolve_ref(block, inst->data.bin.lhs);
+	Operand operand = resolve_ref(block, inst->data.bin.rhs);
+	TypeId type;
+	uint32_t src = inst->src;
+	if (operand.kind == OPERAND_NONE || !operand_to_type(block, dest, src, &type))
+		return operand_none;
+	if (!is_int_or_comptime_int(sema, type)) {
+		sema_error(block, src, "expected integer or vector, found '%s'", sema_type_name(sema, type));
+		return operand_none;
+	}
+	if (!is_int_or_comptime_int(sema, operand.type)) {
+		sema_error(block, src, "expected integer or vector, found '%s'", sema_type_name(sema, operand.type));
+		return operand_none;
+	}
+	if (inst->op == IR_TRUNCATE && is_int(sema, type)) {
+		const Type *to = &sema->types[type];
+		if (to->as.integer.bits == 0)
+			return comptime_operand(type, value_int_u64(&sema->values, type, 0));
+		if (is_int(sema, operand.type)) {
+			const Type *from = &sema->types[operand.type];
+			if (to->as.integer.is_signed != from->as.integer.is_signed) {
+				sema_error(block, src, "expected %s integer type, found '%s'", to->as.integer.is_signed ? "signed" : "unsigned", sema_type_name(sema, operand.type));
+				return operand_none;
+			}
+			if (to->as.integer.bits >= from->as.integer.bits)
+				return coerce(block, operand, type, src);
+		}
+		if (operand_is_undefined(block, operand))
+			return comptime_operand(type, value_undefined(&sema->values, type));
+		if (operand.kind == OPERAND_COMPTIME) {
+			BigInt value = bigint_wrap(sema->arena, &operand_value(block, operand)->as.integer, to->as.integer.is_signed, to->as.integer.bits);
+			return comptime_operand(type, value_int(&sema->values, type, &value));
+		}
+		return runtime_operand(type, emit_tir_un(block, TIR_TRUNCATE, type, src, operand.inst));
+	}
+	if (operand.kind == OPERAND_COMPTIME)
+		return coerce(block, operand, type, src);
+	if (type == T_COMPTIME_INT) {
+		sema_error(block, src, "unable to cast runtime value to 'comptime_int'");
+		return operand_none;
+	}
+	return runtime_operand(type, emit_tir_un(block, TIR_INT_CAST, type, src, operand.inst));
+}
+
+static Operand
+analyze_int_from_bool(Block *block, const IrInst *inst)
+{
+	Sema *sema = block->sema;
+	Operand operand = resolve_ref(block, inst->data.un.operand);
+	if (operand.kind == OPERAND_NONE)
+		return operand_none;
+	if (operand.type != T_BOOL) {
+		sema_error(block, inst->src, "expected 'bool', found '%s'", type_tag_name(sema, operand.type));
+		return operand_none;
+	}
+	TypeId type = type_int(sema, false, 1);
+	if (operand_is_undefined(block, operand))
+		return comptime_operand(type, value_undefined(&sema->values, type));
+	if (operand.kind == OPERAND_COMPTIME)
+		return comptime_operand(type, value_int_u64(&sema->values, type, operand_value(block, operand)->as.boolean ? 1 : 0));
+	return runtime_operand(type, emit_tir_un(block, TIR_INT_FROM_BOOL, type, inst->src, operand.inst));
+}
+
 /* Peer type of two integer operands (Zig's peer type resolution, integer part). */
 static bool
 peer_type(Block *block, Operand lhs, Operand rhs, uint32_t src, TypeId *out)
@@ -1594,8 +1662,10 @@ analyze_bool_br(Block *block, const IrInst *inst)
 	emit_tir_bin(&else_block, TIR_BR, T_NORETURN, src, result, constant);
 	TirCondbr condbr;
 	condbr.condition = lhs.inst;
-	condbr.then_body = block_finish(&then_block);
-	condbr.else_body = block_finish(&else_block);
+	TirBody rhs_body = block_finish(&then_block);
+	TirBody short_body = block_finish(&else_block);
+	condbr.then_body = is_and ? rhs_body : short_body;
+	condbr.else_body = is_and ? short_body : rhs_body;
 	TirRef branch = emit_tir(&inner, TIR_CONDBR, T_NORETURN, src);
 	block->tir->insts[branch].data.payload = tir_extra(block->tir, sema->arena, &condbr, TIR_WORDS(TirCondbr));
 	block->tir->insts[result].data.payload = block_finish(&inner);
@@ -1908,6 +1978,13 @@ analyze_inst(Block *block, IrInstIndex index, Operand *break_value)
 		result = coerce(block, value, type, src);
 		break;
 	}
+	case IR_INT_CAST:
+	case IR_TRUNCATE:
+		result = analyze_cast(block, inst);
+		break;
+	case IR_INT_FROM_BOOL:
+		result = analyze_int_from_bool(block, inst);
+		break;
 	case IR_TYPEOF: {
 		Operand operand = resolve_ref(block, inst->data.un.operand);
 		if (operand.kind != OPERAND_NONE)
@@ -2288,6 +2365,8 @@ dump_tir_inst(FILE *out, Sema *sema, const TirFunc *tir, TirRef ref, uint32_t de
 	case TIR_NOT:
 	case TIR_NEGATE:
 	case TIR_INT_CAST:
+	case TIR_TRUNCATE:
+	case TIR_INT_FROM_BOOL:
 	case TIR_LOAD:
 	case TIR_REPEAT:
 		fprintf(out, " %%%u\n", (unsigned)inst->data.un.operand);

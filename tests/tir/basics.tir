@@ -31,12 +31,12 @@ fn szc.check.3: fn (u8, bool) bool {
   %1: bool = arg 1
   %2: bool = block {
     %8: noreturn = condbr %1 then {
+      %6: bool = const true
+      %7: noreturn = br %2, %6
+    } else {
       %3: u8 = const 200
       %4: bool = cmp_eq %0, %3
       %5: noreturn = br %2, %4
-    } else {
-      %6: bool = const true
-      %7: noreturn = br %2, %6
     }
   }
   %9: noreturn = ret %2

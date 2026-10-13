@@ -1,0 +1,68 @@
+fn szc.main.1: fn () u8 {
+  %0: i64 = const 63
+  %1: i5 = call szc.signed.2(%0)
+  %2: i64 = int_cast %1
+  %3: u8 = const 64
+  %4: u64 = call szc.widen.4(%3)
+  %5: i64 = int_cast %4
+  %6: i64 = add %5, %2
+  %7: i64 = const -1
+  %8: i64 = add %6, %7
+  %9: u8 = call szc.cast.3(%8)
+  %10: u64 = const 95
+  %11: u5 = call szc.narrow.5(%10)
+  %12: u8 = int_cast %11
+  %13: u8 = add %9, %12
+  %14: u8 = const 1
+  %15: u8 = add %13, %14
+  %16: u8 = const 7
+  %17: u8 = add %15, %16
+  %18: u8 = const 10
+  %19: u8 = sub %17, %18
+  %20: bool = const true
+  %21: u8 = call szc.boolean.6(%20)
+  %22: u8 = add %19, %21
+  %23: bool = const false
+  %24: u8 = call szc.boolean.6(%23)
+  %25: u8 = add %22, %24
+  %26: u8 = const 1
+  %27: u8 = add %25, %26
+  %28: u8 = const 0
+  %29: u8 = add %27, %28
+  %30: u0 = const 0
+  %31: u64 = call szc.zero.7(%30)
+  %32: u8 = int_cast %31
+  %33: u8 = add %29, %32
+  %34: noreturn = ret %33
+}
+fn szc.signed.2: fn (i64) i5 {
+  %0: i64 = arg 0
+  %1: i5 = truncate %0
+  %2: noreturn = ret %1
+}
+fn szc.cast.3: fn (i64) u8 {
+  %0: i64 = arg 0
+  %1: u8 = int_cast %0
+  %2: noreturn = ret %1
+}
+fn szc.widen.4: fn (u8) u64 {
+  %0: u8 = arg 0
+  %1: u64 = int_cast %0
+  %2: noreturn = ret %1
+}
+fn szc.narrow.5: fn (u64) u5 {
+  %0: u64 = arg 0
+  %1: u5 = truncate %0
+  %2: noreturn = ret %1
+}
+fn szc.boolean.6: fn (bool) u8 {
+  %0: bool = arg 0
+  %1: u1 = int_from_bool %0
+  %2: u8 = int_cast %1
+  %3: noreturn = ret %2
+}
+fn szc.zero.7: fn (u0) u64 {
+  %0: u0 = arg 0
+  %1: u64 = int_cast %0
+  %2: noreturn = ret %1
+}

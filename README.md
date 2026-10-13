@@ -1,6 +1,6 @@
 # szc
 
-A Zig 0.17.0 compiler written in C99/C11, used to **bootstrap the official Zig
+A Zig 0.17.0 compiler written in C11, used to **bootstrap the official Zig
 compiler** on x86_64-linux. It emits [QBE](https://c9x.me/compile/) IL, then
 runs `qbe` and the system `cc` to assemble and link.
 
@@ -9,7 +9,8 @@ builtins the Zig compiler and its std need. There are no SPIR-V, wasm or other b
 
 ## Status
 
-See [docs/MILESTONES.md](docs/MILESTONES.md). The lexer is complete; the parser is next.
+See [docs/MILESTONES.md](docs/MILESTONES.md). The lexer and parser are complete. Minimal integer/bool programs compile
+through typed IR and QBE to native executables; arithmetic safety is next.
 
 ## Build & test
 
@@ -22,7 +23,15 @@ make fuzz fuzz-run   # libFuzzer (clang)
 
 ```sh
 build/szc tokens file.zig
+build/szc tir file.zig
+build/szc emit-qbe file.zig
+build/szc build-exe file.zig -o program --keep-temps
+build/szc run file.zig
 ```
+
+QBE must be on `PATH` (or set `SZC_QBE`); `SZC_CC` selects the system C compiler.
+Both variables name executables, not shell commands. QBE revision used for testing:
+`e786f06032fefa2e3790d6b1c9e31ed138f475a6`.
 
 ## Layout
 

@@ -1,0 +1,3 @@
+tests/tir/errors/int_from_bool_type.zig:2:12: error: expected 'bool', found 'comptime_int'
+    return @intFromBool(1);
+           ^

@@ -44,7 +44,7 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
 - [x] **M3.1 Untyped IR (ZIR-like) design + `szc ir` dump.**
 - [x] **M3.2 irgen for functions, integer literals, `return`, params, locals.**
 - [x] **M3.3 Typed IR + minimal sema**: `void`, `bool`, `i32`/`u8`/`usize` etc., coercion of comptime_int literals.
-- [ ] **M3.4 QBE codegen**: functions, arithmetic, calls; driver runs `qbe` and `cc`.
+- [x] **M3.4 QBE codegen**: functions, arithmetic, calls; driver runs `qbe` and `cc`.
 - [ ] **M3.5 End-to-end test harness** (`tests/run/*.zig` check exit code/stdout).
 - [ ] **M3.6 Arithmetic semantics**: wrapping/saturating ops, division, shifts, safety checks → panic stub.
 
@@ -112,6 +112,32 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
 ## Completed milestone log
 
 (newest first; each entry: what, limitations, interactions)
+
+### M3.4 QBE codegen (`src/codegen.[ch]`, `src/driver.[ch]`)
+- **What**: typed IR to QBE IL, integer/bool functions and direct calls, arithmetic,
+  comparisons, casts, local alloc/load/store, branch/block/loop instructions and `hlt`.
+  Integers up to 32 bits use `w`, up to 64 use `l`; narrow integers stay sign- or
+  zero-extended after operations. Stack slots are hoisted to entry. A C `main` wrapper
+  handles Zig `main` returning u8/void/noreturn. `emit-qbe`, `build-exe` (`-o`,
+  `--keep-temps`) and `run` commands; driver executes separate QBE and system cc
+  processes without a shell (`SZC_QBE`/`SZC_CC`). Integer builtins `@as`, `@intCast`,
+  `@truncate`, `@intFromBool` support runtime lowering and comptime evaluation.
+  Checked Zig 0.17.0 `Sema.zig`: truncate permits widening and requires matching
+  signedness for typed operands. Fixed runtime `or` branch ordering and nested-body
+  local lookup. Golden QBE/cast tests; sema fuzzer also emits QBE after successful
+  analysis; eight executable tests compared against the official Zig binary.
+  GCC and Clang `-Werror` sanitizer suites pass (366 goldens), all four fuzzers
+  complete 60 seconds each, and a generated 128-function integer-width check
+  (signed/unsigned 1–64 bits) exits zero with both szc and Zig.
+- **Limitations**: runtime integers wider than 64 bits and floats are rejected;
+  arithmetic and integer-cast safety checks are deferred to M3.6. Full C ABI handling,
+  globals, indirect calls and std startup are not implemented. Driver intermediates
+  are named `<output>.ssa`/`.s`; concurrent builds must use different output paths.
+  Source-level loops/if still await Phase 4; short-circuit bool control flow works.
+- **Interactions**: codegen consumes analysed `SemaFunc`/`TirFunc` and interned values;
+  `br` assigns the target block result before jumping. `run` uses a temporary directory
+  and propagates program exit status; a failed compiler stage never invokes QBE/cc.
+  M3.5 will automate executable exit/stdout and reference-compiler checks.
 
 ### M3.3 Typed IR + minimal sema (`src/tir.h`, `src/sema.[ch]`, `src/comptime.[ch]`)
 - **What**: typed IR (`tir.h`): per-function instruction array, every instruction typed,

@@ -1,0 +1,122 @@
+function w $szc.main.1() {
+@start
+	%t1 =w call $szc.identity.2(w 0)
+	jnz %t1, @c7_then, @c7_else
+@c7_then
+	%t3 =w call $szc.fail.3()
+	%t2 =w copy %t3
+	jmp @b2
+@c7_else
+	%t2 =w copy 0
+	jmp @b2
+@b2
+	%t9 =w call $szc.identity.2(w 1)
+	jnz %t9, @c15_then, @c15_else
+@c15_then
+	%t10 =w copy 1
+	jmp @b10
+@c15_else
+	%t11 =w call $szc.fail.3()
+	%t10 =w copy %t11
+	jmp @b10
+@b10
+	%t17 =w call $szc.identity.2(w 1)
+	jnz %t17, @c24_then, @c24_else
+@c24_then
+	%t20 =w call $szc.identity.2(w 1)
+	%t18 =w copy %t20
+	jmp @b18
+@c24_else
+	%t18 =w copy 0
+	jmp @b18
+@b18
+	%t26 =w call $szc.identity.2(w 0)
+	jnz %t26, @c33_then, @c33_else
+@c33_then
+	%t27 =w copy 1
+	jmp @b27
+@c33_else
+	%t29 =w call $szc.identity.2(w 1)
+	%t27 =w copy %t29
+	jmp @b27
+@b27
+	%t35 =w call $szc.identity.2(w 1)
+	jnz %t35, @c42_then, @c42_else
+@c42_then
+	%t38 =w call $szc.identity.2(w 0)
+	%t36 =w copy %t38
+	jmp @b36
+@c42_else
+	%t36 =w copy 0
+	jmp @b36
+@b36
+	jnz %t36, @c49_then, @c49_else
+@c49_then
+	%t43 =w copy 1
+	jmp @b43
+@c49_else
+	%t45 =w call $szc.identity.2(w 1)
+	%t43 =w copy %t45
+	jmp @b43
+@b43
+	%t52 =w call $szc.combine.4(w 1, w 1)
+	%t54 =w call $szc.identity.2(w 0)
+	%t55 =w xor %t54, 1
+	%t55 =w and %t55, 1
+	%t56 =w copy %t2
+	%t57 =w copy %t56
+	%t58 =w copy %t10
+	%t59 =w copy %t58
+	%t60 =w add %t57, %t59
+	%t60 =w and %t60, 255
+	%t61 =w copy %t18
+	%t62 =w copy %t61
+	%t63 =w add %t60, %t62
+	%t63 =w and %t63, 255
+	%t64 =w copy %t27
+	%t65 =w copy %t64
+	%t66 =w add %t63, %t65
+	%t66 =w and %t66, 255
+	%t67 =w copy %t43
+	%t68 =w copy %t67
+	%t69 =w add %t66, %t68
+	%t69 =w and %t69, 255
+	%t70 =w copy %t52
+	%t71 =w copy %t70
+	%t72 =w add %t69, %t71
+	%t72 =w and %t72, 255
+	%t73 =w copy %t55
+	%t74 =w copy %t73
+	%t75 =w add %t72, %t74
+	%t75 =w and %t75, 255
+	ret %t75
+}
+
+function w $szc.identity.2(w %t0) {
+@start
+	ret %t0
+}
+
+function w $szc.fail.3() {
+@start
+	hlt
+}
+
+function w $szc.combine.4(w %t0, w %t1) {
+@start
+	jnz %t0, @c6_then, @c6_else
+@c6_then
+	%t2 =w copy %t1
+	jmp @b2
+@c6_else
+	%t2 =w copy 0
+	jmp @b2
+@b2
+	ret %t2
+}
+
+export function w $main() {
+@start
+	%status =w call $szc.main.1()
+	ret %status
+}

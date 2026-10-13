@@ -81,5 +81,9 @@ for input in $(find tests/tir/errors -name '*.zig' | sort); do
 	check_errors tir "$input" "${input%.zig}.err"
 done
 
+for input in $(find tests/codegen -maxdepth 1 -name '*.zig' | sort); do
+	check emit-qbe "$input" "${input%.zig}.ssa"
+done
+
 echo "golden: $pass passed, $fail failed"
 [ $fail -eq 0 ]

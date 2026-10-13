@@ -1,6 +1,6 @@
 /*
  * sema fuzz target (libFuzzer entry point). Inputs that parse and lower to IR
- * are analysed as an executable and the typed IR is dumped; this must not
+ * are analysed as an executable; typed IR and QBE IL are dumped. This must not
  * crash, leak or loop forever.
  */
 #include <stdint.h>
@@ -8,6 +8,7 @@
 #include <stdlib.h>
 
 #include "arena.h"
+#include "codegen.h"
 #include "diag.h"
 #include "intern.h"
 #include "ir.h"
@@ -38,10 +39,12 @@ LLVMFuzzerTestOneInput(const uint8_t *data, size_t size)
 		IrFile *ir = irgen_file(&arena, &diag, &interner, source_get(&sources, file), file, root);
 		if (!diag_has_errors(&diag)) {
 			Sema *sema = sema_create(&arena, &diag, &interner, &sources);
-			sema_analyze_executable(sema, file, ir);
+			bool analysed = sema_analyze_executable(sema, file, ir);
 			FILE *null_out = fopen("/dev/null", "w");
 			if (null_out != NULL) {
 				sema_dump(null_out, sema);
+				if (analysed)
+					codegen_qbe(null_out, sema, &diag);
 				fclose(null_out);
 			}
 		}

@@ -1,0 +1,3 @@
+tests/tir/errors/truncate_signedness.zig:2:12: error: expected unsigned integer type, found 'i16'
+    return @truncate(a);
+           ^

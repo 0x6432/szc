@@ -12,7 +12,7 @@ Read this first when resuming work (the sandbox resets often).
 4. `make test && make fuzz-standalone` must pass before new work.
 5. Check `docs/MILESTONES.md` for the next unchecked milestone.
 6. Push after every milestone (and more often during long ones).
-   The GitHub token is **never** committed. Ask the user for it.
+   The GitHub token is **never** committed. Restore authenticated Git access if needed.
 
 ## Current state
 
@@ -20,8 +20,13 @@ Read this first when resuming work (the sandbox resets often).
   `std.zig.Ast`).
 - Done: M3.1–M3.2 (untyped IR + irgen basics, `szc ir`).
 - Done: M3.3 (typed IR + minimal sema, `szc tir`).
-- Next: **M3.4** QBE codegen (`src/codegen.c`: TIR -> QBE IL; driver `szc build-exe`/`run`
-  writes `.ssa`, runs `qbe` (PATH or `$QBE`), then `cc`), then M3.5 end-to-end tests.
+- Done: M3.4 QBE codegen + driver (`emit-qbe`, `build-exe`, `run`), integer casts.
+- Next: **M3.5** automated executable tests, then M3.6 arithmetic safety.
+- Tools: `SZC_QBE`/`qbe`, `SZC_CC`/`cc`; pinned QBE revision
+  `e786f06032fefa2e3790d6b1c9e31ed138f475a6`. Local QBE: `/data/tools/bin/qbe`.
+- Restored sandbox needed libasan/libubsan/clang/compiler-rt reinstalled. Saved Git
+  credentials did not survive; push fails without restoring authentication.
+- CI for previous M3.3 commit `2b0d0ca`: completed successfully.
 
 ## Notes for the next steps
 

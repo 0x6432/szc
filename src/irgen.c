@@ -438,6 +438,8 @@ is_coerced_to(const GenBody *body, IrRef value, IrRef type)
 		return true;
 	if (type == IR_REF_TYPE_BOOL && inst->op >= IR_CMP_EQ && inst->op <= IR_CMP_GTE)
 		return true;
+	if ((inst->op == IR_INT_CAST || inst->op == IR_TRUNCATE) && inst->data.bin.lhs == type)
+		return true;
 	return false;
 }
 
@@ -674,7 +676,7 @@ binary(GenBody *body, Scope *scope, ResultInfo info, AstNode *node)
 	if (binary_node->op == AST_OP_BOOL_AND || binary_node->op == AST_OP_BOOL_OR) {
 		IrRef lhs = expr(body, scope, result_type(IR_REF_TYPE_BOOL), binary_node->lhs);
 		GenBody rhs_body;
-		body_init(&rhs_body, body->gen, &body->base, body->is_comptime);
+		body_init(&rhs_body, body->gen, scope, body->is_comptime);
 		IrRef rhs = expr(&rhs_body, &rhs_body.base, result_type(IR_REF_TYPE_BOOL), binary_node->rhs);
 		emit_break(&rhs_body, IR_BREAK_INLINE, node->offset, IR_BODY_RESULT, rhs);
 		IrBoolBr payload;
@@ -737,9 +739,9 @@ call(GenBody *body, Scope *scope, ResultInfo info, AstNode *node)
 	IrBody *arg_bodies = arena_alloc(gen->arena, (arg_count + 1) * sizeof(IrBody), alignof(IrBody));
 	for (uint32_t i = 0; i < arg_count; i++) {
 		GenBody arg_body;
-		body_init(&arg_body, gen, &body->base, body->is_comptime);
+		body_init(&arg_body, gen, scope, body->is_comptime);
 		IrRef arg_type = emit_bin(&arg_body, IR_ARG_TYPE, call_node->args.items[i]->offset, call_ref, (IrRef)i);
-		IrRef value = expr(&arg_body, scope, result_type(arg_type), call_node->args.items[i]);
+		IrRef value = expr(&arg_body, &arg_body.base, result_type(arg_type), call_node->args.items[i]);
 		emit_break(&arg_body, IR_BREAK_INLINE, call_node->args.items[i]->offset, IR_BODY_RESULT, value);
 		arg_bodies[i] = body_finish(&arg_body);
 	}
@@ -754,6 +756,99 @@ call(GenBody *body, Scope *scope, ResultInfo info, AstNode *node)
 	gen->ir->insts[call_index].data.payload = payload;
 	body_push(body, call_index);
 	return rvalue(body, info, call_ref, node->offset);
+}
+
+/* ---------- Builtin calls ---------- */
+
+typedef enum Builtin {
+	BUILTIN_AS,
+	BUILTIN_INT_CAST,
+	BUILTIN_TRUNCATE,
+	BUILTIN_INT_FROM_BOOL,
+} Builtin;
+
+typedef struct BuiltinInfo {
+	const char *name;	/* without '@' */
+	Builtin		builtin;
+	uint32_t	arg_count;
+} BuiltinInfo;
+
+static const BuiltinInfo builtin_table[] = {
+	{"as", BUILTIN_AS, 2},
+	{"intCast", BUILTIN_INT_CAST, 1},
+	{"truncate", BUILTIN_TRUNCATE, 1},
+	{"intFromBool", BUILTIN_INT_FROM_BOOL, 1},
+};
+
+static const BuiltinInfo *
+lookup_builtin(const char *name, uint32_t length)
+{
+	for (size_t i = 0; i < sizeof(builtin_table) / sizeof(builtin_table[0]); i++) {
+		if (strlen(builtin_table[i].name) == length && memcmp(builtin_table[i].name, name, length) == 0)
+			return &builtin_table[i];
+	}
+	return NULL;
+}
+
+/*
+ * The result type a cast builtin converts to, or NONE (after reporting) if the
+ * expression has no result type.
+ */
+static IrRef
+cast_result_type(GenBody *body, ResultInfo info, AstNode *node, const char *name)
+{
+	switch (info.kind) {
+	case RESULT_TYPE:
+		return info.ref;
+	case RESULT_PTR_ELEM:
+		return emit_un(body, IR_ELEM_TYPE, node->offset, info.ref);
+	case RESULT_NONE:
+		break;
+	}
+	error_at(body->gen, node->offset, "@%s must have a known result type", name);
+	return IR_REF_NONE;
+}
+
+static IrRef
+builtin_call(GenBody *body, Scope *scope, ResultInfo info, AstNode *node)
+{
+	IrGen *gen = body->gen;
+	AstBuiltinCall *call_node = AST_CAST(AstBuiltinCall, node, AST_BUILTIN_CALL);
+	const char *name = gen->source + call_node->name.start + 1;
+	uint32_t length = call_node->name.end - call_node->name.start - 1;
+	const BuiltinInfo *builtin = lookup_builtin(name, length);
+	if (builtin == NULL) {
+		error_at(gen, node->offset, "not supported by szc yet: builtin %s", arena_strndup(gen->arena, name - 1, length + 1));
+		return IR_REF_VOID_VALUE;
+	}
+	AstNode **args = call_node->args.items;
+	if (call_node->args.count != builtin->arg_count) {
+		char message[64];
+		snprintf(message, sizeof(message), "expected %u argument%s, found %u", (unsigned)builtin->arg_count, builtin->arg_count == 1 ? "" : "s", (unsigned)call_node->args.count);
+		error_at(gen, node->offset, "%s", message);
+		return IR_REF_VOID_VALUE;
+	}
+	switch (builtin->builtin) {
+	case BUILTIN_AS: {
+		IrRef type = type_expr(body, scope, args[0]);
+		IrRef value = expr(body, scope, result_type(type), args[1]);
+		return rvalue(body, info, value, node->offset);
+	}
+	case BUILTIN_INT_CAST:
+	case BUILTIN_TRUNCATE: {
+		IrRef type = cast_result_type(body, info, node, builtin->name);
+		IrRef operand = expr(body, scope, result_none, args[0]);
+		if (type == IR_REF_NONE)
+			return IR_REF_VOID_VALUE;
+		IrOp op = builtin->builtin == BUILTIN_INT_CAST ? IR_INT_CAST : IR_TRUNCATE;
+		return emit_bin(body, op, node->offset, type, operand);
+	}
+	case BUILTIN_INT_FROM_BOOL: {
+		IrRef operand = expr(body, scope, result_none, args[0]);
+		return rvalue(body, info, emit_un(body, IR_INT_FROM_BOOL, node->offset, operand), node->offset);
+	}
+	}
+	return IR_REF_VOID_VALUE;
 }
 
 static IrRef
@@ -802,6 +897,8 @@ expr(GenBody *body, Scope *scope, ResultInfo info, AstNode *node)
 		return unary(body, scope, info, node);
 	case AST_CALL:
 		return call(body, scope, info, node);
+	case AST_BUILTIN_CALL:
+		return builtin_call(body, scope, info, node);
 	case AST_RETURN:
 		return return_expr(body, scope, node);
 	case AST_BLOCK:

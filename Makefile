@@ -16,7 +16,7 @@ SAN_FLAGS  = -fsanitize=address,undefined -fno-omit-frame-pointer -fno-sanitize-
 FUZZ_CC    ?= clang
 FUZZ_SECONDS ?= 60
 
-LIB_SOURCES = src/arena.c src/source.c src/diag.c src/intern.c src/lexer.c src/ast.c src/parser.c src/irgen.c src/comptime.c src/sema.c
+LIB_SOURCES = src/arena.c src/source.c src/diag.c src/intern.c src/lexer.c src/ast.c src/parser.c src/irgen.c src/comptime.c src/sema.c src/codegen.c src/driver.c
 HEADERS     = $(wildcard src/*.h)
 FUZZERS     = lexer parser irgen sema
 

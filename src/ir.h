@@ -143,6 +143,10 @@ typedef enum IrDataKind {
 	X(ELEM_TYPE, "elem_type", IR_DATA_UN)	/* pointee type of pointer value operand */ \
 	X(RET_TYPE, "ret_type", IR_DATA_NONE)	/* return type of the function being analysed */ \
 	X(ARG_TYPE, "arg_type", IR_DATA_BIN)	/* type of parameter rhs (index) of the call instruction lhs */ \
+	/* Casts (builtins) */ \
+	X(INT_CAST, "int_cast", IR_DATA_BIN)	/* @intCast: integer rhs to type lhs, value must fit */ \
+	X(TRUNCATE, "truncate", IR_DATA_BIN)	/* @truncate: integer rhs to type lhs, dropping high bits */ \
+	X(INT_FROM_BOOL, "int_from_bool", IR_DATA_UN)	/* @intFromBool: u1 */ \
 	/* Arithmetic and logic */ \
 	X(ADD, "add", IR_DATA_BIN) \
 	X(SUB, "sub", IR_DATA_BIN) \

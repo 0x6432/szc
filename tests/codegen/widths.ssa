@@ -1,0 +1,145 @@
+function w $szc.main.1() {
+@start
+	%t0 =l alloc8 8
+	storel 0, %t0
+	%t3 =l loadl %t0
+	%t5 =l call $szc.wrap_u33.2(l 8589934591)
+	%t6 =l copy %t5
+	%t7 =l add %t3, %t6
+	storel %t7, %t0
+	%t10 =l call $szc.wrap_i40.3(l 549755813887)
+	%t12 =l call $szc.widen_signed.4(w -1)
+	%t13 =l loadl %t0
+	%t16 =w call $szc.shl_u8.5(w 255, w 4)
+	%t17 =l extuw %t16
+	%t18 =l add %t13, %t17
+	storel %t18, %t0
+	%t20 =l loadl %t0
+	%t23 =w call $szc.rem_u16.7(w 1000, w 7)
+	%t24 =l call $szc.widen.6(w %t23)
+	%t25 =l add %t20, %t24
+	storel %t25, %t0
+	%t27 =l loadl %t0
+	%t30 =l call $szc.div_u64.8(l 1099511627776, l 274877906944)
+	%t31 =l add %t27, %t30
+	storel %t31, %t0
+	%t33 =l loadl %t0
+	%t35 =w call $szc.not_u5.9(w 1)
+	%t36 =l extuw %t35
+	%t37 =l add %t33, %t36
+	storel %t37, %t0
+	%t41 =w call $szc.shr_i16.10(w -64, w 3)
+	%t44 =w call $szc.xor_i32.11(w -1, w 5)
+	%t45 =w copy %t41
+	%t46 =w add %t45, %t44
+	%t47 =l extsw %t46
+	%t48 =l add %t47, %t12
+	%t49 =l copy %t10
+	%t50 =l add %t48, %t49
+	%t52 =l add %t50, 549755813888
+	%t54 =l add %t52, 15
+	%t56 =l add %t54, 100
+	%t58 =l sub %t56, 280
+	%t59 =l loadl %t0
+	%t61 =l sub %t59, 280
+	storel %t61, %t0
+	%t63 =l loadl %t0
+	%t65 =l add %t63, 100
+	%t67 =l add %t58, 180
+	%t68 =w call $szc.to_u8.12(l %t65, l %t67)
+	ret %t68
+}
+
+function l $szc.wrap_u33.2(l %t0) {
+@start
+	%t2 =l add %t0, 1
+	%t2 =l and %t2, 8589934591
+	ret %t2
+}
+
+function l $szc.wrap_i40.3(l %t0) {
+@start
+	%t2 =l add %t0, 1
+	%t2 =l shl %t2, 24
+	%t2 =l sar %t2, 24
+	ret %t2
+}
+
+function l $szc.widen_signed.4(w %t0) {
+@start
+	%t1 =l extsw %t0
+	ret %t1
+}
+
+function w $szc.shl_u8.5(w %t0, w %t1) {
+@start
+	%t2 =w shl %t0, %t1
+	%t2 =w and %t2, 255
+	ret %t2
+}
+
+function l $szc.widen.6(w %t0) {
+@start
+	%t1 =l extuw %t0
+	ret %t1
+}
+
+function w $szc.rem_u16.7(w %t0, w %t1) {
+@start
+	%t2 =w urem %t0, %t1
+	ret %t2
+}
+
+function l $szc.div_u64.8(l %t0, l %t1) {
+@start
+	%t2 =l udiv %t0, %t1
+	ret %t2
+}
+
+function w $szc.not_u5.9(w %t0) {
+@start
+	%t1 =w xor %t0, -1
+	%t1 =w and %t1, 31
+	ret %t1
+}
+
+function w $szc.shr_i16.10(w %t0, w %t1) {
+@start
+	%t2 =w sar %t0, %t1
+	ret %t2
+}
+
+function w $szc.xor_i32.11(w %t0, w %t1) {
+@start
+	%t2 =w xor %t0, %t1
+	ret %t2
+}
+
+function w $szc.to_u8.12(l %t0, l %t1) {
+@start
+	%t2 =w call $szc.low.13(l %t0)
+	%t3 =w call $szc.low_signed.14(l %t1)
+	%t4 =w add %t2, %t3
+	%t4 =w and %t4, 255
+	ret %t4
+}
+
+function w $szc.low.13(l %t0) {
+@start
+	%t1 =w copy %t0
+	%t1 =w and %t1, 255
+	ret %t1
+}
+
+function w $szc.low_signed.14(l %t0) {
+@start
+	%t1 =w copy %t0
+	%t1 =w and %t1, 255
+	ret %t1
+}
+
+export function w $main() {
+@start
+	%status =w call $szc.main.1()
+	ret %status
+}

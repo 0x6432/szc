@@ -40,6 +40,8 @@ typedef uint32_t TirBody;	/* extra index of a body, 0 = none */
 	X(NOT, "not")	/* un: bool not / bitwise not */ \
 	X(NEGATE, "negate")	/* un: wrapping negation */ \
 	X(INT_CAST, "int_cast")	/* un: widen/narrow integer to `type` */ \
+	X(TRUNCATE, "truncate")	/* un: discard high integer bits */ \
+	X(INT_FROM_BOOL, "int_from_bool")	/* un: bool -> u1 */ \
 	X(ALLOC, "alloc")	/* type is the pointer type; stack slot */ \
 	X(LOAD, "load")	/* un: pointer */ \
 	X(STORE, "store")	/* bin: pointer, value */ \

@@ -8,6 +8,9 @@
  *   szc ir <file>            print the untyped IR
  *   szc tir <file>           analyse <file> as an executable and print the typed IR
  *   szc parse <file>...      parse files and report syntax errors only
+ *   szc emit-qbe <file>      print the QBE IL of an executable
+ *   szc build-exe <file> [-o <path>] [--keep-temps]
+ *   szc run <file> [-- args...]
  *   szc version
  */
 #include <inttypes.h>
@@ -17,6 +20,7 @@
 #include "arena.h"
 #include "ast_dump.h"
 #include "diag.h"
+#include "driver.h"
 #include "intern.h"
 #include "ir.h"
 #include "lexer.h"
@@ -45,6 +49,11 @@ print_usage(FILE *out)
 	      "  ir <file>            print the untyped IR\n"
 	      "  tir <file>           print the typed IR of an executable\n"
 	      "  parse <file>...      check files for syntax errors\n"
+	      "  emit-qbe <file>      print the QBE IL of an executable\n"
+	      "  build-exe <file> [-o <path>] [--keep-temps]\n"
+	      "                       compile an executable (needs qbe and cc)\n"
+	      "  run <file> [-- <args>...]\n"
+	      "                       compile and run an executable\n"
 	      "  version              print version\n", out);
 }
 
@@ -190,6 +199,52 @@ command_parse(char **paths, int count, ParseMode mode)
 	return status;
 }
 
+/* The default output name: the input's base name without `.zig`. */
+static char *
+default_output(const char *input, char *buffer, size_t size)
+{
+	const char *base = strrchr(input, '/');
+	base = base == NULL ? input : base + 1;
+	size_t length = strlen(base);
+	if (length > 4 && strcmp(base + length - 4, ".zig") == 0)
+		length = length - 4;
+	if (length + 1 > size)
+		length = size - 1;
+	memcpy(buffer, base, length);
+	buffer[length] = '\0';
+	return buffer;
+}
+
+static int
+command_build_exe(int count, char **args)
+{
+	BuildOptions options;
+	options.input = NULL;
+	options.output = NULL;
+	options.keep_temporaries = false;
+	for (int i = 0; i < count; i++) {
+		if (strcmp(args[i], "-o") == 0 && i + 1 < count) {
+			options.output = args[i + 1];
+			i = i + 1;
+		} else if (strcmp(args[i], "--keep-temps") == 0) {
+			options.keep_temporaries = true;
+		} else if (options.input == NULL && args[i][0] != '-') {
+			options.input = args[i];
+		} else {
+			print_usage(stderr);
+			return 2;
+		}
+	}
+	if (options.input == NULL) {
+		print_usage(stderr);
+		return 2;
+	}
+	char buffer[256];
+	if (options.output == NULL)
+		options.output = default_output(options.input, buffer, sizeof(buffer));
+	return driver_build_exe(&options);
+}
+
 int
 main(int argc, char **argv)
 {
@@ -252,6 +307,23 @@ main(int argc, char **argv)
 			return 2;
 		}
 		return command_parse(argv + 2, argc - 2, PARSE_CHECK_ONLY);
+	}
+
+	if (strcmp(command, "emit-qbe") == 0) {
+		if (argc != 3) {
+			print_usage(stderr);
+			return 2;
+		}
+		return driver_emit_qbe(argv[2], stdout);
+	}
+	if (strcmp(command, "build-exe") == 0)
+		return command_build_exe(argc - 2, argv + 2);
+	if (strcmp(command, "run") == 0) {
+		if (argc < 3 || (argc > 3 && strcmp(argv[3], "--") != 0)) {
+			print_usage(stderr);
+			return 2;
+		}
+		return driver_run(argv[2], argv + 4, argc > 3 ? argc - 4 : 0);
 	}
 
 	fprintf(stderr, "szc: unknown command '%s'\n", command);
