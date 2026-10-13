@@ -52,7 +52,7 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
 
 ## Phase 4: Control flow
 
-- [ ] **M4.1 if/else, comparisons, `and`/`or` short-circuit.**
+- [x] **M4.1 if/else, comparisons, `and`/`or` short-circuit.**
 - [ ] **M4.2 while/break/continue, continue expressions, labeled loops.**
 - [ ] **M4.3 Blocks as expressions, labeled break with value.**
 - [ ] **M4.4 for over ranges, `defer`.**
@@ -114,6 +114,40 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
 ## Completed milestone log
 
 (newest first; each entry: what, limitations, interactions)
+
+### M4.1 Source if/else, comparisons and boolean short-circuit
+- **What**: source statement/expression `if`, optional `else`, else-if chains,
+  unbraced plain assignments, branch-local declarations, integer/bool results,
+  result-type propagation into branch casts (return/local/assignment/call argument),
+  integer peer-type joins and early returns. Known conditions analyze only the
+  selected arm. Runtime arms lower to existing TIR block/condbr/br; a branch that
+  returns has no merge operand. A sole constant exit stays comptime-known while
+  preserving control effects; two runtime exits reject comptime-only result types,
+  even if their values are identical, like Zig 0.17.0.
+- **Found on the way**: result coercions must not be appended after direct branch
+  terminators. Noreturn result blocks must not emit a dangling QBE join label.
+  Known-lhs boolean short-circuiting now propagates a noreturn RHS. Zig accepts
+  syntax after an if whose two arms return, then sema skips it; do not add an
+  irgen unreachable-code error based on inspecting both arms.
+- **Testing**: IR/TIR/QBE goldens and diagnostic cases; executable tests cover
+  nested branches, both/one returning arms, void/u0 results, skipped division
+  guards, branch assignments, signed/unsigned comparisons and short-circuit
+  composition. `tools/generate_conditional_tests.py` adds branch/merge checks for
+  all 128 signed/unsigned 1–64-bit types, included in `make e2e-test` and CI.
+  GCC/Clang sanitizer suites pass 518 unit checks, 389 goldens, 16 ordinary e2e
+  inputs, 12 driver checks and 115 panic cases. Four 60-second libFuzzer runs,
+  final sema/codegen 60-second run and standalone corpus replay are clean.
+  Diagnostics checked against the actual 0.17.0 binary and Sema.zig's
+  zirCondbr/zirBlock implementations. Both runtime arms are analyzed before
+  collecting results, so independent branch errors are collected.
+- **Limitations**: optional/error-union payload captures are explicitly rejected
+  until M6.3/M6.5. Labeled value blocks, loops, break/continue and defer remain
+  upcoming milestones. Compound assignments and unused-result/local diagnostics
+  remain unsupported. Explicit unreachable still emits hlt until M4.5.
+- **Interactions**: IR_IF is a value instruction with an IrCondbr payload and
+  break_inline BODY_RESULT arm exits; IR_CONDBR remains a terminator. No new TIR
+  operation or backend executable is needed. Noreturn results stop sema body
+  analysis; void branches use TIR_REF_NONE and dump without a fake numeric ref.
 
 ### M3.6b Runtime saturation and explicit division builtins
 - **What**: runtime +|/-|/*| clamp overflow to integer bounds; <<| checks the

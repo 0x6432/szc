@@ -1,0 +1,59 @@
+function w $szc.main.1() {
+@start
+	%t0 =l alloc4 1
+	storeb 0, %t0
+	%t6 =w call $szc.choose.2(w 1, w 3, w 4)
+	%t8 =w ceqw %t6, 3
+	jnz %t8, @c18_then, @c18_else
+@c18_then
+	%t11 =w call $szc.early.3(w 0)
+	storeb %t11, %t0
+	jmp @b9
+@c18_else
+	%t14 =w call $szc.all.4(w 1)
+	storeb %t14, %t0
+	jmp @b9
+@b9
+	%t19 =w loadub %t0
+	ret %t19
+}
+
+function w $szc.choose.2(w %t0, w %t1, w %t2) {
+@start
+	jnz %t0, @c7_then, @c7_else
+@c7_then
+	%t4 =w copy %t1
+	%t3 =w copy %t4
+	jmp @b3
+@c7_else
+	%t3 =w copy %t2
+	jmp @b3
+@b3
+	ret %t3
+}
+
+function w $szc.early.3(w %t0) {
+@start
+	jnz %t0, @c5_then, @c5_else
+@c5_then
+	jmp @b1
+@c5_else
+	ret 8
+@b1
+	ret 7
+}
+
+function w $szc.all.4(w %t0) {
+@start
+	jnz %t0, @c6_then, @c6_else
+@c6_then
+	ret 9
+@c6_else
+	ret 10
+}
+
+export function w $main() {
+@start
+	%status =w call $szc.main.1()
+	ret %status
+}

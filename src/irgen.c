@@ -267,7 +267,7 @@ body_finish(GenBody *body)
 	return index;
 }
 
-/* True if the body's last instruction never falls through. */
+/* True if the body's last instruction is a syntactic terminator. */
 static bool
 body_is_terminated(const GenBody *body)
 {
@@ -447,6 +447,8 @@ is_coerced_to(const GenBody *body, IrRef value, IrRef type)
 static IrRef
 rvalue(GenBody *body, ResultInfo info, IrRef value, uint32_t src)
 {
+	if (body_is_terminated(body))
+		return value;
 	switch (info.kind) {
 	case RESULT_NONE:
 		return value;
@@ -894,6 +896,39 @@ block_expr(GenBody *body, Scope *scope, ResultInfo info, AstNode *node)
 	return rvalue(body, info, IR_REF_VOID_VALUE, node->offset);
 }
 
+static void assign(GenBody *body, Scope *scope, AstAssign *node);
+
+/* Each arm yields a value, unless it ends in return/unreachable. */
+static IrBody
+if_branch(GenBody *body, Scope *scope, ResultInfo info, AstNode *node, uint32_t src)
+{
+	GenBody branch;
+	body_init(&branch, body->gen, scope, body->is_comptime);
+	IrRef value = IR_REF_VOID_VALUE;
+	if (node != NULL)
+		value = expr(&branch, &branch.base, info, node);
+	else
+		value = rvalue(&branch, info, value, src);
+	if (!body_is_terminated(&branch))
+		emit_break(&branch, IR_BREAK_INLINE, src, IR_BODY_RESULT, value);
+	return body_finish(&branch);
+}
+
+static IrRef
+if_expr(GenBody *body, Scope *scope, ResultInfo info, AstNode *node)
+{
+	AstIf *conditional = AST_CAST(AstIf, node, AST_IF);
+	if (conditional->has_capture || conditional->has_else_capture) {
+		unsupported(body, node, "if payload captures");
+		return IR_REF_VOID_VALUE;
+	}
+	IrCondbr payload;
+	payload.condition = expr(body, scope, result_type(IR_REF_TYPE_BOOL), conditional->condition);
+	payload.then_body = if_branch(body, scope, info, conditional->then_branch, node->offset);
+	payload.else_body = if_branch(body, scope, info, conditional->else_branch, node->offset);
+	return emit_payload(body, IR_IF, node->offset, APPEND_EXTRA(body->gen, payload));
+}
+
 static IrRef
 expr(GenBody *body, Scope *scope, ResultInfo info, AstNode *node)
 {
@@ -916,6 +951,11 @@ expr(GenBody *body, Scope *scope, ResultInfo info, AstNode *node)
 		return return_expr(body, scope, node);
 	case AST_BLOCK:
 		return block_expr(body, scope, info, node);
+	case AST_IF:
+		return if_expr(body, scope, info, node);
+	case AST_ASSIGN:
+		assign(body, scope, AST_CAST(AstAssign, node, AST_ASSIGN));
+		return rvalue(body, info, IR_REF_VOID_VALUE, node->offset);
 	case AST_UNREACHABLE:
 		emit_none(body, IR_UNREACHABLE, node->offset);
 		return IR_REF_VOID_VALUE;
@@ -1639,7 +1679,8 @@ dump_inst(const IrDumper *dumper, IrInstIndex index, uint32_t depth)
 	case IR_LOOP:
 		dump_labeled_body(dumper, "", inst->data.payload, depth);
 		break;
-	case IR_CONDBR: {
+	case IR_CONDBR:
+	case IR_IF: {
 		IrCondbr payload;
 		IR_READ(ir, inst->data.payload, &payload);
 		fputc(' ', out);

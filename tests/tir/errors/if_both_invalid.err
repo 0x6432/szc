@@ -1,0 +1,6 @@
+tests/tir/errors/if_both_invalid.zig:1:34: error: type 'u8' cannot represent integer value '256'
+fn f(c: bool) u8 { return if (c) 256 else 257; }
+                                 ^
+tests/tir/errors/if_both_invalid.zig:1:43: error: type 'u8' cannot represent integer value '257'
+fn f(c: bool) u8 { return if (c) 256 else 257; }
+                                          ^

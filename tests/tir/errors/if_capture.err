@@ -1,0 +1,3 @@
+tests/tir/errors/if_capture.zig:1:25: error: not supported by szc yet: if payload captures
+fn f(x: u8) u8 { return if (x) |v| v else 1; }
+                        ^

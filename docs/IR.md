@@ -67,6 +67,13 @@ return type is a body too, so it may depend on comptime parameters.
 - `block` has a body; `break block, value` leaves it with a value.
   `break_inline` is the comptime-only variant used by declaration and type bodies.
 - `condbr cond, then_body, else_body` ends a body.
+- Source `if` uses `if cond, then_body, else_body` (`IrCondbr` payload).
+  Each arm ends with `break_inline BODY_RESULT, value`, or a terminator such as
+  `ret`/`unreachable`. This is a value-producing instruction, not a syntactic
+  terminator. Sema selects a known arm or lowers runtime arms to a typed result
+  block with `condbr` and `br`; an arm that returns does not contribute a value.
+  Two runtime exits cannot merge comptime-only types. One constant exit remains
+  known while a void result block preserves the runtime control effects.
 - `loop` has a body that ends with `repeat`; leaving the loop is a `break` of
   an enclosing block.
 - `and`/`or` are `bool_and`/`bool_or` with a right-hand body (short-circuit).

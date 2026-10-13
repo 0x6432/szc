@@ -1,0 +1,3 @@
+tests/tir/errors/if_peer.zig:1:30: error: incompatible types: 'u8' and 'bool'
+fn f(c: bool) u8 { const x = if (c) @as(u8, 1) else false; return x; }
+                             ^

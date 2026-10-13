@@ -706,7 +706,8 @@ emit_inst(Codegen *cg, TirRef ref)
 		return;
 	case TIR_BLOCK:
 		emit_body(cg, inst->data.payload);
-		fprintf(out, "@b%u\n", (unsigned)ref);
+		if (sema_type(cg->sema, inst->type)->kind != TYPE_NORETURN)
+			fprintf(out, "@b%u\n", (unsigned)ref);
 		return;
 	case TIR_BR: {
 		TirRef target = inst->data.bin.lhs;

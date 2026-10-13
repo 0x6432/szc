@@ -1,0 +1,65 @@
+fn szc.main.1: fn () u8 {
+  %0: *u8 = alloc
+  %1: u8 = const 0
+  %2: void = store %0, %1
+  %3: bool = const true
+  %4: u8 = const 3
+  %5: u16 = const 4
+  %6: u16 = call szc.choose.2(%3, %4, %5)
+  %7: u16 = const 3
+  %8: bool = cmp_eq %6, %7
+  %9: void = block {
+    %18: noreturn = condbr %8 then {
+      %10: bool = const false
+      %11: u8 = call szc.early.3(%10)
+      %12: void = store %0, %11
+      %16: noreturn = br %9
+    } else {
+      %13: bool = const true
+      %14: u8 = call szc.all.4(%13)
+      %15: void = store %0, %14
+      %17: noreturn = br %9
+    }
+  }
+  %19: u8 = load %0
+  %20: noreturn = ret %19
+}
+fn szc.choose.2: fn (bool, u8, u16) u16 {
+  %0: bool = arg 0
+  %1: u8 = arg 1
+  %2: u16 = arg 2
+  %3: u16 = block {
+    %7: noreturn = condbr %0 then {
+      %4: u16 = int_cast %1
+      %5: noreturn = br %3, %4
+    } else {
+      %6: noreturn = br %3, %2
+    }
+  }
+  %8: noreturn = ret %3
+}
+fn szc.early.3: fn (bool) u8 {
+  %0: bool = arg 0
+  %1: void = block {
+    %5: noreturn = condbr %0 then {
+      %4: noreturn = br %1
+    } else {
+      %2: u8 = const 8
+      %3: noreturn = ret %2
+    }
+  }
+  %6: u8 = const 7
+  %7: noreturn = ret %6
+}
+fn szc.all.4: fn (bool) u8 {
+  %0: bool = arg 0
+  %1: noreturn = block {
+    %6: noreturn = condbr %0 then {
+      %2: u8 = const 9
+      %3: noreturn = ret %2
+    } else {
+      %4: u8 = const 10
+      %5: noreturn = ret %4
+    }
+  }
+}

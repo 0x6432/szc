@@ -24,7 +24,8 @@ Read this first when resuming work (the sandbox resets often).
 - Done: M3.5 executable/driver harness + generated integer-width tests and CI.
 - Done: M3.6a checked arithmetic, casts, unsigned division/shift guards and panic stub.
 - Done: M3.6b runtime saturation and explicit division/remainder builtins.
-- Next: **M4.1** source-level if/else (comparisons and boolean short-circuit are already supported).
+- Done: M4.1 source-level if/else, typed branch joins, early returns and short-circuit composition.
+- Next: **M4.2** while/break/continue, continue expressions and labeled loops.
 - Run `PATH=/data/tools/bin:$PATH ZIG=/data/zig/zig-x86_64-linux-0.17.0/zig make e2e-test`
   locally. `tools/build_qbe.sh` builds the pinned QBE into `build/qbe-src` on CI.
 - Tools: `SZC_QBE`/`qbe`, `SZC_CC`/`cc`; pinned QBE revision
@@ -32,7 +33,22 @@ Read this first when resuming work (the sandbox resets often).
 - Restored sandbox needed libasan/libubsan/clang/compiler-rt reinstalled. Git
   credentials are not persisted; use transient authentication for future pushes.
 - M3.4 (`1882ced`) and M3.5 (`7b36edd`) are pushed to `main`.
-- CI for M3.6a (`5dcfeb0`): completed successfully.
+- CI for M3.6a (`5dcfeb0`) and M3.6b (`6db0025`): completed successfully.
+
+## Validation at M4.1
+
+- GCC/Clang warning-clean sanitizer suites: 518 unit checks, 389 goldens,
+  16 ordinary e2e inputs (including arithmetic and conditional-width generators),
+  one szc-only edge input, 12 driver checks and 115 panic cases.
+- Ordinary/reference inputs pass with official Zig 0.17.0; all 128 signed/unsigned
+  1–64-bit conditional joins are exercised. Diagnostic messages are reference-checked.
+- Four 60-second libFuzzer runs and final sema/codegen 60-second run pass;
+  standalone replay covers all four targets with 20,000 mutations each.
+- `tools/generate_conditional_tests.py` is part of e2e/CI. New IR_IF arm bodies
+  yield via break_inline BODY_RESULT; do not treat IR_IF as an irgen terminator.
+- Both runtime arms are analyzed before gathering merge results, preserving
+  independent errors. A single constant exit is represented by a void control
+  block plus the known operand; a two-exit comptime-only result is an error.
 
 ## Validation at M3.6b
 
@@ -77,10 +93,13 @@ Read this first when resuming work (the sandbox resets often).
   `tools/diff_parse_errors.py build/szc build/ast_spans <file-list> [count] [seed]`.
   `zig fmt --check file.zig` shows the reference's parse error for a mutant.
 - Number literals are lexed loosely (like the reference). Validate them when decoding (M3.x).
-- Phase 4: the parser already has if/while/for/labels/defer AST nodes; irgen/sema
-  still reject these source constructs. Typed IR and codegen already support block,
-  condbr, loop and repeat for the boolean/control-flow scaffolding. Extend lowering
-  with explicit result blocks and terminators, checking reference behavior first.
+- Phase 4: parser has while/for/labels/defer AST nodes; these still need irgen/sema.
+  Source if is now IR_IF with IrCondbr payload and break_inline BODY_RESULT arm
+  exits. It lowers to TIR block/condbr/br. IR_CONDBR is still a terminator.
+  Known conditions select one arm; a sole surviving constant stays known, while
+  two runtime exits of comptime-only type are rejected even for equal values.
+  Noreturn blocks omit QBE join labels. Extend loop lowering with explicit result
+  blocks and terminators, checking the actual 0.17.0 reference first.
 - `make safety-test` checks generated runtime panic cases; setting `ZIG` enables
   reference validation. Checks are always enabled in szc for now. Panic stubs
   print one line via libc write, then abort; explicit unreachable still uses hlt.

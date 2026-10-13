@@ -1721,6 +1721,8 @@ analyze_bool_br(Block *block, const IrInst *inst)
 		if (value != is_and)
 			return lhs;
 		BodyResult rhs = analyze_body(block, payload.rhs_body);
+		if (rhs.end == BODY_NORETURN)
+			return runtime_operand(T_NORETURN, TIR_REF_NONE);
 		if (rhs.end != BODY_BREAK_RESULT)
 			return operand_none;
 		return coerce(block, rhs.result, T_BOOL, src);
@@ -1752,6 +1754,84 @@ analyze_bool_br(Block *block, const IrInst *inst)
 	block->tir->insts[branch].data.payload = tir_extra(block->tir, sema->arena, &condbr, TIR_WORDS(TirCondbr));
 	block->tir->insts[result].data.payload = block_finish(&inner);
 	return runtime_operand(T_BOOL, result);
+}
+
+/* Source if: analyze one known arm, or merge the two runtime exits. */
+static Operand
+analyze_if(Block *block, const IrInst *inst)
+{
+	Sema *sema = block->sema;
+	uint32_t src = inst->src;
+	IrCondbr payload;
+	IR_READ(block->ir, inst->data.payload, &payload);
+	Operand condition = coerce(block, resolve_ref(block, payload.condition), T_BOOL, src);
+	if (condition.kind == OPERAND_NONE)
+		return operand_none;
+	if (condition.kind == OPERAND_COMPTIME) {
+		if (!check_defined(block, condition, src))
+			return operand_none;
+		IrBody body = operand_value(block, condition)->as.boolean ? payload.then_body : payload.else_body;
+		BodyResult arm = analyze_body(block, body);
+		return arm.end == BODY_NORETURN ? runtime_operand(T_NORETURN, TIR_REF_NONE) : arm.result;
+	}
+	if (!require_runtime(block, src))
+		return operand_none;
+
+	TirRef merge = emit_tir(block, TIR_BLOCK, T_VOID, src);
+	Block arms[2];
+	BodyResult exits[2];
+	IrBody bodies[2] = {payload.then_body, payload.else_body};
+	uint32_t exit_count = 0;
+	Operand value = operand_none;
+	TypeId type = T_NORETURN;
+	for (uint32_t i = 0; i < 2; i++) {
+		block_init_child(&arms[i], block);
+		exits[i] = analyze_body(&arms[i], bodies[i]);
+	}
+	for (uint32_t i = 0; i < 2; i++) {
+		if (exits[i].end != BODY_BREAK_RESULT)
+			continue;
+		if (exits[i].result.kind == OPERAND_NONE)
+			return operand_none;
+		if (exit_count == 0) {
+			type = exits[i].result.type;
+			value = exits[i].result;
+		} else if (!peer_type(block, value, exits[i].result, src, &type)) {
+			return operand_none;
+		}
+		exit_count++;
+	}
+	if (exit_count > 1 && is_comptime_only_type(sema, type)) {
+		sema_error(block, src, "value with comptime-only type '%s' depends on runtime control flow", sema_type_name(sema, type));
+		return operand_none;
+	}
+	/* One surviving constant exit stays known, but its control effects remain. */
+	bool known = exit_count == 1 && value.kind == OPERAND_COMPTIME;
+	TypeId merge_type = known ? T_VOID : type;
+	block->tir->insts[merge].type = merge_type;
+	for (uint32_t i = 0; i < 2; i++) {
+		if (exits[i].end != BODY_BREAK_RESULT)
+			continue;
+		Operand operand = coerce(&arms[i], exits[i].result, type, src);
+		if (operand.kind == OPERAND_NONE)
+			return operand_none;
+		TirRef ref = merge_type == T_VOID ? TIR_REF_NONE : materialize(&arms[i], operand, src);
+		emit_tir_bin(&arms[i], TIR_BR, T_NORETURN, src, merge, ref);
+	}
+	Block inner;
+	block_init_child(&inner, block);
+	TirCondbr branch;
+	branch.condition = condition.inst;
+	branch.then_body = block_finish(&arms[0]);
+	branch.else_body = block_finish(&arms[1]);
+	TirRef ref = emit_tir(&inner, TIR_CONDBR, T_NORETURN, src);
+	block->tir->insts[ref].data.payload = tir_extra(block->tir, sema->arena, &branch, TIR_WORDS(TirCondbr));
+	block->tir->insts[merge].data.payload = block_finish(&inner);
+	if (known)
+		return value;
+	if (type == T_VOID)
+		return void_operand(sema);
+	return runtime_operand(type, merge);
 }
 
 /* ---------- Analysis: functions and calls ---------- */
@@ -2137,6 +2217,8 @@ analyze_inst(Block *block, IrInstIndex index, Operand *break_value)
 	case IR_BOOL_AND:
 	case IR_BOOL_OR:
 		result = analyze_bool_br(block, inst);
+		if (result.type == T_NORETURN)
+			return INST_NORETURN;
 		break;
 	case IR_ALLOC:
 		result = analyze_alloc(block, inst);
@@ -2166,6 +2248,11 @@ analyze_inst(Block *block, IrInstIndex index, Operand *break_value)
 	}
 	case IR_CALL:
 		if (analyze_call(block, index, &result) == INST_NORETURN)
+			return INST_NORETURN;
+		break;
+	case IR_IF:
+		result = analyze_if(block, inst);
+		if (result.type == T_NORETURN)
 			return INST_NORETURN;
 		break;
 	case IR_BREAK_INLINE:
@@ -2469,6 +2556,12 @@ dump_tir_inst(FILE *out, Sema *sema, const TirFunc *tir, TirRef ref, uint32_t de
 			fputs("\n", out);
 		else
 			fprintf(out, " %%%u\n", (unsigned)inst->data.un.operand);
+		return;
+	case TIR_BR:
+		fprintf(out, " %%%u", (unsigned)inst->data.bin.lhs);
+		if (inst->data.bin.rhs != TIR_REF_NONE)
+			fprintf(out, ", %%%u", (unsigned)inst->data.bin.rhs);
+		fputs("\n", out);
 		return;
 	case TIR_CALL: {
 		TirCall call;

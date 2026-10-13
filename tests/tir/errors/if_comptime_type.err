@@ -1,0 +1,3 @@
+tests/tir/errors/if_comptime_type.zig:1:30: error: value with comptime-only type 'type' depends on runtime control flow
+fn f(c: bool) u8 { const T = if (c) u8 else i8; const x: T = 1; return @intCast(x); }
+                             ^

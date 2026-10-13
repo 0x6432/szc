@@ -192,6 +192,7 @@ typedef enum IrDataKind {
 	X(BREAK, "break", IR_DATA_BREAK)	/* leave block with operand */ \
 	X(BREAK_INLINE, "break_inline", IR_DATA_BREAK)	/* comptime-only break */ \
 	X(CONDBR, "condbr", IR_DATA_PAYLOAD)	/* condition ref, then body, else body */ \
+	X(IF, "if", IR_DATA_PAYLOAD)	/* IrCondbr; branches yield via break_inline BODY_RESULT */ \
 	X(LOOP, "loop", IR_DATA_PAYLOAD)	/* body (ends with repeat) */ \
 	X(REPEAT, "repeat", IR_DATA_NONE)	/* jump back to the start of the innermost loop */ \
 	X(CALL, "call", IR_DATA_PAYLOAD)	/* callee ref, modifier, arg count, arg bodies */ \
