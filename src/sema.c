@@ -1721,6 +1721,50 @@ analyze_unary(Block *block, const IrInst *inst)
 
 /* ---------- Analysis: control flow ---------- */
 
+/* Prefer a known bound, then assert every runtime input has that length. */
+static Operand
+analyze_for_len(Block *block, const IrInst *inst)
+{
+	uint32_t count = block->ir->extra[inst->data.payload];
+	if (count == 0) {
+		sema_error(block, inst->src, "unbounded for loop");
+		return operand_none;
+	}
+	Operand *lengths = ARENA_ARRAY(block->sema->arena, Operand, count);
+	Operand result = operand_none;
+	bool failed = false;
+	TypeId type = type_id_of_well_known(IR_REF_TYPE_USIZE);
+	for (uint32_t i = 0; i < count; i++) {
+		IrRef ref = block->ir->extra[inst->data.payload + 1 + i];
+		lengths[i] = coerce(block, resolve_ref(block, ref), type, inst->src);
+		if (lengths[i].kind == OPERAND_NONE || !check_defined(block, lengths[i], inst->src)) {
+			failed = true;
+			continue;
+		}
+		if (result.kind == OPERAND_NONE || (result.kind == OPERAND_RUNTIME && lengths[i].kind == OPERAND_COMPTIME))
+			result = lengths[i];
+	}
+	if (failed)
+		return operand_none;
+	for (uint32_t i = 0; i < count; i++) {
+		if (result.kind == OPERAND_COMPTIME && lengths[i].kind == OPERAND_COMPTIME) {
+			if (bigint_compare(&operand_value(block, result)->as.integer, &operand_value(block, lengths[i])->as.integer) != 0) {
+				sema_error(block, inst->src, "non-matching for loop lengths");
+				failed = true;
+			}
+			continue;
+		}
+		if (result.kind == OPERAND_RUNTIME && lengths[i].kind == OPERAND_RUNTIME && result.inst == lengths[i].inst)
+			continue;
+		if (!require_runtime(block, inst->src))
+			return operand_none;
+		TirRef lhs = materialize(block, result, inst->src);
+		TirRef rhs = materialize(block, lengths[i], inst->src);
+		emit_tir_bin(block, TIR_FOR_LEN_CHECK, T_VOID, inst->src, lhs, rhs);
+	}
+	return failed ? operand_none : result;
+}
+
 /* `and` / `or` with a short-circuiting right-hand side. */
 static Operand
 analyze_bool_br(Block *block, const IrInst *inst)
@@ -2297,6 +2341,9 @@ analyze_inst(Block *block, IrInstIndex index, Operand *break_value)
 		result = coerce(block, value, type, src);
 		break;
 	}
+	case IR_FOR_LEN:
+		result = analyze_for_len(block, inst);
+		break;
 	case IR_INT_CAST:
 	case IR_TRUNCATE:
 		result = analyze_cast(block, inst);

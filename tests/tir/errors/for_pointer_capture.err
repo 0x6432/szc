@@ -1,0 +1,3 @@
+tests/tir/errors/for_pointer_capture.zig:1:35: error: cannot capture reference to range
+pub fn main() void { for (0..2) |*i| { _ = i; } }
+                                  ^

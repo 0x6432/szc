@@ -56,6 +56,8 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
 - [x] **M4.2 while/break/continue, continue expressions, labeled loops.**
 - [x] **M4.3 Blocks as expressions, labeled break with value.**
 - [ ] **M4.4 for over ranges, `defer`.**
+  - [x] **M4.4a Runtime range-based for loops**: captures, multiple inputs, length safety, labels and else/values.
+  - [ ] **M4.4b defer**: scope-exit execution across fallthrough and control transfers.
 - [ ] **M4.5 unreachable, noreturn, `@panic` minimal runtime.**
 
 ## Phase 5: Memory
@@ -114,6 +116,35 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
 ## Completed milestone log
 
 (newest first; each entry: what, limitations, interactions)
+
+### M4.4a Runtime range-based for loops
+- **What**: bounded integer ranges, multiple range inputs, unbounded companion
+  counters, immutable usize captures/discards, nested loops, labeled break/continue,
+  value-producing breaks and exhaustion else. Bounds are evaluated once in source
+  order; continue advances the common index and break skips else. Captures do not
+  leak into else. Existing result-type propagation and peer joins apply to values.
+- **Safety**: endpoints coerce to usize; checked subtraction rejects reversed ranges.
+  Known length mismatches report "non-matching for loop lengths". Runtime mismatches
+  panic before iteration, including empty inputs, with "for loop over objects with
+  non-equal lengths". Unbounded capture addition is checked for overflow.
+- **Tests**: 518 unit checks, 449 goldens, 29 ordinary/reference executable inputs
+  plus one szc-only edge input, 12 driver checks and 124 panic cases pass with
+  warning-clean GCC/Clang ASan/UBSan builds. Optimized GCC also builds cleanly.
+  The range generator covers 128 integer types; fixtures exercise endpoint order,
+  bound snapshots, labels, else, contextual casts and boundary counters. Four
+  60-second libFuzzer runs and standalone 20,000-mutation replays per target pass.
+- **Reference**: verified using Zig 0.17.0 AstGen.forExpr, Sema.zirForLen,
+  std.debug.forLenMismatch and the official executable, not older semantics.
+- **Limitations**: non-range array/slice inputs await Phase 5; inline/comptime for
+  awaits Phase 7. Defer is M4.4b; errdefer awaits error unions. Full diagnostic
+  notes, unused captures/locals and quoted identifier canonicalization remain
+  incomplete. Pointer range captures are invalid in Zig, not a supported future mode.
+- **Interactions**: irgen emits bounded lengths through IR_FOR_LEN and lowers the
+  loop with existing result/body-exit blocks and explicit repeat targets. Sema
+  prefers a known bound and emits TIR_FOR_LEN_CHECK for runtime comparisons;
+  codegen uses the existing panic guard infrastructure. No new parser node or
+  static control state is introduced. Array/slice for can extend this shared-index
+  lowering with memory element access in Phase 5.
 
 ### M4.3 Labeled blocks as expressions and named break values
 - **What**: labeled block expressions/statements, value/void breaks, nested exits

@@ -1,0 +1,3 @@
+tests/tir/errors/for_continue_else.zig:1:55: error: continue outside of loop or labeled switch expression
+pub fn main() void { target: for (0..0) |_| {} else { continue :target; } }
+                                                      ^

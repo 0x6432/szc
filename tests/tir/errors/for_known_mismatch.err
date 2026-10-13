@@ -1,0 +1,3 @@
+tests/tir/errors/for_known_mismatch.zig:1:22: error: non-matching for loop lengths
+pub fn main() void { for (0..2, 1..4) |_, _| {} }
+                     ^

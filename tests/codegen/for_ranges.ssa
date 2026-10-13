@@ -1,0 +1,99 @@
+function w $szc.main.1() {
+@start
+	%t3 =w call $szc.choose.2(l 3, w 7, w 300)
+	%t4 =w copy %t3
+	%t4 =w and %t4, 255
+	ret %t4
+}
+
+function w $szc.choose.2(l %t0, w %t1, w %t2) {
+@start
+	%t3 =l alloc8 8
+	storel 0, %t3
+	%t7 =l sub %t0, 0
+	%g7_overflow =w cultl %t0, 0
+	jnz %g7_overflow, @g7_overflow_panic, @g7_overflow_ok
+@g7_overflow_panic
+	call $szc.panic.0()
+	hlt
+@g7_overflow_ok
+	%g9_len =w cnel 3, %t7
+	jnz %g9_len, @g9_len_panic, @g9_len_ok
+@g9_len_panic
+	call $szc.panic.5()
+	hlt
+@g9_len_ok
+@l11
+	%t12 =l loadl %t3
+	%t14 =w cultl %t12, 3
+	jnz %t14, @c40_then, @c40_else
+@c40_then
+	%t17 =l add 0, %t12
+	%g17_overflow =w cultl %t17, 0
+	jnz %g17_overflow, @g17_overflow_panic, @g17_overflow_ok
+@g17_overflow_panic
+	call $szc.panic.0()
+	hlt
+@g17_overflow_ok
+	%t19 =l add 5, %t12
+	%g19_overflow =w cultl %t19, 5
+	jnz %g19_overflow, @g19_overflow_panic, @g19_overflow_ok
+@g19_overflow_panic
+	call $szc.panic.0()
+	hlt
+@g19_overflow_ok
+	%t21 =w ceql %t17, 0
+	jnz %t21, @c25_then, @c25_else
+@c25_then
+	jmp @b15
+@c25_else
+	jmp @b22
+@b22
+	%t27 =w ceql %t19, 7
+	jnz %t27, @c31_then, @c31_else
+@c31_then
+	%t41 =w copy %t1
+	%t10 =w copy %t41
+	jmp @b10
+@c31_else
+	jmp @b28
+@b28
+	jmp @b15
+@b15
+	%t36 =l add %t12, 1
+	%g36_overflow =w cultl %t36, %t12
+	jnz %g36_overflow, @g36_overflow_panic, @g36_overflow_ok
+@g36_overflow_panic
+	call $szc.panic.0()
+	hlt
+@g36_overflow_ok
+	storel %t36, %t3
+	jmp @l11
+@c40_else
+	%t10 =w copy %t2
+	jmp @b10
+@b10
+	ret %t10
+}
+
+data $szc.panic.msg.0 = { b "integer overflow\n", b 0 }
+function $szc.panic.0() {
+@start
+	call $write(w 2, l $szc.panic.msg.0, l 17)
+	call $abort()
+	hlt
+}
+
+data $szc.panic.msg.5 = { b "for loop over objects with non-equal lengths\n", b 0 }
+function $szc.panic.5() {
+@start
+	call $write(w 2, l $szc.panic.msg.5, l 45)
+	call $abort()
+	hlt
+}
+
+export function w $main() {
+@start
+	%status =w call $szc.main.1()
+	ret %status
+}

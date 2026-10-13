@@ -1,0 +1,3 @@
+tests/tir/errors/for_pointer_discard.zig:1:35: error: pointer modifier invalid on discard
+pub fn main() void { for (0..2) |*_| {} }
+                                  ^

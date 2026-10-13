@@ -57,6 +57,7 @@ typedef uint32_t TirBody;	/* extra index of a body, 0 = none */
 	X(ALLOC, "alloc")	/* type is the pointer type; stack slot */ \
 	X(LOAD, "load")	/* un: pointer */ \
 	X(STORE, "store")	/* bin: pointer, value */ \
+	X(FOR_LEN_CHECK, "for_len_check")	/* bin: assert equal usize lengths */ \
 	X(CALL, "call")	/* payload: callee FuncId, arg count, args */ \
 	X(RET, "ret")	/* un */ \
 	X(BLOCK, "block")	/* payload: body; breaks target it */ \

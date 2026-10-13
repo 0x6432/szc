@@ -1045,6 +1045,132 @@ while_expr(GenBody *body, Scope *scope, ResultInfo info, AstNode *node)
 	return result;
 }
 
+static bool
+capture_is_discard(const IrGen *gen, AstCapture capture)
+{
+	return capture.name.end - capture.name.start == 1 && gen->source[capture.name.start] == '_';
+}
+
+/* Range bounds are evaluated once; a shared zero-based index drives all inputs. */
+static IrRef
+for_expr(GenBody *body, Scope *scope, ResultInfo info, AstNode *node)
+{
+	AstFor *loop = AST_CAST(AstFor, node, AST_FOR);
+	IrGen *gen = body->gen;
+	StringId label = check_label(gen, scope, loop->label);
+	if (loop->is_inline) {
+		unsupported(body, node, "inline for");
+		return IR_REF_VOID_VALUE;
+	}
+	if (loop->captures.count < loop->input_count) {
+		error_at(gen, loop->inputs[loop->captures.count].expr->offset, "%s", "for input is not captured");
+		return IR_REF_VOID_VALUE;
+	}
+	if (loop->captures.count > loop->input_count) {
+		error_at(gen, loop->captures.items[loop->input_count].name.start, "%s", "extra capture in for loop");
+		return IR_REF_VOID_VALUE;
+	}
+	uint32_t bounded_count = 0;
+	for (uint32_t i = 0; i < loop->input_count; i++) {
+		AstForInput input = loop->inputs[i];
+		AstCapture capture = loop->captures.items[i];
+		if (!input.is_range) {
+			unsupported(body, input.expr, "for over non-range inputs");
+			return IR_REF_VOID_VALUE;
+		}
+		bool discard = capture_is_discard(gen, capture);
+		if (capture.by_pointer) {
+			error_at(gen, capture.name.start, "%s", discard ? "pointer modifier invalid on discard" : "cannot capture reference to range");
+			return IR_REF_VOID_VALUE;
+		}
+		if (input.range_end == NULL && discard)
+			error_at(gen, capture.name.start, "%s", "discard of unbounded counter");
+		if (input.range_end != NULL)
+			bounded_count++;
+	}
+	if (bounded_count == 0) {
+		error_at(gen, node->offset, "%s", "unbounded for loop");
+		return IR_REF_VOID_VALUE;
+	}
+	IrAlloc alloc = {IR_REF_TYPE_USIZE, IR_REF_ZERO_USIZE, 0};
+	IrRef index_ptr = emit_payload(body, IR_ALLOC, node->offset, APPEND_EXTRA(gen, alloc));
+	IrRef *starts = ARENA_ARRAY(gen->arena, IrRef, loop->input_count);
+	IrRef *ends = ARENA_ARRAY(gen->arena, IrRef, loop->input_count);
+	for (uint32_t i = 0; i < loop->input_count; i++) {
+		AstForInput input = loop->inputs[i];
+		starts[i] = expr(body, scope, result_type(IR_REF_TYPE_USIZE), input.expr);
+		ends[i] = input.range_end == NULL ? IR_REF_NONE : expr(body, scope, result_type(IR_REF_TYPE_USIZE), input.range_end);
+	}
+	IrRef *lengths = ARENA_ARRAY(gen->arena, IrRef, bounded_count);
+	uint32_t length_index = 0;
+	for (uint32_t i = 0; i < loop->input_count; i++) {
+		if (ends[i] != IR_REF_NONE)
+			lengths[length_index++] = emit_bin(body, IR_SUB, loop->inputs[i].expr->offset, ends[i], starts[i]);
+	}
+	uint32_t payload = reserve_extra(gen, 1 + bounded_count);
+	gen->ir->extra[payload] = bounded_count;
+	memcpy(&gen->ir->extra[payload + 1], lengths, bounded_count * sizeof(IrRef));
+	IrRef length = emit_payload(body, IR_FOR_LEN, node->offset, payload);
+	IrRef result = emit_payload(body, IR_BLOCK, node->offset, 0);
+	GenBody outer;
+	body_init(&outer, gen, scope, body->is_comptime);
+	IrRef repeat = emit_payload(&outer, IR_LOOP, node->offset, 0);
+	GenBody condition;
+	body_init(&condition, gen, &outer.base, body->is_comptime);
+	IrRef index = emit_un(&condition, IR_LOAD, node->offset, index_ptr);
+	IrCondbr branch;
+	branch.condition = emit_bin(&condition, IR_CMP_LT, node->offset, index, length);
+	GenBody then_body;
+	body_init(&then_body, gen, &condition.base, body->is_comptime);
+	IrRef continuation = emit_payload(&then_body, IR_BLOCK, node->offset, 0);
+	ControlScope control;
+	memset(&control, 0, sizeof(control));
+	control.base.kind = SCOPE_CONTROL;
+	control.base.parent = &then_body.base;
+	control.label = label;
+	control.break_target = ir_ref_inst(result);
+	control.continue_target = ir_ref_inst(continuation);
+	control.result = info;
+	control.allow_unlabeled = true;
+	control.allow_continue = true;
+	GenBody iteration;
+	body_init(&iteration, gen, &control.base, body->is_comptime);
+	Scope *capture_scope = &iteration.base;
+	for (uint32_t i = 0; i < loop->input_count; i++) {
+		AstCapture capture = loop->captures.items[i];
+		if (capture_is_discard(gen, capture))
+			continue;
+		StringId name = intern_span(gen, capture.name);
+		check_shadowing(gen, capture_scope, name, capture.name.start);
+		IrRef value = emit_bin(&iteration, IR_ADD, capture.name.start, starts[i], index);
+		LocalScope *local = ARENA_NEW(gen->arena, LocalScope);
+		local_init(local, capture_scope, name, LOCAL_CONST, value, capture.name.start);
+		capture_scope = &local->base;
+	}
+	expr(&iteration, capture_scope, result_type(IR_REF_TYPE_VOID), loop->body);
+	if (!body_is_terminated(&iteration))
+		emit_break(&iteration, IR_BREAK, node->offset, control.continue_target, IR_REF_VOID_VALUE);
+	gen->ir->insts[control.continue_target].data.payload = body_finish(&iteration);
+	IrRef next = emit_bin(&then_body, IR_ADD, node->offset, index, IR_REF_ONE_USIZE);
+	emit_bin(&then_body, IR_STORE, node->offset, index_ptr, next);
+	emit_un(&then_body, IR_REPEAT, node->offset, repeat);
+	branch.then_body = body_finish(&then_body);
+	GenBody else_body;
+	control.allow_unlabeled = false;
+	control.allow_continue = false;
+	body_init(&else_body, gen, &control.base, body->is_comptime);
+	IrRef value = loop->else_branch == NULL ? rvalue(&else_body, info, IR_REF_VOID_VALUE, node->offset) : expr(&else_body, &else_body.base, info, loop->else_branch);
+	if (!body_is_terminated(&else_body))
+		emit_break(&else_body, IR_BREAK, node->offset, control.break_target, value);
+	branch.else_body = body_finish(&else_body);
+	emit_payload(&condition, IR_CONDBR, node->offset, APPEND_EXTRA(gen, branch));
+	gen->ir->insts[ir_ref_inst(repeat)].data.payload = body_finish(&condition);
+	gen->ir->insts[control.break_target].data.payload = body_finish(&outer);
+	if (control.label != STRING_NONE && !control.label_used)
+		error_at(gen, loop->label.name.start, "%s", "unused for loop label");
+	return result;
+}
+
 /* Each arm yields a value, unless it ends in return/unreachable. */
 static IrBody
 if_branch(GenBody *body, Scope *scope, ResultInfo info, AstNode *node, uint32_t src)
@@ -1102,6 +1228,8 @@ expr(GenBody *body, Scope *scope, ResultInfo info, AstNode *node)
 		return if_expr(body, scope, info, node);
 	case AST_WHILE:
 		return while_expr(body, scope, info, node);
+	case AST_FOR:
+		return for_expr(body, scope, info, node);
 	case AST_BREAK:
 	case AST_CONTINUE:
 		return jump_expr(body, scope, node);
@@ -1844,6 +1972,14 @@ dump_inst(const IrDumper *dumper, IrInstIndex index, uint32_t depth)
 	case IR_INT_TYPE:
 		fprintf(out, " %c%" PRIu64, (inst->data.integer & 0x10000u) ? 'i' : 'u', inst->data.integer & 0xffffu);
 		break;
+	case IR_FOR_LEN: {
+		uint32_t count = ir->extra[inst->data.payload];
+		for (uint32_t i = 0; i < count; i++) {
+			fputs(i == 0 ? " " : ", ", out);
+			dump_ref(dumper, ir->extra[inst->data.payload + 1 + i]);
+		}
+		break;
+	}
 	case IR_INT_BIG: {
 		uint32_t limb_count = ir->extra[inst->data.payload];
 		fputs(" 0x", out);

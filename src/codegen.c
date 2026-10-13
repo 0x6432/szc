@@ -29,6 +29,7 @@ typedef enum PanicKind {
 	PANIC_DIV_ZERO,
 	PANIC_SHIFT,
 	PANIC_EXACT,
+	PANIC_FOR_LEN,
 	PANIC_COUNT,
 } PanicKind;
 
@@ -205,6 +206,7 @@ static const char *const panic_messages[PANIC_COUNT] = {
 	"division by zero",
 	"shift amount is greater than the type size",
 	"exact division produced remainder",
+	"for loop over objects with non-equal lengths",
 };
 
 /* Bounds as canonical 64-bit bit patterns; wider types have already errored. */
@@ -695,6 +697,14 @@ emit_inst(Codegen *cg, TirRef ref)
 		fputs(")\n", out);
 		return;
 	}
+	case TIR_FOR_LEN_CHECK:
+		fprintf(out, "\t%%g%u_len =w cnel ", (unsigned)ref);
+		print_operand(cg, inst->data.bin.lhs);
+		fputs(", ", out);
+		print_operand(cg, inst->data.bin.rhs);
+		fputs("\n", out);
+		emit_guard(cg, ref, "len", PANIC_FOR_LEN);
+		return;
 	case TIR_RET:
 		if (inst->data.un.operand == TIR_REF_NONE || type_class(cg, inst_at(cg, inst->data.un.operand)->type, inst->src) == QBE_NONE) {
 			fputs("\tret\n", out);

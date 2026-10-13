@@ -21,6 +21,19 @@ def binary_case(name, integer_type, operator, lhs, rhs, message="integer overflo
 
 
 def cases():
+    source = ("fn operation(start: usize, end: usize) void { for (start..end) |_| {} }\n"
+              "pub fn main() void { operation(2, 1); }\n")
+    yield "for_reversed", source, "integer overflow"
+    source = ("fn operation(n: usize) void { for (0..n, 3..5) |_, _| {} }\n"
+              "pub fn main() void { operation(1); }\n")
+    yield "for_known_mismatch", source, "for loop over objects with non-equal lengths"
+    for n, m, label in ((1, 2, "runtime"), (0, 1, "zero")):
+        source = ("fn operation(n: usize, m: usize) void { for (0..n, 0..m) |_, _| {} }\n"
+                  f"pub fn main() void {{ operation({n}, {m}); }}\n")
+        yield f"for_{label}_mismatch", source, "for loop over objects with non-equal lengths"
+    source = ("fn operation(start: usize) void { for (0..2, start..) |_, i| { _ = i; } }\n"
+              "pub fn main() void { operation(0xffffffffffffffff); }\n")
+    yield "for_counter_overflow", source, "integer overflow"
     source = ("fn operation(c: bool, a: u8) u8 { return value: { if (c) break :value a + 1; break :value 0; }; }\n"
               "pub fn main() void { _ = operation(true, 255); }\n")
     yield "block_break_overflow", source, "integer overflow"

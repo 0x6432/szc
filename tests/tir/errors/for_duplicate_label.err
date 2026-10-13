@@ -1,0 +1,3 @@
+tests/tir/errors/for_duplicate_label.zig:1:47: error: redefinition of label 'target'
+pub fn main() void { target: for (0..2) |_| { target: { break :target; } break :target; } }
+                                              ^

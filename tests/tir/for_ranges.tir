@@ -1,0 +1,70 @@
+fn szc.main.1: fn () u8 {
+  %0: usize = const 3
+  %1: u8 = const 7
+  %2: u16 = const 300
+  %3: u16 = call szc.choose.2(%0, %1, %2)
+  %4: u8 = truncate %3
+  %5: noreturn = ret %4
+}
+fn szc.choose.2: fn (usize, u8, u16) u16 {
+  %0: usize = arg 0
+  %1: u8 = arg 1
+  %2: u16 = arg 2
+  %3: *usize = alloc
+  %4: usize = const 0
+  %5: void = store %3, %4
+  %6: usize = const 0
+  %7: usize = sub %0, %6
+  %8: usize = const 3
+  %9: void = for_len_check %8, %7
+  %10: u16 = block {
+    %11: noreturn = loop {
+      %12: usize = load %3
+      %13: usize = const 3
+      %14: bool = cmp_lt %12, %13
+      %40: noreturn = condbr %14 then {
+        %15: void = block {
+          %16: usize = const 0
+          %17: usize = add %16, %12
+          %18: usize = const 5
+          %19: usize = add %18, %12
+          %20: usize = const 0
+          %21: bool = cmp_eq %17, %20
+          %22: void = block {
+            %25: noreturn = condbr %21 then {
+              %23: noreturn = block {
+                %33: noreturn = br %15
+              }
+            } else {
+              %24: noreturn = br %22
+            }
+          }
+          %26: usize = const 7
+          %27: bool = cmp_eq %19, %26
+          %28: void = block {
+            %31: noreturn = condbr %27 then {
+              %29: noreturn = block {
+                %41: u16 = int_cast %1
+                %42: noreturn = br %10, %41
+              }
+            } else {
+              %30: noreturn = br %28
+            }
+          }
+          %32: noreturn = block {
+            %34: noreturn = br %15
+          }
+        }
+        %35: usize = const 1
+        %36: usize = add %12, %35
+        %37: void = store %3, %36
+        %38: noreturn = repeat %11
+      } else {
+        %39: noreturn = block {
+          %43: noreturn = br %10, %2
+        }
+      }
+    }
+  }
+  %44: noreturn = ret %10
+}

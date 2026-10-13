@@ -27,7 +27,8 @@ Read this first when resuming work (the sandbox resets often).
 - Done: M4.1 source-level if/else, typed branch joins, early returns and short-circuit composition.
 - Done: M4.2 runtime while/break/continue, labels, loop else/values and compound assignments.
 - Done: M4.3 labeled block expressions, nested named exits and constant-only comptime blocks.
-- Next: **M4.4** for over ranges and defer (split into small submilestones).
+- Done: M4.4a runtime range-based for, multi-input length checks and usize captures.
+- Next: **M4.4b** defer (errdefer remains Phase 6).
 - Run `PATH=/data/tools/bin:$PATH ZIG=/data/zig/zig-x86_64-linux-0.17.0/zig make e2e-test`
   locally. `tools/build_qbe.sh` builds the pinned QBE into `build/qbe-src` on CI.
 - Tools: `SZC_QBE`/`qbe`, `SZC_CC`/`cc`; pinned QBE revision
@@ -35,7 +36,30 @@ Read this first when resuming work (the sandbox resets often).
 - Restored sandbox needed libasan/libubsan/clang/compiler-rt reinstalled. Git
   credentials are not persisted; use transient authentication for future pushes.
 - M3.4 (`1882ced`) and M3.5 (`7b36edd`) are pushed to `main`.
-- CI through M4.2 (`385c784`): completed successfully.
+- CI through M4.3 (`72ef1b6`): completed successfully. Check the M4.4a push run.
+
+## Validation at M4.4a
+
+- GCC/Clang warning-clean sanitizer suites: 518 unit checks, 449 goldens,
+  29 ordinary/reference e2e inputs plus one szc-only edge input, 12 driver checks
+  and 124 panic cases. Optimized GCC is warning-clean. The range-width generator
+  covers all 128 signed/unsigned 1–64-bit bound types and contextual casts.
+- Four 60-second libFuzzer runs and standalone corpus replay with 20,000 mutations
+  per target pass. New irgen/sema seeds exercise multi-input and labeled for loops.
+- Bounds are evaluated once, in input/source order, and coerced to usize. Each
+  bounded length is checked end-start. IR_FOR_LEN prefers a known bound, diagnoses
+  known mismatches and emits TIR_FOR_LEN_CHECK for runtime inputs before iteration.
+- A shared zero-based usize index drives captures as start+index. For reuses the
+  while result block / body-exit continue block structure; continue increments,
+  break skips increment and else. Else has no captures; unnamed jumps target outer
+  loops, while its own label supports break but not continue.
+- Runtime length mismatch panics with "for loop over objects with non-equal lengths".
+  Reversed ranges and overflowing unbounded companion captures use integer overflow.
+  Messages/behavior were checked against 0.17 AstGen.forExpr, Sema.zirForLen and
+  std.debug.forLenMismatch, plus the official executable.
+- Array/slice iteration is Phase 5; inline/comptime for is Phase 7. Range pointer
+  captures are invalid Zig and rejected. Defer is the next small milestone.
+  Quoted identifier/label canonicalization remains incomplete (see M4.3).
 
 ## Validation at M4.3
 
@@ -142,7 +166,8 @@ Read this first when resuming work (the sandbox resets often).
   `tools/diff_parse_errors.py build/szc build/ast_spans <file-list> [count] [seed]`.
   `zig fmt --check file.zig` shows the reference's parse error for a mutant.
 - Number literals are lexed loosely (like the reference). Validate them when decoding (M3.x).
-- Phase 4: parser has for/defer AST nodes; these still need irgen/sema.
+- Phase 4: parser has defer AST nodes; these still need irgen/sema.
+  Runtime range for is implemented; array/slice inputs and comptime loops remain pending.
   Source if is now IR_IF with IrCondbr payload and break_inline BODY_RESULT arm
   exits. It lowers to TIR block/condbr/br. IR_CONDBR is still a terminator.
   Known conditions select one arm; a sole surviving constant stays known, while

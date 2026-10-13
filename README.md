@@ -16,7 +16,9 @@ Source-level `if`/`else`, comparisons and boolean short-circuiting work, includi
 value-producing branches and early returns. Runtime `while`, labeled break/continue,
 continue expressions, loop else/values and compound assignments also work.
 Labeled blocks support named value breaks, nested exits, typed joins and
-constant-only comptime evaluation. For loops and defer are next.
+constant-only comptime evaluation. Runtime range-based `for` supports multiple
+inputs, unbounded companion counters, captures, labels and loop else/values.
+`defer` is next; array/slice iteration and inline/comptime loops remain pending.
 
 ## Build & test
 

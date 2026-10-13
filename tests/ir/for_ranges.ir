@@ -1,0 +1,98 @@
+%67 = struct_decl (flags=0) {
+  decl fn "choose" value {
+    %45 = func "choose" {
+      %1 = param "n" type {
+        %0 = break_inline result, @type_usize
+      }
+      %3 = param "a" type {
+        %2 = break_inline result, @type_u8
+      }
+      %5 = param "b" type {
+        %4 = break_inline result, @type_u16
+      }
+      ret type {
+        %6 = break_inline result, @type_u16
+      }
+      body insts {
+        %7 = alloc type=@type_usize init=@zero_usize
+        %8 = int 0
+        %9 = as @type_usize, %8
+        %10 = as @type_usize, %1
+        %11 = int 5
+        %12 = as @type_usize, %11
+        %13 = int 8
+        %14 = as @type_usize, %13
+        %15 = sub %10, %9
+        %16 = sub %14, %12
+        %17 = for_len %15, %16
+        %18 = block  {
+          %19 = loop  {
+            %20 = load %7
+            %21 = cmp_lt %20, %17
+            %41 = condbr %21 then {
+              %22 = block  {
+                %23 = add %9, %20
+                %24 = add %12, %20
+                %25 = int 0
+                %26 = cmp_eq %23, %25
+                %29 = if %26 then {
+                  %27 = break %22, @void_value
+                } else {
+                  %28 = break_inline result, @void_value
+                }
+                %30 = int 7
+                %31 = cmp_eq %24, %30
+                %34 = if %31 then {
+                  %32 = break %18, %3
+                } else {
+                  %33 = break_inline result, @void_value
+                }
+                %35 = as @type_void, @void_value
+                %36 = break %22, @void_value
+              }
+              %37 = add %20, @one_usize
+              %38 = store %7, %37
+              %39 = repeat %19
+            } else {
+              %40 = break %18, %5
+            }
+          }
+        }
+        %42 = ret_type
+        %43 = as %42, %18
+        %44 = ret %43
+      }
+    }
+    %46 = break_inline result, %45
+  }
+  decl fn "main" pub value {
+    %65 = func "main" {
+      ret type {
+        %47 = break_inline result, @type_u8
+      }
+      body insts {
+        %48 = ret_type
+        %49 = decl_val "choose"
+        %50 = call %49 arg0 {
+          %51 = arg_type %50, 0
+          %52 = int 3
+          %53 = as %51, %52
+          %54 = break_inline result, %53
+        } arg1 {
+          %55 = arg_type %50, 1
+          %56 = int 7
+          %57 = as %55, %56
+          %58 = break_inline result, %57
+        } arg2 {
+          %59 = arg_type %50, 2
+          %60 = int 300
+          %61 = as %59, %60
+          %62 = break_inline result, %61
+        }
+        %63 = truncate %48, %50
+        %64 = ret %63
+      }
+    }
+    %66 = break_inline result, %65
+  }
+}

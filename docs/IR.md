@@ -84,6 +84,16 @@ return type is a body too, so it may depend on comptime parameters.
   its condition body ends with condbr. The true arm has a body-exit block (the
   continue target), followed by the continue expression and repeat; the false
   arm yields the else result to the outer result block. Break skips else.
+- Source range `for` evaluates starts/ends once in source order as usize. Bounded
+  inputs produce checked `sub end, start` lengths. `for_len` has an extra-data
+  payload of count followed by bounded length refs; unbounded companions do not
+  contribute lengths. Sema selects a known bound when available, rejects known
+  mismatches, and emits void `TIR_FOR_LEN_CHECK` comparisons for runtime bounds.
+  QBE guards length equality before iteration with the dedicated mismatch panic.
+  An anonymous usize index allocation starts at zero. The loop compares it to the
+  common length, binds immutable captures as checked start+index, and increments
+  after the body-exit block before repeat. For reuses while's outer result block
+  and separate continue target; break skips increment/else. Else cannot see captures.
 - Sema collects block exits using an analysis-local control-target chain. Each
   exit reserves a noreturn typed block whose body is filled after peer typing
   with any needed coercion and br. This keeps runtime operands in their branch.

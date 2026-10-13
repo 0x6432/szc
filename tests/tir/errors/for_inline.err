@@ -1,0 +1,3 @@
+tests/tir/errors/for_inline.zig:1:29: error: not supported by szc yet: inline for
+pub fn main() void { inline for (0..2) |i| { _ = i; } }
+                            ^
