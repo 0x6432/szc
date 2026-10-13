@@ -14,6 +14,32 @@ diag_init(Diag *diag, Arena *arena, SourceTable *sources)
 	diag->error_count = 0;
 }
 
+static void
+append_diagnostic(Diag *diag, DiagLevel level, FileId file, uint32_t offset, const char *message, size_t length)
+{
+	if (diag->count == diag->capacity) {
+		uint32_t new_capacity = diag->capacity == 0 ? 16 : diag->capacity * 2;
+		diag->items = arena_grow_array(diag->arena, diag->items, diag->count, new_capacity, sizeof(Diagnostic), alignof(Diagnostic));
+		diag->capacity = new_capacity;
+	}
+
+	Diagnostic *item = &diag->items[diag->count];
+	item->level = level;
+	item->file = file;
+	item->offset = offset;
+	item->message = message;
+	item->message_length = length;
+	diag->count = diag->count + 1;
+	if (level == DIAG_ERROR)
+		diag->error_count = diag->error_count + 1;
+}
+
+void
+diag_report_bytes(Diag *diag, DiagLevel level, FileId file, uint32_t offset, const char *message, size_t length)
+{
+	append_diagnostic(diag, level, file, offset, arena_strndup(diag->arena, message, length), length);
+}
+
 void
 diag_report(Diag *diag, DiagLevel level, FileId file, uint32_t offset, const char *format, ...)
 {
@@ -29,20 +55,7 @@ diag_report(Diag *diag, DiagLevel level, FileId file, uint32_t offset, const cha
 	vsnprintf(message, (size_t)length + 1, format, args);
 	va_end(args);
 
-	if (diag->count == diag->capacity) {
-		uint32_t new_capacity = diag->capacity == 0 ? 16 : diag->capacity * 2;
-		diag->items = arena_grow_array(diag->arena, diag->items, diag->count, new_capacity, sizeof(Diagnostic), alignof(Diagnostic));
-		diag->capacity = new_capacity;
-	}
-
-	Diagnostic *item = &diag->items[diag->count];
-	item->level = level;
-	item->file = file;
-	item->offset = offset;
-	item->message = message;
-	diag->count = diag->count + 1;
-	if (level == DIAG_ERROR)
-		diag->error_count = diag->error_count + 1;
+	append_diagnostic(diag, level, file, offset, message, (size_t)length);
 }
 
 bool
@@ -96,7 +109,9 @@ diag_print(const Diag *diag, FILE *out)
 		SourceFile *file = source_get(diag->sources, item->file);
 		LineColumn position = source_line_column(file, item->offset);
 
-		fprintf(out, "%s:%u:%u: %s: %s\n", file->path, position.line, position.column, level_name(item->level), item->message);
+		fprintf(out, "%s:%u:%u: %s: ", file->path, position.line, position.column, level_name(item->level));
+		fwrite(item->message, 1, item->message_length, out);
+		fputc('\n', out);
 		print_source_line(file, item->offset, out);
 	}
 }

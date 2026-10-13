@@ -5,6 +5,7 @@
 
 #include "arena.h"
 #include "comptime.h"
+#include "diag.h"
 #include "lexer.h"
 
 static uint32_t failures = 0;
@@ -296,6 +297,72 @@ test_bigint_div_zero(void)
 	arena_free(&arena);
 }
 
+
+static void
+test_byte_values(void)
+{
+	Arena arena;
+	arena_init(&arena);
+	ValueTable table;
+	value_table_init(&table, &arena);
+	uint8_t data[] = {'a', 0, 'b'};
+	ValueId id = value_bytes(&table, 1, data, 3);
+	CHECK(id == value_bytes(&table, 1, data, 3));
+	CHECK(id != value_bytes(&table, 2, data, 3));
+	CHECK(id != value_bytes(&table, 1, data, 1));
+	data[2] = 'c';
+	CHECK(value_get(&table, id)->as.bytes.data[2] == 'b');
+	CHECK(value_get(&table, id)->as.bytes.data[3] == 0);
+	CHECK(value_get(&table, id)->as.bytes.length == 3);
+	ValueId empty = value_bytes(&table, 1, NULL, 0);
+	CHECK(value_get(&table, empty)->as.bytes.data[0] == 0);
+	CHECK(empty == value_bytes(&table, 1, data, 0));
+	ValueId ids[512];
+	for (uint32_t i = 0; i < 512; i++) {
+		uint8_t bytes[] = {(uint8_t)i, (uint8_t)(i >> 8), 0, 255};
+		ids[i] = value_bytes(&table, 1, bytes, 4);
+	}
+	bool preserved = true;
+	for (uint32_t i = 0; i < 512; i++) {
+		uint8_t bytes[] = {(uint8_t)i, (uint8_t)(i >> 8), 0, 255};
+		if (value_bytes(&table, 1, bytes, 4) != ids[i])
+			preserved = false;
+	}
+	CHECK(preserved);
+	CHECK(table.capacity >= 1024 && table.slot_count >= 2048);
+	arena_free(&arena);
+}
+
+static void
+test_binary_diagnostics(void)
+{
+	Arena arena;
+	arena_init(&arena);
+	SourceTable sources;
+	source_table_init(&sources, &arena);
+	FileId file = source_add_memory(&sources, "binary.zig", "x", 1);
+	Diag diag;
+	diag_init(&diag, &arena, &sources);
+	char message[] = {'a', 0, 'b'};
+	diag_report_bytes(&diag, DIAG_ERROR, file, 0, message, sizeof(message));
+	message[2] = 'c';
+	CHECK(diag.error_count == 1 && diag.count == 1);
+	CHECK(diag.items[0].message_length == 3);
+	CHECK(diag.items[0].message[2] == 'b');
+	FILE *out = tmpfile();
+	CHECK(out != NULL);
+	if (out != NULL) {
+		diag_print(&diag, out);
+		rewind(out);
+		char output[128];
+		size_t length = fread(output, 1, sizeof(output), out);
+		static const char expected[] = "binary.zig:1:1: error: a\0b\nx\n^\n";
+		CHECK(length == sizeof(expected) - 1 && memcmp(output, expected, length) == 0);
+		fclose(out);
+	}
+	arena_free(&arena);
+}
+
 int
 main(void)
 {
@@ -308,6 +375,8 @@ main(void)
 	test_bom_and_embedded_nul();
 	test_bigint_random();
 	test_bigint_div_zero();
+	test_byte_values();
+	test_binary_diagnostics();
 
 	printf("unit: %u checks, %u failed\n", checks, failures);
 	return failures == 0 ? 0 : 1;

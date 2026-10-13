@@ -143,6 +143,7 @@ typedef enum IrDataKind {
 	X(TYPEOF, "typeof", IR_DATA_UN)	/* type of operand */ \
 	X(ELEM_TYPE, "elem_type", IR_DATA_UN)	/* pointee type of pointer value operand */ \
 	X(LOG2_INT_TYPE, "log2_int_type", IR_DATA_UN)	/* shift amount type for integer value operand */ \
+	X(PANIC, "panic", IR_DATA_PAYLOAD)	/* normal message expression operand */ \
 	X(DEFER, "defer", IR_DATA_PAYLOAD)	/* reusable cleanup body, ending in break_inline */ \
 	X(ENSURE_RESULT, "ensure_result", IR_DATA_UN)	/* discarded expression must be void or noreturn */ \
 	X(FOR_LEN, "for_len", IR_DATA_PAYLOAD)	/* count, then bounded input length refs */ \
@@ -355,6 +356,11 @@ typedef enum IrCallModifier {
 } IrCallModifier;
 
 /* CALL: header, then arg_count bodies. Each arg body ends with break of the value. */
+typedef struct IrPanic {
+	IrRef message;
+	uint32_t argument_src;
+} IrPanic;
+
 typedef struct IrCallHeader {
 	IrRef          callee;
 	IrCallModifier modifier;

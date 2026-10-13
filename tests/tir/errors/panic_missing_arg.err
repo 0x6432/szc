@@ -1,0 +1,3 @@
+tests/tir/errors/panic_missing_arg.zig:1:22: error: expected 1 argument, found 0
+pub fn main() void { @panic(); }
+                     ^

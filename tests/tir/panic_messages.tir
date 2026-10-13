@@ -1,0 +1,28 @@
+export fn abort_message: fn (bool) noreturn {
+  %0: bool = arg 0
+  %1: noreturn = call szc.fail.3(%0)
+  %2: noreturn = trap
+}
+fn szc.main.2: fn () u8 {
+  %0: u8 = const 0
+  %1: noreturn = ret %0
+}
+fn szc.fail.3: fn (bool) noreturn {
+  %0: bool = arg 0
+  %1: **const [4:0]u8 = alloc
+  %2: *const [4:0]u8 = const "base"
+  %3: void = store %1, %2
+  %4: *const [4:0]u8 = block {
+    %9: noreturn = condbr %0 then {
+      %5: *const [4:0]u8 = const "left"
+      %6: noreturn = br %4, %5
+    } else {
+      %7: *const [4:0]u8 = const "rght"
+      %8: noreturn = br %4, %7
+    }
+  }
+  %10: void = store %1, %4
+  %11: *const [4:0]u8 = load %1
+  %12: usize = const 4
+  %13: noreturn = panic %11, %12
+}

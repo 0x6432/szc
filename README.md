@@ -21,8 +21,10 @@ inputs, unbounded companion counters, captures, labels and loop else/values.
 `defer` runs in reverse registration order across scope fallthrough, return,
 break and continue. Array/slice iteration, inline/comptime loops and `errdefer`
 remain pending. Explicit `unreachable` aborts through the safety panic runtime;
-noreturn return/cast diagnostics are checked against Zig 0.17. Explicit `@panic`
-and its message-value support are next.
+noreturn return/cast diagnostics are checked against Zig 0.17. `@panic` accepts
+first-class string-literal values, aliases, variables and runtime choices with
+statically known message lengths. Literal bytes, escapes, Unicode and multiline
+strings are supported; general runtime slices and string operations remain pending.
 
 ## Build & test
 

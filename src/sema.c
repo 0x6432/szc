@@ -172,6 +172,11 @@ type_hash(const Type *type)
 	case TYPE_FLOAT:
 		hash = hash_word(hash, type->as.floating.bits);
 		break;
+	case TYPE_ARRAY:
+		hash = hash_word(hash, type->as.array.child);
+		hash = hash_word(hash, type->as.array.length);
+		hash = hash_word(hash, type->as.array.sentinel_zero ? 1u : 0u);
+		break;
 	case TYPE_POINTER:
 		hash = hash_word(hash, type->as.pointer.child);
 		hash = hash_word(hash, (uint32_t)type->as.pointer.size);
@@ -201,6 +206,8 @@ type_equal(const Type *a, const Type *b)
 		return a->as.integer.is_signed == b->as.integer.is_signed && a->as.integer.bits == b->as.integer.bits;
 	case TYPE_FLOAT:
 		return a->as.floating.bits == b->as.floating.bits;
+	case TYPE_ARRAY:
+		return a->as.array.child == b->as.array.child && a->as.array.length == b->as.array.length && a->as.array.sentinel_zero == b->as.array.sentinel_zero;
 	case TYPE_POINTER:
 		return a->as.pointer.child == b->as.pointer.child && a->as.pointer.size == b->as.pointer.size && a->as.pointer.is_const == b->as.pointer.is_const && a->as.pointer.is_volatile == b->as.pointer.is_volatile;
 	case TYPE_FN:
@@ -485,6 +492,8 @@ sema_type_name(Sema *sema, TypeId type_id)
 		return arena_sprintf(sema->arena, "%c%u", type->as.integer.is_signed ? 'i' : 'u', (unsigned)type->as.integer.bits);
 	case TYPE_FLOAT:
 		return arena_sprintf(sema->arena, "f%u", (unsigned)type->as.floating.bits);
+	case TYPE_ARRAY:
+		return arena_sprintf(sema->arena, "[%u%s]%s", type->as.array.length, type->as.array.sentinel_zero ? ":0" : "", sema_type_name(sema, type->as.array.child));
 	case TYPE_POINTER: {
 		const char *prefix = type->as.pointer.size == POINTER_ONE ? "*" : type->as.pointer.size == POINTER_MANY ? "[*]" : type->as.pointer.size == POINTER_SLICE ? "[]" : "[*c]";
 		return arena_sprintf(sema->arena, "%s%s%s", prefix, type->as.pointer.is_const ? "const " : "", sema_type_name(sema, type->as.pointer.child));
@@ -527,6 +536,8 @@ sema_type_size(const Sema *sema, TypeId type_id)
 			bytes = bytes * 2;
 		return bytes;
 	}
+	case TYPE_ARRAY:
+		return ((uint64_t)type->as.array.length + (type->as.array.sentinel_zero ? 1u : 0u)) * sema_type_size(sema, type->as.array.child);
 	case TYPE_FLOAT:
 		return type->as.floating.bits / 8;
 	case TYPE_POINTER:
@@ -539,6 +550,8 @@ sema_type_size(const Sema *sema, TypeId type_id)
 uint32_t
 sema_type_align(const Sema *sema, TypeId type_id)
 {
+	if (sema->types[type_id].kind == TYPE_ARRAY)
+		return sema_type_align(sema, sema->types[type_id].as.array.child);
 	uint64_t size = sema_type_size(sema, type_id);
 	if (size == 0)
 		return 1;
@@ -969,6 +982,8 @@ type_tag_name(const Sema *sema, TypeId type)
 		return "int";
 	case TYPE_FLOAT:
 		return "float";
+	case TYPE_ARRAY:
+		return "array";
 	case TYPE_POINTER:
 		return "pointer";
 	case TYPE_FN:
@@ -1179,6 +1194,14 @@ peer_type(Block *block, Operand lhs, Operand rhs, uint32_t src, TypeId *out)
 		if (int_type_contains(sema, b, a)) {
 			*out = b;
 			return true;
+		}
+	}
+	if (ak == TYPE_POINTER && bk == TYPE_POINTER) {
+		TypePointer ap = sema->types[a].as.pointer;
+		TypePointer bp = sema->types[b].as.pointer;
+		if (ap.size == POINTER_ONE && bp.size == POINTER_ONE && sema->types[ap.child].kind == TYPE_ARRAY && sema->types[bp.child].kind == TYPE_ARRAY) {
+			sema_error(block, src, "not supported by szc yet: runtime slice joins");
+			return false;
 		}
 	}
 	sema_error(block, src, "incompatible types: '%s' and '%s'", sema_type_name(sema, a), sema_type_name(sema, b));
@@ -1731,6 +1754,68 @@ analyze_unary(Block *block, const IrInst *inst)
 		return int_result(block, op, type, result, src);
 	}
 	return runtime_operand(type, emit_tir_un(block, op == IR_NEGATE_WRAP ? TIR_NEGATE_WRAP : TIR_NEGATE, type, src, operand.inst));
+}
+
+
+/* String literals are pointers to immutable, zero-sentinel u8 arrays. */
+static Operand
+analyze_string(Block *block, const IrInst *inst)
+{
+	Sema *sema = block->sema;
+	StringId id = inst->data.name.name;
+	uint32_t length = intern_length(sema->interner, id);
+	Type array = make_type(TYPE_ARRAY);
+	array.as.array.child = type_id_of_well_known(IR_REF_TYPE_U8);
+	array.as.array.length = length;
+	array.as.array.sentinel_zero = true;
+	TypeId child = type_intern(sema, &array);
+	TypeId pointer = type_pointer(sema, child, POINTER_ONE, true);
+	return comptime_operand(pointer, value_bytes(&sema->values, pointer, (const uint8_t *)intern_text(sema->interner, id), length));
+}
+
+/* Lower the pointer-to-byte-array -> byte-slice conversion directly to ptr/len. */
+static InstOutcome
+analyze_panic(Block *block, const IrInst *inst)
+{
+	Sema *sema = block->sema;
+	IrPanic payload;
+	IR_READ(block->ir, inst->data.payload, &payload);
+	Operand message = resolve_ref(block, payload.message);
+	if (message.kind == OPERAND_NONE)
+		return INST_NORETURN;
+	if (message.type == type_id_of_well_known(IR_REF_TYPE_UNDEFINED) && !block->is_comptime) {
+		sema_error(block, payload.argument_src, "not supported by szc yet: undefined panic message");
+		return INST_NORETURN;
+	}
+	if (!check_defined(block, message, payload.argument_src))
+		return INST_NORETURN;
+	const Type *pointer = &sema->types[message.type];
+	const Type *array = pointer->kind == TYPE_POINTER && pointer->as.pointer.size == POINTER_ONE ? &sema->types[pointer->as.pointer.child] : NULL;
+	if (array == NULL || array->kind != TYPE_ARRAY || array->as.array.child != type_id_of_well_known(IR_REF_TYPE_U8)) {
+		sema_error(block, payload.argument_src, "expected type '[]const u8', found '%s'", sema_type_name(sema, message.type));
+		return INST_NORETURN;
+	}
+	uint32_t length = array->as.array.length;
+	if (block->is_comptime) {
+		if (message.kind != OPERAND_COMPTIME || operand_value(block, message)->kind != VALUE_BYTES)
+			sema_error(block, inst->src, "unable to evaluate comptime expression");
+		else {
+			static const char prefix[] = "encountered @panic at comptime: ";
+			ByteString bytes = operand_value(block, message)->as.bytes;
+			size_t size = sizeof(prefix) - 1 + (size_t)bytes.length;
+			char *text = arena_alloc(sema->arena, size, 1);
+			memcpy(text, prefix, sizeof(prefix) - 1);
+			memcpy(text + sizeof(prefix) - 1, bytes.data, bytes.length);
+			diag_report_bytes(sema->diag, DIAG_ERROR, block->ir->file, inst->src, text, size);
+		}
+		return INST_NORETURN;
+	}
+	if (!require_runtime(block, inst->src))
+		return INST_NORETURN;
+	TirRef data = materialize(block, message, inst->src);
+	Operand size = comptime_operand(T_USIZE, value_int_u64(&sema->values, T_USIZE, length));
+	emit_tir_bin(block, TIR_PANIC, T_NORETURN, inst->src, data, materialize(block, size, inst->src));
+	return INST_NORETURN;
 }
 
 /* ---------- Analysis: control flow ---------- */
@@ -2360,6 +2445,11 @@ analyze_inst(Block *block, IrInstIndex index, Operand *break_value)
 		result = inst->op == IR_AS_RETURN ? coerce_return(block, value, type, src) : coerce(block, value, type, src);
 		break;
 	}
+	case IR_STR:
+		result = analyze_string(block, inst);
+		break;
+	case IR_PANIC:
+		return analyze_panic(block, inst);
 	case IR_DEFER: {
 		/* Each exit gets fresh cleanup operands; captured outer refs remain visible. */
 		InstMap map;
@@ -2576,7 +2666,6 @@ analyze_inst(Block *block, IrInstIndex index, Operand *break_value)
 		/* Parameters are bound before the function body is analysed. */
 		break;
 	case IR_FLOAT:
-	case IR_STR:
 	case IR_ENUM_LITERAL:
 	case IR_DECL_REF:
 		result = unsupported_inst(block, inst);
@@ -2789,6 +2878,27 @@ value_text(Sema *sema, ValueId id)
 		return sema_type_name(sema, value->as.type_value);
 	case VALUE_FUNCTION:
 		return sema->funcs[value->as.function]->symbol;
+	case VALUE_BYTES: {
+		ByteString bytes = value->as.bytes;
+		char *text = arena_alloc(sema->arena, (size_t)bytes.length * 4 + 3, 1);
+		char *next = text;
+		*next++ = '"';
+		for (uint32_t i = 0; i < bytes.length; i++) {
+			uint8_t c = bytes.data[i];
+			if (c == '"' || c == '\\') {
+				*next++ = '\\';
+				*next++ = (char)c;
+			} else if (c >= 0x20 && c < 0x7f) {
+				*next++ = (char)c;
+			} else {
+				snprintf(next, 5, "\\x%02x", (unsigned)c);
+				next += 4;
+			}
+		}
+		*next++ = '"';
+		*next = '\0';
+		return text;
+	}
 	case VALUE_UNDEFINED:
 		return "undefined";
 	}

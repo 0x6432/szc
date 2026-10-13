@@ -18,6 +18,7 @@ typedef struct Diagnostic {
 	FileId     file;
 	uint32_t   offset;
 	const char *message;
+	size_t message_length;
 } Diagnostic;
 
 /* Collects diagnostics; compilation keeps going after an error. */
@@ -32,6 +33,7 @@ typedef struct Diag {
 
 void diag_init(Diag *diag, Arena *arena, SourceTable *sources);
 void diag_report(Diag *diag, DiagLevel level, FileId file, uint32_t offset, const char *format, ...);
+void diag_report_bytes(Diag *diag, DiagLevel level, FileId file, uint32_t offset, const char *message, size_t length);
 void diag_print(const Diag *diag, FILE *out);
 bool diag_has_errors(const Diag *diag);
 

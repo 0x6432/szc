@@ -123,3 +123,20 @@ return type is a body too, so it may depend on comptime parameters.
 The authoritative list is `IR_OP_LIST` in `ir.h`, with the meaning of each
 instruction's operands next to it. It grows milestone by milestone; `szc ir`
 prints a file's IR.
+
+## Literal bytes and explicit panic
+
+- `str` holds interned decoded bytes. Quoted literals decode Zig 0.17 escapes and
+  UTF-8 Unicode scalar values; multiline tokens join raw contents with newlines,
+  with no implicit trailing newline. Sema produces a const single pointer to a
+  zero-sentinel u8 array, with structural TYPE_ARRAY length/element information.
+- VALUE_BYTES owns and interns bytes with an explicit length; that length excludes
+  the zero sentinel. Empty strings and embedded NULs are not strlen-based values.
+  Aliases, variables and fixed-array pointer joins use existing operand machinery.
+  Codegen materializes constants as references to read-only globals keyed by ValueId.
+- `panic` has IrPanic payload: message ref and argument source position. Sema
+  validates the fixed-array pointer -> const-byte-slice conversion, then lowers to
+  TIR_PANIC(pointer, length). The outlined helper writes bytes/newline and aborts.
+  At comptime it records an error; binary message lengths survive diagnostic printing.
+  Different-length runtime joins/general slice representations await memory lowering.
+  Panic's noreturn control flow never causes scope-exit cleanup to run.

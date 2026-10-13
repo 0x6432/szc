@@ -1,0 +1,3 @@
+tests/tir/errors/panic_integer.zig:1:29: error: expected type '[]const u8', found 'comptime_int'
+pub fn main() void { @panic(1); }
+                            ^

@@ -42,6 +42,8 @@ typedef struct Codegen {
 	const TirFunc		*tir;
 	bool					failed;
 	bool					panic_used[PANIC_COUNT];
+	bool *bytes_used;
+	bool explicit_panic_used;
 } Codegen;
 
 static void
@@ -144,6 +146,10 @@ print_operand(Codegen *cg, TirRef ref)
 			fprintf(cg->out, "%" PRId64, (int64_t)bits);
 		return;
 	}
+	case VALUE_BYTES:
+		cg->bytes_used[inst->data.value] = true;
+		fprintf(cg->out, "$szc.bytes.%u", (unsigned)inst->data.value);
+		return;
 	case VALUE_FUNCTION:
 		fprintf(cg->out, "$%s", sema_func(cg->sema, value->as.function)->symbol);
 		return;
@@ -752,6 +758,14 @@ emit_inst(Codegen *cg, TirRef ref)
 	case TIR_REPEAT:
 		fprintf(out, "\tjmp @l%u\n", (unsigned)inst->data.un.operand);
 		return;
+	case TIR_PANIC:
+		cg->explicit_panic_used = true;
+		fputs("\tcall $szc.panic.bytes(l ", out);
+		print_operand(cg, inst->data.bin.lhs);
+		fputs(", l ", out);
+		print_operand(cg, inst->data.bin.rhs);
+		fputs(")\n\thlt\n", out);
+		return;
 	case TIR_UNREACHABLE:
 		cg->panic_used[PANIC_UNREACHABLE] = true;
 		fprintf(out, "\tcall $szc.panic.%u()\n\thlt\n", (unsigned)PANIC_UNREACHABLE);
@@ -842,14 +856,34 @@ codegen_qbe(FILE *out, Sema *sema, Diag *diag)
 	cg.sema = sema;
 	cg.out = out;
 	cg.diag = diag;
+	Arena arena;
+	arena_init(&arena);
+	cg.bytes_used = ARENA_ARRAY(&arena, bool, sema_values(sema)->count);
 	for (FuncId id = 1; id < sema_func_count(sema); id++) {
 		const SemaFunc *func = sema_func(sema, id);
 		if (func->state == FUNC_ANALYSED && !func->is_extern)
 			emit_function(&cg, func);
 	}
+	const ValueTable *values = sema_values(sema);
+	for (ValueId id = 1; id < values->count; id++) {
+		if (!cg.bytes_used[id])
+			continue;
+		ByteString bytes = value_get(values, id)->as.bytes;
+		fprintf(out, "section \".rodata\"\ndata $szc.bytes.%u = { ", (unsigned)id);
+		for (uint32_t i = 0; i < bytes.length; i++)
+			fprintf(out, "b %u, ", (unsigned)bytes.data[i]);
+		fputs("b 0 }\n", out);
+	}
+	if (cg.explicit_panic_used) {
+		fputs("section \".rodata\"\ndata $szc.panic.newline = { b 10 }\n", out);
+		fputs("function $szc.panic.bytes(l %ptr, l %len) {\n@start\n", out);
+		fputs("\tcall $write(w 2, l %ptr, l %len)\n", out);
+		fputs("\tcall $write(w 2, l $szc.panic.newline, l 1)\n\tcall $abort()\n\thlt\n}\n\n", out);
+	}
 	emit_panic_stubs(&cg);
 	FuncId main_id = sema_main_func(sema);
 	if (main_id != 0)
 		emit_entry(&cg, sema_func(sema, main_id));
+	arena_free(&arena);
 	return !cg.failed;
 }

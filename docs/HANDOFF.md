@@ -30,7 +30,8 @@ Read this first when resuming work (the sandbox resets often).
 - Done: M4.4a runtime range-based for, multi-input length checks and usize captures.
 - Done: M4.4b scope-exit defer across fallthrough, return, break and continue.
 - Done: M4.5a safe explicit unreachable, noreturn return/cast diagnostics and terminating joins.
-- Next: **M4.5b** explicit @panic, with proper message-value/string prerequisites.
+- Done: M4.5b explicit @panic and first-class string-literal byte values.
+- Next: **M5.1** single pointers, address-of/dereference and const pointer rules.
 - Run `PATH=/data/tools/bin:$PATH ZIG=/data/zig/zig-x86_64-linux-0.17.0/zig make e2e-test`
   locally. `tools/build_qbe.sh` builds the pinned QBE into `build/qbe-src` on CI.
 - Tools: `SZC_QBE`/`qbe`, `SZC_CC`/`cc`; pinned QBE revision
@@ -38,7 +39,37 @@ Read this first when resuming work (the sandbox resets often).
 - Restored sandbox needed libasan/libubsan/clang/compiler-rt reinstalled. Git
   credentials are not persisted; use transient authentication for future pushes.
 - M3.4 (`1882ced`) and M3.5 (`7b36edd`) are pushed to `main`.
-- CI through M4.4b (`e9c3c6c`): completed successfully. Check the M4.5a push run.
+- CI through M4.5a (`4e47b20`): completed successfully. Check the M4.5b push run.
+
+## Validation at M4.5b
+
+- GCC/Clang warning-clean sanitizer suites: 533 unit checks, 500 goldens,
+  36 ordinary/reference executable inputs plus one szc-only input, 12 driver checks
+  and 154 panic cases. Optimized GCC is clean. Four 60-second fuzz targets and
+  standalone 20,000 mutations per target pass. New seeds cover literal value flow.
+- IR_STR now holds decoded bytes; TYPE_ARRAY represents u8 length and zero sentinel,
+  with a const single pointer as the literal type. VALUE_BYTES owns/interns its
+  complete byte sequence, not a strlen-based C string. Byte lengths exclude the
+  sentinel, while storage includes it. Keep this invariant for future string memory.
+- IR_PANIC has a normal message operand plus argument source location. Sema validates
+  the fixed-array pointer -> const-byte-slice conversion and decomposes it directly
+  into TIR_PANIC pointer/length. There is no panic-only AST literal special case.
+- Codegen emits referenced bytes once per ValueId in read-only .rodata; data uses
+  numeric byte initializers to avoid QBE quoting/escape ambiguity. TIR_PANIC calls
+  the outlined pointer/length write+newline+abort helper. Panic never unwinds defer.
+- Runtime aliases, local pointer variables and same-length runtime choices work.
+  Different-length runtime choices require true slice joins and explicitly fail
+  as unsupported. Runtime undefined panic messages are explicitly unsupported.
+  General slice values/ABI, arrays and pointer operations are still Phase 5.
+- String escapes/multiline joining were checked against actual 0.17 sources and
+  binary. Sixteen new runtime cases include all byte values and Unicode boundaries.
+  Nested panic/unreachable arguments are valid in 0.17 and stop before outer panic.
+- Diagnostic stores message_length and prints bytes, preserving embedded zeroes.
+  The 0.17 renderer truncates comptime panic diagnostics at NUL; szc intentionally
+  preserves them (new binary golden/unit tests). Existing text diagnostics are unchanged.
+- M5.4 is partly implemented, not complete: literal bytes exist, but general string
+  operations/sentinel pointer syntax await memory work. Quoted identifiers still
+  use exact spelling; don't assume literal decoding fixed their canonicalization.
 
 ## Validation at M4.5a
 
@@ -221,7 +252,8 @@ Read this first when resuming work (the sandbox resets often).
   `zig fmt --check file.zig` shows the reference's parse error for a mutant.
 - Number literals are lexed loosely (like the reference). Validate them when decoding (M3.x).
 - Phase 4: runtime range for and scope-exit defer are implemented.
-  Explicit @panic is next; array/slice inputs and comptime loops remain pending.
+  Explicit @panic and literal byte values are implemented; single pointers are next.
+  Array/slice inputs and comptime loops remain pending.
   Source if is now IR_IF with IrCondbr payload and break_inline BODY_RESULT arm
   exits. It lowers to TIR block/condbr/br. IR_CONDBR is still a terminator.
   Known conditions select one arm; a sole surviving constant stays known, while

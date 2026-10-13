@@ -30,6 +30,7 @@ typedef enum TypeKind {
 	TYPE_INT,
 	TYPE_FLOAT,
 	TYPE_POINTER,
+	TYPE_ARRAY,
 	TYPE_FN,
 	TYPE_STRUCT,
 	TYPE_ANYOPAQUE,
@@ -53,6 +54,12 @@ typedef struct TypePointer {
 	bool        is_volatile;
 } TypePointer;
 
+typedef struct TypeArray {
+	TypeId child;
+	uint32_t length;
+	bool sentinel_zero;
+} TypeArray;
+
 typedef struct TypeFn {
 	TypeId   *params;
 	uint32_t param_count;
@@ -74,6 +81,7 @@ typedef struct Type {
 			uint16_t bits;
 		} floating;
 		TypePointer   pointer;
+		TypeArray     array;
 		TypeFn        fn;
 		SemaNamespace *structure;	/* the struct's namespace (nominal type) */
 	} as;

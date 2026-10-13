@@ -1,0 +1,3 @@
+tests/tir/errors/panic_undefined.zig:1:29: error: not supported by szc yet: undefined panic message
+pub fn main() void { @panic(undefined); }
+                            ^

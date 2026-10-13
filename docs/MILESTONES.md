@@ -58,16 +58,16 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
 - [x] **M4.4 for over ranges, `defer`.**
   - [x] **M4.4a Runtime range-based for loops**: captures, multiple inputs, length safety, labels and else/values.
   - [x] **M4.4b defer**: scope-exit execution across fallthrough and control transfers.
-- [ ] **M4.5 unreachable, noreturn, `@panic` minimal runtime.**
+- [x] **M4.5 unreachable, noreturn, `@panic` minimal runtime.**
   - [x] **M4.5a Safe unreachable and noreturn checks**: safety panic, return/cast diagnostics, terminating calls/joins.
-  - [ ] **M4.5b Explicit @panic**: message-value prerequisites and minimal runtime.
+  - [x] **M4.5b Explicit @panic**: first-class literal values and minimal fixed-length message runtime.
 
 ## Phase 5: Memory
 
 - [ ] **M5.1 Single pointers, `&`, `.*`, `const` pointers.**
 - [ ] **M5.2 Arrays, indexing, array literals, `++` at comptime** (0.17.0 has no `**`).
 - [ ] **M5.3 Slices, many-pointers, slicing, `.len`, `.ptr`, for over slices.**
-- [ ] **M5.4 String literals, sentinels, `[*:0]const u8`.**
+- [~] **M5.4 String literals, sentinels, `[*:0]const u8`.** Literal byte values landed in M4.5b; general string/memory operations and sentinel pointer syntax remain pending.
 - [ ] **M5.5 Casting builtins**: `@intCast`, `@truncate`, `@ptrCast`, `@intFromPtr`, `@ptrFromInt`, `@bitCast`, `@as`.
 
 ## Phase 6: Aggregates and errors
@@ -118,6 +118,48 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
 ## Completed milestone log
 
 (newest first; each entry: what, limitations, interactions)
+
+### M4.5b Explicit panic and first-class literal byte values
+- **What**: ordinary quoted/multiline string expressions lower to IR_STR, typed
+  as pointers to immutable zero-sentinel u8 arrays. Escapes decode to bytes;
+  Unicode escapes encode valid scalar values as UTF-8. VALUE_BYTES interns owned,
+  length-aware bytes (including embedded NULs), independent of AST lifetime.
+  Aliases, known-condition selection, block exits, local pointer variables and
+  same-length runtime branch joins flow through the usual expression/value pipeline.
+- **Panic**: @panic takes a normal operand and validates the byte-array-to-const-byte-
+  slice conversion. Known array lengths lower directly as pointer/length operands
+  to TIR_PANIC and an outlined libc write/abort helper. Literal storage is emitted
+  once per referenced ValueId in ELF read-only .rodata, including its zero sentinel.
+  Panic writes exactly the message bytes plus newline; it never unwinds defer.
+  Comptime panic reports "encountered @panic at comptime: ...". Nested panic and
+  syntactically unreachable arguments terminate before the outer panic, as in 0.17.
+- **Tests**: warning-clean GCC/Clang ASan/UBSan: 533 unit checks, 500 goldens,
+  36 ordinary/reference executable inputs plus one szc-only input, 12 driver checks
+  and 154 panic cases. Optimized GCC is clean. Sixteen new panic cases compare
+  Unicode boundaries, all 256 byte values, NULs, raw UTF-8, empty/escaped/multiline
+  messages, aliases, variables, both runtime choices and cleanup suppression.
+  Unit checks exercise byte interning ownership/deduplication/rehashing and binary
+  diagnostic storage/printing. Readelf confirms literal .rodata has no write flag.
+  Four 60-second fuzz targets and standalone 20,000-mutation replays pass.
+- **Reference**: checked actual 0.17 string_literal.parseWrite/parseEscapeSequence,
+  AstGen.strLitNodeAsString/simpleUnOp/panic and Sema.zirPanic, plus reference
+  execution and diagnostics. Runtime binary messages match byte-for-byte. The
+  official diagnostic renderer truncates a comptime panic message at embedded NUL;
+  szc intentionally preserves the complete diagnostic bytes and records this difference.
+- **Limitations**: general arrays/indexing/slices/string operations remain Phase 5.
+  Runtime choices between different-sized literal arrays require slice joins and
+  are explicitly unsupported, not falsely labeled incompatible source types.
+  Runtime undefined panic slices are explicitly unsupported (reference accepts
+  that undefined program). User panic handlers, stack traces, safety modes and
+  retries for failed/partial writes remain absent. Quoted identifier canonicalization
+  is unchanged; decoding literals does not automatically normalize identifier names.
+- **Interactions**: IR_PANIC stores the operand and its argument source location;
+  there is no panic-specific literal AST shortcut. TYPE_ARRAY carries element,
+  length and zero-sentinel layout. Codegen materializes VALUE_BYTES as read-only
+  global addresses and accepts ordinary pointer storage/joins. Diagnostic now stores
+  a byte length; diag_report_bytes allows embedded-zero comptime messages, while
+  existing formatted diagnostics use the same collector unchanged. Slice ABI and
+  more general pointer/aggregate coercions can extend this foundation in Phase 5.
 
 ### M4.5a Safe unreachable and noreturn checks
 - **What**: explicit source unreachable now uses the existing outlined safety

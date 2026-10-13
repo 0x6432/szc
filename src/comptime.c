@@ -531,6 +531,11 @@ value_hash(const Value *value)
 	case VALUE_TYPE:
 		hash = hash_mix(hash, value->as.type_value);
 		break;
+	case VALUE_BYTES:
+		hash = hash_mix(hash, value->as.bytes.length);
+		for (uint32_t i = 0; i < value->as.bytes.length; i++)
+			hash = hash_mix(hash, value->as.bytes.data[i]);
+		break;
 	case VALUE_FUNCTION:
 		hash = hash_mix(hash, value->as.function);
 		break;
@@ -553,6 +558,8 @@ value_equal(const Value *a, const Value *b)
 		return bigint_compare(&a->as.integer, &b->as.integer) == 0;
 	case VALUE_TYPE:
 		return a->as.type_value == b->as.type_value;
+	case VALUE_BYTES:
+		return a->as.bytes.length == b->as.bytes.length && (a->as.bytes.length == 0 || memcmp(a->as.bytes.data, b->as.bytes.data, a->as.bytes.length) == 0);
 	case VALUE_FUNCTION:
 		return a->as.function == b->as.function;
 	}
@@ -604,6 +611,12 @@ value_intern(ValueTable *table, const Value *value)
 		table->values[id].as.integer = bigint_from_limbs(table->arena, value->as.integer.limbs, value->as.integer.limb_count);
 	if (value->kind == VALUE_INT)
 		table->values[id].as.integer.negative = value->as.integer.negative;
+	if (value->kind == VALUE_BYTES) {
+		uint8_t *copy = arena_zalloc(table->arena, (size_t)value->as.bytes.length + 1, 1);
+		if (value->as.bytes.length != 0)
+			memcpy(copy, value->as.bytes.data, value->as.bytes.length);
+		table->values[id].as.bytes.data = copy;
+	}
 	table->hashes[id] = hash;
 	table->count = table->count + 1;
 
@@ -692,5 +705,14 @@ value_function(ValueTable *table, TypeId fn_type, FuncId function)
 {
 	Value value = make_value(VALUE_FUNCTION, fn_type);
 	value.as.function = function;
+	return value_intern(table, &value);
+}
+
+ValueId
+value_bytes(ValueTable *table, TypeId type, const uint8_t *data, uint32_t length)
+{
+	Value value = make_value(VALUE_BYTES, type);
+	value.as.bytes.data = data;
+	value.as.bytes.length = length;
 	return value_intern(table, &value);
 }

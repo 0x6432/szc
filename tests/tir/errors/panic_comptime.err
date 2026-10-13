@@ -1,0 +1,3 @@
+tests/tir/errors/panic_comptime.zig:2:11: error: encountered @panic at comptime: failure
+const x = @panic(text);
+          ^

@@ -1,0 +1,76 @@
+%44 = struct_decl (flags=0) {
+  decl const "message" value {
+    %0 = str "base"
+    %1 = break_inline result, %0
+  }
+  decl fn "fail" value {
+    %20 = func "fail" {
+      %3 = param "c" type {
+        %2 = break_inline result, @type_bool
+      }
+      ret type {
+        %4 = break_inline result, @type_noreturn
+      }
+      body insts {
+        %5 = decl_val "message"
+        %6 = alloc type=inferred init=%5
+        %7 = as @type_bool, %3
+        %16 = if %7 then {
+          %8 = str "left"
+          %9 = elem_type %6
+          %10 = as %9, %8
+          %11 = break_inline result, %10
+        } else {
+          %12 = str "rght"
+          %13 = elem_type %6
+          %14 = as %13, %12
+          %15 = break_inline result, %14
+        }
+        %17 = store %6, %16
+        %18 = load %6
+        %19 = panic %18
+      }
+    }
+    %21 = break_inline result, %20
+  }
+  decl fn "main" pub value {
+    %31 = func "main" {
+      ret type {
+        %22 = break_inline result, @type_u8
+      }
+      body insts {
+        %23 = str "\x00\xf0\x9f\x98\x80\x0a"
+        %26 = if @false then {
+          %24 = panic %23
+        } else {
+          %25 = break_inline result, @void_value
+        }
+        %27 = ret_type
+        %28 = int 0
+        %29 = as_return %27, %28
+        %30 = ret %29
+      }
+    }
+    %32 = break_inline result, %31
+  }
+  decl fn "abort_message" export value {
+    %42 = func "abort_message" export {
+      %34 = param "c" type {
+        %33 = break_inline result, @type_bool
+      }
+      ret type {
+        %35 = break_inline result, @type_noreturn
+      }
+      body insts {
+        %36 = decl_val "fail"
+        %37 = call %36 arg0 {
+          %38 = arg_type %37, 0
+          %39 = as %38, %34
+          %40 = break_inline result, %39
+        }
+        %41 = ret_implicit
+      }
+    }
+    %43 = break_inline result, %42
+  }
+}

@@ -302,6 +302,7 @@ body_is_terminated(const GenBody *body)
 	case IR_RET:
 	case IR_RET_IMPLICIT:
 	case IR_UNREACHABLE:
+	case IR_PANIC:
 		return true;
 	default:
 		return false;
@@ -581,6 +582,127 @@ number_literal(GenBody *body, AstNode *node)
 	return emit_payload(body, IR_INT_BIG, node->offset, payload);
 }
 
+static uint32_t
+hex_digit(uint8_t c)
+{
+	if (c >= '0' && c <= '9')
+		return c - '0';
+	if (c >= 'a' && c <= 'f')
+		return c - 'a' + 10;
+	if (c >= 'A' && c <= 'F')
+		return c - 'A' + 10;
+	return UINT32_MAX;
+}
+
+static IrRef
+literal_error(GenBody *body, uint32_t start, uint32_t index, const char *message, uint8_t c)
+{
+	const char *text = arena_sprintf(body->gen->arena, message, (unsigned)c);
+	error_at(body->gen, start + index, "%s", text);
+	return IR_REF_VOID_VALUE;
+}
+
+/* Same escapes and UTF-8 encoding as 0.17 std.zig.string_literal.parseWrite. */
+static IrRef
+string_literal(GenBody *body, AstNode *node)
+{
+	IrGen *gen = body->gen;
+	AstLiteral *literal = AST_CAST(AstLiteral, node, AST_STRING_LITERAL);
+	Span span = literal->text;
+	const uint8_t *text = (const uint8_t *)gen->source + span.start;
+	uint32_t length = span.end - span.start;
+	uint8_t *bytes = ARENA_ARRAY(gen->arena, uint8_t, length);
+	uint32_t count = 0;
+	for (uint32_t i = 1; i < length - 1;) {
+		uint8_t c = text[i++];
+		if (c != '\\') {
+			bytes[count++] = c;
+			continue;
+		}
+		uint32_t escape = i;
+		c = text[i++];
+		switch (c) {
+		case 'n': bytes[count++] = '\n'; break;
+		case 'r': bytes[count++] = '\r'; break;
+		case 't': bytes[count++] = '\t'; break;
+		case '\\':
+		case '\'':
+		case '"': bytes[count++] = c; break;
+		case 'x': {
+			uint32_t value = 0;
+			for (uint32_t j = 0; j < 2; j++, i++) {
+				uint32_t digit = i < length ? hex_digit(text[i]) : UINT32_MAX;
+				if (digit == UINT32_MAX)
+					return literal_error(body, span.start, i, "expected hex digit, found '%c'", i < length ? text[i] : 0);
+				value = value * 16 + digit;
+			}
+			bytes[count++] = (uint8_t)value;
+			break;
+		}
+		case 'u': {
+			if (i >= length || text[i] != '{')
+				return literal_error(body, span.start, i, "expected '{', found '%c'", i < length ? text[i] : 0);
+			i++;
+			if (i < length && text[i] == '}')
+				return literal_error(body, span.start, i, "empty unicode escape sequence", 0);
+			uint32_t value = 0;
+			while (i < length && text[i] != '}') {
+				uint32_t digit = hex_digit(text[i]);
+				if (digit == UINT32_MAX)
+					return literal_error(body, span.start, i, "expected hex digit or '}', found '%c'", text[i]);
+				value = value * 16 + digit;
+				if (value > 0x10ffff)
+					return literal_error(body, span.start, i, "unicode escape does not correspond to a valid unicode scalar value", 0);
+				i++;
+			}
+			if (i >= length)
+				return literal_error(body, span.start, i, "expected '}', found '%c'", 0);
+			i++;
+			if (value >= 0xd800 && value <= 0xdfff)
+				return literal_error(body, span.start, escape + 1, "unicode escape does not correspond to a valid unicode scalar value", 0);
+			if (value <= 0x7f) {
+				bytes[count++] = (uint8_t)value;
+			} else if (value <= 0x7ff) {
+				bytes[count++] = (uint8_t)(0xc0 | value >> 6);
+				bytes[count++] = (uint8_t)(0x80 | (value & 0x3f));
+			} else if (value <= 0xffff) {
+				bytes[count++] = (uint8_t)(0xe0 | value >> 12);
+				bytes[count++] = (uint8_t)(0x80 | (value >> 6 & 0x3f));
+				bytes[count++] = (uint8_t)(0x80 | (value & 0x3f));
+			} else {
+				bytes[count++] = (uint8_t)(0xf0 | value >> 18);
+				bytes[count++] = (uint8_t)(0x80 | (value >> 12 & 0x3f));
+				bytes[count++] = (uint8_t)(0x80 | (value >> 6 & 0x3f));
+				bytes[count++] = (uint8_t)(0x80 | (value & 0x3f));
+			}
+			break;
+		}
+		default:
+			return literal_error(body, span.start, escape, "invalid escape character: '%c'", c);
+		}
+	}
+	return emit_name(body, IR_STR, node->offset, intern(gen->interner, (const char *)bytes, count), IR_REF_NONE);
+}
+
+/* Multiline lines are raw bytes, joined by newlines without a trailing newline. */
+static IrRef
+multiline_literal(GenBody *body, AstNode *node)
+{
+	AstMultilineString *literal = AST_CAST(AstMultilineString, node, AST_MULTILINE_STRING_LITERAL);
+	uint32_t capacity = node->end - node->offset;
+	char *bytes = ARENA_ARRAY(body->gen->arena, char, capacity);
+	uint32_t count = 0;
+	for (uint32_t i = 0; i < literal->line_count; i++) {
+		Span line = literal->lines[i];
+		if (i != 0)
+			bytes[count++] = '\n';
+		uint32_t length = line.end - line.start - 2;
+		memcpy(bytes + count, body->gen->source + line.start + 2, length);
+		count += length;
+	}
+	return emit_name(body, IR_STR, node->offset, intern(body->gen->interner, bytes, count), IR_REF_NONE);
+}
+
 static IrRef
 identifier(GenBody *body, Scope *scope, ResultInfo info, AstNode *node)
 {
@@ -789,6 +911,7 @@ typedef enum Builtin {
 	BUILTIN_TRUNCATE,
 	BUILTIN_INT_FROM_BOOL,
 	BUILTIN_ARITH,
+	BUILTIN_PANIC,
 } Builtin;
 
 typedef struct BuiltinInfo {
@@ -799,6 +922,7 @@ typedef struct BuiltinInfo {
 } BuiltinInfo;
 
 static const BuiltinInfo builtin_table[] = {
+	{"panic", BUILTIN_PANIC, 1, IR_OP_COUNT},
 	{"as", BUILTIN_AS, 2, IR_OP_COUNT},
 	{"intCast", BUILTIN_INT_CAST, 1, IR_OP_COUNT},
 	{"truncate", BUILTIN_TRUNCATE, 1, IR_OP_COUNT},
@@ -860,6 +984,12 @@ builtin_call(GenBody *body, Scope *scope, ResultInfo info, AstNode *node)
 		return IR_REF_VOID_VALUE;
 	}
 	switch (builtin->builtin) {
+	case BUILTIN_PANIC: {
+		IrPanic payload;
+		payload.message = expr(body, scope, result_none, args[0]);
+		payload.argument_src = args[0]->offset;
+		return emit_payload(body, IR_PANIC, node->offset, APPEND_EXTRA(gen, payload));
+	}
 	case BUILTIN_AS: {
 		IrRef type = type_expr(body, scope, args[0]);
 		IrRef value = expr(body, scope, result_type(type), args[1]);
@@ -1252,6 +1382,10 @@ static IrRef
 expr(GenBody *body, Scope *scope, ResultInfo info, AstNode *node)
 {
 	switch (node->kind) {
+	case AST_STRING_LITERAL:
+		return rvalue(body, info, string_literal(body, node), node->offset);
+	case AST_MULTILINE_STRING_LITERAL:
+		return rvalue(body, info, multiline_literal(body, node), node->offset);
 	case AST_NUMBER_LITERAL:
 		return rvalue(body, info, number_literal(body, node), node->offset);
 	case AST_IDENTIFIER:
@@ -2056,6 +2190,13 @@ dump_inst(const IrDumper *dumper, IrInstIndex index, uint32_t depth)
 	case IR_INT_TYPE:
 		fprintf(out, " %c%" PRIu64, (inst->data.integer & 0x10000u) ? 'i' : 'u', inst->data.integer & 0xffffu);
 		break;
+	case IR_PANIC: {
+		IrPanic payload;
+		IR_READ(ir, inst->data.payload, &payload);
+		fputc(' ', out);
+		dump_ref(dumper, payload.message);
+		break;
+	}
 	case IR_FOR_LEN: {
 		uint32_t count = ir->extra[inst->data.payload];
 		for (uint32_t i = 0; i < count; i++) {

@@ -31,8 +31,14 @@ typedef enum ValueKind {
 	VALUE_INT,	/* integer of any integer type, including comptime_int */
 	VALUE_TYPE,
 	VALUE_FUNCTION,
+	VALUE_BYTES,	/* immutable bytes; length excludes the zero sentinel */
 	VALUE_UNDEFINED,	/* `undefined` of any type */
 } ValueKind;
+
+typedef struct ByteString {
+	const uint8_t *data;
+	uint32_t length;
+} ByteString;
 
 typedef struct Value {
 	ValueKind kind;
@@ -42,6 +48,7 @@ typedef struct Value {
 		BigInt integer;
 		TypeId type_value;
 		FuncId function;
+		ByteString bytes;
 	} as;
 } Value;
 
@@ -59,6 +66,7 @@ void         value_table_init(ValueTable *table, Arena *arena);
 ValueId      value_intern(ValueTable *table, const Value *value);	/* copies limbs */
 const Value *value_get(const ValueTable *table, ValueId id);
 
+ValueId value_bytes(ValueTable *table, TypeId type, const uint8_t *data, uint32_t length);
 ValueId value_void(ValueTable *table, TypeId void_type);
 ValueId value_bool(ValueTable *table, TypeId bool_type, bool value);
 ValueId value_type(ValueTable *table, TypeId type_type, TypeId type);

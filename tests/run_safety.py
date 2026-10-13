@@ -21,6 +21,30 @@ def binary_case(name, integer_type, operator, lhs, rhs, message="integer overflo
 
 
 def cases():
+    for label, literal, message in (
+        ("plain", '"explicit panic"', "explicit panic"),
+        ("empty", '""', ""),
+        ("escapes", r'"quote \" slash \\ tab \t CR \r LF \n"', 'quote " slash \\ tab \t CR \r LF \n'),
+        ("utf8", '"héllo 😀"', "héllo 😀"),
+        ("unicode", r'"\u{0}\u{7f}\u{80}\u{7ff}\u{800}\u{d7ff}\u{e000}\u{ffff}\u{10000}\u{10ffff}"',
+         "".join(chr(c) for c in (0, 0x7f, 0x80, 0x7ff, 0x800, 0xd7ff, 0xe000, 0xffff, 0x10000, 0x10ffff))),
+        ("binary", r'"a\x00b\xff"', b"a\x00b\xff"),
+    ):
+        yield f"panic_{label}", f"pub fn main() void {{ @panic({literal}); }}\n", message
+    literal = '"' + "".join(f"\\x{c:02x}" for c in range(256)) + '"'
+    yield "panic_all_bytes", f"pub fn main() void {{ @panic({literal}); }}\n", bytes(range(256))
+    yield "panic_nested", 'pub fn main() void { @panic(@panic("inner")); }\n', "inner"
+    yield "panic_unreachable_argument", "pub fn main() void { @panic(unreachable); }\n", "reached unreachable code"
+    yield "panic_alias", 'const text = value: { break :value "alias"; };\npub fn main() void { const local = text; @panic(local); }\n', "alias"
+    for c, message in (("true", "left"), ("false", "rght")):
+        source = f'fn operation(c: bool) noreturn {{ @panic(if (c) "left" else "rght"); }}\npub fn main() void {{ operation({c}); }}\n'
+        yield f"panic_choice_{c}", source, message
+    yield "panic_variable", 'fn operation() noreturn { var text = "first"; text = "later"; @panic(text); }\npub fn main() void { operation(); }\n', "later"
+    slashes = chr(92) * 2
+    source = "\n".join(("pub fn main() void { @panic(", "    " + slashes + "first line", "    " + slashes + "raw " + chr(92) + "u{41}", "); }", ""))
+    yield "panic_multiline", source, "first line\nraw " + chr(92) + "u{41}"
+    yield "panic_cleanup", 'fn operation(x: u8) void { var a = x; defer a += 1; defer @panic("cleanup"); }\npub fn main() void { operation(255); }\n', "cleanup"
+    yield "panic_before_cleanup", 'fn operation(x: u8) void { var a = x; defer a += 1; @panic("direct"); }\npub fn main() void { operation(255); }\n', "direct"
     for label, source in (
         ("direct", "pub fn main() void { unreachable; }"),
         ("noreturn_main", "pub fn main() noreturn { unreachable; }"),
@@ -142,6 +166,7 @@ def main():
             src = root / f"{name}.zig"
             src.write_text(source)
             try:
+                message_bytes = message.encode() if isinstance(message, str) else message
                 for compiler in ([szc, zig] if zig else [szc]):
                     exe = root / ("reference" if compiler == zig else "native")
                     command = ([compiler, "build-exe", str(src), f"-femit-bin={exe}"]
@@ -156,9 +181,9 @@ def main():
                     if result.stdout:
                         raise AssertionError("unexpected stdout")
                     if compiler == zig:
-                        if message.encode() not in result.stderr:
+                        if message_bytes not in result.stderr:
                             raise AssertionError("reference panic message mismatch: " + result.stderr.decode(errors="replace"))
-                    elif result.stderr != (message + "\n").encode():
+                    elif result.stderr != message_bytes + b"\n":
                         raise AssertionError("panic message mismatch: " + result.stderr.decode(errors="replace"))
                 passed += 1
             except (AssertionError, subprocess.TimeoutExpired) as error:

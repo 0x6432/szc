@@ -65,6 +65,7 @@ typedef uint32_t TirBody;	/* extra index of a body, 0 = none */
 	X(CONDBR, "condbr")	/* payload: condition, then body, else body */ \
 	X(LOOP, "loop")	/* payload: body; repeat jumps to its start */ \
 	X(REPEAT, "repeat")	/* un: the loop instruction */ \
+	X(PANIC, "panic")	/* bin: byte pointer, length */ \
 	X(TRAP, "trap")	/* backend-only terminator after a known noreturn call */ \
 	X(UNREACHABLE, "unreachable")	/* source unreachable: safety panic */
 

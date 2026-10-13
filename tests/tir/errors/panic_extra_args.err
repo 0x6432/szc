@@ -1,0 +1,3 @@
+tests/tir/errors/panic_extra_args.zig:1:22: error: expected 1 argument, found 2
+pub fn main() void { @panic("one", "two"); }
+                     ^

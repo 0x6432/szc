@@ -1,0 +1,3 @@
+tests/tir/errors/panic_bool.zig:1:29: error: expected type '[]const u8', found 'bool'
+pub fn main() void { @panic(true); }
+                            ^
