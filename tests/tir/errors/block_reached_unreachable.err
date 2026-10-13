@@ -1,0 +1,3 @@
+tests/tir/errors/block_reached_unreachable.zig:1:47: error: reached unreachable code
+const x = value: { if (false) break :value 1; unreachable; };
+                                              ^

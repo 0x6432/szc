@@ -1,0 +1,6 @@
+tests/tir/errors/block_missing_label.zig:1:38: error: label not found: 'missing'
+pub fn main() void { value: { break :missing; } }
+                                     ^
+tests/tir/errors/block_missing_label.zig:1:22: error: unused block label
+pub fn main() void { value: { break :missing; } }
+                     ^

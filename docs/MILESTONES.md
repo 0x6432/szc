@@ -54,7 +54,7 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
 
 - [x] **M4.1 if/else, comparisons, `and`/`or` short-circuit.**
 - [x] **M4.2 while/break/continue, continue expressions, labeled loops.**
-- [ ] **M4.3 Blocks as expressions, labeled break with value.**
+- [x] **M4.3 Blocks as expressions, labeled break with value.**
 - [ ] **M4.4 for over ranges, `defer`.**
 - [ ] **M4.5 unreachable, noreturn, `@panic` minimal runtime.**
 
@@ -114,6 +114,41 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
 ## Completed milestone log
 
 (newest first; each entry: what, limitations, interactions)
+
+### M4.3 Labeled blocks as expressions and named break values
+- **What**: labeled block expressions/statements, value/void breaks, nested exits
+  to outer blocks and loops, implicit void fallthrough, branch-local results and
+  peer-typed joins. Result types propagate from returns, declarations, assignments
+  and call arguments into break operands (including integer cast builtins).
+  Blocks with no local exit are noreturn. A sole constant exit stays known;
+  multiple runtime exits of comptime-only type are rejected like Zig 0.17.0.
+- **Comptime**: constant-only block bodies work in container-level declarations,
+  including nested named exits, conditional selection, arithmetic, type-valued
+  blocks and function aliases. When typed IR is absent, breaks record known
+  operands without allocating/emitting TIR; an inner exit to an outer target
+  propagates noreturn until that target yields its value.
+- **Scoping/diagnostics**: block and loop labels share ControlScope and a label
+  redefinition checker. Unnamed jumps skip labeled blocks and find an enclosing
+  loop; named continue targeting a block is rejected. Labels are a distinct
+  namespace from locals. Unused/missing/redefined labels, fallthrough/type errors,
+  comptime-only joins and unreachable break operands are reference-checked.
+- **Testing**: IR/TIR/QBE goldens; runtime/comptime/nested-loop examples; all 128
+  signed/unsigned 1–64-bit block joins via tools/generate_block_tests.py in CI.
+  GCC/Clang sanitizer suites: 518 unit checks, 427 goldens, 25 ordinary e2e inputs
+  plus one szc-only edge input, 12 driver checks and 119 panic cases. New safety
+  cases exercise checked arithmetic and integer cast guards in break operands;
+  ordinary programs and diagnostic messages are checked against actual Zig 0.17.0.
+  Four 60-second fuzz runs and standalone corpus replay (20,000 mutations per
+  target) are clean, including final irgen/sema replay after updating block seeds.
+- **Limitations**: mutable comptime storage, comptime calls/loops and explicit
+  comptime expressions remain Phase 7 work. Identifier/label matching still uses
+  exact source spelling: quoted labels work with identical spelling, but aliases
+  such as foo vs @"foo" and equivalent escapes are not yet normalized. Unused
+  locals/results and full secondary diagnostic notes remain unsupported.
+- **Interactions**: no new IR/TIR/codegen operation is needed. Source labeled
+  blocks use the existing IR_BLOCK/BREAK and deferred BreakExit coercion bodies
+  introduced by M4.2. ControlScope has independent flags for unnamed loop jumps
+  and continue support. Namespace boundaries still stop label lookup.
 
 ### M4.2 Runtime while, break/continue and labeled loops
 - **What**: boolean `while`, block/unbraced bodies, continue expressions, nested

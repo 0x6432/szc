@@ -1883,24 +1883,29 @@ analyze_break(Block *block, const IrInst *inst)
 	BreakExit *exit = &target->exits[target->count++];
 	exit->value = value;
 	exit->src = inst->src;
-	exit->wrapper = emit_tir(block, TIR_BLOCK, T_NORETURN, inst->src);
+	exit->wrapper = block->tir == NULL ? TIR_REF_NONE : emit_tir(block, TIR_BLOCK, T_NORETURN, inst->src);
 }
 
 static Operand
 analyze_control_block(Block *block, IrInstIndex index)
 {
 	const IrInst *inst = &block->ir->insts[index];
-	if (!require_runtime(block, inst->src))
-		return operand_none;
 	ControlTarget target;
 	memset(&target, 0, sizeof(target));
 	target.parent = block->control;
 	target.ir_index = index;
-	target.tir_ref = emit_tir(block, TIR_BLOCK, T_VOID, inst->src);
+	target.tir_ref = block->tir == NULL ? TIR_REF_NONE : emit_tir(block, TIR_BLOCK, T_VOID, inst->src);
 	Block inner;
 	block_init_child(&inner, block);
 	inner.control = &target;
 	analyze_body(&inner, inst->data.payload);
+	if (block->tir == NULL) {
+		if (target.count == 1)
+			return target.exits[0].value;
+		if (target.count > 1)
+			sema_error(block, inst->src, "unable to evaluate comptime expression");
+		return runtime_operand(T_NORETURN, TIR_REF_NONE);
+	}
 	TypeId type = T_NORETURN;
 	if (target.count > 0)
 		type = target.exits[0].value.type;

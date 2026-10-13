@@ -1,0 +1,54 @@
+function w $szc.main.1() {
+@start
+	%t3 =w call $szc.choose.2(w 1, w 3, w 300)
+	%t5 =w ceqw %t3, 3
+	jnz %t5, @c12_then, @c12_else
+@c12_then
+	%t8 =w call $szc.nested.3(w 0)
+	%t6 =w copy %t8
+	jmp @b6
+@c12_else
+	%t6 =w copy 9
+	jmp @b6
+@b6
+	ret %t6
+}
+
+function w $szc.choose.2(w %t0, w %t1, w %t2) {
+@start
+	jnz %t0, @c7_then, @c7_else
+@c7_then
+	%t9 =w copy %t1
+	%t3 =w copy %t9
+	jmp @b3
+@c7_else
+	jmp @b4
+@b4
+	%t3 =w copy %t2
+	jmp @b3
+@b3
+	ret %t3
+}
+
+function w $szc.nested.3(w %t0) {
+@start
+	jnz %t0, @c6_then, @c6_else
+@c6_then
+	%t1 =w copy 7
+	jmp @b1
+@c6_else
+	jmp @b3
+@b3
+	jmp @b2
+@b2
+	%t1 =w copy 8
+	jmp @b1
+@b1
+	ret %t1
+}
+
+export function w $main() {
+@start
+	%status =w call $szc.main.1()
+	ret %status
+}

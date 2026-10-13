@@ -1,0 +1,6 @@
+tests/tir/errors/block_both_invalid.zig:1:56: error: type 'u8' cannot represent integer value '256'
+fn f(c: bool) u8 { return value: { if (c) break :value 256; break :value 257; }; }
+                                                       ^
+tests/tir/errors/block_both_invalid.zig:1:74: error: type 'u8' cannot represent integer value '257'
+fn f(c: bool) u8 { return value: { if (c) break :value 256; break :value 257; }; }
+                                                                         ^

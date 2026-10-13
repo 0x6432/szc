@@ -1,0 +1,3 @@
+tests/tir/errors/block_unused_label.zig:1:22: error: unused block label
+pub fn main() void { value: {} }
+                     ^

@@ -1,0 +1,3 @@
+tests/tir/errors/block_comptime_unreachable.zig:1:20: error: unreachable code
+const x = value: { break :value unreachable; };
+                   ^

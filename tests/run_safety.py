@@ -21,6 +21,12 @@ def binary_case(name, integer_type, operator, lhs, rhs, message="integer overflo
 
 
 def cases():
+    source = ("fn operation(c: bool, a: u8) u8 { return value: { if (c) break :value a + 1; break :value 0; }; }\n"
+              "pub fn main() void { _ = operation(true, 255); }\n")
+    yield "block_break_overflow", source, "integer overflow"
+    source = ("fn operation(c: bool, a: u16) u8 { return value: { if (c) break :value @intCast(a); break :value 0; }; }\n"
+              "pub fn main() void { _ = operation(true, 256); }\n")
+    yield "block_break_cast", source, "integer does not fit in destination type"
     source = ("fn operation(a: u8) u8 { var x = a; while (true) { x += 1; if (x == 0) break; } return x; }\n"
               "pub fn main() void { _ = operation(255); }\n")
     yield "loop_body_overflow", source, "integer overflow"

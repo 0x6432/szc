@@ -1,0 +1,3 @@
+tests/tir/errors/block_break_unreachable.zig:1:36: error: unreachable code
+pub fn main() u8 { return value: { break :value return 1; }; }
+                                   ^

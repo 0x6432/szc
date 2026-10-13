@@ -1,0 +1,6 @@
+tests/tir/errors/block_break_unlabeled.zig:1:31: error: break expression outside loop
+pub fn main() void { value: { break; } }
+                              ^
+tests/tir/errors/block_break_unlabeled.zig:1:22: error: unused block label
+pub fn main() void { value: { break; } }
+                     ^

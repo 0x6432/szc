@@ -26,7 +26,8 @@ Read this first when resuming work (the sandbox resets often).
 - Done: M3.6b runtime saturation and explicit division/remainder builtins.
 - Done: M4.1 source-level if/else, typed branch joins, early returns and short-circuit composition.
 - Done: M4.2 runtime while/break/continue, labels, loop else/values and compound assignments.
-- Next: **M4.3** labeled blocks as expressions and break with value.
+- Done: M4.3 labeled block expressions, nested named exits and constant-only comptime blocks.
+- Next: **M4.4** for over ranges and defer (split into small submilestones).
 - Run `PATH=/data/tools/bin:$PATH ZIG=/data/zig/zig-x86_64-linux-0.17.0/zig make e2e-test`
   locally. `tools/build_qbe.sh` builds the pinned QBE into `build/qbe-src` on CI.
 - Tools: `SZC_QBE`/`qbe`, `SZC_CC`/`cc`; pinned QBE revision
@@ -34,7 +35,30 @@ Read this first when resuming work (the sandbox resets often).
 - Restored sandbox needed libasan/libubsan/clang/compiler-rt reinstalled. Git
   credentials are not persisted; use transient authentication for future pushes.
 - M3.4 (`1882ced`) and M3.5 (`7b36edd`) are pushed to `main`.
-- CI through M4.1 (`957fd22`): completed successfully.
+- CI through M4.2 (`385c784`): completed successfully.
+
+## Validation at M4.3
+
+- GCC/Clang warning-clean sanitizer suites: 518 unit checks, 427 goldens,
+  25 ordinary/reference e2e inputs plus one szc-only edge input, 12 driver
+  checks and 119 panic cases. `tools/generate_block_tests.py` checks all 128
+  signed/unsigned 1–64-bit types, including container-level constant blocks.
+- Four 60-second libFuzzer runs pass. Standalone replay covers all targets
+  with 20,000 mutations each; final irgen/sema corpus replay is clean.
+- Source block/loop labels now share irgen ControlScope. Named breaks target
+  the block; unnamed jumps skip block labels and find outer loops. Named continue
+  to a block is rejected. Reuse check_label for new labeled control constructs.
+- Runtime blocks reuse IR_BLOCK/BREAK and deferred BreakExit coercion bodies.
+  Comptime blocks record operands with wrapper=TIR_REF_NONE, emit no TIR and
+  yield their sole known exit; nested exits to an outer label propagate noreturn.
+- Explicitly noreturn break operands are unreachable-code errors, matching the
+  actual 0.17 AstGen reachableExpr rule. Dead conditional exits can mark a label
+  used without contributing a sema merge value, matching reference behavior.
+- Constant arithmetic, nested exits, type-valued blocks and function aliases work.
+  Mutable comptime storage/calls/loops and explicit comptime syntax remain Phase 7.
+- Quoted label/identifier canonicalization is still incomplete: identical spelling
+  works, but foo vs @"foo" and equivalent escapes do not match yet. Keep this
+  visible when implementing string/identifier decoding in later milestones.
 
 ## Validation at M4.2
 
@@ -118,13 +142,13 @@ Read this first when resuming work (the sandbox resets often).
   `tools/diff_parse_errors.py build/szc build/ast_spans <file-list> [count] [seed]`.
   `zig fmt --check file.zig` shows the reference's parse error for a mutant.
 - Number literals are lexed loosely (like the reference). Validate them when decoding (M3.x).
-- Phase 4: parser has for/labels/defer AST nodes; for/defer and labeled blocks still need irgen/sema.
+- Phase 4: parser has for/defer AST nodes; these still need irgen/sema.
   Source if is now IR_IF with IrCondbr payload and break_inline BODY_RESULT arm
   exits. It lowers to TIR block/condbr/br. IR_CONDBR is still a terminator.
   Known conditions select one arm; a sole surviving constant stays known, while
   two runtime exits of comptime-only type are rejected even for equal values.
-  Noreturn blocks omit QBE join labels. Reuse the new block/loop control targets
-  for labeled value blocks, checking the actual 0.17.0 reference first.
+  Noreturn blocks omit QBE join labels. Reuse the block/loop control targets
+  for range loops and defer, checking the actual 0.17.0 reference first.
 - `make safety-test` checks generated runtime panic cases; setting `ZIG` enables
   reference validation. Checks are always enabled in szc for now. Panic stubs
   print one line via libc write, then abort; explicit unreachable still uses hlt.

@@ -1,0 +1,65 @@
+fn szc.main.1: fn () u8 {
+  %0: bool = const true
+  %1: u8 = const 3
+  %2: u16 = const 300
+  %3: u16 = call szc.choose.2(%0, %1, %2)
+  %4: u16 = const 3
+  %5: bool = cmp_eq %3, %4
+  %6: u8 = block {
+    %12: noreturn = condbr %5 then {
+      %7: bool = const false
+      %8: u8 = call szc.nested.3(%7)
+      %9: noreturn = br %6, %8
+    } else {
+      %10: u8 = const 9
+      %11: noreturn = br %6, %10
+    }
+  }
+  %13: noreturn = ret %6
+}
+fn szc.choose.2: fn (bool, u8, u16) u16 {
+  %0: bool = arg 0
+  %1: u8 = arg 1
+  %2: u16 = arg 2
+  %3: u16 = block {
+    %4: void = block {
+      %7: noreturn = condbr %0 then {
+        %5: noreturn = block {
+          %9: u16 = int_cast %1
+          %10: noreturn = br %3, %9
+        }
+      } else {
+        %6: noreturn = br %4
+      }
+    }
+    %8: noreturn = block {
+      %11: noreturn = br %3, %2
+    }
+  }
+  %12: noreturn = ret %3
+}
+fn szc.nested.3: fn (bool) u8 {
+  %0: bool = arg 0
+  %1: u8 = block {
+    %2: void = block {
+      %3: void = block {
+        %6: noreturn = condbr %0 then {
+          %4: noreturn = block {
+            %10: u8 = const 7
+            %11: noreturn = br %1, %10
+          }
+        } else {
+          %5: noreturn = br %3
+        }
+      }
+      %7: noreturn = block {
+        %8: noreturn = br %2
+      }
+    }
+    %9: noreturn = block {
+      %12: u8 = const 8
+      %13: noreturn = br %1, %12
+    }
+  }
+  %14: noreturn = ret %1
+}

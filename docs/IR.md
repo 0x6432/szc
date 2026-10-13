@@ -65,8 +65,12 @@ return type is a body too, so it may depend on comptime parameters.
 
 ## Control flow
 
-- `block` has a body; `break block, value` leaves it with a value.
-  `break_inline` is the comptime-only variant used by declaration and type bodies.
+- `block` has a body; `break block, value` leaves it with a value. Source labeled
+  blocks use this pair; fallthrough contributes void. Unnamed jumps skip block
+  labels to find enclosing loops; named continue cannot target a block.
+  In a comptime context, block exits record known values without emitting typed
+  IR, including nested exits to an outer label. `break_inline` is the body-result
+  variant used by declarations, types, call arguments and source if arms.
 - `condbr cond, then_body, else_body` ends a body.
 - Source `if` uses `if cond, then_body, else_body` (`IrCondbr` payload).
   Each arm ends with `break_inline BODY_RESULT, value`, or a terminator such as

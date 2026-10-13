@@ -33,7 +33,7 @@ typedef enum ScopeKind {
 	SCOPE_NAMESPACE,	/* container: its declaration names */
 	SCOPE_LOCAL,	/* one local constant, variable or parameter */
 	SCOPE_BODY,	/* an instruction body being built */
-	SCOPE_LOOP,	/* break/continue targets and optional label */
+	SCOPE_CONTROL,	/* block/loop targets and optional label */
 } ScopeKind;
 
 typedef struct Scope {
@@ -84,7 +84,7 @@ typedef struct ResultInfo {
 	IrRef      ref;
 } ResultInfo;
 
-typedef struct LoopScope {
+typedef struct ControlScope {
 	Scope base;
 	StringId label;
 	IrInstIndex break_target;
@@ -93,7 +93,7 @@ typedef struct LoopScope {
 	bool allow_unlabeled;
 	bool allow_continue;
 	bool label_used;
-} LoopScope;
+} ControlScope;
 
 static const ResultInfo result_none = {RESULT_NONE, IR_REF_NONE};
 
@@ -895,17 +895,51 @@ return_expr(GenBody *body, Scope *scope, AstNode *node)
 	return IR_REF_VOID_VALUE;
 }
 
-/* A labeled block, or a block used as an expression. */
+static StringId
+check_label(IrGen *gen, Scope *scope, AstLabel label)
+{
+	if (!label.has_label)
+		return STRING_NONE;
+	StringId name = intern_span(gen, label.name);
+	for (Scope *current = scope; current != NULL && current->kind != SCOPE_NAMESPACE; current = current->parent) {
+		if (current->kind == SCOPE_CONTROL && ((ControlScope *)current)->label == name) {
+			error_at(gen, label.name.start, "redefinition of label '%s'", intern_text(gen->interner, name));
+			break;
+		}
+	}
+	return name;
+}
+
+/* A labeled block yields through named breaks; unlabeled blocks yield void. */
 static IrRef
 block_expr(GenBody *body, Scope *scope, ResultInfo info, AstNode *node)
 {
 	AstBlock *block = AST_CAST(AstBlock, node, AST_BLOCK);
-	if (block->label.has_label) {
-		unsupported(body, node, "labeled blocks");
-		return IR_REF_VOID_VALUE;
+	if (!block->label.has_label) {
+		block_statements(body, scope, block);
+		return rvalue(body, info, IR_REF_VOID_VALUE, node->offset);
 	}
-	block_statements(body, scope, block);
-	return rvalue(body, info, IR_REF_VOID_VALUE, node->offset);
+	IrGen *gen = body->gen;
+	StringId label = check_label(gen, scope, block->label);
+	IrRef result = emit_payload(body, IR_BLOCK, node->offset, 0);
+	ControlScope control;
+	memset(&control, 0, sizeof(control));
+	control.base.kind = SCOPE_CONTROL;
+	control.base.parent = scope;
+	control.label = label;
+	control.break_target = ir_ref_inst(result);
+	control.result = info;
+	GenBody inner;
+	body_init(&inner, gen, &control.base, body->is_comptime);
+	block_statements(&inner, &inner.base, block);
+	if (!body_is_terminated(&inner)) {
+		IrRef value = rvalue(&inner, info, IR_REF_VOID_VALUE, node->offset);
+		emit_break(&inner, IR_BREAK, node->offset, control.break_target, value);
+	}
+	gen->ir->insts[control.break_target].data.payload = body_finish(&inner);
+	if (!control.label_used)
+		error_at(gen, block->label.name.start, "%s", "unused block label");
+	return result;
 }
 
 static void assign(GenBody *body, Scope *scope, AstAssign *node);
@@ -921,14 +955,14 @@ jump_expr(GenBody *body, Scope *scope, AstNode *node)
 		return IR_REF_VOID_VALUE;
 	}
 	for (Scope *current = scope; current != NULL && current->kind != SCOPE_NAMESPACE; current = current->parent) {
-		if (current->kind != SCOPE_LOOP)
+		if (current->kind != SCOPE_CONTROL)
 			continue;
-		LoopScope *loop = (LoopScope *)current;
-		if (label == STRING_NONE ? !loop->allow_unlabeled : loop->label != label)
+		ControlScope *control = (ControlScope *)current;
+		if (label == STRING_NONE ? !control->allow_unlabeled : control->label != label)
 			continue;
 		if (label != STRING_NONE)
-			loop->label_used = true;
-		if (is_continue && !loop->allow_continue) {
+			control->label_used = true;
+		if (is_continue && !control->allow_continue) {
 			error_at(body->gen, node->offset, "%s", "continue outside of loop or labeled switch expression");
 			return IR_REF_VOID_VALUE;
 		}
@@ -938,9 +972,13 @@ jump_expr(GenBody *body, Scope *scope, AstNode *node)
 		}
 		IrRef value = IR_REF_VOID_VALUE;
 		if (!is_continue)
-			value = jump->value == NULL ? rvalue(body, loop->result, value, node->offset) : expr(body, scope, loop->result, jump->value);
+			value = jump->value == NULL ? rvalue(body, control->result, value, node->offset) : expr(body, scope, control->result, jump->value);
+		if (!is_continue && jump->value != NULL && body_is_terminated(body)) {
+			error_at(body->gen, node->offset, "%s", "unreachable code");
+			return IR_REF_VOID_VALUE;
+		}
 		if (!body_is_terminated(body))
-			emit_break(body, IR_BREAK, node->offset, is_continue ? loop->continue_target : loop->break_target, value);
+			emit_break(body, IR_BREAK, node->offset, is_continue ? control->continue_target : control->break_target, value);
 		return IR_REF_VOID_VALUE;
 	}
 	if (label != STRING_NONE)
@@ -970,19 +1008,11 @@ while_expr(GenBody *body, Scope *scope, ResultInfo info, AstNode *node)
 	GenBody then_body;
 	body_init(&then_body, gen, &condition.base, body->is_comptime);
 	IrRef continuation = emit_payload(&then_body, IR_BLOCK, node->offset, 0);
-	LoopScope control;
+	ControlScope control;
 	memset(&control, 0, sizeof(control));
-	control.base.kind = SCOPE_LOOP;
+	control.base.kind = SCOPE_CONTROL;
 	control.base.parent = &then_body.base;
-	control.label = loop->label.has_label ? intern_span(gen, loop->label.name) : STRING_NONE;
-	if (control.label != STRING_NONE) {
-		for (Scope *current = scope; current != NULL && current->kind != SCOPE_NAMESPACE; current = current->parent) {
-			if (current->kind == SCOPE_LOOP && ((LoopScope *)current)->label == control.label) {
-				error_at(gen, loop->label.name.start, "redefinition of label '%s'", intern_text(gen->interner, control.label));
-				break;
-			}
-		}
-	}
+	control.label = check_label(gen, scope, loop->label);
 	control.break_target = ir_ref_inst(result);
 	control.continue_target = ir_ref_inst(continuation);
 	control.result = info;

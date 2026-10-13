@@ -1,0 +1,3 @@
+tests/tir/errors/block_comptime_integer.zig:1:37: error: value with comptime-only type 'comptime_int' depends on runtime control flow
+fn f(c: bool) u8 { const x = value: { if (c) break :value 1; break :value 1; }; return x; }
+                                    ^
