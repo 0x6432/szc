@@ -131,7 +131,7 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
   goldens, nine e2e inputs (including the generated 128-type suite) and 12 driver
   boundary tests. Negative harness checks reject compile failures and stdout
   mismatches. The QBE clone/build script succeeds using the canonical Git transport.
-  New GitHub CI runs await restoring Git push authentication.
+  The new GitHub CI configuration is pushed; check Actions for the latest status.
 - **Limitations**: current programs produce no stdout (string/runtime output support
   awaits M5); sidecars support future output tests. Only successful programs with
   deterministic exits are covered; panic tests arrive in M3.6. Generated tests use

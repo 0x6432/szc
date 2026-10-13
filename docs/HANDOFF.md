@@ -27,8 +27,9 @@ Read this first when resuming work (the sandbox resets often).
   locally. `tools/build_qbe.sh` builds the pinned QBE into `build/qbe-src` on CI.
 - Tools: `SZC_QBE`/`qbe`, `SZC_CC`/`cc`; pinned QBE revision
   `e786f06032fefa2e3790d6b1c9e31ed138f475a6`. Local QBE: `/data/tools/bin/qbe`.
-- Restored sandbox needed libasan/libubsan/clang/compiler-rt reinstalled. Saved Git
-  credentials did not survive; push fails without restoring authentication.
+- Restored sandbox needed libasan/libubsan/clang/compiler-rt reinstalled. Git
+  credentials are not persisted; use transient authentication for future pushes.
+- M3.4 (`1882ced`) and M3.5 (`7b36edd`) are pushed to `main`.
 - CI for previous M3.3 commit `2b0d0ca`: completed successfully.
 
 ## Validation at M3.5
@@ -37,8 +38,8 @@ Read this first when resuming work (the sandbox resets often).
   checked with official Zig, 12 driver boundary tests, standalone fuzz replay clean.
 - Four libFuzzer targets ran 60 seconds each locally without failures; sema fuzzing
   now also exercises QBE emission. Existing CI push/nightly schedules are retained.
-- New CI configuration is committed but not yet run: GitHub push authentication
-  must be restored first. M3.3's existing CI passed.
+- New CI configuration is pushed; check GitHub Actions for its latest status.
+  M3.3's existing CI passed.
 
 ## Notes for the next steps
 
