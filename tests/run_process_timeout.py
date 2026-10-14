@@ -7,9 +7,18 @@ import subprocess
 import sys
 import tempfile
 import time
+from unittest.mock import patch
 
 sys.dont_write_bytecode = True
 from run_safety import run
+
+
+def descendant_exited(pid):
+    try:
+        state = Path(f"/proc/{pid}/stat").read_text().split(") ", 1)[1]
+    except (FileNotFoundError, ProcessLookupError):
+        return True
+    return state.startswith("Z ")
 
 
 def main():
@@ -18,6 +27,15 @@ def main():
     result = run([sys.executable, "-c", "import os, signal; os.kill(os.getpid(), signal.SIGTERM)"])
     assert result.returncode == -signal.SIGTERM
     checked = 2
+    # Reaping can race either opening procfs (ENOENT) or reading it (ESRCH).
+    for error in (FileNotFoundError(), ProcessLookupError()):
+        with patch.object(Path, "read_text", side_effect=error):
+            assert descendant_exited(123)
+        checked += 1
+    for state, exited in (("Z", True), ("S", False)):
+        with patch.object(Path, "read_text", return_value=f"123 (python3) {state} 1"):
+            assert descendant_exited(123) == exited
+        checked += 1
     # Cover a waiting driver and a driver that exits while its child keeps pipes open.
     for wait_for_child in (False, True):
         with tempfile.TemporaryDirectory(prefix="szc-process-timeout-") as directory:
@@ -37,12 +55,8 @@ def main():
                 assert time.monotonic() - started < 8, "cleanup waited for a descendant"
             pid = int(child_file.read_text())
             # A killed orphan can briefly remain as a zombie until PID 1 reaps it.
-            stat = Path(f"/proc/{pid}/stat")
             for _ in range(100):
-                try:
-                    if stat.read_text().split(") ", 1)[1].startswith("Z "):
-                        break
-                except FileNotFoundError:
+                if descendant_exited(pid):
                     break
                 time.sleep(0.01)
             else:

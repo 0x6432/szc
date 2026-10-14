@@ -65,6 +65,18 @@ Read this first when resuming work (the sandbox resets often).
   also passed all jobs (run 38590520673), as did M5.1c2b2b1 ecfb6ab
   (run 38593742928). Check each new push's run.
 
+## CI follow-up: procfs reap-race regression
+
+- da77561/run 38626759145 passed GCC/fuzz, but Clang/differential stopped in the
+  cleanup probe: a descendant disappeared during reading /proc/PID/stat and raised
+  ProcessLookupError (ESRCH), not FileNotFoundError (ENOENT). This is a test race,
+  not evidence that the process-group termination failed.
+- descendant_exited now treats both disappearance errors as a successful exit and
+  still rejects a live/sleeping process. Deterministic mocked ENOENT/ESRCH/zombie/
+  sleeping cases plus the existing output/status/signal/group checks all pass:
+  eight cleanup checks. Production timeout behavior and compiler sources unchanged.
+- Check push CI; aligned global constants remain the next language checkpoint.
+
 ## CI follow-up after M5.1c2b2b3a
 
 - GCC/Clang -Werror ASan/UBSan pass 558 unit checks, 671 goldens, 53 ordinary

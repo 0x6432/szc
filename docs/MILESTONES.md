@@ -136,6 +136,13 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
 
 (newest first; each entry: what, limitations, interactions)
 
+### CI follow-up: procfs reaping race in cleanup regression
+- da77561 CI exposed ESRCH while reading a just-reaped descendant's procfs file.
+  The probe now recognizes both ENOENT and ESRCH as disappearance, without hiding
+  live processes or changing production timeout handling. Deterministic tests cover
+  both errors and zombie/sleeping states; all eight cleanup checks pass locally.
+  No language milestone was advanced. Check the new push before claiming CI green.
+
 ### CI follow-up: safety subprocess-group timeout cleanup
 - **What**: safety commands now start in a new session. On a compilation/execution
   deadline, the harness kills the whole process group, drains captured output and
