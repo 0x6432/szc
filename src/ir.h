@@ -137,6 +137,7 @@ typedef enum IrDataKind {
 	X(STR, "str", IR_DATA_NAME)	/* string literal bytes (interned) */ \
 	X(ENUM_LITERAL, "enum_literal", IR_DATA_NAME)	/* .name */ \
 	X(INT_TYPE, "int_type", IR_DATA_INT)	/* bit 16 = signed, bits 0..15 = bit count */ \
+	X(PTR_TYPE, "ptr_type", IR_DATA_BIN)	/* child type, const qualifier (true/false) */ \
 	/* Result types and coercion */ \
 	X(AS_RETURN, "as_return", IR_DATA_BIN)	/* direct return-value coercion */ \
 	X(AS, "as", IR_DATA_BIN)	/* coerce rhs to type lhs */ \
@@ -191,6 +192,8 @@ typedef enum IrDataKind {
 	X(BOOL_OR, "bool_or", IR_DATA_PAYLOAD)	/* lhs ref, rhs body */ \
 	/* Memory */ \
 	X(ALLOC, "alloc", IR_DATA_PAYLOAD)	/* type ref (or NONE: inferred), init ref, flags: local variable */ \
+	X(DEREF, "deref", IR_DATA_UN)	/* validated source dereference */ \
+	X(REF_DEREF, "ref_deref", IR_DATA_UN)	/* validated address of dereference */ \
 	X(LOAD, "load", IR_DATA_UN)	/* pointer */ \
 	X(STORE, "store", IR_DATA_BIN)	/* pointer, value */ \
 	/* Control flow */ \

@@ -1,0 +1,3 @@
+tests/tir/errors/pointer_deref_undefined.zig:1:53: error: cannot dereference undefined value
+pub fn main() void { const p: *u8 = undefined; _ = p.*; }
+                                                    ^

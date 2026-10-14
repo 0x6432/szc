@@ -1,0 +1,3 @@
+tests/tir/errors/pointer_discard_const.zig:1:33: error: expected type '*u8', found '*const u8'
+fn f(p: *const u8) *u8 { return p; }
+                                ^

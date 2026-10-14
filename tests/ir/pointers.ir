@@ -1,0 +1,55 @@
+%37 = struct_decl (flags=0) {
+  decl fn "update" value {
+    %20 = func "update" {
+      %3 = param "p" type {
+        %0 = ptr_type @type_u8, @false
+        %1 = as @type_type, %0
+        %2 = break_inline result, %1
+      }
+      ret type {
+        %4 = ptr_type @type_u8, @true
+        %5 = as @type_type, %4
+        %6 = break_inline result, %5
+      }
+      body insts {
+        %7 = ref_deref %3
+        %8 = load %7
+        %9 = int 1
+        %10 = elem_type %7
+        %11 = as %10, %9
+        %12 = add %8, %11
+        %13 = elem_type %7
+        %14 = as %13, %12
+        %15 = store %7, %14
+        %16 = ret_type
+        %17 = ref_deref %3
+        %18 = as_return %16, %17
+        %19 = ret %18
+      }
+    }
+    %21 = break_inline result, %20
+  }
+  decl fn "main" pub value {
+    %35 = func "main" {
+      ret type {
+        %22 = break_inline result, @type_u8
+      }
+      body insts {
+        %23 = int 40
+        %24 = as @type_u8, %23
+        %25 = alloc type=@type_u8 init=%24
+        %26 = ret_type
+        %27 = decl_val "update"
+        %28 = call %27 arg0 {
+          %29 = arg_type %28, 0
+          %30 = as %29, %25
+          %31 = break_inline result, %30
+        }
+        %32 = deref %28
+        %33 = as_return %26, %32
+        %34 = ret %33
+      }
+    }
+    %36 = break_inline result, %35
+  }
+}

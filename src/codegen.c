@@ -640,6 +640,12 @@ emit_inst(Codegen *cg, TirRef ref)
 		fputs("\n", out);
 		normalize(cg, ref, inst->type, cls);
 		return;
+	case TIR_PTR_CAST:
+		print_dest(cg, ref, QBE_L);
+		fputs("copy ", out);
+		print_operand(cg, inst->data.un.operand);
+		fputs("\n", out);
+		return;
 	case TIR_INT_CAST:
 	case TIR_TRUNCATE:
 	case TIR_INT_FROM_BOOL: {

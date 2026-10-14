@@ -1051,6 +1051,23 @@ operand_to_type(Block *block, Operand operand, uint32_t src, TypeId *out)
 	return true;
 }
 
+/* A mutable outer pointee requires all inner pointer qualifiers to be invariant. */
+static bool
+pointer_coercion_allowed(const Sema *sema, TypeId dest, TypeId source, bool dest_is_mut)
+{
+	if (dest == source)
+		return true;
+	if (sema->types[dest].kind != TYPE_POINTER || sema->types[source].kind != TYPE_POINTER)
+		return false;
+	TypePointer to = sema->types[dest].as.pointer;
+	TypePointer from = sema->types[source].as.pointer;
+	if (to.size != from.size || to.is_volatile != from.is_volatile)
+		return false;
+	if (to.is_const != from.is_const && (dest_is_mut || !to.is_const))
+		return false;
+	return pointer_coercion_allowed(sema, to.child, from.child, dest_is_mut || !to.is_const);
+}
+
 /* Coerces `operand` to type `dest` (Zig's implicit coercions that szc supports so far). */
 static Operand
 coerce(Block *block, Operand operand, TypeId dest, uint32_t src)
@@ -1061,8 +1078,11 @@ coerce(Block *block, Operand operand, TypeId dest, uint32_t src)
 	TypeKind dest_kind = sema->types[dest].kind;
 	if (operand.kind == OPERAND_COMPTIME) {
 		const Value *value = operand_value(block, operand);
-		if (value->kind == VALUE_UNDEFINED)
-			return comptime_operand(dest, value_undefined(&sema->values, dest));
+		if (value->kind == VALUE_UNDEFINED) {
+			bool pointer_conversion = dest_kind == TYPE_POINTER || sema->types[operand.type].kind == TYPE_POINTER;
+			if (!pointer_conversion || operand.type == type_id_of_well_known(IR_REF_TYPE_UNDEFINED) || pointer_coercion_allowed(sema, dest, operand.type, false))
+				return comptime_operand(dest, value_undefined(&sema->values, dest));
+		}
 		if (value->kind == VALUE_INT && (dest_kind == TYPE_INT || dest_kind == TYPE_COMPTIME_INT)) {
 			BigInt integer = value->as.integer;
 			if (dest_kind == TYPE_INT && !bigint_fits(&integer, sema->types[dest].as.integer.is_signed, sema->types[dest].as.integer.bits)) {
@@ -1071,6 +1091,13 @@ coerce(Block *block, Operand operand, TypeId dest, uint32_t src)
 			}
 			return comptime_operand(dest, value_int(&sema->values, dest, &integer));
 		}
+	}
+	if (dest_kind == TYPE_POINTER && pointer_coercion_allowed(sema, dest, operand.type, false)) {
+		if (operand.kind == OPERAND_RUNTIME)
+			return runtime_operand(dest, emit_tir_un(block, TIR_PTR_CAST, dest, src, operand.inst));
+		Value value = *operand_value(block, operand);
+		value.type = dest;
+		return comptime_operand(dest, value_intern(&sema->values, &value));
 	}
 	if (operand.kind == OPERAND_RUNTIME && dest_kind == TYPE_INT && is_int(sema, operand.type) && int_type_contains(sema, dest, operand.type))
 		return runtime_operand(dest, emit_tir_un(block, TIR_INT_CAST, dest, src, operand.inst));
@@ -1197,6 +1224,14 @@ peer_type(Block *block, Operand lhs, Operand rhs, uint32_t src, TypeId *out)
 		}
 	}
 	if (ak == TYPE_POINTER && bk == TYPE_POINTER) {
+		if (pointer_coercion_allowed(sema, a, b, false)) {
+			*out = a;
+			return true;
+		}
+		if (pointer_coercion_allowed(sema, b, a, false)) {
+			*out = b;
+			return true;
+		}
 		TypePointer ap = sema->types[a].as.pointer;
 		TypePointer bp = sema->types[b].as.pointer;
 		if (ap.size == POINTER_ONE && bp.size == POINTER_ONE && sema->types[ap.child].kind == TYPE_ARRAY && sema->types[bp.child].kind == TYPE_ARRAY) {
@@ -1673,6 +1708,10 @@ analyze_compare(Block *block, const IrInst *inst)
 		TirRef l = materialize(block, lhs, src);
 		TirRef r = materialize(block, rhs, src);
 		return runtime_operand(T_BOOL, emit_tir_bin(block, tir_arith_op(op), T_BOOL, src, l, r));
+	}
+	if (is_equality && lk == TYPE_POINTER && rk == TYPE_POINTER) {
+		sema_error(block, src, "not supported by szc yet: pointer equality");
+		return operand_none;
 	}
 	if (!is_int_or_comptime_int(sema, lhs.type) || !is_int_or_comptime_int(sema, rhs.type)) {
 		const char *text = op == IR_CMP_EQ ? "==" : op == IR_CMP_NEQ ? "!=" : op == IR_CMP_LT ? "<" : op == IR_CMP_GT ? ">" : op == IR_CMP_LTE ? "<=" : ">=";
@@ -2344,7 +2383,7 @@ analyze_alloc(Block *block, const IrInst *inst)
 }
 
 static bool
-pointer_operand(Block *block, Operand operand, uint32_t src)
+pointer_type_operand(Block *block, Operand operand, uint32_t src)
 {
 	Sema *sema = block->sema;
 	if (operand.kind == OPERAND_NONE)
@@ -2353,11 +2392,57 @@ pointer_operand(Block *block, Operand operand, uint32_t src)
 		sema_error(block, src, "expected pointer, found '%s'", sema_type_name(sema, operand.type));
 		return false;
 	}
+	return true;
+}
+
+static bool
+pointer_operand(Block *block, Operand operand, uint32_t src)
+{
+	if (!pointer_type_operand(block, operand, src))
+		return false;
 	if (operand.kind != OPERAND_RUNTIME) {
 		sema_error(block, src, "not supported by szc yet: comptime pointers");
 		return false;
 	}
 	return true;
+}
+
+/* Validate even &p.*: cancelling the address must not hide an invalid dereference. */
+static Operand
+analyze_deref(Block *block, const IrInst *inst)
+{
+	Sema *sema = block->sema;
+	Operand pointer = resolve_ref(block, inst->data.un.operand);
+	if (pointer.kind == OPERAND_NONE)
+		return operand_none;
+	if (sema->types[pointer.type].kind != TYPE_POINTER) {
+		sema_error(block, inst->src, "cannot dereference non-pointer type '%s'", sema_type_name(sema, pointer.type));
+		return operand_none;
+	}
+	TypePointer type = sema->types[pointer.type].as.pointer;
+	if (type.size != POINTER_ONE) {
+		sema_error(block, inst->src, "not supported by szc yet: non-single pointer dereference");
+		return operand_none;
+	}
+	bool zero_int = is_int(sema, type.child) && sema->types[type.child].as.integer.bits == 0;
+	if (operand_is_undefined(block, pointer) && type.child != T_VOID && !zero_int) {
+		sema_error(block, inst->src, "cannot dereference undefined value");
+		return operand_none;
+	}
+	if (inst->op == IR_REF_DEREF)
+		return pointer;
+	if (type.child == T_VOID)
+		return void_operand(sema);
+	if (zero_int)
+		return comptime_operand(type.child, value_int_u64(&sema->values, type.child, 0));
+	TypeKind child_kind = sema->types[type.child].kind;
+	if (child_kind != TYPE_INT && child_kind != TYPE_BOOL && child_kind != TYPE_POINTER) {
+		sema_error(block, inst->src, "not supported by szc yet: dereference of '%s'", sema_type_name(sema, type.child));
+		return operand_none;
+	}
+	if (!pointer_operand(block, pointer, inst->src))
+		return operand_none;
+	return runtime_operand(type.child, emit_tir_un(block, TIR_LOAD, type.child, inst->src, pointer.inst));
 }
 
 /* ---------- Analysis: instructions ---------- */
@@ -2427,6 +2512,22 @@ analyze_inst(Block *block, IrInstIndex index, Operand *break_value)
 		result = type_operand(sema, type_int(sema, is_signed, bits));
 		break;
 	}
+	case IR_PTR_TYPE: {
+		Operand child = resolve_ref(block, inst->data.bin.lhs);
+		TypeId type;
+		if (!operand_to_type(block, child, src, &type))
+			break;
+		if (type == T_NORETURN) {
+			sema_error(block, src, "pointer to noreturn not allowed");
+			break;
+		}
+		result = type_operand(sema, type_pointer(sema, type, POINTER_ONE, inst->data.bin.rhs == IR_REF_TRUE));
+		break;
+	}
+	case IR_DEREF:
+	case IR_REF_DEREF:
+		result = analyze_deref(block, inst);
+		break;
 	case IR_AS:
 	case IR_AS_RETURN: {
 		Operand dest = resolve_ref(block, inst->data.bin.lhs);
@@ -2489,7 +2590,7 @@ analyze_inst(Block *block, IrInstIndex index, Operand *break_value)
 	}
 	case IR_ELEM_TYPE: {
 		Operand pointer = resolve_ref(block, inst->data.un.operand);
-		if (pointer_operand(block, pointer, src))
+		if (pointer_type_operand(block, pointer, src))
 			result = type_operand(sema, sema->types[pointer.type].as.pointer.child);
 		break;
 	}
@@ -2575,14 +2676,16 @@ analyze_inst(Block *block, IrInstIndex index, Operand *break_value)
 	case IR_STORE: {
 		Operand pointer = resolve_ref(block, inst->data.bin.lhs);
 		Operand value = resolve_ref(block, inst->data.bin.rhs);
-		if (!pointer_operand(block, pointer, src) || value.kind == OPERAND_NONE)
+		if (!pointer_type_operand(block, pointer, src) || value.kind == OPERAND_NONE)
 			break;
 		if (sema->types[pointer.type].as.pointer.is_const) {
 			sema_error(block, src, "cannot assign to constant");
 			break;
 		}
-		value = coerce(block, value, sema->types[pointer.type].as.pointer.child, src);
-		if (value.kind != OPERAND_NONE && !operand_is_undefined(block, value))
+		TypeId child = sema->types[pointer.type].as.pointer.child;
+		value = coerce(block, value, child, src);
+		bool no_storage = child == T_VOID || (is_int(sema, child) && sema->types[child].as.integer.bits == 0);
+		if (value.kind != OPERAND_NONE && !no_storage && !operand_is_undefined(block, value) && pointer_operand(block, pointer, src))
 			emit_tir_bin(block, TIR_STORE, T_VOID, src, pointer.inst, materialize(block, value, src));
 		result = void_operand(sema);
 		break;
@@ -2924,6 +3027,7 @@ dump_tir_inst(FILE *out, Sema *sema, const TirFunc *tir, TirRef ref, uint32_t de
 	case TIR_NOT:
 	case TIR_NEGATE:
 	case TIR_NEGATE_WRAP:
+	case TIR_PTR_CAST:
 	case TIR_INT_CAST:
 	case TIR_TRUNCATE:
 	case TIR_INT_FROM_BOOL:

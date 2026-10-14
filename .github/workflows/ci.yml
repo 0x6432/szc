@@ -71,6 +71,8 @@ jobs:
           echo "PATH=$PWD/build/qbe-src:$PATH" >> "$GITHUB_ENV"
       - name: Compare native programs with Zig 0.17.0
         run: make e2e-test
+      - name: Compare nested pointer qualifier coercions
+        run: python3 tools/diff_pointer_coercions.py build/asan/szc "$ZIG"
       - name: Compare AST node spans with std.zig.Ast over the Zig lib
         run: |
           find zig-x86_64-linux-0.17.0/lib -name '*.zig' | sort > build/zig-files.txt

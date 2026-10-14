@@ -64,7 +64,9 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
 
 ## Phase 5: Memory
 
-- [ ] **M5.1 Single pointers, `&`, `.*`, `const` pointers.**
+- [~] **M5.1 Single pointers, `&`, `.*`, `const` pointers.**
+  - [x] **M5.1a Runtime single pointers**: mutable-local addresses, dereference reads/writes, nested const coercions.
+  - [ ] **M5.1b Addressable constants/parameters/temporaries and pointer identity**: declaration-backed storage, lifetime rules and equality.
 - [ ] **M5.2 Arrays, indexing, array literals, `++` at comptime** (0.17.0 has no `**`).
 - [ ] **M5.3 Slices, many-pointers, slicing, `.len`, `.ptr`, for over slices.**
 - [~] **M5.4 String literals, sentinels, `[*:0]const u8`.** Literal byte values landed in M4.5b; general string/memory operations and sentinel pointer syntax remain pending.
@@ -118,6 +120,45 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
 ## Completed milestone log
 
 (newest first; each entry: what, limitations, interactions)
+
+### M5.1a Runtime single pointers and const qualification
+- **What**: source `*T`/`*const T` types use structural pointer interning. Address-of
+  mutable locals reuses their existing allocation; `p.*` reads/writes integer, bool
+  or pointer pointees. Grouped lvalues and `&p.*` work, including nested pointers,
+  function arguments/results, conditional/block joins and deferred writes.
+  IR_DEREF and IR_REF_DEREF validate source dereferences separately from compiler
+  loads. TIR_PTR_CAST represents compatible pointer qualification, emitted as a
+  QBE long copy rather than an integer cast with unrelated safety checks.
+- **Const rules**: a mutable pointer can become read-only. Nested qualifications
+  follow 0.17's in-memory coercion rules: a mutable outer pointee makes inner
+  qualifiers invariant. `**u8 -> *const *const u8` is allowed;
+  `**u8 -> **const u8` is not. Scalar pointee widening is never pointer covariance.
+- **Diagnostics/safety**: writes through const pointers, non-pointer dereferences,
+  known undefined non-OPV dereferences (including `&p.*`), pointer-to-noreturn and
+  single-pointer ordering are rejected. Void/u0 dereferences and stores require no
+  memory access, including through known undefined pointers, as in the reference.
+  Runtime pointee arithmetic/casts/defer preserve existing checked panic behavior.
+- **Tests**: GCC/Clang warning-clean ASan/UBSan suites; 533 unit checks, 526 goldens,
+  40 ordinary/reference executable inputs plus one szc-only input, 12 driver checks
+  and 157 panic cases. The new generator covers signed/unsigned widths 1–64 with
+  load/store, nested const arguments, pointer reassignment and defer snapshots.
+  A CI differential compares all 84 qualifier pairs at pointer depths 1–3 in both
+  runtime and typed-undefined form (168 cases). Typed undefined no longer bypasses
+  const/pointer compatibility or implicitly becomes an integer. Error fixtures
+  compare rejection/acceptance with actual 0.17, not a guessed model. Optimized GCC,
+  four 60-second fuzz targets and standalone 20,000-mutation replays per stage pass.
+- **Limitations**: M5.1 remains partial. Addresses of constants, parameters, globals
+  and temporary values explicitly fail until declaration-backed storage/lifetime
+  handling in M5.1b; no lazy branch-local spills or static temporary hacks.
+  Pointer equality is explicitly unsupported until identity handling; `<` ordering
+  of single pointers is a language error. Pointer attributes, non-single sizes,
+  aggregate/array dereference and general comptime memory remain later work.
+- **Interactions**: alloc/load/store still use existing QBE stack slots and long
+  pointer ABI; address taking introduces no new allocator or global storage.
+  Dereference result types feed existing assignment coercions, and pointer peers
+  choose a compatible existing type without inventing an unsafe nested conversion.
+  M4.5b literal byte pointers still support `&text.*` identity, but loading whole
+  literal arrays awaits M5.2. General pointer casts remain M5.5.
 
 ### M4.5b Explicit panic and first-class literal byte values
 - **What**: ordinary quoted/multiline string expressions lower to IR_STR, typed

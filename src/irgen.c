@@ -738,6 +738,8 @@ static IrRef
 lvalue(GenBody *body, Scope *scope, AstNode *node)
 {
 	IrGen *gen = body->gen;
+	if (node->kind == AST_GROUPED)
+		return lvalue(body, scope, AST_CAST(AstWrap, node, AST_GROUPED)->operand);
 	if (node->kind == AST_IDENTIFIER) {
 		AstIdentifier *identifier_node = AST_CAST(AstIdentifier, node, AST_IDENTIFIER);
 		StringId name = intern_span(gen, identifier_node->name);
@@ -754,9 +756,40 @@ lvalue(GenBody *body, Scope *scope, AstNode *node)
 		return IR_REF_VOID_VALUE;
 	}
 	if (node->kind == AST_DEREF)
-		return expr(body, scope, result_none, AST_CAST(AstWrap, node, AST_DEREF)->operand);
+		return emit_un(body, IR_REF_DEREF, node->offset, expr(body, scope, result_none, AST_CAST(AstWrap, node, AST_DEREF)->operand));
 	unsupported(body, node, "this kind of assignment target");
 	return IR_REF_VOID_VALUE;
+}
+
+/* Addressable constants need declaration-backed storage, not branch-local spills. */
+static IrRef
+address_of(GenBody *body, Scope *scope, AstNode *node)
+{
+	if (node->kind == AST_GROUPED)
+		return address_of(body, scope, AST_CAST(AstWrap, node, AST_GROUPED)->operand);
+	if (node->kind == AST_DEREF)
+		return lvalue(body, scope, node);
+	if (node->kind == AST_IDENTIFIER) {
+		StringId name = intern_span(body->gen, AST_CAST(AstIdentifier, node, AST_IDENTIFIER)->name);
+		Lookup found = lookup_name(scope, name);
+		if (found.kind == LOOKUP_LOCAL && found.local->local_kind == LOCAL_VAR)
+			return found.local->ref;
+		if (found.kind != LOOKUP_LOCAL && found.kind != LOOKUP_DECL)
+			return lvalue(body, scope, node);
+	}
+	unsupported(body, node, "address of constants, parameters, or temporary values");
+	return IR_REF_VOID_VALUE;
+}
+
+static IrRef
+pointer_type(GenBody *body, Scope *scope, AstPointerType *node)
+{
+	if (node->size != AST_POINTER_ONE || node->sentinel != NULL || node->align != NULL || node->bit_offset != NULL || node->host_size != NULL || node->addrspace != NULL || node->is_volatile || node->is_allowzero) {
+		unsupported(body, &node->base, "pointer sizes other than single pointers or pointer attributes");
+		return IR_REF_VOID_VALUE;
+	}
+	IrRef child = type_expr(body, scope, node->child);
+	return emit_bin(body, IR_PTR_TYPE, node->child->offset, child, node->is_const ? IR_REF_TRUE : IR_REF_FALSE);
 }
 
 static IrOp
@@ -846,6 +879,8 @@ unary(GenBody *body, Scope *scope, ResultInfo info, AstNode *node)
 	AstUnary *unary_node = AST_CAST(AstUnary, node, AST_UNARY);
 	IrOp op;
 	switch (unary_node->op) {
+	case AST_UNARY_ADDRESS_OF:
+		return rvalue(body, info, address_of(body, scope, unary_node->operand), node->offset);
 	case AST_UNARY_BOOL_NOT:
 		op = IR_BOOL_NOT;
 		break;
@@ -1390,6 +1425,10 @@ expr(GenBody *body, Scope *scope, ResultInfo info, AstNode *node)
 		return rvalue(body, info, number_literal(body, node), node->offset);
 	case AST_IDENTIFIER:
 		return identifier(body, scope, info, node);
+	case AST_POINTER_TYPE:
+		return rvalue(body, info, pointer_type(body, scope, AST_CAST(AstPointerType, node, AST_POINTER_TYPE)), node->offset);
+	case AST_DEREF:
+		return rvalue(body, info, emit_un(body, IR_DEREF, node->offset, expr(body, scope, result_none, AST_CAST(AstWrap, node, AST_DEREF)->operand)), node->offset);
 	case AST_GROUPED:
 		return expr(body, scope, info, AST_CAST(AstWrap, node, AST_GROUPED)->operand);
 	case AST_BINARY:

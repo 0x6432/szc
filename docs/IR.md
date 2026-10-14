@@ -140,3 +140,21 @@ prints a file's IR.
   At comptime it records an error; binary message lengths survive diagnostic printing.
   Different-length runtime joins/general slice representations await memory lowering.
   Panic's noreturn control flow never causes scope-exit cleanup to run.
+
+## Single-pointer operations
+
+- `ptr_type(child_type, is_const)` builds a single pointer type; the qualifier is
+  a well-known true/false ref. The source location identifies the child type.
+- Address-of mutable locals reuses ALLOC refs. Source `deref(pointer)` validates
+  the pointer and produces a typed load, or an OPV void/u0 constant without memory.
+  `ref_deref(pointer)` performs the same validation and returns the pointer itself
+  for assignment targets and `&p.*`. Neither cancellation nor ignored results
+  bypass undefined/non-pointer validation.
+- Internal LOAD remains distinct from source dereference. ELEM_TYPE only needs a
+  valid pointer type; stores check const qualification and coerce the value before
+  emitting memory access. Zero-storage void/u0 stores emit no typed memory op.
+- Compatible qualification uses TIR_PTR_CAST, a long QBE copy. Nested coercions
+  must be invariant below any mutable outer pointee; scalar pointee widening is
+  not permitted. Peer resolution can choose either compatible existing pointer
+  type. Addressable constants/temporaries, identity and general comptime memory
+  are intentionally deferred, not simulated with conditional stack spills.

@@ -1,0 +1,3 @@
+tests/tir/errors/pointer_align.zig:1:32: error: not supported by szc yet: pointer sizes other than single pointers or pointer attributes
+pub fn main() void { const P = *align(1) u8; _ = P; }
+                               ^

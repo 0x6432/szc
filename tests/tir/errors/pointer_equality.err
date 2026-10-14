@@ -1,0 +1,3 @@
+tests/tir/errors/pointer_equality.zig:1:41: error: not supported by szc yet: pointer equality
+fn same(a: *u8, b: *u8) bool { return a == b; }
+                                        ^

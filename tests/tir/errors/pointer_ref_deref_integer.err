@@ -1,0 +1,3 @@
+tests/tir/errors/pointer_ref_deref_integer.zig:1:45: error: cannot dereference non-pointer type 'u8'
+pub fn main() void { const n: u8 = 1; _ = &n.*; }
+                                            ^

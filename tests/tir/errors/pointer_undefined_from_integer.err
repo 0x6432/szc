@@ -1,0 +1,3 @@
+tests/tir/errors/pointer_undefined_from_integer.zig:1:63: error: expected type '*u8', found 'u64'
+pub fn main() void { const n: u64 = undefined; const p: *u8 = n; _ = p; }
+                                                              ^

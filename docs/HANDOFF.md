@@ -31,7 +31,8 @@ Read this first when resuming work (the sandbox resets often).
 - Done: M4.4b scope-exit defer across fallthrough, return, break and continue.
 - Done: M4.5a safe explicit unreachable, noreturn return/cast diagnostics and terminating joins.
 - Done: M4.5b explicit @panic and first-class string-literal byte values.
-- Next: **M5.1** single pointers, address-of/dereference and const pointer rules.
+- Done: M5.1a runtime single pointers, mutable-local addresses, dereference and nested const rules.
+- Next: **M5.1b** declaration-backed addresses for constants/parameters/temporaries and pointer identity.
 - Run `PATH=/data/tools/bin:$PATH ZIG=/data/zig/zig-x86_64-linux-0.17.0/zig make e2e-test`
   locally. `tools/build_qbe.sh` builds the pinned QBE into `build/qbe-src` on CI.
 - Tools: `SZC_QBE`/`qbe`, `SZC_CC`/`cc`; pinned QBE revision
@@ -39,7 +40,34 @@ Read this first when resuming work (the sandbox resets often).
 - Restored sandbox needed libasan/libubsan/clang/compiler-rt reinstalled. Git
   credentials are not persisted; use transient authentication for future pushes.
 - M3.4 (`1882ced`) and M3.5 (`7b36edd`) are pushed to `main`.
-- CI through M4.5a (`4e47b20`): completed successfully. Check the M4.5b push run.
+- CI through M4.5b (`c877ab7`): completed successfully (run 38505459099).
+  Check the M5.1a push run.
+
+## Validation at M5.1a
+
+- GCC/Clang -Werror ASan/UBSan: 533 unit checks, 526 goldens, 40 ordinary/reference
+  executable inputs plus one szc-only input, 12 driver checks, 157 panic cases.
+  `tools/generate_pointer_tests.py` exercises all signed/unsigned 1–64-bit pointees.
+  `tools/diff_pointer_coercions.py SZC ZIG` checks 84 depth-1/2/3 const conversions
+  in runtime and typed-undefined form (168 cases); the differential CI job runs it
+  after e2e. Optimized GCC is clean. Four 60-second fuzz targets and standalone
+  20,000-mutation replays per target pass.
+- IR_PTR_TYPE uses child type and well-known true/false refs; its location is the
+  child expression. IR_DEREF reads, IR_REF_DEREF validates and preserves the pointer
+  for lvalues and &p.*. Keep internal IR_LOAD separate from source validation.
+  Typed undefined pointers still obey pointer type/const coercion rules; only
+  untyped undefined is freely typed.
+- TIR_PTR_CAST is a QBE long copy, not an integer cast. Nested qualifier coercions
+  must remain invariant below mutable outer pointees (actual Sema.zig rules).
+- OPV void/u0 dereferences/stores do not access memory, even through known undefined
+  pointers. Other known undefined source dereferences are errors. Existing pointer
+  storage uses allocation-backed runtime addresses, never static mutable state.
+- M5.1b must design declaration-backed const/parameter storage and pointer identity;
+  do not lazily allocate at the first address-taking expression in a branch.
+  Preserve existing const comptime knowledge and dominance/lifetime guarantees.
+  Constant, parameter, global and temporary addresses currently report NYI;
+  pointer equality reports NYI, while ordering single pointers is rejected by 0.17.
+  Pointer attributes/many/slice/C pointer syntax and aggregate reads are still NYI.
 
 ## Validation at M4.5b
 
