@@ -81,8 +81,8 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
             - [x] **M5.1c2b2b3a Internal mutable global alignment**.
             - [x] **M5.1c2b2b3b Aligned global constants** (internal, supported runtime-representable types).
             - [x] **M5.1c2b2b4 Aligned function declarations/addresses** (local explicitly aligned bare-function aliases remain NYI).
-        - [ ] **M5.1c2b3 Volatile pointer accesses**.
-          - [ ] **M5.1c2b3a Volatile pointer qualification/coercion**.
+        - [~] **M5.1c2b3 Volatile pointer accesses**.
+          - [x] **M5.1c2b3a Volatile pointer qualification/coercion**.
           - [ ] **M5.1c2b3b Observable volatile loads/stores**.
 - [ ] **M5.2 Arrays, indexing, array literals, `++` at comptime** (0.17.0 has no `**`).
 - [ ] **M5.3 Slices, many-pointers, slicing, `.len`, `.ptr`, for over slices.**
@@ -137,6 +137,29 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
 ## Completed milestone log
 
 (newest first; each entry: what, limitations, interactions)
+
+### M5.1c2b3a Volatile pointer qualification/coercion
+- **What**: single-pointer syntax lowers IR_POINTER_VOLATILE. Interning already
+  includes TypePointer.is_volatile; sema now populates and prints it. Coercion can
+  add but not discard volatile, while mutable outer pointees require bidirectional
+  compatibility. Joins combine const/allowzero/volatile and retain the weakest
+  alignment only when both operands coerce. Function parameter variance uses the
+  same memory-compatibility checks. Pointer identity and storage layout do not change.
+- **Grounding/tests**: Sema.zig coerceInMemoryAllowedPtrs and peer resolution
+  confirm the qualifier rules. A 240-case Zig matrix covers direct qualifiers,
+  alignment interactions, nested mutable invariance, joins and function variance.
+  Added three stage goldens, seven reference-rejected diagnostics, executable
+  identity/slot/address-cancellation coverage and two temporary access-NYI fixtures.
+  Removed the old blanket volatile-pointer rejection. CI runs the new matrix.
+  GCC -Werror ASan/UBSan passes 558 units, 720 goldens and full executable/memory/
+  safety suites. Clang sanitizer checks and all 240 Zig comparisons pass; the new
+  executable passes with Zig too. Four 60-second fuzz targets and 20,000 standalone
+  mutations per stage pass. Exact test counts are in HANDOFF.md.
+- **Safe boundary**: this checkpoint supports qualification only. Volatile loads
+  and stores fail explicitly rather than silently becoming ordinary QBE memory
+  operations. The next checkpoint removes these temporary guards and supplies
+  observable access lowering. Atomicity/fences, casts, non-single pointers and
+  unsupported pointee types remain separate work. Q6 is still deferred to M10.2.
 
 ### M5.1c2b2b4 Function declaration/address alignment
 - **What**: function declarations have isolated alignment bodies/source locations.

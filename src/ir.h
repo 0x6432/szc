@@ -254,6 +254,7 @@ typedef struct IrInst {
 typedef enum IrPointerFlags {
 	IR_POINTER_CONST = 0x1,
 	IR_POINTER_ALLOWZERO = 0x2,
+	IR_POINTER_VOLATILE = 0x4,
 } IrPointerFlags;
 
 typedef struct IrPointerType {

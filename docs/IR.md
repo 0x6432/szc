@@ -271,3 +271,14 @@ prints a file's IR.
   diagnoses alignment above 16 because it cannot carry this ELF prelude.
 - Exported bodies use the same mechanism; extern alignment is supplier-guaranteed.
   Explicitly aligned local bare-function alias addresses remain NYI.
+
+## Volatile pointer qualification
+
+- IrPointerType.flags adds IR_POINTER_VOLATILE; TypePointer retains it independently
+  of const, allowzero and alignment. Names/dumps show it, and type interning includes
+  the bit. Top-level conversion can add volatile, never discard it. Nested mutable
+  pointers remain invariant; function parameter variance reuses compatibility rules.
+- Pointer joins union const/allowzero/volatile and choose weakest alignment, then
+  validate both operands against the resulting type. Qualifiers do not alter size,
+  storage identity or the ABI. The qualification-only checkpoint explicitly rejects
+  accesses until observable volatile memory lowering is implemented.

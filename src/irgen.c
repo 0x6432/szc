@@ -862,7 +862,7 @@ alignment_body(IrGen *gen, Scope *scope, AstNode *node)
 static IrRef
 pointer_type(GenBody *body, Scope *scope, AstPointerType *node)
 {
-	if (node->size != AST_POINTER_ONE || node->sentinel != NULL || node->bit_offset != NULL || node->host_size != NULL || node->addrspace != NULL || node->is_volatile) {
+	if (node->size != AST_POINTER_ONE || node->sentinel != NULL || node->bit_offset != NULL || node->host_size != NULL || node->addrspace != NULL) {
 		unsupported(body, &node->base, "pointer sizes other than single pointers or pointer attributes");
 		return IR_REF_VOID_VALUE;
 	}
@@ -876,6 +876,8 @@ pointer_type(GenBody *body, Scope *scope, AstPointerType *node)
 		payload.flags |= IR_POINTER_CONST;
 	if (node->is_allowzero)
 		payload.flags |= IR_POINTER_ALLOWZERO;
+	if (node->is_volatile)
+		payload.flags |= IR_POINTER_VOLATILE;
 	return emit_payload(body, IR_PTR_TYPE, node->child->offset, APPEND_EXTRA(body->gen, payload));
 }
 
@@ -2450,6 +2452,8 @@ dump_inst(const IrDumper *dumper, IrInstIndex index, uint32_t depth)
 		dump_ref(dumper, (payload.flags & IR_POINTER_CONST) != 0 ? IR_REF_TRUE : IR_REF_FALSE);
 		if ((payload.flags & IR_POINTER_ALLOWZERO) != 0)
 			fputs(" allowzero", out);
+		if ((payload.flags & IR_POINTER_VOLATILE) != 0)
+			fputs(" volatile", out);
 		dump_labeled_body(dumper, "align", payload.alignment_body, depth);
 		break;
 	}

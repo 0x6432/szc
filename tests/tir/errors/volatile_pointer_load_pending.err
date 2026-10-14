@@ -1,0 +1,3 @@
+tests/tir/errors/volatile_pointer_load_pending.zig:1:78: error: not supported by szc yet: volatile memory accesses
+pub fn main() void { var value: u8 = 7; const p: *volatile u8 = &value; _ = p.*; }
+                                                                             ^

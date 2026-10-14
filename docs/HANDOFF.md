@@ -44,7 +44,8 @@ Read this first when resuming work (the sandbox resets often).
   runtime-representable types, preserving comptime values and immutable identities.
 - Done: M5.1c2b2b4 function declaration/address alignment (internal/exported
   definitions and supplier-guaranteed extern declarations).
-- Next: M5.1c2b3a volatile qualification, then M5.1c2b3b observable accesses.
+- Done: M5.1c2b3a volatile single-pointer qualification/coercion.
+- Next: M5.1c2b3b observable volatile accesses (temporary explicit access guards).
   The user requested three checkpoints together this turn only.
   M5.1/M5.1c/M5.1c2/M5.1c2b/M5.1c2b2/M5.1c2b2b remain partial.
 - Run `PATH=/data/tools/bin:$PATH ZIG=/data/zig/zig-x86_64-linux-0.17.0/zig make e2e-test`
@@ -68,6 +69,31 @@ Read this first when resuming work (the sandbox resets often).
   GCC/Clang/fuzz/differential jobs, restoring green CI. M5.1c2b2a 8b1d3cf
   also passed all jobs (run 38590520673), as did M5.1c2b2b1 ecfb6ab
   (run 38593742928). Check each new push's run.
+
+## Validation at M5.1c2b3a
+
+- IR_POINTER_VOLATILE and pointer_type populate the existing TypePointer flag;
+  IR/TIR diagnostics retain it. memory_coercion_allowed permits adding volatile,
+  disallows discarding it and enforces nested invariance through mutable pointers.
+  peer_type unions volatile with const/allowzero and verifies both conversions;
+  function variance reuses these rules. Pointer representation/identity unchanged.
+- Sema.zig coerceInMemoryAllowedPtrs and peer type resolution ground the behavior.
+  tools/diff_volatile_pointers.py has 240 acceptance cases covering qualifiers,
+  alignment, nested pointers, joins and function parameter variance. Three stage
+  goldens, seven reference-rejected errors, two temporary access-NYI fixtures and
+  executable pointer/alias/slot/&p.* tests replace blanket pointer-volatile NYI.
+  Corpus: irgen 32/sema 75. GCC -Werror ASan/UBSan passes 558 units,
+  720 goldens, eight cleanup probes, 56 ordinary/generated executables plus two
+  szc-only inputs, 16 driver, all existing memory/alignment and 166 safety cases.
+  The new executable also passes with Zig. Clang sanitizers pass units/goldens,
+  46 ordinary executables, driver and safety checks, and all 240 Zig comparisons.
+  Four 60-second fuzz targets and 20,000 standalone mutations per stage pass.
+- This intermediate commit rejects volatile memory accesses explicitly; it does
+  not claim ordinary QBE loads/stores are volatile. Next is M5.1c2b3b, still within
+  this user-requested three-checkpoint batch. Non-single pointers, casts, atomics
+  and unsupported value kinds remain NYI. Keep Q6 deferred until M10.2.
+- Earlier process-reaping race fix 0fc49d8/run 38627706294 completed all CI jobs
+  successfully. Later checkpoint CI must still be checked independently.
 
 ## Validation at M5.1c2b2b4
 

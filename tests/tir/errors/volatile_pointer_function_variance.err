@@ -1,0 +1,3 @@
+tests/tir/errors/volatile_pointer_function_variance.zig:1:119: error: expected type '*const fn (*volatile u8) void', found '*const fn (*u8) void'
+fn target(p: *u8) void { _ = p; } fn take(f: *const fn (*volatile u8) void) void { _ = f; } pub fn main() void { take(target); }
+                                                                                                                      ^

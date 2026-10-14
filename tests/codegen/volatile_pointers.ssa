@@ -1,0 +1,61 @@
+function w $szc.main.1() {
+@start
+	%t1 =l call $szc.qualify.2(l $szc.g.1)
+	%t3 =w cnel %t1, $szc.g.1
+	jnz %t3, @c14_then, @c14_else
+@c14_then
+	%t4 =w copy 1
+	jmp @b4
+@c14_else
+	%t8 =l call $szc.choose.3(w 1, l $szc.g.1, l $szc.g.1)
+	%t10 =w cnel %t8, $szc.g.1
+	%t4 =w copy %t10
+	jmp @b4
+@b4
+	jnz %t4, @c19_then, @c19_else
+@c19_then
+	ret 1
+@c19_else
+	jmp @b15
+@b15
+	call $szc.invoke.4(l $szc.target.5, l $szc.g.1)
+	ret 0
+}
+
+function l $szc.qualify.2(l %t0) {
+@start
+	%t1 =l copy %t0
+	ret %t1
+}
+
+function l $szc.choose.3(w %t0, l %t1, l %t2) {
+@start
+	jnz %t0, @c7_then, @c7_else
+@c7_then
+	%t4 =l copy %t1
+	%t3 =l copy %t4
+	jmp @b3
+@c7_else
+	%t3 =l copy %t2
+	jmp @b3
+@b3
+	ret %t3
+}
+
+function $szc.invoke.4(l %t0, l %t1) {
+@start
+	call %t0(l %t1)
+	ret
+}
+
+function $szc.target.5(l %t0) {
+@start
+	ret
+}
+
+data $szc.g.1 = align 64 { b 7 }
+export function w $main() {
+@start
+	%status =w call $szc.main.1()
+	ret %status
+}

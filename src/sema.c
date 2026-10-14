@@ -523,7 +523,7 @@ sema_type_name(Sema *sema, TypeId type_id)
 	case TYPE_POINTER: {
 		const char *prefix = type->as.pointer.size == POINTER_ONE ? "*" : type->as.pointer.size == POINTER_MANY ? "[*]" : type->as.pointer.size == POINTER_SLICE ? "[]" : "[*c]";
 		const char *alignment = type->as.pointer.alignment == 0 ? "" : arena_sprintf(sema->arena, "align(%u) ", (unsigned)type->as.pointer.alignment);
-		return arena_sprintf(sema->arena, "%s%s%s%s%s", prefix, alignment, type->as.pointer.is_allowzero ? "allowzero " : "", type->as.pointer.is_const ? "const " : "", sema_type_name(sema, type->as.pointer.child));
+		return arena_sprintf(sema->arena, "%s%s%s%s%s%s", prefix, alignment, type->as.pointer.is_allowzero ? "allowzero " : "", type->as.pointer.is_const ? "const " : "", type->as.pointer.is_volatile ? "volatile " : "", sema_type_name(sema, type->as.pointer.child));
 	}
 	case TYPE_FN: {
 		const char *text = "fn (";
@@ -1258,7 +1258,9 @@ memory_coercion_allowed(const Sema *sema, TypeId dest, TypeId source, bool dest_
 		return false;
 	TypePointer to = sema->types[dest].as.pointer;
 	TypePointer from = sema->types[source].as.pointer;
-	if (to.size != from.size || to.is_volatile != from.is_volatile)
+	if (to.size != from.size)
+		return false;
+	if (to.is_volatile != from.is_volatile && (dest_is_mut || !to.is_volatile))
 		return false;
 	if (to.is_allowzero != from.is_allowzero && (dest_is_mut || !to.is_allowzero))
 		return false;
@@ -1506,6 +1508,7 @@ peer_type(Block *block, Operand lhs, Operand rhs, uint32_t src, TypeId *out)
 			Type candidate = make_type(TYPE_POINTER);
 			candidate.as.pointer = ap;
 			candidate.as.pointer.is_const = ap.is_const || bp.is_const;
+			candidate.as.pointer.is_volatile = ap.is_volatile || bp.is_volatile;
 			candidate.as.pointer.is_allowzero = ap.is_allowzero || bp.is_allowzero;
 			if (ap.alignment != 0 || bp.alignment != 0) {
 				uint32_t a_align = pointer_alignment(sema, ap);
@@ -2811,7 +2814,12 @@ load_pointer(Block *block, Operand pointer, uint32_t src)
 	Sema *sema = block->sema;
 	if (!pointer_type_operand(block, pointer, src))
 		return operand_none;
-	TypeId child = sema->types[pointer.type].as.pointer.child;
+	TypePointer pointer_type = sema->types[pointer.type].as.pointer;
+	TypeId child = pointer_type.child;
+	if (pointer_type.is_volatile) {
+		sema_error(block, src, "not supported by szc yet: volatile memory accesses");
+		return operand_none;
+	}
 	if (child == T_VOID)
 		return void_operand(sema);
 	if (is_int(sema, child) && sema->types[child].as.integer.bits == 0)
@@ -3024,6 +3032,7 @@ analyze_inst(Block *block, IrInstIndex index, Operand *break_value)
 		pointer.as.pointer.size = POINTER_ONE;
 		pointer.as.pointer.is_const = (payload.flags & IR_POINTER_CONST) != 0;
 		pointer.as.pointer.is_allowzero = (payload.flags & IR_POINTER_ALLOWZERO) != 0;
+		pointer.as.pointer.is_volatile = (payload.flags & IR_POINTER_VOLATILE) != 0;
 		if (!analyze_alignment(block, payload.alignment_body, payload.alignment_src, &pointer.as.pointer.alignment))
 			break;
 		result = type_operand(sema, type_intern(sema, &pointer));
@@ -3218,6 +3227,10 @@ analyze_inst(Block *block, IrInstIndex index, Operand *break_value)
 			break;
 		if (sema->types[pointer.type].as.pointer.is_const) {
 			sema_error(block, src, "cannot assign to constant");
+			break;
+		}
+		if (sema->types[pointer.type].as.pointer.is_volatile) {
+			sema_error(block, src, "not supported by szc yet: volatile memory accesses");
 			break;
 		}
 		TypeId child = sema->types[pointer.type].as.pointer.child;
