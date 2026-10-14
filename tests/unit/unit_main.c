@@ -346,27 +346,32 @@ test_constant_references(void)
 	CHECK(function != value_function(&table, 5, 2));
 	CHECK(value_get(&table, function)->as.function == 1);
 	ValueId function_pointer = value_function(&table, 6, 1);
-	ValueId function_object = value_ref(&table, 7, function_pointer, 0);
+	ValueId function_object = value_ref(&table, 7, function_pointer, 0, 0);
 	CHECK(table.objects[value_get(&table, function_object)->as.object].value == function_pointer);
 	ValueId n = value_int_u64(&table, 1, 42);
-	ValueId ref = value_ref(&table, 2, n, 0);
-	CHECK(ref == value_ref(&table, 2, n, 0));
-	CHECK(ref != value_ref(&table, 3, n, 0));
-	CHECK(value_get(&table, ref)->as.object == value_get(&table, value_ref(&table, 3, n, 0))->as.object);
-	ValueId named = value_ref(&table, 2, n, 1);
+	ValueId ref = value_ref(&table, 2, n, 0, 0);
+	CHECK(ref == value_ref(&table, 2, n, 0, 0));
+	CHECK(ref != value_ref(&table, 3, n, 0, 0));
+	CHECK(value_get(&table, ref)->as.object == value_get(&table, value_ref(&table, 3, n, 0, 0))->as.object);
+	ValueId named = value_ref(&table, 2, n, 1, 0);
 	CHECK(named != ref);
-	CHECK(named != value_ref(&table, 2, n, 2));
+	CHECK(named != value_ref(&table, 2, n, 2, 0));
 	CHECK(table.objects[value_get(&table, named)->as.object].value == n);
+	ValueId aligned = value_ref(&table, 2, n, 0, 64);
+	CHECK(aligned == value_ref(&table, 2, n, 0, 64));
+	CHECK(aligned != ref);
+	CHECK(aligned != value_ref(&table, 2, n, 0, 128));
+	CHECK(table.objects[value_get(&table, aligned)->as.object].alignment == 64);
 	ValueId refs[512];
 	for (uint32_t i = 0; i < 512; i++)
-		refs[i] = value_ref(&table, 2, value_int_u64(&table, 1, i), i + 3);
+		refs[i] = value_ref(&table, 2, value_int_u64(&table, 1, i), i + 3, 1u << (i % 13));
 	bool preserved = true;
 	for (uint32_t i = 0; i < 512; i++)
-		if (refs[i] != value_ref(&table, 2, value_int_u64(&table, 1, i), i + 3))
+		if (refs[i] != value_ref(&table, 2, value_int_u64(&table, 1, i), i + 3, 1u << (i % 13)))
 			preserved = false;
 	CHECK(preserved);
 	CHECK(table.object_capacity >= 1024 && table.object_slot_count >= 2048);
-	ValueId outer = value_ref(&table, 4, ref, 0);
+	ValueId outer = value_ref(&table, 4, ref, 0, 0);
 	CHECK(table.objects[value_get(&table, outer)->as.object].value == ref);
 	arena_free(&arena);
 }
@@ -392,7 +397,7 @@ test_global_references(void)
 			preserved = false;
 	CHECK(preserved);
 	CHECK(table.capacity >= 1024 && table.slot_count >= 2048);
-	ValueId outer = value_ref(&table, 4, address, 0);
+	ValueId outer = value_ref(&table, 4, address, 0, 0);
 	CHECK(table.objects[value_get(&table, outer)->as.object].value == address);
 	arena_free(&arena);
 }

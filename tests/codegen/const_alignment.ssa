@@ -1,0 +1,62 @@
+function w $szc.main.1() {
+@start
+	%t1 =w call $szc.read.2(l $szc.const.1)
+	%t3 =w cnew %t1, 42
+	jnz %t3, @c9_then, @c9_else
+@c9_then
+	%t4 =w copy 1
+	jmp @b4
+@c9_else
+	%t4 =w copy 0
+	jmp @b4
+@b4
+	jnz %t4, @c19_then, @c19_else
+@c19_then
+	%t10 =w copy 1
+	jmp @b10
+@c19_else
+	%t13 =w call $szc.runtime.3(w 7, w 0)
+	%t15 =w cnew %t13, 7
+	%t10 =w copy %t15
+	jmp @b10
+@b10
+	jnz %t10, @c24_then, @c24_else
+@c24_then
+	ret 1
+@c24_else
+	jmp @b20
+@b20
+	ret 0
+}
+
+function w $szc.read.2(l %t0) {
+@start
+	%t1 =w loadw %t0
+	ret %t1
+}
+
+function w $szc.runtime.3(w %t0, w %t1) {
+@start
+	%a2_raw =l alloc16 67
+	%a2_round =l add %a2_raw, 63
+	%t2 =l and %a2_round, -64
+	storew %t0, %t2
+	jnz %t1, @c7_then, @c7_else
+@c7_then
+	%t4 =l copy %t2
+	jmp @b4
+@c7_else
+	%t4 =l copy %t2
+	jmp @b4
+@b4
+	%t8 =w loadw %t4
+	ret %t8
+}
+
+section ".rodata"
+data $szc.const.1 = align 64 { w 42 }
+export function w $main() {
+@start
+	%status =w call $szc.main.1()
+	ret %status
+}

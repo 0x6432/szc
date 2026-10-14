@@ -12,6 +12,7 @@
  * function as QBE IL, plus a C `main` that calls Zig's `main`. Returns false
  * if something could not be lowered (reported to `diag`).
  */
-bool codegen_qbe(FILE *out, Sema *sema, Diag *diag);
+/* assembly may be NULL for standalone IL; larger static alignments need it. */
+bool codegen_qbe(FILE *out, FILE *assembly, Sema *sema, Diag *diag);
 
 #endif

@@ -1,0 +1,148 @@
+%106 = struct_decl (flags=0) {
+  decl fn "read" value {
+    %12 = func "read" {
+      %6 = param "p" type {
+        %3 = ptr_type @type_u32, @true align {
+          %0 = int 64
+          %1 = as @type_u29, %0
+          %2 = break_inline result, %1
+        }
+        %4 = as @type_type, %3
+        %5 = break_inline result, %4
+      }
+      ret type {
+        %7 = break_inline result, @type_u32
+      }
+      body insts {
+        %8 = ret_type
+        %9 = deref %6
+        %10 = as_return %8, %9
+        %11 = ret %10
+      }
+    }
+    %13 = break_inline result, %12
+  }
+  decl fn "runtime" value {
+    %34 = func "runtime" {
+      %15 = param "n" type {
+        %14 = break_inline result, @type_u32
+      }
+      %17 = param "c" type {
+        %16 = break_inline result, @type_bool
+      }
+      ret type {
+        %18 = break_inline result, @type_u32
+      }
+      body insts {
+        %22 = align value {
+          %19 = int 64
+          %20 = as @type_u29, %19
+          %21 = break_inline result, %20
+        }
+        %23 = as @type_u32, %15
+        %24 = const_bind %23, %22
+        %26 = ref %24
+        %25 = as @type_bool, %17
+        %29 = if %25 then {
+          %27 = break_inline result, %26
+        } else {
+          %28 = break_inline result, %26
+        }
+        %30 = ret_type
+        %31 = deref %29
+        %32 = as_return %30, %31
+        %33 = ret %32
+      }
+    }
+    %35 = break_inline result, %34
+  }
+  decl fn "main" pub value {
+    %104 = func "main" {
+      ret type {
+        %36 = break_inline result, @type_u8
+      }
+      body insts {
+        %40 = align value {
+          %37 = int 64
+          %38 = as @type_u29, %37
+          %39 = break_inline result, %38
+        }
+        %41 = int 42
+        %42 = as @type_u32, %41
+        %43 = const_bind %42, %40
+        %53 = ref %43
+        %47 = ptr_type @type_u32, @true align {
+          %44 = int 64
+          %45 = as @type_u29, %44
+          %46 = break_inline result, %45
+        }
+        %48 = as @type_type, %47
+        %52 = align value {
+          %49 = int 32
+          %50 = as @type_u29, %49
+          %51 = break_inline result, %50
+        }
+        %54 = as %48, %53
+        %55 = const_bind %54, %52
+        %59 = align value {
+          %56 = int 16
+          %57 = as @type_u29, %56
+          %58 = break_inline result, %57
+        }
+        %60 = int 32
+        %61 = const_bind %60, %59
+        %62 = ref %61
+        %66 = ptr_type @type_u32, @true align {
+          %63 = deref %62
+          %64 = as @type_u29, %63
+          %65 = break_inline result, %64
+        }
+        %67 = as @type_type, %66
+        %68 = as %67, %53
+        %69 = decl_val "read"
+        %70 = call %69 arg0 {
+          %71 = arg_type %70, 0
+          %72 = as %71, %55
+          %73 = break_inline result, %72
+        }
+        %74 = int 42
+        %75 = cmp_neq %70, %74
+        %80 = bool_or %75 rhs {
+          %76 = deref %68
+          %77 = int 42
+          %78 = cmp_neq %76, %77
+          %79 = break_inline result, %78
+        }
+        %93 = bool_or %80 rhs {
+          %81 = decl_val "runtime"
+          %82 = call %81 arg0 {
+            %83 = arg_type %82, 0
+            %84 = int 7
+            %85 = as %83, %84
+            %86 = break_inline result, %85
+          } arg1 {
+            %87 = arg_type %82, 1
+            %88 = as %87, @false
+            %89 = break_inline result, %88
+          }
+          %90 = int 7
+          %91 = cmp_neq %82, %90
+          %92 = break_inline result, %91
+        }
+        %99 = if %93 then {
+          %94 = ret_type
+          %95 = int 1
+          %96 = as_return %94, %95
+          %97 = ret %96
+        } else {
+          %98 = break_inline result, @void_value
+        }
+        %100 = ret_type
+        %101 = int 0
+        %102 = as_return %100, %101
+        %103 = ret %102
+      }
+    }
+    %105 = break_inline result, %104
+  }
+}

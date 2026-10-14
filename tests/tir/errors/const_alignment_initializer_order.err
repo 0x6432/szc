@@ -1,0 +1,6 @@
+tests/tir/errors/const_alignment_initializer_order.zig:1:44: error: alignment must be >= 1
+pub fn main() void { const value: u8 align(0) = true; _ = &value; }
+                                           ^
+tests/tir/errors/const_alignment_initializer_order.zig:1:49: error: expected type 'u8', found 'bool'
+pub fn main() void { const value: u8 align(0) = true; _ = &value; }
+                                                ^

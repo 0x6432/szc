@@ -2652,17 +2652,21 @@ analyze_call(Block *block, IrInstIndex index, Operand *out)
 
 /* Known values have immutable backing objects; runtime values have anchored stack slots. */
 static Operand
-analyze_ref(Block *block, Operand value, uint32_t src, uint32_t identity)
+analyze_ref(Block *block, Operand value, uint32_t src, uint32_t identity, uint32_t alignment)
 {
 	Sema *sema = block->sema;
 	if (value.kind == OPERAND_NONE)
 		return operand_none;
 	TypeKind kind = sema->types[value.type].kind;
+	if (kind == TYPE_FN && alignment != 0) {
+		sema_error(block, src, "not supported by szc yet: aligned function body address");
+		return operand_none;
+	}
 	if (kind == TYPE_FN)
 		return function_address(block, value, src);
-	TypeId pointer = type_pointer(sema, value.type, POINTER_ONE, true, false, 0);
+	TypeId pointer = type_pointer(sema, value.type, POINTER_ONE, true, false, alignment);
 	if (value.kind == OPERAND_COMPTIME)
-		return comptime_operand(pointer, value_ref(&sema->values, pointer, value.value, identity));
+		return comptime_operand(pointer, value_ref(&sema->values, pointer, value.value, identity, alignment));
 	if (block->is_comptime || !require_runtime(block, src)) {
 		sema_error(block, src, "unable to evaluate comptime expression");
 		return operand_none;
@@ -2922,7 +2926,7 @@ analyze_inst(Block *block, IrInstIndex index, Operand *break_value)
 		} else if (inst->op == IR_DECL_REF) {
 			if (decl->address_identity == 0)
 				decl->address_identity = ++sema->next_address_identity;
-			result = analyze_ref(block, result, src, decl->address_identity);
+			result = analyze_ref(block, result, src, decl->address_identity, 0);
 		}
 		break;
 	}
@@ -2975,9 +2979,28 @@ analyze_inst(Block *block, IrInstIndex index, Operand *break_value)
 		result = type_operand(sema, type_intern(sema, &pointer));
 		break;
 	}
-	case IR_REF:
-		result = analyze_ref(block, resolve_ref(block, inst->data.un.operand), src, 0);
+	case IR_CONST_BIND:
+		if (inst->data.bin.rhs == IR_REF_NONE || resolve_ref(block, inst->data.bin.rhs).kind != OPERAND_NONE)
+			result = resolve_ref(block, inst->data.bin.lhs);
 		break;
+	case IR_REF: {
+		IrRef operand = inst->data.un.operand;
+		uint32_t alignment = 0;
+		if (ir_ref_is_inst(operand)) {
+			const IrInst *definition = &block->ir->insts[ir_ref_inst(operand)];
+			if (definition->op == IR_CONST_BIND && definition->data.bin.rhs != IR_REF_NONE) {
+				Operand value = resolve_ref(block, definition->data.bin.rhs);
+				if (value.kind == OPERAND_NONE)
+					break;
+				if (value.kind != OPERAND_COMPTIME || !bigint_to_u32(&operand_value(block, value)->as.integer, &alignment)) {
+					sema_error(block, src, "unable to resolve comptime value");
+					break;
+				}
+			}
+		}
+		result = analyze_ref(block, resolve_ref(block, operand), src, 0, alignment);
+		break;
+	}
 	case IR_REF_TYPE: {
 		Operand operand = resolve_ref(block, inst->data.un.operand);
 		if (operand.kind == OPERAND_NO_RESULT_TYPE) {

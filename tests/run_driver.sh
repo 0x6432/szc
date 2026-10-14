@@ -60,5 +60,27 @@ fi
 check_status 2 "$SZC" build-exe tests/run/void_main.zig -o
 check_status 2 "$SZC" run tests/run/void_main.zig argument-without-separator
 
+# Static alignments beyond QBE's data limit are appended as real assembly data.
+cat > "$tmp/aligned.zig" <<'EOF_ALIGNED'
+fn read(p: *align(128) const u32) u32 { return p.*; }
+pub fn main() u8 { const value: u32 align(128) = 42; return @intCast(read(&value)); }
+EOF_ALIGNED
+check_status 1 "$SZC" emit-qbe "$tmp/aligned.zig"
+if ! grep -q 'static alignment above 64' "$tmp/stderr"; then
+ echo 'FAIL (standalone aligned data diagnostic)'
+ fail=$((fail + 1))
+fi
+check_status 0 "$SZC" build-exe "$tmp/aligned.zig" -o "$tmp/aligned program" --keep-temps
+check_status 42 "$tmp/aligned program"
+if ! grep -q '^.balign 128$' "$tmp/aligned program.s"; then
+ echo 'FAIL (outlined data missing from retained assembly)'
+ fail=$((fail + 1))
+fi
+check_status 2 env SZC_QBE=/bin/false "$SZC" build-exe "$tmp/aligned.zig" -o "$tmp/failed-aligned"
+if [ -e "$tmp/failed-aligned.ssa" ] || [ -e "$tmp/failed-aligned.s" ]; then
+ echo 'FAIL (outlined data failure cleanup)'
+ fail=$((fail + 1))
+fi
+
 echo "driver: $pass passed, $fail failed"
 [ "$fail" -eq 0 ]

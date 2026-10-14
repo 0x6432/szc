@@ -37,6 +37,7 @@ typedef enum PanicKind {
 typedef struct Codegen {
 	Sema					*sema;
 	FILE					*out;
+	FILE					*assembly;
 	Diag					*diag;
 	FileId file;
 	const SemaFunc	*func;
@@ -904,12 +905,13 @@ mark_constant_dependencies(Codegen *cg)
 }
 
 static void
-emit_data_object(Codegen *cg, ValueId stored, const char *symbol, bool immutable, uint32_t src)
+emit_data_object(Codegen *cg, ValueId stored, const char *symbol, bool immutable, uint32_t src, uint32_t alignment)
 {
 	const Value *value = value_get(sema_values(cg->sema), stored);
 	const Type *type = sema_type(cg->sema, value->type);
 	uint64_t size = sema_type_size(cg->sema, value->type);
-	uint32_t align = sema_type_align(cg->sema, value->type);
+	uint32_t align = alignment != 0 ? alignment : sema_type_align(cg->sema, value->type);
+	bool outlined = align > 64;
 	if (type->kind != TYPE_VOID && type->kind != TYPE_BOOL && type->kind != TYPE_POINTER && type->kind != TYPE_INT) {
 		codegen_error(cg, src, "not supported by szc yet: runtime storage of this constant type");
 		return;
@@ -918,59 +920,73 @@ emit_data_object(Codegen *cg, ValueId stored, const char *symbol, bool immutable
 		codegen_error(cg, src, "not supported by szc yet: integers wider than 64 bits");
 		return;
 	}
-	if (immutable)
-		fputs(type->kind == TYPE_POINTER ? "section \".data.rel.ro\"\n" : "section \".rodata\"\n", cg->out);
-	fprintf(cg->out, "data $%s = align %u { ", symbol, (unsigned)align);
+	if (outlined && cg->assembly == NULL) {
+		codegen_error(cg, src, "static alignment above 64 requires assembly output; use build-exe");
+		return;
+	}
+	FILE *out = outlined ? cg->assembly : cg->out;
+	if (outlined) {
+		fputs(type->kind == TYPE_POINTER ? ".section .data.rel.ro,\"aw\",@progbits\n" : ".section .rodata,\"a\",@progbits\n", out);
+		fprintf(out, ".balign %u\n%s:\n", (unsigned)align, symbol);
+	} else {
+		if (immutable)
+			fputs(type->kind == TYPE_POINTER ? "section \".data.rel.ro\"\n" : "section \".rodata\"\n", out);
+		fprintf(out, "data $%s = align %u { ", symbol, (unsigned)align);
+	}
 	bool zero = value->kind == VALUE_UNDEFINED || value->kind == VALUE_VOID
 		|| (value->kind == VALUE_BOOL && !value->as.boolean)
 		|| (value->kind == VALUE_INT && value->as.integer.limb_count == 0);
 	if (!immutable && zero) {
-		fprintf(cg->out, "z %" PRIu64 " }\n", size == 0 ? UINT64_C(1) : size);
+		fprintf(out, "z %" PRIu64 " }\n", size == 0 ? UINT64_C(1) : size);
 		return;
 	}
 	if (size == 0) {
-		fputs("b 0 }\n", cg->out);
+		fputs(outlined ? ".byte 0\n" : "b 0 }\n", out);
 		return;
 	}
 	char cls = size == 1 ? 'b' : size == 2 ? 'h' : size == 4 ? 'w' : 'l';
-	fprintf(cg->out, "%c ", cls);
+	if (outlined)
+		fprintf(out, "%s ", size == 1 ? ".byte" : size == 2 ? ".short" : size == 4 ? ".long" : ".quad");
+	else
+		fprintf(out, "%c ", cls);
 	switch (value->kind) {
 	case VALUE_UNDEFINED:
-		fputs("0", cg->out);
+		fputs("0", out);
 		break;
 	case VALUE_INT:
-		fprintf(cg->out, "%" PRId64, (int64_t)bigint_to_u64_bits(&value->as.integer));
+		fprintf(out, "%" PRId64, (int64_t)bigint_to_u64_bits(&value->as.integer));
 		break;
 	case VALUE_BOOL:
-		fputs(value->as.boolean ? "1" : "0", cg->out);
+		fputs(value->as.boolean ? "1" : "0", out);
 		break;
 	case VALUE_FUNCTION:
-		fprintf(cg->out, "$%s", sema_func(cg->sema, value->as.function)->symbol);
+		fprintf(out, "%s%s", outlined ? "" : "$", sema_func(cg->sema, value->as.function)->symbol);
 		break;
 	case VALUE_GLOBAL:
-		fprintf(cg->out, "$%s", sema_global(cg->sema, value->as.global)->symbol);
+		fprintf(out, "%s%s", outlined ? "" : "$", sema_global(cg->sema, value->as.global)->symbol);
 		break;
 	case VALUE_REF:
-		fprintf(cg->out, "$szc.const.%u", (unsigned)value->as.object);
+		fprintf(out, "%sszc.const.%u", outlined ? "" : "$", (unsigned)value->as.object);
 		break;
 	case VALUE_BYTES:
-		fprintf(cg->out, "$szc.bytes.%u", (unsigned)stored);
+		fprintf(out, "%sszc.bytes.%u", outlined ? "" : "$", (unsigned)stored);
 		break;
 	default:
 		codegen_error(cg, src, "not supported by szc yet: constant object initializer");
-		fputs("0", cg->out);
+		fputs("0", out);
 		break;
 	}
-	fputs(" }\n", cg->out);
+	fputs(outlined ? "\n" : " }\n", out);
 }
 
 bool
-codegen_qbe(FILE *out, Sema *sema, Diag *diag)
+codegen_qbe(FILE *out, FILE *assembly, Sema *sema, Diag *diag)
 {
 	Codegen cg;
 	memset(&cg, 0, sizeof(cg));
 	cg.sema = sema;
 	cg.out = out;
+	cg.assembly = assembly;
 	cg.diag = diag;
 	Arena arena;
 	arena_init(&arena);
@@ -995,12 +1011,12 @@ codegen_qbe(FILE *out, Sema *sema, Diag *diag)
 		if (cg.constants_used[id]) {
 			char symbol[64];
 			snprintf(symbol, sizeof(symbol), "szc.const.%u", (unsigned)id);
-			emit_data_object(&cg, values->objects[id].value, symbol, true, 0);
+			emit_data_object(&cg, values->objects[id].value, symbol, true, 0, values->objects[id].alignment);
 		}
 	for (GlobalId id = 1; id < sema_global_count(sema); id++) {
 		const SemaGlobal *global = sema_global(sema, id);
 		cg.file = global->file;
-		emit_data_object(&cg, global->initializer, global->symbol, false, global->src);
+		emit_data_object(&cg, global->initializer, global->symbol, false, global->src, 0);
 	}
 	for (ValueId id = 1; id < values->count; id++) {
 		if (!cg.bytes_used[id])

@@ -2,6 +2,7 @@
 # Native and optional reference checks. A test starts with // exit: N.
 # <test>.stdout is byte-exact expected stdout; absent means empty stdout.
 # Set ZIG to also compile and run every test with the official compiler.
+# // outlined-data: true expects a standalone-IL limitation and tests full assembly.
 set -u
 SZC=${1:-build/asan/szc}
 [ "$#" -eq 0 ] || shift
@@ -49,17 +50,29 @@ for input do
 	fi
 	stdout=${input%.zig}.stdout
 	[ -f "$stdout" ] || stdout=$tmp/empty
-	if ! "$SZC" emit-qbe "$input" > "$tmp/expected.ssa"; then
-		echo "FAIL (emit-qbe): $input"
-		fail=$((fail + 1))
-		continue
+	outlined=false
+	if grep -q '^// outlined-data: true$' "$input"; then
+		outlined=true
+		"$SZC" emit-qbe "$input" > "$tmp/expected.ssa" 2> "$tmp/emit-error"
+		status=$?
+		if [ "$status" -ne 1 ] || ! grep -q 'static alignment above 64 requires assembly output' "$tmp/emit-error"; then
+			echo "FAIL (standalone outlined-data diagnostic): $input"
+			fail=$((fail + 1))
+			continue
+		fi
+	else
+		if ! "$SZC" emit-qbe "$input" > "$tmp/expected.ssa"; then
+			echo "FAIL (emit-qbe): $input"
+			fail=$((fail + 1))
+			continue
+		fi
 	fi
 	if ! "$SZC" build-exe "$input" -o "$tmp/native" --keep-temps; then
 		echo "FAIL (build-exe): $input"
 		fail=$((fail + 1))
 		continue
 	fi
-	if ! cmp -s "$tmp/expected.ssa" "$tmp/native.ssa" || [ ! -s "$tmp/native.s" ]; then
+	if [ ! -s "$tmp/native.ssa" ] || [ ! -s "$tmp/native.s" ] || { [ "$outlined" = false ] && ! cmp -s "$tmp/expected.ssa" "$tmp/native.ssa"; }; then
 		echo "FAIL (retained intermediates): $input"
 		fail=$((fail + 1))
 		continue

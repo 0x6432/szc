@@ -62,6 +62,7 @@ typedef struct Value {
 typedef struct ConstObject {
 	ValueId value;
 	uint32_t identity;
+	uint32_t alignment;	/* 0: natural ABI alignment; otherwise byte units */
 } ConstObject;
 
 typedef struct ValueTable {
@@ -84,7 +85,7 @@ ValueId      value_intern(ValueTable *table, const Value *value);	/* copies limb
 const Value *value_get(const ValueTable *table, ValueId id);
 
 ValueId value_global(ValueTable *table, TypeId type, GlobalId global);
-ValueId value_ref(ValueTable *table, TypeId type, ValueId pointee, uint32_t identity);
+ValueId value_ref(ValueTable *table, TypeId type, ValueId pointee, uint32_t identity, uint32_t alignment);
 ValueId value_bytes(ValueTable *table, TypeId type, const uint8_t *data, uint32_t length);
 ValueId value_void(ValueTable *table, TypeId void_type);
 ValueId value_bool(ValueTable *table, TypeId bool_type, bool value);

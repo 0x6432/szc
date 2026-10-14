@@ -77,7 +77,8 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
           - [x] **M5.1c2b2a Alignment-qualified pointer types and unaligned memory**.
           - [~] **M5.1c2b2b Explicit declaration/storage alignment**.
             - [x] **M5.1c2b2b1 Aligned mutable locals**.
-            - [ ] Aligned local constants, global objects and functions.
+            - [x] **M5.1c2b2b2 Aligned local constants** (known values and runtime initializers).
+            - [ ] Aligned global objects and function declarations/addresses.
         - [ ] **M5.1c2b3 Volatile pointer accesses**.
 - [ ] **M5.2 Arrays, indexing, array literals, `++` at comptime** (0.17.0 has no `**`).
 - [ ] **M5.3 Slices, many-pointers, slicing, `.len`, `.ptr`, for over slices.**
@@ -132,6 +133,51 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
 ## Completed milestone log
 
 (newest first; each entry: what, limitations, interactions)
+
+### M5.1c2b2b2 Aligned local constants
+- **What**: explicit local const alignment preserves the immutable binding's value,
+  including comptime integers/types and known pointer values. IR_CONST_BIND carries
+  the initializer and validated IR_ALIGN ref without converting reads into runtime
+  loads. Cached IR_REF instructions remain anchored after the binding, so runtime
+  values spill once at the definition even when first addressed in one branch.
+- **Known storage**: ConstObject records alignment alongside value and identity;
+  hashing/equality/rehashing include it. Compatible pointer casts retain the same
+  object. Known dereferences still recover the original value. Codegen uses the
+  object's real storage alignment, not the alignment of the pointer value itself.
+  Pointer/function-pointer objects remain in .data.rel.ro; scalars remain in .rodata.
+- **QBE/driver interaction**: the pinned QBE data parser accepts powers of two only
+  through 64 (its alignment field is bounded by CHAR_MAX). Larger immutable objects
+  are emitted as ELF assembly data with .balign, correct scalar widths and symbol
+  relocations. Codegen writes an optional assembly companion; the driver keeps it
+  in an anonymous temporary, runs external QBE normally, appends the data to QBE's
+  assembly and invokes cc. No text rewrite, fake alignment promise or runtime
+  address rounding substitutes for a known object's relocatable aligned address.
+  --keep-temps retains the complete .s; success/failure cleanup remains unchanged.
+- **Standalone IL**: emit-qbe reports a compile diagnostic when a materialized
+  constant requires alignment above 64; use build-exe/run for those programs.
+  Ordinary standalone IL is unchanged. The executable harness explicitly tests
+  this limitation for marked outlined-data inputs, then tests the full pipeline.
+  The sema fuzzer exercises both codegen output streams through its discard sink.
+- **Tests**: added IR/TIR/QBE goldens, reference-rejected alignment diagnostics,
+  interning/rehashing unit checks, retained-assembly and tool-failure driver checks.
+  Assembly checks cover 270 physical known/runtime constant addresses across 15
+  types and nine alignments, plus readbacks and PIE/RELRO checks. Executable tests
+  cover runtime branch dominance, recursion, loop initialization, returned known
+  addresses, nested object dependencies and function-pointer storage. The reference
+  matrix covers 626 coercion/comptime cases, including copied binding alignment.
+  GCC/Clang -Werror ASan/UBSan pass 558 unit checks, 652 goldens, 52 ordinary
+  executable inputs plus two szc-only inputs, 16 driver, 11 storage, four ABI,
+  seven unaligned memory, 135 mutable-local alignment, 270 constant alignment and
+  166 safety cases. Full GCC reference checks and optimized GCC checks pass.
+  All 626 new comparisons match Zig and sanitized replay; existing 300 mutable
+  cases retain sanitizer parity. Four final 60-second fuzz targets and 20,000
+  standalone mutations per stage pass. Corpus: irgen 28, sema 52 inputs.
+- **Limitations/next**: aligned global declarations and function declarations remain
+  pending. Taking the address of an explicitly aligned local bare-function alias
+  is an explicit NYI: metadata alone must not promise stronger code alignment.
+  Calling that alias and addressing an aligned function-pointer *slot* work.
+  General comptime interpretation, floats and wider/aggregate runtime storage keep
+  their existing limits. All enclosing memory/alignment milestones stay partial.
 
 ### M5.1c2b2b1 Aligned mutable locals
 - **What**: mutable local declarations accept explicit integer alignment, including

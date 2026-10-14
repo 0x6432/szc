@@ -1,0 +1,3 @@
+tests/tir/errors/const_alignment_runtime.zig:1:43: error: unable to resolve comptime value
+fn f(n: u29) void { const value: u8 align(n) = 1; _ = &value; } pub fn main() void { f(4); }
+                                          ^

@@ -163,7 +163,8 @@ prints a file's IR.
   an explicit attribute; TIR_ALLOC records it in the slot pointer type. Child ABI
   layout is unchanged. QBE slots above alignment 16 use private over-allocation
   and upward address rounding; initialization is not hoisted with the allocation.
-  Explicit alignment on local constants/globals/functions remains unsupported.
+  Aligned local constants use CONST_BIND below; global/function declaration
+  alignment remains pending.
 - Address-of mutable locals reuses ALLOC refs. Source `deref(pointer)` validates
   the pointer and produces a typed load, or an OPV void/u0 constant without memory.
   `ref_deref(pointer)` performs the same validation and returns the pointer itself
@@ -186,12 +187,22 @@ prints a file's IR.
   Taking an address only in one branch still yields a dominating initialization.
   References of references are appended in dependency order. Mutable locals keep
   their existing allocation refs, and named constants/params keep their value refs.
+- IR_CONST_BIND wraps an explicitly aligned local const initializer and its
+  validated alignment ref. Copies of such bindings also get a wrapper, with NONE
+  for an unannotated destination: source storage alignment must not leak through
+  a copied value. It returns the original operand, not a runtime load,
+  and is a separate definition for anchored references. IR_REF reads this binding's
+  alignment when constructing its const pointer. Runtime values get aligned stack
+  storage; known values keep their comptime payload and aligned immutable objects.
+  Taking an explicitly aligned bare-function alias address is NYI until code-symbol
+  alignment is implemented; aligned function-pointer slots are ordinary objects.
 - IR_REF_TYPE extracts the child of an expected address result type. It applies
   result context to temporary values, not named bindings; `&1` can receive u8
   context while a named comptime_int constant retains its original pointee type.
 - Sema lowers runtime references to stack allocation plus initialization, and known
   ones to VALUE_REF/ConstObjectId. ConstObject records an immutable ValueId and an
-  identity: anonymous value addresses deduplicate; each named global constant has
+  identity and byte alignment (0 means natural): anonymous value addresses with
+  the same alignment deduplicate; each named global constant has
   its own identity. Retyping a compatible pointer does not change its object.
 - Known dereferences recover the stored value without losing comptime knowledge.
   Pointer equality compares object IDs or runtime address bits. A known undefined
@@ -201,3 +212,16 @@ prints a file's IR.
   objects in .rodata. Pointer-valued objects use .data.rel.ro, preserving PIE/RELRO
   without text relocations. Literal bytes retain their separate read-only storage.
   Runtime local/parameter values never become static mutable temporary objects.
+
+## Outlined immutable data
+
+- The pinned QBE parser limits data alignment to powers of two through 64. Codegen
+  accepts an optional assembly companion stream for immutable objects above that
+  limit, using ELF .balign and scalar/symbol relocation directives. Dependencies
+  are still marked transitively before either data stream is emitted. The driver
+  appends the companion to the external QBE output before invoking system cc.
+- Standalone emit-qbe rejects materialized static alignment above 64 rather than
+  emitting invalid or insufficiently aligned IL. build-exe/run provide the complete
+  pipeline, and retained .s output includes the outlined data. Pointer objects use
+  .data.rel.ro in both streams; there are no text relocations or mutable statics
+  standing in for runtime local values.

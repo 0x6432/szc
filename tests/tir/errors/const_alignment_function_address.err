@@ -1,0 +1,3 @@
+tests/tir/errors/const_alignment_function_address.zig:2:54: error: not supported by szc yet: aligned function body address
+pub fn main() void { const value align(64) = f; _ = &value; }
+                                                     ^

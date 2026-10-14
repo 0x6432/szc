@@ -140,6 +140,7 @@ typedef enum IrDataKind {
 	X(ENUM_LITERAL, "enum_literal", IR_DATA_NAME)	/* .name */ \
 	X(INT_TYPE, "int_type", IR_DATA_INT)	/* bit 16 = signed, bits 0..15 = bit count */ \
 	X(ALIGN, "align", IR_DATA_PAYLOAD)	/* comptime u29 byte alignment body */ \
+	X(CONST_BIND, "const_bind", IR_DATA_BIN)	/* immutable value, declaration alignment ref */ \
 	X(PTR_TYPE, "ptr_type", IR_DATA_PAYLOAD)	/* IrPointerType */ \
 	/* Result types and coercion */ \
 	X(AS_RETURN, "as_return", IR_DATA_BIN)	/* direct return-value coercion */ \

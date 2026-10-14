@@ -724,23 +724,23 @@ value_function(ValueTable *table, TypeId fn_type, FuncId function)
 }
 
 static uint32_t
-object_hash(ValueId value, uint32_t identity)
+object_hash(ValueId value, uint32_t identity, uint32_t alignment)
 {
-	return hash_mix(hash_mix(2166136261u, value), identity);
+	return hash_mix(hash_mix(hash_mix(2166136261u, value), identity), alignment);
 }
 
 static void
 insert_object_slot(uint32_t *slots, uint32_t count, const ConstObject *object, ConstObjectId id)
 {
 	uint32_t mask = count - 1;
-	uint32_t index = object_hash(object->value, object->identity) & mask;
+	uint32_t index = object_hash(object->value, object->identity, object->alignment) & mask;
 	while (slots[index] != 0)
 		index = (index + 1) & mask;
 	slots[index] = id;
 }
 
 static ConstObjectId
-intern_object(ValueTable *table, ValueId value, uint32_t identity)
+intern_object(ValueTable *table, ValueId value, uint32_t identity, uint32_t alignment)
 {
 	if (table->object_count == 0) {
 		table->object_capacity = 64;
@@ -750,10 +750,10 @@ intern_object(ValueTable *table, ValueId value, uint32_t identity)
 		table->object_slots = ARENA_ARRAY(table->arena, uint32_t, table->object_slot_count);
 	}
 	uint32_t mask = table->object_slot_count - 1;
-	for (uint32_t index = object_hash(value, identity) & mask; table->object_slots[index] != 0; index = (index + 1) & mask) {
+	for (uint32_t index = object_hash(value, identity, alignment) & mask; table->object_slots[index] != 0; index = (index + 1) & mask) {
 		ConstObjectId id = table->object_slots[index];
 		const ConstObject *object = &table->objects[id];
-		if (object->value == value && object->identity == identity)
+		if (object->value == value && object->identity == identity && object->alignment == alignment)
 			return id;
 	}
 	if (table->object_count == table->object_capacity) {
@@ -764,6 +764,7 @@ intern_object(ValueTable *table, ValueId value, uint32_t identity)
 	ConstObjectId id = table->object_count++;
 	table->objects[id].value = value;
 	table->objects[id].identity = identity;
+	table->objects[id].alignment = alignment;
 	if (table->object_count * 2 > table->object_slot_count) {
 		uint32_t count = table->object_slot_count * 2;
 		uint32_t *slots = ARENA_ARRAY(table->arena, uint32_t, count);
@@ -786,10 +787,10 @@ value_global(ValueTable *table, TypeId type, GlobalId global)
 }
 
 ValueId
-value_ref(ValueTable *table, TypeId type, ValueId pointee, uint32_t identity)
+value_ref(ValueTable *table, TypeId type, ValueId pointee, uint32_t identity, uint32_t alignment)
 {
 	Value value = make_value(VALUE_REF, type);
-	value.as.object = intern_object(table, pointee, identity);
+	value.as.object = intern_object(table, pointee, identity, alignment);
 	return value_intern(table, &value);
 }
 

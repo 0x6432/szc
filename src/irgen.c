@@ -1575,8 +1575,6 @@ local_var_decl(GenBody *body, Scope *scope, AstVarDecl *decl)
 	check_shadowing(gen, scope, name, decl->base.offset);
 	if (decl->addrspace != NULL || decl->linksection != NULL)
 		unsupported(body, &decl->base, "align/addrspace/linksection on locals");
-	if (decl->align != NULL && decl->is_const)
-		unsupported(body, &decl->base, "aligned local constants");
 
 	IrRef type = IR_REF_NONE;
 	if (decl->type != NULL)
@@ -1589,6 +1587,9 @@ local_var_decl(GenBody *body, Scope *scope, AstVarDecl *decl)
 
 	LocalScope *local = ARENA_NEW(gen->arena, LocalScope);
 	if (decl->is_const && !decl->is_comptime) {
+		/* A copied binding has its own storage alignment, not its source's. */
+		if (alignment != IR_REF_NONE || (ir_ref_is_inst(init) && gen->ir->insts[ir_ref_inst(init)].op == IR_CONST_BIND))
+			init = emit_bin(body, IR_CONST_BIND, decl->base.offset, init, alignment);
 		local_init(local, scope, name, LOCAL_CONST, init, decl->base.offset);
 		return &local->base;
 	}

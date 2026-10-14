@@ -1,0 +1,3 @@
+tests/tir/errors/const_alignment_alias.zig:1:106: error: expected type '*align(64) const u32', found '*const u32'
+fn f(n: u32) void { const value: u32 align(64) = n; const alias = value; const p: *align(64) const u32 = &alias; _ = p; }
+                                                                                                         ^

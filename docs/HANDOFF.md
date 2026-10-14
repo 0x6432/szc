@@ -38,7 +38,8 @@ Read this first when resuming work (the sandbox resets often).
 - Done: M5.1c2b1 allowzero pointer qualification, nested coercions and qualifier joins.
 - Done: M5.1c2b2a alignment-qualified pointer types and actual unaligned memory tests.
 - Done: M5.1c2b2b1 explicit alignment on mutable locals, including over-aligned slots.
-- Next: finish **M5.1c2b2b** with aligned local constants, globals and functions
+- Done: M5.1c2b2b2 aligned local constants, preserving comptime values and addresses.
+- Next: finish **M5.1c2b2b** with aligned globals and function declarations/addresses
   in small checkpoints, then M5.1c2b3 volatile.
   M5.1/M5.1c/M5.1c2/M5.1c2b/M5.1c2b2/M5.1c2b2b remain partial.
 - Run `PATH=/data/tools/bin:$PATH ZIG=/data/zig/zig-x86_64-linux-0.17.0/zig make e2e-test`
@@ -60,7 +61,55 @@ Read this first when resuming work (the sandbox resets often).
   The check annotation confirms runner communication loss, not a completed test
   result. The next checkpoint, M5.1c2b1 55ad2cd/run 38564405059, passed all
   GCC/Clang/fuzz/differential jobs, restoring green CI. M5.1c2b2a 8b1d3cf
-  also passed all jobs (run 38590520673). Check each new push's run.
+  also passed all jobs (run 38590520673), as did M5.1c2b2b1 ecfb6ab
+  (run 38593742928). Check each new push's run.
+
+## Validation at M5.1c2b2b2
+
+- GCC/Clang -Werror ASan/UBSan pass 558 unit checks, 652 goldens, 52 ordinary
+  executable inputs plus two szc-only inputs, 16 driver checks, 11 PIE/storage
+  cases, four callback ABI cases, seven unaligned-memory cases, 135 mutable-local
+  alignment cases, 270 constant-address cases and 166 safety cases. GCC's full
+  executable/memory/safety suite also passes against Zig 0.17.0. Optimized GCC
+  passes goldens, ordinary executables and both local-address matrices; constant
+  addresses also match the official binary. The 602 base constant coercion/comptime
+  cases and 24 copied-binding cases match Zig; all 626 replay identically under
+  ASan/UBSan. Existing 300 mutable-local cases also retain sanitizer parity.
+  Four final 60-second fuzz targets and 20,000 standalone mutations per stage pass.
+  Corpus: irgen 28, sema 52 inputs. Check this checkpoint's push CI before claiming
+  remote success. The prior ecfb6ab CI passed all jobs (run 38593742928).
+- IR_CONST_BIND is a binop (initializer value, validated alignment ref); it only
+  wraps explicitly aligned const bindings and copies of those bindings. A copied
+  binding with no attribute records NONE, so it cannot inherit source alignment.
+  Other ordinary IR is unchanged. Sema returns the original operand, including
+  comptime knowledge. IR_REF consults the
+  binding's alignment; runtime references use the existing definition-anchored
+  allocation path, known values retain immutable ConstObject storage.
+- ConstObject.alignment is 0 for implicit ABI alignment, otherwise byte units. It
+  participates in object hash/equality and rehashing. value_ref now takes alignment
+  as its final argument; ordinary references pass zero. Pointer casts must keep
+  object identity/alignment, not re-intern its stored value at weaker alignment.
+- codegen_qbe now accepts a second FILE* for optional outlined assembly. The pinned
+  QBE parse.c parsedat rejects alignment > CHAR_MAX (largest power of two 64).
+  Known objects above 64 use real .balign assembly data with relocations; the driver
+  writes a tmpfile companion, runs QBE as a separate executable, appends the data
+  to the generated .s, then runs cc. Runtime slots still use the previous private
+  over-allocation/rounding strategy. Keep .rodata / .data.rel.ro placement intact.
+- Standalone emit-qbe cannot carry the companion and rejects *materialized static*
+  alignment above 64 with a diagnostic directing users to build-exe. Values not
+  materialized need no backing data. tests/run_e2e.sh recognizes an explicit
+  outlined-data marker and tests the diagnostic plus complete build/run pipeline;
+  ordinary programs still compare standalone and retained IL byte-for-byte.
+- tests/run_const_alignment.py checks 270 known/runtime addresses and readbacks,
+  plus no TEXTREL and GNU_RELRO. tools/diff_const_alignment.py checks 626 accepted
+  or rejected coercion/comptime cases in CI. @TypeOf is still NYI; reflection probes
+  were checked separately against actual Zig, not added to szc's supported matrix.
+- Next: aligned globals, then function declaration/address alignment, in small
+  checkpoints. Bare-function aliases with explicit alignment cannot yet be
+  addressed (honest NYI); do not propagate metadata onto an unaligned code symbol.
+  Calling the alias and aligned *function-pointer slot* storage work. Constants
+  retain values/reference identity; no mutable-variable substitution was used.
+  Keep Q6 deferred until M10.2.
 
 ## Validation at M5.1c2b2b1
 
@@ -91,11 +140,10 @@ Read this first when resuming work (the sandbox resets often).
   300 typed/inferred locals and address coercions and is in differential CI.
   tests/run/local_alignment.zig additionally covers recursion/identity, aliases,
   defer, loop reinitialization, aligned pointer/function-pointer slots and OPVs.
-- Next: aligned local constants first, then global/function declaration alignment.
-  Constants must retain comptime values and definition-anchored immutable object
-  identity; do not turn them into mutable runtime allocations to reuse this path.
-  Explicit aligned constants still produce an honest NYI diagnostic. Global and
-  function attributes are unchanged. Keep Q6 deferred until M10.2.
+- At this checkpoint aligned constants were pending; M5.1c2b2b2 above implements
+  them without losing comptime values or definition-anchored references. Global
+  and function declaration attributes still need separate storage/code alignment.
+  Keep Q6 deferred until M10.2.
 
 ## Validation at M5.1c2b2a
 

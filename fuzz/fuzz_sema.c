@@ -44,7 +44,7 @@ LLVMFuzzerTestOneInput(const uint8_t *data, size_t size)
 			if (null_out != NULL) {
 				sema_dump(null_out, sema);
 				if (analysed)
-					codegen_qbe(null_out, sema, &diag);
+					codegen_qbe(null_out, null_out, sema, &diag);
 				fclose(null_out);
 			}
 		}

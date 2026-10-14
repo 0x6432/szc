@@ -1,0 +1,3 @@
+tests/tir/errors/const_alignment_runtime_widen.zig:1:42: error: unable to evaluate comptime expression
+fn f(n: u8) void { const value: u8 align(n) = 1; _ = &value; } pub fn main() void { f(4); }
+                                         ^

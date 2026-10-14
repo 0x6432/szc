@@ -60,8 +60,8 @@ run_process(char **argv)
 	return -1;
 }
 
-int
-driver_emit_qbe(const char *input, FILE *out)
+static int
+emit_program(const char *input, FILE *out, FILE *assembly)
 {
 	Arena arena;
 	arena_init(&arena);
@@ -84,7 +84,7 @@ driver_emit_qbe(const char *input, FILE *out)
 		if (!diag_has_errors(&diag)) {
 			Sema *sema = sema_create(&arena, &diag, &interner, &sources);
 			if (sema_analyze_executable(sema, file, ir))
-				codegen_qbe(out, sema, &diag);
+				codegen_qbe(out, assembly, sema, &diag);
 		}
 	}
 	diag_print(&diag, stderr);
@@ -94,8 +94,37 @@ driver_emit_qbe(const char *input, FILE *out)
 		fprintf(stderr, "szc: cannot write QBE IL: %s\n", strerror(errno));
 		status = 2;
 	}
+	if (assembly != NULL && (fflush(assembly) != 0 || ferror(assembly))) {
+		fprintf(stderr, "szc: cannot write outlined assembly: %s\n", strerror(errno));
+		status = 2;
+	}
 	arena_free(&arena);
 	return status;
+}
+
+int
+driver_emit_qbe(const char *input, FILE *out)
+{
+	return emit_program(input, out, NULL);
+}
+
+static bool
+append_assembly(const char *path, FILE *assembly)
+{
+	FILE *out = fopen(path, "a");
+	if (out == NULL)
+		return false;
+	rewind(assembly);
+	char buffer[4096];
+	size_t count;
+	bool ok = fputc('\n', out) != EOF;
+	while (ok && (count = fread(buffer, 1, sizeof(buffer), assembly)) != 0)
+		ok = fwrite(buffer, 1, count, out) == count;
+	if (ferror(assembly))
+		ok = false;
+	if (fclose(out) != 0)
+		ok = false;
+	return ok;
 }
 
 static char *
@@ -119,12 +148,19 @@ driver_build_exe(const BuildOptions *options)
 	char *ssa_path = concat(options->output, ".ssa");
 	char *asm_path = concat(options->output, ".s");
 	int status = 0;
+	FILE *assembly = tmpfile();
+	if (assembly == NULL) {
+		fprintf(stderr, "szc: cannot create assembly temporary: %s\n", strerror(errno));
+		free(ssa_path);
+		free(asm_path);
+		return 2;
+	}
 	FILE *ssa = fopen(ssa_path, "w");
 	if (ssa == NULL) {
 		fprintf(stderr, "szc: cannot write '%s': %s\n", ssa_path, strerror(errno));
 		status = 2;
 	} else {
-		status = driver_emit_qbe(options->input, ssa);
+		status = emit_program(options->input, ssa, assembly);
 		if (fclose(ssa) != 0 && status == 0)
 			status = 2;
 	}
@@ -136,6 +172,14 @@ driver_build_exe(const BuildOptions *options)
 			status = 2;
 		}
 	}
+	if (status == 0) {
+		if (!append_assembly(asm_path, assembly)) {
+			fprintf(stderr, "szc: cannot append outlined assembly to '%s': %s\n", asm_path, strerror(errno));
+			status = 2;
+		}
+	}
+	if (fclose(assembly) != 0 && status == 0)
+		status = 2;
 	if (status == 0) {
 		char *cc_argv[] = {(char *)tool_path("SZC_CC", "cc"), "-o", (char *)options->output, asm_path, NULL};
 		int cc_status = run_process(cc_argv);
