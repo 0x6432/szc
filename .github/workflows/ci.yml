@@ -85,6 +85,8 @@ jobs:
         run: python3 tools/diff_global_alignment.py build/asan/szc "$ZIG"
       - name: Compare aligned global constants
         run: python3 tools/diff_global_const_alignment.py build/asan/szc "$ZIG"
+      - name: Compare aligned function addresses
+        run: python3 tools/diff_function_alignment.py build/asan/szc "$ZIG"
       - name: Compare function-pointer signatures and qualifiers
         run: python3 tools/diff_function_pointers.py build/asan/szc "$ZIG"
       - name: Compare AST node spans with std.zig.Ast over the Zig lib

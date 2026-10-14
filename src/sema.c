@@ -1298,6 +1298,7 @@ function_address(Block *block, Operand value, uint32_t src)
 		sema_error(block, src, "not supported by szc yet: addresses of inline functions");
 		return operand_none;
 	}
+	pointer = type_pointer(sema, value.type, POINTER_ONE, true, false, sema->funcs[id]->alignment);
 	return comptime_operand(pointer, value_function(&sema->values, pointer, id));
 }
 
@@ -2572,6 +2573,9 @@ analyze_func_inst(Block *block, IrInstIndex index)
 		fn_type.as.fn.param_count = 0;
 		fn_type.as.fn.ret = T_VOID;
 	}
+	uint32_t alignment;
+	if (!analyze_alignment(block, header.align_body, header.align_src, &alignment))
+		return operand_none;
 	TypeId type = type_intern(sema, &fn_type);
 	if (inst->op == IR_FN_TYPE)
 		return type_operand(sema, type);
@@ -2581,6 +2585,7 @@ analyze_func_inst(Block *block, IrInstIndex index)
 	func->ir = ir;
 	func->func_inst = index;
 	func->header = header;
+	func->alignment = alignment;
 	func->name = header.name;
 	func->is_export = (header.flags & IR_FUNC_EXPORT) != 0;
 	func->is_extern = (header.flags & IR_FUNC_EXTERN) != 0 || (header.flags & IR_FUNC_HAS_BODY) == 0;
@@ -3687,6 +3692,8 @@ sema_dump(FILE *out, Sema *sema)
 		if (func->state != FUNC_ANALYSED && !(func->is_extern && func->state == FUNC_QUEUED))
 			continue;
 		fprintf(out, "%sfn %s: %s", func->is_extern ? "extern " : func->is_export ? "export " : "", func->symbol, sema_type_name(sema, func->type));
+		if (func->alignment != 0)
+			fprintf(out, " align(%u)", (unsigned)func->alignment);
 		if (func->is_extern) {
 			fputs("\n", out);
 			continue;

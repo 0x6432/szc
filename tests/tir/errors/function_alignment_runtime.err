@@ -1,0 +1,3 @@
+tests/tir/errors/function_alignment_runtime.zig:1:36: error: unable to resolve comptime value
+var A: u29 = 16; fn target() align(A) u8 { return 7; }
+                                   ^

@@ -257,3 +257,17 @@ prints a file's IR.
   not implemented; unlike typed mutable globals, these keep dependency-loop errors.
 - Existing immutable static codegen handles explicit alignment and relocations,
   including the outlined assembly companion above QBE's 64-byte data limit.
+
+## Function declaration alignment
+
+- IrFuncHeader.align_body/align_src describe a declaration attribute, evaluated
+  with the shared isolated u29 validation. Function type syntax cannot carry it.
+  SemaFunc.alignment stores code alignment independently of TypeFn identity;
+  function_address uses it in the returned const pointer, including alias/decay.
+- QBE guarantees 16-byte function alignment. Larger requests select a unique
+  executable .text.szc.fn.ID section, with the sole body at offset zero. The
+  assembly companion establishes section alignment before the QBE stream. Driver
+  combination copies streams unchanged, companion first. Standalone emit-qbe
+  diagnoses alignment above 16 because it cannot carry this ELF prelude.
+- Exported bodies use the same mechanism; extern alignment is supplier-guaranteed.
+  Explicitly aligned local bare-function alias addresses remain NYI.

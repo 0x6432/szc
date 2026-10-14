@@ -42,8 +42,10 @@ Read this first when resuming work (the sandbox resets often).
 - Done: M5.1c2b2b3a explicit alignment on internal mutable global objects.
 - Done: M5.1c2b2b3b explicit alignment on internal global constants of supported
   runtime-representable types, preserving comptime values and immutable identities.
-- Next: function declaration/address alignment, then M5.1c2b3 volatile. Keep these
-  as small checkpoints.
+- Done: M5.1c2b2b4 function declaration/address alignment (internal/exported
+  definitions and supplier-guaranteed extern declarations).
+- Next: M5.1c2b3a volatile qualification, then M5.1c2b3b observable accesses.
+  The user requested three checkpoints together this turn only.
   M5.1/M5.1c/M5.1c2/M5.1c2b/M5.1c2b2/M5.1c2b2b remain partial.
 - Run `PATH=/data/tools/bin:$PATH ZIG=/data/zig/zig-x86_64-linux-0.17.0/zig make e2e-test`
   locally. `tools/build_qbe.sh` builds the pinned QBE into `build/qbe-src` on CI.
@@ -66,6 +68,41 @@ Read this first when resuming work (the sandbox resets often).
   GCC/Clang/fuzz/differential jobs, restoring green CI. M5.1c2b2a 8b1d3cf
   also passed all jobs (run 38590520673), as did M5.1c2b2b1 ecfb6ab
   (run 38593742928). Check each new push's run.
+
+## Validation at M5.1c2b2b4
+
+- Function address alignment is SemaFunc metadata, not part of TypeFn. IrFuncHeader
+  carries isolated align_body/align_src. analyze_alignment validates after the
+  signature; function_address preserves the declaration guarantee for direct
+  references, aliases and function-to-pointer decay. std.zig.AstGen rejects an
+  alignment on function type syntax, and szc now emits the same primary error.
+- QBE uses fixed alignment 16 for functions. For larger requests emit_function
+  selects .text.szc.fn.ID with exactly one body at offset zero. An assembly prelude
+  creates that executable section and raises its alignment while still empty.
+  combine_assembly copies the complete companion then complete QBE output; there
+  is no text interpretation or instruction rewriting. Immutable/global data still
+  uses existing sections and all retained .s content includes both streams.
+- Standalone emit-qbe rejects function alignment above 16 with an explicit
+  build-exe recommendation. Physical tests verify internal/export/extern targets
+  at nine alignments (27 cases), indirect slots, no TEXTREL, executable sections
+  and bounded output size. Extern alignment is a promise supplied by external asm,
+  not code emitted by szc. tests/run_function_alignment.py accepts optional ZIG.
+- tools/diff_function_alignment.py checks 77 acceptance/coercion/join cases with
+  Zig. Added IR/TIR/QBE goldens, 12 reference-rejected errors, executable coverage
+  and corpus inputs (irgen 31/sema 70). GCC -Werror ASan/UBSan passes 558
+  units, 709 goldens, eight cleanup probes, 55 generated/ordinary executables plus
+  two szc-only inputs, 16 driver, 11 storage, four ABI, seven unaligned, 135 local,
+  270 local-constant, 153 mutable-global, 153 global-constant, 27 function alignment
+  and 166 safety cases, with Zig reference checks enabled. Clang sanitizers pass
+  units/goldens, 45 ordinary executables, function alignment (also Zig), driver,
+  storage, global constants and safety. All 77 new comparisons match both debug
+  and sanitized builds. Four 60-second fuzz targets and 20,000 standalone
+  mutations per stage pass. Check push CI separately.
+- Explicitly aligned local bare-function alias addresses remain NYI, as do inline
+  addresses, generic calls, explicit callconv/addrspace/linksection and existing
+  constant address cycles. Do not mark enclosing memory/alignment complete.
+- Next in this user-authorized batch: volatile qualification then observable
+  volatile accesses; keep separate validated commits. Ask Q6 only at M10.2.
 
 ## Validation at M5.1c2b2b3b
 

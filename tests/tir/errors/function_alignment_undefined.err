@@ -1,0 +1,3 @@
+tests/tir/errors/function_alignment_undefined.zig:1:19: error: use of undefined value here causes illegal behavior
+fn target() align(undefined) u8 { return 7; }
+                  ^

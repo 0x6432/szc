@@ -1,0 +1,3 @@
+tests/tir/errors/function_alignment_function_type.zig:1:30: error: function type cannot have an alignment
+const P = *const fn () align(16) u8; fn target() u8 { const p: P = undefined; _ = p; return 7; }
+                             ^

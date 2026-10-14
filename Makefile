@@ -93,6 +93,7 @@ e2e-test: build/asan/szc $(GENERATED_RUN_TESTS)
 	python3 tests/run_const_alignment.py build/asan/szc
 	python3 tests/run_global_alignment.py build/asan/szc
 	python3 tests/run_global_const_alignment.py build/asan/szc
+	python3 tests/run_function_alignment.py build/asan/szc
 	python3 tests/run_safety.py build/asan/szc
 
 safety-test: build/asan/szc

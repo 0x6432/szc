@@ -50,7 +50,8 @@ Both variables name executables, not shell commands. QBE revision used for testi
 `e786f06032fefa2e3790d6b1c9e31ed138f475a6`.
 
 Aligned local variables/constants and internal mutable/constant globals are supported
-for the currently implemented value types. Function declaration alignment is not yet supported.
+for the currently implemented value types. Function declarations and their addresses
+also preserve explicit alignment; code alignment above 16 needs the assembly companion.
 Static data alignment above 64 bytes needs an assembly companion because of QBE's data-alignment
 limit: use `build-exe` or `run`; standalone `emit-qbe` reports this limitation.
 `--keep-temps` retains the complete assembly, including any outlined data.

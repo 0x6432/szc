@@ -109,19 +109,33 @@ driver_emit_qbe(const char *input, FILE *out)
 }
 
 static bool
-append_assembly(const char *path, FILE *assembly)
+copy_stream(FILE *out, FILE *in)
 {
-	FILE *out = fopen(path, "a");
+	char buffer[4096];
+	size_t count;
+	while ((count = fread(buffer, 1, sizeof(buffer), in)) != 0)
+		if (fwrite(buffer, 1, count, out) != count)
+			return false;
+	return !ferror(in);
+}
+
+/* Section alignment must precede QBE's function bodies; no assembly is parsed. */
+static bool
+combine_assembly(const char *path, FILE *assembly)
+{
+	FILE *generated = fopen(path, "r");
+	if (generated == NULL)
+		return false;
+	bool ok = fputc('\n', assembly) != EOF && copy_stream(assembly, generated);
+	if (fclose(generated) != 0)
+		ok = false;
+	if (!ok || fflush(assembly) != 0)
+		return false;
+	FILE *out = fopen(path, "w");
 	if (out == NULL)
 		return false;
 	rewind(assembly);
-	char buffer[4096];
-	size_t count;
-	bool ok = fputc('\n', out) != EOF;
-	while (ok && (count = fread(buffer, 1, sizeof(buffer), assembly)) != 0)
-		ok = fwrite(buffer, 1, count, out) == count;
-	if (ferror(assembly))
-		ok = false;
+	ok = copy_stream(out, assembly);
 	if (fclose(out) != 0)
 		ok = false;
 	return ok;
@@ -173,8 +187,8 @@ driver_build_exe(const BuildOptions *options)
 		}
 	}
 	if (status == 0) {
-		if (!append_assembly(asm_path, assembly)) {
-			fprintf(stderr, "szc: cannot append outlined assembly to '%s': %s\n", asm_path, strerror(errno));
+		if (!combine_assembly(asm_path, assembly)) {
+			fprintf(stderr, "szc: cannot combine outlined assembly with '%s': %s\n", asm_path, strerror(errno));
 			status = 2;
 		}
 	}

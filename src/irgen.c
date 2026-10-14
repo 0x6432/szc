@@ -1801,8 +1801,16 @@ function_proto(GenBody *body, Scope *scope, AstFnProto *proto, StringId name, ui
 		header.flags = header.flags | IR_FUNC_VAR_ARGS;
 	if (proto->inferred_error)
 		header.flags = header.flags | IR_FUNC_INFERRED_ERROR;
-	if (proto->align != NULL || proto->addrspace != NULL || proto->linksection != NULL)
-		unsupported(body, &proto->base, "align/addrspace/linksection on functions");
+	if (proto->addrspace != NULL || proto->linksection != NULL)
+		unsupported(body, &proto->base, "addrspace/linksection on functions");
+	if (proto->align != NULL) {
+		if (op == IR_FN_TYPE)
+			diag_report(gen->diag, DIAG_ERROR, gen->file, proto->align->offset, "function type cannot have an alignment");
+		else {
+			header.align_body = alignment_body(gen, param_scope, proto->align);
+			header.align_src = proto->align->offset;
+		}
+	}
 
 	GenBody ret_body;
 	body_init(&ret_body, gen, param_scope, true);
@@ -2319,6 +2327,12 @@ dump_func(const IrDumper *dumper, uint32_t payload, uint32_t depth)
 		dump_indent(dumper, depth + 1);
 		fputs("callconv", dumper->out);
 		dump_labeled_body(dumper, "value", header.callconv_body, depth + 1);
+		fputc('\n', dumper->out);
+	}
+	if (header.align_body != 0) {
+		dump_indent(dumper, depth + 1);
+		fputs("align", dumper->out);
+		dump_labeled_body(dumper, "value", header.align_body, depth + 1);
 		fputc('\n', dumper->out);
 	}
 	if (header.body != 0) {

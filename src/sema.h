@@ -124,6 +124,7 @@ typedef struct SemaFunc {
 	const IrFile  *ir;
 	IrInstIndex   func_inst;
 	IrFuncHeader  header;
+	uint32_t      alignment;	/* code address, 0 = implicit ABI */
 	TypeId        type;
 	StringId      name;
 	const char    *symbol;	/* linker symbol */

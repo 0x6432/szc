@@ -1,0 +1,3 @@
+tests/tir/errors/function_alignment_bool.zig:1:19: error: expected type 'u29', found 'bool'
+fn target() align(true) u8 { return 7; }
+                  ^

@@ -337,6 +337,7 @@ typedef struct IrFuncHeader {
 	IrBody   ret_type_body;
 	IrBody   callconv_body;
 	IrBody   align_body;
+	uint32_t align_src;
 	IrBody   body;
 	uint32_t param_count;
 } IrFuncHeader;

@@ -80,8 +80,10 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
             - [x] **M5.1c2b2b2 Aligned local constants** (known values and runtime initializers).
             - [x] **M5.1c2b2b3a Internal mutable global alignment**.
             - [x] **M5.1c2b2b3b Aligned global constants** (internal, supported runtime-representable types).
-            - [ ] Aligned function declarations/addresses.
+            - [x] **M5.1c2b2b4 Aligned function declarations/addresses** (local explicitly aligned bare-function aliases remain NYI).
         - [ ] **M5.1c2b3 Volatile pointer accesses**.
+          - [ ] **M5.1c2b3a Volatile pointer qualification/coercion**.
+          - [ ] **M5.1c2b3b Observable volatile loads/stores**.
 - [ ] **M5.2 Arrays, indexing, array literals, `++` at comptime** (0.17.0 has no `**`).
 - [ ] **M5.3 Slices, many-pointers, slicing, `.len`, `.ptr`, for over slices.**
 - [~] **M5.4 String literals, sentinels, `[*:0]const u8`.** Literal byte values landed in M4.5b; general string/memory operations and sentinel pointer syntax remain pending.
@@ -135,6 +137,36 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
 ## Completed milestone log
 
 (newest first; each entry: what, limitations, interactions)
+
+### M5.1c2b2b4 Function declaration/address alignment
+- **What**: function declarations have isolated alignment bodies/source locations.
+  SemaFunc stores validated code alignment independently of the interned function
+  signature; taking/decaying the address preserves it in the pointer type. Alias
+  values retain their function identity. Pointer weakening and joins reuse the
+  existing memory-coercion rules. Function *types* cannot carry an alignment,
+  matching std.zig.AstGen; Sema's u29/nonzero/power-of-two checks are shared.
+- **Backend**: QBE functions are already 16-byte aligned. Larger guarantees put
+  each function at offset zero of a private executable .text section; the assembly
+  companion establishes its ELF section alignment before the QBE body. The driver
+  concatenates complete assembly streams without parsing or patching QBE output.
+  This avoids padded wrappers, changed function identity and huge trailing padding.
+  Standalone emit-qbe explicitly rejects code alignment above 16; build-exe/run work.
+  Exported definitions are emitted aligned; extern declarations trust their supplier.
+- **Tests**: 27 physical internal/export/extern address checks through 4096 bytes,
+  indirect calls via immutable pointer slots, ELF executable-section/no-TEXTREL and
+  bounded-size assertions, 77 reference address/alias/join comparisons, three stage
+  goldens, twelve reference-rejected diagnostics and executable regression. CI runs
+  the physical and differential tests; corpus grows to irgen 31/sema 70 inputs.
+  GCC/Clang -Werror sanitizer checks pass; GCC's full reference-enabled suite passes
+  558 units, 709 goldens and all executable/memory/166 safety cases. Four 60-second
+  fuzz targets and 20,000 standalone mutations per stage pass. See HANDOFF.md for
+  exact Clang coverage; hosted CI is not implied by local success.
+- **Limits/next**: explicit alignment on a local bare-function alias remains an
+  honest NYI rather than a metadata-only promise; inline addresses/generic calls,
+  explicit callconv/addrspace/linksection and other existing restrictions remain.
+  Constant type-only address cycles remain unsupported. Enclosing memory/alignment
+  milestones stay partial. This turn batches volatile qualification then volatile
+  loads/stores next; Q6 remains deferred to M10.2.
 
 ### M5.1c2b2b3b Aligned internal global constants
 - **What**: aligned global constants retain their original comptime Operand and

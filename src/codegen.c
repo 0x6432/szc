@@ -813,7 +813,7 @@ emit_body(Codegen *cg, TirBody body)
 /* ---------- Functions ---------- */
 
 static void
-emit_function(Codegen *cg, const SemaFunc *func)
+emit_function(Codegen *cg, const SemaFunc *func, FuncId id)
 {
 	cg->func = func;
 	cg->file = func->ir->file;
@@ -822,6 +822,15 @@ emit_function(Codegen *cg, const SemaFunc *func)
 	const TypeFn *fn = &sema_type(cg->sema, func->type)->as.fn;
 	uint32_t src = func->ir->insts[func->func_inst].src;
 	QbeClass ret_class = type_class(cg, fn->ret, src);
+	if (func->alignment > 16) {
+		if (cg->assembly == NULL) {
+			codegen_error(cg, src, "function alignment above 16 requires assembly output; use build-exe");
+			return;
+		}
+		/* One function at offset zero in a privately aligned executable section. */
+		fprintf(cg->assembly, ".section .text.szc.fn.%u,\"ax\",@progbits\n.balign %u\n", (unsigned)id, (unsigned)func->alignment);
+		fprintf(out, "section \".text.szc.fn.%u\"\n", (unsigned)id);
+	}
 	fputs(func->is_export ? "export function " : "function ", out);
 	if (ret_class != QBE_NONE)
 		fprintf(out, "%c ", class_char(ret_class));
@@ -998,7 +1007,7 @@ codegen_qbe(FILE *out, FILE *assembly, Sema *sema, Diag *diag)
 	for (FuncId id = 1; id < sema_func_count(sema); id++) {
 		const SemaFunc *func = sema_func(sema, id);
 		if (func->state == FUNC_ANALYSED && !func->is_extern)
-			emit_function(&cg, func);
+			emit_function(&cg, func, id);
 	}
 	for (GlobalId id = 1; id < sema_global_count(sema); id++) {
 		ValueId stored = sema_global(sema, id)->initializer;

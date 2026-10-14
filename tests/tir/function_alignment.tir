@@ -1,0 +1,29 @@
+fn szc.main.1: fn () u8 {
+  %0: u8 = call szc.target.2()
+  %1: bool = const false
+  %2: *align(1) const fn () u8 = call szc.choose.3(%1)
+  %3: u8 = call %2()
+  %4: u8 = add %0, %3
+  %5: noreturn = ret %4
+}
+fn szc.target.2: fn () u8 align(16) {
+  %0: u8 = const 7
+  %1: noreturn = ret %0
+}
+fn szc.choose.3: fn (bool) *align(1) const fn () u8 {
+  %0: bool = arg 0
+  %1: *align(1) const fn () u8 = block {
+    %6: noreturn = condbr %0 then {
+      %2: *align(1) const fn () u8 = const szc.target.2
+      %3: noreturn = br %1, %2
+    } else {
+      %4: *align(1) const fn () u8 = const szc.other.4
+      %5: noreturn = br %1, %4
+    }
+  }
+  %7: noreturn = ret %1
+}
+fn szc.other.4: fn () u8 align(1) {
+  %0: u8 = const 9
+  %1: noreturn = ret %0
+}

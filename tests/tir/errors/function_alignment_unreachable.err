@@ -1,0 +1,3 @@
+tests/tir/errors/function_alignment_unreachable.zig:1:19: error: reached unreachable code
+fn target() align(unreachable) u8 { return 7; }
+                  ^
