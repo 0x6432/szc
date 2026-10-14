@@ -124,6 +124,12 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
 
 (newest first; each entry: what, limitations, interactions)
 
+### CI follow-up: separate compilation and execution timeouts
+- M5.1c1 CI run 38548134671 passed compiler and fuzz jobs; differential safety failed
+  only because seven Zig reference compilations exceeded the 15-second execution
+  budget. Safety compilation now has 120 seconds, while execution stays at 15 seconds.
+  Compiler failures, runtime hangs and panic/message mismatches remain hard failures.
+
 ### M5.1c1 Internal mutable scalar globals
 - **What**: internal container-level `var` declarations now have stable GlobalId
   records, typed comptime initializers and writable scalar storage. VALUE_GLOBAL

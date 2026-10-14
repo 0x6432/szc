@@ -43,7 +43,9 @@ Read this first when resuming work (the sandbox resets often).
   credentials are not persisted; use transient authentication for future pushes.
 - M3.4 (`1882ced`) and M3.5 (`7b36edd`) are pushed to `main`.
 - CI through M5.1b (`4e31f1e`): completed successfully (run 38545269536).
-  Check the M5.1c1 push run.
+  M5.1c1 run 38548134671 passed GCC/Clang/fuzz and all 45 native/reference inputs,
+  but seven reference safety compilations hit the old 15-second harness timeout.
+  Compilation now has a separate 120-second budget; execution still has 15 seconds.
 
 ## Validation at M5.1c1
 

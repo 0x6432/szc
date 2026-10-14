@@ -9,8 +9,8 @@ import tempfile
 from pathlib import Path
 
 
-def run(command):
-    return subprocess.run(command, capture_output=True, timeout=15)
+def run(command, timeout=15):
+    return subprocess.run(command, capture_output=True, timeout=timeout)
 
 
 def binary_case(name, integer_type, operator, lhs, rhs, message="integer overflow"):
@@ -191,7 +191,7 @@ def main():
                     command = ([compiler, "build-exe", str(src), f"-femit-bin={exe}"]
                                if compiler == zig else
                                [compiler, "build-exe", str(src), "-o", str(exe)])
-                    compiled = run(command)
+                    compiled = run(command, timeout=120)
                     if compiled.returncode != 0:
                         raise AssertionError("compilation failed: " + compiled.stderr.decode(errors="replace"))
                     result = run([str(exe)])
