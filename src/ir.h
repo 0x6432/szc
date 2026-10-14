@@ -257,6 +257,8 @@ typedef enum IrPointerFlags {
 typedef struct IrPointerType {
 	IrRef			child;
 	uint32_t	flags;
+	IrBody		alignment_body;	/* 0 = implicit ABI alignment */
+	uint32_t	alignment_src;
 } IrPointerType;
 
 /* STRUCT_DECL: header, then field_count IrField, then decl_count IrDecl. */

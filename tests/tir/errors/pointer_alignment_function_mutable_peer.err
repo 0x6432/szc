@@ -1,0 +1,6 @@
+tests/tir/errors/pointer_alignment_function_mutable_peer.zig:2:58: error: incompatible types: 'fn () u8' and '*align(16) fn () u8'
+fn first(c: bool, p: *align(16) fn () u8) u8 { const f = if (c) target else p; return f(); }
+                                                         ^
+tests/tir/errors/pointer_alignment_function_mutable_peer.zig:3:59: error: incompatible types: '*align(16) fn () u8' and 'fn () u8'
+fn second(c: bool, p: *align(16) fn () u8) u8 { const f = if (c) p else target; return f(); }
+                                                          ^

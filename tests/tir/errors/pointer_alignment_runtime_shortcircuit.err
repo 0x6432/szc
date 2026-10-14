@@ -1,0 +1,3 @@
+tests/tir/errors/pointer_alignment_runtime_shortcircuit.zig:1:54: error: unable to evaluate comptime expression
+fn f(n: bool) void { const P = *align(@intFromBool(n and true)) u8; _ = P; } pub fn main() void { f(true); }
+                                                     ^

@@ -1,0 +1,3 @@
+tests/tir/errors/pointer_alignment_panic.zig:1:39: error: encountered @panic at comptime: alignment panic
+pub fn main() void { const P = *align(@panic("alignment panic")) u8; _ = P; }
+                                      ^

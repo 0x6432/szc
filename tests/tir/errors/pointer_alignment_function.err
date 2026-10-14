@@ -1,0 +1,3 @@
+tests/tir/errors/pointer_alignment_function.zig:1:76: error: expected type '*align(16) const fn () void', found '*const fn () void'
+fn f() void {} pub fn main() void { const p: *align(16) const fn () void = &f; p(); }
+                                                                           ^

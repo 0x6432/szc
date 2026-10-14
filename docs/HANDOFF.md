@@ -36,8 +36,9 @@ Read this first when resuming work (the sandbox resets often).
 - Done: M5.1c1 internal mutable scalar globals, lazy type/init resolution and writable relocations.
 - Done: M5.1c2a function types, symbolic addresses, signature variance and indirect calls.
 - Done: M5.1c2b1 allowzero pointer qualification, nested coercions and qualifier joins.
-- Next: **M5.1c2b2** pointer alignment, then M5.1c2b3 volatile accesses.
-  M5.1/M5.1c/M5.1c2/M5.1c2b remain partial.
+- Done: M5.1c2b2a alignment-qualified pointer types and actual unaligned memory tests.
+- Next: **M5.1c2b2b** explicit declaration/storage alignment, then M5.1c2b3 volatile.
+  M5.1/M5.1c/M5.1c2/M5.1c2b/M5.1c2b2 remain partial.
 - Run `PATH=/data/tools/bin:$PATH ZIG=/data/zig/zig-x86_64-linux-0.17.0/zig make e2e-test`
   locally. `tools/build_qbe.sh` builds the pinned QBE into `build/qbe-src` on CI.
 - Tools: `SZC_QBE`/`qbe`, `SZC_CC`/`cc`; pinned QBE revision
@@ -55,7 +56,47 @@ Read this first when resuming work (the sandbox resets often).
   M5.1c2a 54fcbb4/run 38554387430 also passed GCC/Clang/fuzz; its differential
   job lost communication with the hosted runner during native/reference tests.
   The check annotation confirms runner communication loss, not a completed test
-  result. Reference CI remains unverified; check the next push's fresh run.
+  result. The next checkpoint, M5.1c2b1 55ad2cd/run 38564405059, passed all
+  GCC/Clang/fuzz/differential jobs, restoring green CI. Check each new push's run.
+
+## Validation at M5.1c2b2a
+
+- GCC/Clang -Werror ASan/UBSan and optimized GCC pass 554 unit checks, 620 goldens,
+  50 ordinary/reference executable inputs plus two szc-only inputs, 12 driver checks,
+  11 PIE/storage checks, four callback ABI checks, seven unaligned memory cases and
+  166 safety cases. Four 60-second fuzz targets pass; final irgen/sema were re-fuzzed
+  for 60 seconds each after the comptime evaluation fixes. All 1,035 alignment,
+  168 const-only pointer, 486 function-pointer and 864 allowzero comparisons match
+  Zig 0.17.0; the complete alignment matrix also matches debug output under ASan/UBSan.
+  Standalone 20,000 mutations per stage pass. Corpus: irgen 25, sema 43 inputs.
+  Check this checkpoint's push CI before claiming remote success.
+- IrPointerType.alignment_body is a separate comptime body, not a runtime ref. It
+  has a fresh InstMap overlay capturing the parent operands, is_comptime=true,
+  tir/func/control=NULL. This prevents align(unreachable) from compiling as a runtime
+  panic and stops runtime casts/stores from emitting through a null TIR. Existing
+  runtime coercion/cast/unary/bool/control/store paths gained require_runtime guards.
+- TypePointer.alignment is byte alignment of the pointee: 0 means implicit child
+  ABI alignment. Keep 0 distinct from explicit natural alignment for type identity;
+  memory coercions compare effective alignment instead. A pointer value/slot still
+  has ABI alignment eight, regardless of its pointee qualification.
+- Pointer peer joins take minimum effective alignment, explicit if either input
+  was explicit. Do not restore the old early "one pointer coerces to the other"
+  returns: they lose explicit natural alignment in the inferred type. Bare function
+  plus const-function-pointer peers use address decay before merging; mutable peers
+  must not gain acceptance simply by OR-ing a const flag onto both pointer types.
+- tests/run_pointer_alignment.py links real offset-one .s storage to test seven
+  unaligned scalar/pointer reads/writes with guard bytes; optional ZIG executes the
+  same source and helpers. make e2e-test runs it. tools/diff_pointer_alignment.py is
+  in differential CI, alongside existing qualifier/function comparisons.
+- Explicit declaration/storage alignment is next (M5.1c2b2b). Existing local/global
+  and immutable storage stays naturally aligned; do not promise over-aligned backing
+  objects merely because a pointer type can express align(16) or greater. QBE's
+  alloc4/8/16 limit needs an honest strategy for larger stack alignment. Function
+  alignment and constant-object/reference identity must also be considered.
+- Integer alignment expressions work within existing comptime support. Zig accepts
+  align(4.0), but floats are still explicit NYI here; do not add a literal-only hack.
+  @alignCast/@ptrCast/@intFromPtr/@ptrFromInt remain later casting work. Address
+  spaces/packed fields/volatile remain pending. Keep Q6 deferred until M10.2.
 
 ## Validation at M5.1c2b1
 

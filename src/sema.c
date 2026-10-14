@@ -195,6 +195,7 @@ type_hash(const Type *type)
 	case TYPE_POINTER:
 		hash = hash_word(hash, type->as.pointer.child);
 		hash = hash_word(hash, (uint32_t)type->as.pointer.size);
+		hash = hash_word(hash, type->as.pointer.alignment);
 		hash = hash_word(hash, type->as.pointer.is_const ? 1u : 0u);
 		hash = hash_word(hash, type->as.pointer.is_volatile ? 1u : 0u);
 		hash = hash_word(hash, type->as.pointer.is_allowzero ? 1u : 0u);
@@ -228,7 +229,7 @@ type_equal(const Type *a, const Type *b)
 	case TYPE_ARRAY:
 		return a->as.array.child == b->as.array.child && a->as.array.length == b->as.array.length && a->as.array.sentinel_zero == b->as.array.sentinel_zero;
 	case TYPE_POINTER:
-		return a->as.pointer.child == b->as.pointer.child && a->as.pointer.size == b->as.pointer.size && a->as.pointer.is_const == b->as.pointer.is_const && a->as.pointer.is_volatile == b->as.pointer.is_volatile && a->as.pointer.is_allowzero == b->as.pointer.is_allowzero;
+		return a->as.pointer.child == b->as.pointer.child && a->as.pointer.size == b->as.pointer.size && a->as.pointer.alignment == b->as.pointer.alignment && a->as.pointer.is_const == b->as.pointer.is_const && a->as.pointer.is_volatile == b->as.pointer.is_volatile && a->as.pointer.is_allowzero == b->as.pointer.is_allowzero;
 	case TYPE_FN:
 		if (a->as.fn.convention != b->as.fn.convention || a->as.fn.ret != b->as.fn.ret || a->as.fn.is_var_args != b->as.fn.is_var_args || a->as.fn.is_generic != b->as.fn.is_generic || a->as.fn.param_count != b->as.fn.param_count)
 			return false;
@@ -519,7 +520,8 @@ sema_type_name(Sema *sema, TypeId type_id)
 		return arena_sprintf(sema->arena, "[%u%s]%s", type->as.array.length, type->as.array.sentinel_zero ? ":0" : "", sema_type_name(sema, type->as.array.child));
 	case TYPE_POINTER: {
 		const char *prefix = type->as.pointer.size == POINTER_ONE ? "*" : type->as.pointer.size == POINTER_MANY ? "[*]" : type->as.pointer.size == POINTER_SLICE ? "[]" : "[*c]";
-		return arena_sprintf(sema->arena, "%s%s%s%s", prefix, type->as.pointer.is_allowzero ? "allowzero " : "", type->as.pointer.is_const ? "const " : "", sema_type_name(sema, type->as.pointer.child));
+		const char *alignment = type->as.pointer.alignment == 0 ? "" : arena_sprintf(sema->arena, "align(%u) ", (unsigned)type->as.pointer.alignment);
+		return arena_sprintf(sema->arena, "%s%s%s%s%s", prefix, alignment, type->as.pointer.is_allowzero ? "allowzero " : "", type->as.pointer.is_const ? "const " : "", sema_type_name(sema, type->as.pointer.child));
 	}
 	case TYPE_FN: {
 		const char *text = "fn (";
@@ -967,6 +969,7 @@ block_init_comptime(Block *block, Sema *sema, SemaNamespace *ns, InstMap *map, S
 }
 
 static bool operand_to_type(Block *block, Operand operand, uint32_t src, TypeId *out);
+static bool require_runtime(Block *block, uint32_t src);
 
 static bool
 global_type_allowed(Block *block, TypeId type, uint32_t src)
@@ -1178,6 +1181,12 @@ operand_to_type(Block *block, Operand operand, uint32_t src, TypeId *out)
 	return true;
 }
 
+static uint32_t
+pointer_alignment(const Sema *sema, TypePointer pointer)
+{
+	return pointer.alignment != 0 ? pointer.alignment : sema_type_align(sema, pointer.child);
+}
+
 /* Memory-compatible types: mutable outer pointees require bidirectional coercions. */
 static bool
 memory_coercion_allowed(const Sema *sema, TypeId dest, TypeId source, bool dest_is_mut)
@@ -1208,6 +1217,10 @@ memory_coercion_allowed(const Sema *sema, TypeId dest, TypeId source, bool dest_
 	if (to.is_allowzero != from.is_allowzero && (dest_is_mut || !to.is_allowzero))
 		return false;
 	if (to.is_const != from.is_const && (dest_is_mut || !to.is_const))
+		return false;
+	uint32_t to_align = pointer_alignment(sema, to);
+	uint32_t from_align = pointer_alignment(sema, from);
+	if (dest_is_mut ? to_align != from_align : to_align > from_align)
 		return false;
 	return memory_coercion_allowed(sema, to.child, from.child, dest_is_mut || !to.is_const);
 }
@@ -1279,14 +1292,20 @@ coerce(Block *block, Operand operand, TypeId dest, uint32_t src)
 		return comptime_operand(dest, value_intern(&sema->values, &value));
 	}
 	if (dest_kind == TYPE_POINTER && memory_coercion_allowed(sema, dest, operand.type, false)) {
-		if (operand.kind == OPERAND_RUNTIME)
+		if (operand.kind == OPERAND_RUNTIME) {
+			if (!require_runtime(block, src))
+				return operand_none;
 			return runtime_operand(dest, emit_tir_un(block, TIR_PTR_CAST, dest, src, operand.inst));
+		}
 		Value value = *operand_value(block, operand);
 		value.type = dest;
 		return comptime_operand(dest, value_intern(&sema->values, &value));
 	}
-	if (operand.kind == OPERAND_RUNTIME && dest_kind == TYPE_INT && is_int(sema, operand.type) && int_type_contains(sema, dest, operand.type))
+	if (operand.kind == OPERAND_RUNTIME && dest_kind == TYPE_INT && is_int(sema, operand.type) && int_type_contains(sema, dest, operand.type)) {
+		if (!require_runtime(block, src))
+			return operand_none;
 		return runtime_operand(dest, emit_tir_un(block, TIR_INT_CAST, dest, src, operand.inst));
+	}
 	sema_error(block, src, "expected type '%s', found '%s'", sema_type_name(sema, dest), sema_type_name(sema, operand.type));
 	return operand_none;
 }
@@ -1340,6 +1359,8 @@ analyze_cast(Block *block, const IrInst *inst)
 			BigInt value = bigint_wrap(sema->arena, &operand_value(block, operand)->as.integer, to->as.integer.is_signed, to->as.integer.bits);
 			return comptime_operand(type, value_int(&sema->values, type, &value));
 		}
+		if (!require_runtime(block, src))
+			return operand_none;
 		return runtime_operand(type, emit_tir_un(block, TIR_TRUNCATE, type, src, operand.inst));
 	}
 	if (operand.kind == OPERAND_COMPTIME)
@@ -1348,6 +1369,8 @@ analyze_cast(Block *block, const IrInst *inst)
 		sema_error(block, src, "unable to cast runtime value to 'comptime_int'");
 		return operand_none;
 	}
+	if (!require_runtime(block, src))
+		return operand_none;
 	return runtime_operand(type, emit_tir_un(block, TIR_INT_CAST, type, src, operand.inst));
 }
 
@@ -1367,6 +1390,8 @@ analyze_int_from_bool(Block *block, const IrInst *inst)
 		return comptime_operand(type, value_undefined(&sema->values, type));
 	if (operand.kind == OPERAND_COMPTIME)
 		return comptime_operand(type, value_int_u64(&sema->values, type, operand_value(block, operand)->as.boolean ? 1 : 0));
+	if (!require_runtime(block, inst->src))
+		return operand_none;
 	return runtime_operand(type, emit_tir_un(block, TIR_INT_FROM_BOOL, type, inst->src, operand.inst));
 }
 
@@ -1409,13 +1434,13 @@ peer_type(Block *block, Operand lhs, Operand rhs, uint32_t src, TypeId *out)
 			return true;
 		}
 	}
-	if (ak == TYPE_FN && bk == TYPE_POINTER && sema->types[b].as.pointer.is_const && callable_type(sema, b) != 0 && memory_coercion_allowed(sema, callable_type(sema, b), a, false)) {
-		*out = b;
-		return true;
+	if (ak == TYPE_FN && bk == TYPE_POINTER && sema->types[b].as.pointer.is_const && callable_type(sema, b) != 0) {
+		Operand address = function_address(block, lhs, src);
+		return address.kind != OPERAND_NONE && peer_type(block, address, rhs, src, out);
 	}
-	if (bk == TYPE_FN && ak == TYPE_POINTER && sema->types[a].as.pointer.is_const && callable_type(sema, a) != 0 && memory_coercion_allowed(sema, callable_type(sema, a), b, false)) {
-		*out = a;
-		return true;
+	if (bk == TYPE_FN && ak == TYPE_POINTER && sema->types[a].as.pointer.is_const && callable_type(sema, a) != 0) {
+		Operand address = function_address(block, rhs, src);
+		return address.kind != OPERAND_NONE && peer_type(block, lhs, address, src, out);
 	}
 	if (ak == TYPE_FN && bk == TYPE_FN) {
 		if (memory_coercion_allowed(sema, a, b, false)) {
@@ -1428,14 +1453,6 @@ peer_type(Block *block, Operand lhs, Operand rhs, uint32_t src, TypeId *out)
 		}
 	}
 	if (ak == TYPE_POINTER && bk == TYPE_POINTER) {
-		if (memory_coercion_allowed(sema, a, b, false)) {
-			*out = a;
-			return true;
-		}
-		if (memory_coercion_allowed(sema, b, a, false)) {
-			*out = b;
-			return true;
-		}
 		TypePointer ap = sema->types[a].as.pointer;
 		TypePointer bp = sema->types[b].as.pointer;
 		if (ap.size == bp.size) {
@@ -1443,6 +1460,11 @@ peer_type(Block *block, Operand lhs, Operand rhs, uint32_t src, TypeId *out)
 			candidate.as.pointer = ap;
 			candidate.as.pointer.is_const = ap.is_const || bp.is_const;
 			candidate.as.pointer.is_allowzero = ap.is_allowzero || bp.is_allowzero;
+			if (ap.alignment != 0 || bp.alignment != 0) {
+				uint32_t a_align = pointer_alignment(sema, ap);
+				uint32_t b_align = pointer_alignment(sema, bp);
+				candidate.as.pointer.alignment = a_align < b_align ? a_align : b_align;
+			}
 			TypeId merged = type_intern(sema, &candidate);
 			if (memory_coercion_allowed(sema, merged, a, false) && memory_coercion_allowed(sema, merged, b, false)) {
 				*out = merged;
@@ -2015,6 +2037,8 @@ analyze_unary(Block *block, const IrInst *inst)
 				return operand_none;
 			return bool_operand(sema, !operand_value(block, operand)->as.boolean);
 		}
+		if (!require_runtime(block, src))
+			return operand_none;
 		return runtime_operand(T_BOOL, emit_tir_un(block, TIR_NOT, T_BOOL, src, operand.inst));
 	}
 	if (op == IR_BIT_NOT) {
@@ -2029,6 +2053,8 @@ analyze_unary(Block *block, const IrInst *inst)
 			result = bigint_wrap(sema->arena, &result, sema->types[type].as.integer.is_signed, sema->types[type].as.integer.bits);
 			return comptime_operand(type, value_int(&sema->values, type, &result));
 		}
+		if (!require_runtime(block, src))
+			return operand_none;
 		return runtime_operand(type, emit_tir_un(block, TIR_NOT, type, src, operand.inst));
 	}
 	/* negation */
@@ -2043,6 +2069,8 @@ analyze_unary(Block *block, const IrInst *inst)
 		BigInt result = bigint_negate(sema->arena, &operand_value(block, operand)->as.integer);
 		return int_result(block, op, type, result, src);
 	}
+	if (!require_runtime(block, src))
+		return operand_none;
 	return runtime_operand(type, emit_tir_un(block, op == IR_NEGATE_WRAP ? TIR_NEGATE_WRAP : TIR_NEGATE, type, src, operand.inst));
 }
 
@@ -2179,6 +2207,8 @@ analyze_bool_br(Block *block, const IrInst *inst)
 			return operand_none;
 		return coerce(block, rhs.result, T_BOOL, src);
 	}
+	if (!require_runtime(block, src))
+		return operand_none;
 	/* block { condbr lhs, { br rhs }, { br short-circuit value } } */
 	TirRef result = emit_tir(block, TIR_BLOCK, T_BOOL, src);
 	Block inner;
@@ -2406,6 +2436,8 @@ analyze_condbr(Block *block, const IrInst *inst)
 			analyze_body(block, operand_value(block, condition)->as.boolean ? payload.then_body : payload.else_body);
 		return;
 	}
+	if (!require_runtime(block, inst->src))
+		return;
 	Block arms[2];
 	IrBody bodies[2] = {payload.then_body, payload.else_body};
 	for (uint32_t i = 0; i < 2; i++) {
@@ -2776,6 +2808,52 @@ analyze_deref(Block *block, const IrInst *inst)
 	return load_pointer(block, pointer, inst->src);
 }
 
+static bool
+analyze_alignment(Block *block, IrBody body, uint32_t src, uint32_t *out)
+{
+	if (body == 0) {
+		*out = 0;
+		return true;
+	}
+	InstMap map;
+	inst_map_init(&map, block->sema->arena);
+	map.parent = block->map;
+	Block inner;
+	block_init_child(&inner, block);
+	inner.map = &map;
+	inner.is_comptime = true;
+	inner.tir = NULL;
+	inner.func = NULL;
+	inner.control = NULL;
+	BodyResult result = analyze_body(&inner, body);
+	if (result.end != BODY_BREAK_RESULT)
+		return false;
+	Operand operand = coerce(&inner, result.result, type_id_of_well_known(IR_REF_TYPE_U29), src);
+	if (operand.kind == OPERAND_NONE)
+		return false;
+	if (operand.kind != OPERAND_COMPTIME) {
+		sema_error(block, src, "unable to resolve comptime value");
+		return false;
+	}
+	if (!check_defined(block, operand, src))
+		return false;
+	uint32_t bytes;
+	if (!bigint_to_u32(&operand_value(block, operand)->as.integer, &bytes)) {
+		sema_error(block, src, "alignment value is too large");
+		return false;
+	}
+	if (bytes == 0) {
+		sema_error(block, src, "alignment must be >= 1");
+		return false;
+	}
+	if ((bytes & (bytes - 1)) != 0) {
+		sema_error(block, src, "alignment value '%u' is not a power of two", (unsigned)bytes);
+		return false;
+	}
+	*out = bytes;
+	return true;
+}
+
 /* ---------- Analysis: instructions ---------- */
 
 static Operand
@@ -2868,7 +2946,14 @@ analyze_inst(Block *block, IrInstIndex index, Operand *break_value)
 			sema_error(block, src, "pointer to noreturn not allowed");
 			break;
 		}
-		result = type_operand(sema, type_pointer(sema, type, POINTER_ONE, (payload.flags & IR_POINTER_CONST) != 0, (payload.flags & IR_POINTER_ALLOWZERO) != 0));
+		Type pointer = make_type(TYPE_POINTER);
+		pointer.as.pointer.child = type;
+		pointer.as.pointer.size = POINTER_ONE;
+		pointer.as.pointer.is_const = (payload.flags & IR_POINTER_CONST) != 0;
+		pointer.as.pointer.is_allowzero = (payload.flags & IR_POINTER_ALLOWZERO) != 0;
+		if (!analyze_alignment(block, payload.alignment_body, payload.alignment_src, &pointer.as.pointer.alignment))
+			break;
+		result = type_operand(sema, type_intern(sema, &pointer));
 		break;
 	}
 	case IR_REF:
@@ -3051,6 +3136,8 @@ analyze_inst(Block *block, IrInstIndex index, Operand *break_value)
 				sema_error(block, src, "unable to evaluate comptime expression");
 				break;
 			}
+			if (!require_runtime(block, src))
+				break;
 			if (!operand_is_undefined(block, value) && pointer_operand(block, pointer, src)) {
 				TirRef address = materialize(block, pointer, src);
 				emit_tir_bin(block, TIR_STORE, T_VOID, src, address, materialize(block, value, src));

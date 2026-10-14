@@ -851,12 +851,21 @@ address_of(GenBody *body, Scope *scope, ResultInfo info, AstNode *node)
 static IrRef
 pointer_type(GenBody *body, Scope *scope, AstPointerType *node)
 {
-	if (node->size != AST_POINTER_ONE || node->sentinel != NULL || node->align != NULL || node->bit_offset != NULL || node->host_size != NULL || node->addrspace != NULL || node->is_volatile) {
+	if (node->size != AST_POINTER_ONE || node->sentinel != NULL || node->bit_offset != NULL || node->host_size != NULL || node->addrspace != NULL || node->is_volatile) {
 		unsupported(body, &node->base, "pointer sizes other than single pointers or pointer attributes");
 		return IR_REF_VOID_VALUE;
 	}
 	IrRef child = type_expr(body, scope, node->child);
-	IrPointerType payload = {child, 0};
+	IrPointerType payload = {child, 0, 0, 0};
+	if (node->align != NULL) {
+		GenBody alignment;
+		body_init(&alignment, body->gen, scope, true);
+		IrRef value = expr(&alignment, &alignment.base, result_type(IR_REF_TYPE_U29), node->align);
+		if (!body_is_terminated(&alignment))
+			emit_break(&alignment, IR_BREAK_INLINE, node->align->offset, IR_BODY_RESULT, value);
+		payload.alignment_body = body_finish(&alignment);
+		payload.alignment_src = node->align->offset;
+	}
 	if (node->is_const)
 		payload.flags |= IR_POINTER_CONST;
 	if (node->is_allowzero)
@@ -2401,6 +2410,7 @@ dump_inst(const IrDumper *dumper, IrInstIndex index, uint32_t depth)
 		dump_ref(dumper, (payload.flags & IR_POINTER_CONST) != 0 ? IR_REF_TRUE : IR_REF_FALSE);
 		if ((payload.flags & IR_POINTER_ALLOWZERO) != 0)
 			fputs(" allowzero", out);
+		dump_labeled_body(dumper, "align", payload.alignment_body, depth);
 		break;
 	}
 	case IR_CALL: {

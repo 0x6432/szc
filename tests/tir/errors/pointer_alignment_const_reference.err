@@ -1,0 +1,3 @@
+tests/tir/errors/pointer_alignment_const_reference.zig:1:53: error: expected type '*align(16) const u8', found '*const u8'
+pub fn main() void { const p: *align(16) const u8 = &@as(u8, 1); _ = p; }
+                                                    ^

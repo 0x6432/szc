@@ -73,7 +73,9 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
       - [x] **M5.1c2a Function types, addresses and indirect calls**.
       - [~] **M5.1c2b Pointer attributes**.
         - [x] **M5.1c2b1 Allowzero pointer qualification**.
-        - [ ] **M5.1c2b2 Pointer alignment**.
+        - [~] **M5.1c2b2 Pointer alignment**.
+          - [x] **M5.1c2b2a Alignment-qualified pointer types and unaligned memory**.
+          - [ ] **M5.1c2b2b Explicit declaration/storage alignment**.
         - [ ] **M5.1c2b3 Volatile pointer accesses**.
 - [ ] **M5.2 Arrays, indexing, array literals, `++` at comptime** (0.17.0 has no `**`).
 - [ ] **M5.3 Slices, many-pointers, slicing, `.len`, `.ptr`, for over slices.**
@@ -128,6 +130,58 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
 ## Completed milestone log
 
 (newest first; each entry: what, limitations, interactions)
+
+### M5.1c2b2a Alignment-qualified pointer types and unaligned memory
+- **What**: single-pointer types accept `align(integer_expression)`. IrPointerType
+  holds a separate comptime body and source location for the alignment expression;
+  sema evaluates it with a fresh operand-map overlay, no runtime TIR and no enclosing
+  function/control targets. Values must be defined u29, nonzero powers of two.
+  Captured runtime values, unreachable/panic and runtime stores cannot escape into
+  runtime code from a type attribute. Calls/mutable comptime interpretation still
+  have their existing explicit NYI limits.
+- **Type identity/coercion**: TypePointer.alignment stores zero for implicit ABI
+  alignment and byte units for explicit alignment. Explicit natural alignment is
+  memory-compatible but not type-identical to implicit alignment in Zig 0.17; do
+  not canonicalize those types together. Implicit effective alignment comes from
+  the child ABI layout. Coercion may weaken alignment, never strengthen it; mutable
+  outer pointees require equal effective alignment. Function parameter/return
+  variance includes these rules, and typed undefined cannot bypass them.
+- **Joins**: use the minimum effective alignment, retaining explicit alignment when
+  either input was explicit, plus the existing const/allowzero union. Both inputs
+  must coerce to the selected pointer. Bare function bodies decay before an aligned
+  const-function-pointer join; mutable function-pointer peers remain rejected,
+  matching reference behavior. Differential testing caught and fixed an initially
+  over-permissive mutable-peer merge.
+- **Backend/interactions**: existing x86_64 QBE scalar loads/stores operate on
+  unaligned addresses; no invented alignment promises or dummy backing storage.
+  Seven assembly-backed regressions supply addresses at offset one from aligned
+  data and check signed/unsigned 16/32/64-bit loads/stores, an unaligned pointer slot,
+  and untouched prefix/suffix guard bytes. They also execute with official Zig.
+  Alignment of a pointer's pointee is separate from the pointer value's own ABI
+  alignment (eight bytes); existing local/global slots and immutable objects retain
+  natural storage alignment. Weakening a pointer never changes object identity.
+- **Comptime safety**: auditing attribute evaluation found missing runtime-emission
+  guards in coercions, integer casts, unary/bool operations, conditional branches
+  and stores. These now reject runtime work in a comptime-only body instead of
+  emitting through a null TIR. Runtime paths and OPV folding remain intact.
+- **Reference**: actual 0.17 Sema.zirPtrType, validateAlign,
+  coerceInMemoryAllowedPtrs, pointer peer merging and Type.abiAlignment, plus binary
+  probes. Alignment expressions use the existing supported comptime integer subset;
+  float literals such as align(4.0), which Zig accepts, remain explicit float NYI.
+- **Validation**: GCC/Clang -Werror ASan/UBSan and optimized GCC: 554 unit checks,
+  620 goldens, 50 ordinary/reference executable inputs plus two szc-only inputs,
+  12 driver checks, 11 PIE/storage checks, four callback ABI checks, seven unaligned
+  memory cases and 166 safety cases pass. Four 60-second fuzz targets passed, with
+  final irgen/sema each re-fuzzed for 60 seconds after the comptime fixes.
+  All 1,035 alignment comparisons match Zig 0.17.0 and sanitized replay matches
+  debug output for every case. Existing 168 const-only pointer, 486 function-pointer
+  and 864 allowzero comparisons also match. Standalone 20,000 mutations per stage
+  pass, with irgen corpus 25 and sema corpus 43 inputs.
+- **Limitations/next**: this is pointer type alignment, not explicit storage alignment.
+  Local/global/constant/function declaration alignment remains M5.1c2b2b; do not
+  claim over-aligned storage can already be declared. @alignCast and integer/pointer
+  casts remain later casting work. Volatile memory access, address spaces and packed
+  pointer fields are still pending. M5.1/M5.1c/M5.1c2/M5.1c2b/M5.1c2b2 remain partial.
 
 ### M5.1c2b1 Allowzero pointer qualification
 - **What**: single-pointer syntax accepts `allowzero`, independent of `const`.

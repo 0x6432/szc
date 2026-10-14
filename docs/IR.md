@@ -143,9 +143,15 @@ prints a file's IR.
 
 ## Single-pointer operations
 
-- `ptr_type` uses an IrPointerType payload with a child type ref and const/allowzero
-  flags. Its text dump retains the old `child, @true/@false` const notation and
-  appends `allowzero` when set. The source location identifies the child type.
+- `ptr_type` uses an IrPointerType payload with a child type ref, const/allowzero
+  flags, and an optional alignment comptime body/source offset. Its text dump retains
+  the old `child, @true/@false` const notation, appends `allowzero` when set and adds
+  an `align { ... }` body. The source location identifies the child type. Alignment
+  bodies run in an isolated comptime context with captured outer operands but no TIR
+  or enclosing function/control target. The resulting defined u29 must be a nonzero
+  power of two. Zero in TypePointer.alignment means implicit ABI alignment; explicit
+  natural alignment remains a distinct type. Alignment can weaken in a coercion,
+  while mutable outer pointees require equal effective alignment.
   Pointer identity includes allowzero; coercion may add it but cannot discard it,
   and mutable outer pointees require bidirectional compatibility. A branch join
   can combine top-level const/allowzero flags only when both inputs can coerce to

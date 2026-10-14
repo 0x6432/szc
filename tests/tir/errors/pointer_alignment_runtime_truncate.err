@@ -1,0 +1,3 @@
+tests/tir/errors/pointer_alignment_runtime_truncate.zig:1:38: error: unable to evaluate comptime expression
+fn f(n: u64) void { const P = *align(@truncate(n)) u8; _ = P; } pub fn main() void { f(4); }
+                                     ^
