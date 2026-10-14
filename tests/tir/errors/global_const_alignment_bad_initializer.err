@@ -1,0 +1,3 @@
+tests/tir/errors/global_const_alignment_bad_initializer.zig:1:73: error: expected type 'u8', found 'bool'
+const holder: *align(64) const u8 = &value; const value: u8 align(64) = true;
+                                                                        ^

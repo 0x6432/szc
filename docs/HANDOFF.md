@@ -40,8 +40,10 @@ Read this first when resuming work (the sandbox resets often).
 - Done: M5.1c2b2b1 explicit alignment on mutable locals, including over-aligned slots.
 - Done: M5.1c2b2b2 aligned local constants, preserving comptime values and addresses.
 - Done: M5.1c2b2b3a explicit alignment on internal mutable global objects.
-- Next: **M5.1c2b2b3b** aligned global constants, then function declaration/address
-  alignment, then M5.1c2b3 volatile. Keep these as small checkpoints.
+- Done: M5.1c2b2b3b explicit alignment on internal global constants of supported
+  runtime-representable types, preserving comptime values and immutable identities.
+- Next: function declaration/address alignment, then M5.1c2b3 volatile. Keep these
+  as small checkpoints.
   M5.1/M5.1c/M5.1c2/M5.1c2b/M5.1c2b2/M5.1c2b2b remain partial.
 - Run `PATH=/data/tools/bin:$PATH ZIG=/data/zig/zig-x86_64-linux-0.17.0/zig make e2e-test`
   locally. `tools/build_qbe.sh` builds the pinned QBE into `build/qbe-src` on CI.
@@ -65,6 +67,47 @@ Read this first when resuming work (the sandbox resets often).
   also passed all jobs (run 38590520673), as did M5.1c2b2b1 ecfb6ab
   (run 38593742928). Check each new push's run.
 
+## Validation at M5.1c2b2b3b
+
+- Global const declarations now use isolated IrDecl alignment bodies. Explicit
+  types resolve before alignment and initialization; inferred declarations resolve
+  initializer/type first. SemaDecl.alignment is separate from the original known
+  Operand, so dereferencing an aligned constant still yields its comptime value.
+  IR_DECL_REF combines the declaration's unique identity and storage alignment.
+  Ordinary copied bindings get their own natural storage, not the source's alignment.
+- Actual Zig 0.17 sources (Zcu/PerThread.zig analyzeNavType/analyzeNavVal and
+  Sema.zig resolveNavPtrModifiers) and reference probes ground ordering and errors.
+  Aligned global comptime-only types and bare function aliases are rejected, unlike
+  local comptime constants. Function-pointer slots are ordinary supported objects.
+- Existing immutable storage codegen handles QBE data through 64 and outlined ELF
+  assembly for larger alignments, including .rodata/.data.rel.ro and relocations.
+  build-exe/run supply that companion; standalone emit-qbe retains its explicit
+  above-64 limitation. No new backend workaround or mutable const backing was added.
+- Forward acyclic constants, nested pointers, mutable pointees, callable pointer
+  slots, void/u0, lazy invalid declarations and copied binding guarantees are tested.
+  Typed global-constant address dependency cycles still report the existing
+  dependency loop even where Zig accepts them. The address-cycle diagnostic is an
+  szc-only limitation fixture, not a reference-rejected conformance example.
+  Exported/extern/threadlocal aligned global constants remain NYI; functions,
+  aggregates and other pre-existing type/backend limitations are not completed.
+- New coverage: 153 physical global-constant address/readback checks (15 types at
+  nine alignments, plus zero/undefined objects), 332 reference acceptance/coercion
+  comparisons, IR/TIR/QBE goldens and 21 diagnostic fixtures. Sanitized replay
+  matches all 332 new, 300 mutable-global and 626 local-constant cases.
+- Clang -Werror ASan/UBSan passes 558 units, 694 goldens, eight cleanup probes,
+  54 ordinary executable inputs plus two szc-only inputs, 16 driver, 11 storage,
+  four ABI, seven unaligned-memory, 135 mutable-local, 270 local-constant,
+  153 mutable-global, 153 global-constant and 166 safety checks. Optimized GCC
+  passes goldens, ordinary executables and the new address checks with Zig enabled.
+- GCC -Werror ASan/UBSan passes the same complete suite with Zig reference checks
+  enabled. Four 60-second libFuzzer targets and 20,000 standalone mutations per
+  stage pass; corpus is irgen 30/sema 65. Check the new push's CI; the prior
+  0fc49d8/run 38627706294 has passed GCC/Clang/fuzz, with differential still running
+  (allowzero comparisons at last check). Do not declare runner stalls solved.
+- Next: function declaration/address alignment, without promising code-symbol
+  alignment through metadata alone. Keep enclosing memory/alignment milestones
+  partial and Q6 deferred until M10.2.
+
 ## CI follow-up: procfs reap-race regression
 
 - da77561/run 38626759145 passed GCC/fuzz, but Clang/differential stopped in the
@@ -75,7 +118,8 @@ Read this first when resuming work (the sandbox resets often).
   still rejects a live/sleeping process. Deterministic mocked ENOENT/ESRCH/zombie/
   sleeping cases plus the existing output/status/signal/group checks all pass:
   eight cleanup checks. Production timeout behavior and compiler sources unchanged.
-- Check push CI; aligned global constants remain the next language checkpoint.
+- 0fc49d8 carries this fix; check its push CI. The following checkpoint implements
+  aligned global constants (see above).
 
 ## CI follow-up after M5.1c2b2b3a
 

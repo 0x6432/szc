@@ -163,8 +163,8 @@ prints a file's IR.
   an explicit attribute; TIR_ALLOC records it in the slot pointer type. Child ABI
   layout is unchanged. QBE slots above alignment 16 use private over-allocation
   and upward address rounding; initialization is not hoisted with the allocation.
-  Aligned local constants use CONST_BIND below; mutable globals use IrDecl
-  alignment bodies. Global const/function declaration alignment remains pending.
+  Aligned local constants use CONST_BIND below; mutable globals and global
+  constants use IrDecl alignment bodies. Function declaration alignment remains pending.
 - Address-of mutable locals reuses ALLOC refs. Source `deref(pointer)` validates
   the pointer and produces a typed load, or an OPV void/u0 constant without memory.
   `ref_deref(pointer)` performs the same validation and returns the pointer itself
@@ -237,5 +237,23 @@ prints a file's IR.
   Existing lazy initializer draining and declaration dependency diagnostics remain.
 - Static alignment through 64 uses ordinary QBE data; larger mutable objects use
   outlined writable .data with .balign, including .zero for zero/undefined bytes.
-  Immutable data sections do not change. Global const and function alignment are
-  separate pending work; threadlocal/export/extern variable limitations remain.
+  Immutable data sections do not change. Global constants use the path below;
+  function alignment and threadlocal/export/extern variable limitations remain.
+
+## Global constant declaration alignment
+
+- IrDecl.alignment_body/alignment_src also describe a global constant attribute.
+  Explicitly typed aligned constants use type_body and IR_DECL_TYPE, resolving
+  type then alignment before initializer analysis. Inferred constants resolve
+  initializer/type first, then alignment. Unannotated constants retain their
+  existing inline type-body representation.
+- SemaDecl.alignment stores validated bytes (0 implicit ABI) independently of the
+  known value. IR_DECL_REF passes this and the declaration's address_identity to
+  analyze_ref; ConstObject retains immutable storage alignment without losing the
+  original operand's comptime value. Copying the value does not inherit alignment.
+- Global comptime-only types and bare function aliases cannot carry alignment;
+  function-pointer objects can. Aligned exported/extern/threadlocal constants are
+  explicit NYI. Type-only publication for constant address-dependency cycles is
+  not implemented; unlike typed mutable globals, these keep dependency-loop errors.
+- Existing immutable static codegen handles explicit alignment and relocations,
+  including the outlined assembly companion above QBE's 64-byte data limit.

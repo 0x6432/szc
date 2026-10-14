@@ -1,0 +1,40 @@
+fn szc.main.1: fn () u8 {
+  %0: *align(32) const *align(64) const u32 = const ref(object.3)
+  %1: u32 = call szc.read.2(%0)
+  %2: u32 = const 42
+  %3: bool = cmp_neq %1, %2
+  %4: bool = block {
+    %9: noreturn = condbr %3 then {
+      %7: bool = const true
+      %8: noreturn = br %4, %7
+    } else {
+      %5: bool = const false
+      %6: noreturn = br %4, %5
+    }
+  }
+  %10: bool = block {
+    %15: noreturn = condbr %4 then {
+      %13: bool = const true
+      %14: noreturn = br %10, %13
+    } else {
+      %11: bool = const false
+      %12: noreturn = br %10, %11
+    }
+  }
+  %16: void = block {
+    %20: noreturn = condbr %10 then {
+      %17: u8 = const 1
+      %18: noreturn = ret %17
+    } else {
+      %19: noreturn = br %16
+    }
+  }
+  %21: u8 = const 0
+  %22: noreturn = ret %21
+}
+fn szc.read.2: fn (*align(32) const *align(64) const u32) u32 {
+  %0: *align(32) const *align(64) const u32 = arg 0
+  %1: *align(64) const u32 = load %0
+  %2: u32 = load %1
+  %3: noreturn = ret %2
+}

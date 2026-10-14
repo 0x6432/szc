@@ -79,7 +79,7 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
             - [x] **M5.1c2b2b1 Aligned mutable locals**.
             - [x] **M5.1c2b2b2 Aligned local constants** (known values and runtime initializers).
             - [x] **M5.1c2b2b3a Internal mutable global alignment**.
-            - [ ] **M5.1c2b2b3b Aligned global constants**.
+            - [x] **M5.1c2b2b3b Aligned global constants** (internal, supported runtime-representable types).
             - [ ] Aligned function declarations/addresses.
         - [ ] **M5.1c2b3 Volatile pointer accesses**.
 - [ ] **M5.2 Arrays, indexing, array literals, `++` at comptime** (0.17.0 has no `**`).
@@ -135,6 +135,40 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
 ## Completed milestone log
 
 (newest first; each entry: what, limitations, interactions)
+
+### M5.1c2b2b3b Aligned internal global constants
+- **What**: aligned global constants retain their original comptime Operand and
+  unique immutable object identity. IrDecl has a separate type body for explicitly
+  typed aligned constants and an isolated alignment body; SemaDecl stores validated
+  byte alignment separately. Declaration references pass it to analyze_ref, rather
+  than manufacturing runtime variables or discarding known values.
+- **Reference semantics**: explicit type resolves before alignment/initializer;
+  inferred type follows initializer resolution before alignment. Zig 0.17
+  Zcu/PerThread.zig and Sema.zig source/probes confirm this ordering and the global
+  rejections for comptime-only types and bare function aliases. Ordinary copied
+  globals/locals use their own natural storage alignment. Unused declarations stay
+  lazy; invalid attributes and invalid initializers keep diagnostic ordering.
+- **Storage/interactions**: existing aligned immutable objects emit QBE data up to
+  64-byte alignment, or outlined .rodata/.data.rel.ro assembly above that. Real
+  addresses, nested pointers, mutable pointees, callback slots, void/u0 and
+  zero/undefined storage work without changing backend representation. Standalone
+  emit-qbe retains its above-64 static-data limitation; build-exe/run supply assembly.
+- **Tests**: 153 new physical address/readback checks with PIE/RELRO assertions,
+  332 comparisons against Zig, IR/TIR/QBE goldens, and 21 diagnostic fixtures.
+  Twenty diagnostics are reference-rejected; the typed constant self-address cycle
+  records an existing szc-only limitation which the reference accepts. Sanitized
+  replay matches all 332 new cases plus 300 mutable-global and 626 local-constant
+  cases. Full validation totals are recorded in HANDOFF.md; CI runs both the new
+  physical tests and reference matrix. GCC/Clang -Werror ASan/UBSan pass 558 unit
+  checks, 694 goldens, all executable/memory suites and 166 safety cases. GCC also
+  passes the full reference-enabled suite. Four 60-second fuzz targets and 20,000
+  standalone mutations per stage pass. Corpus grows to irgen 30/sema 65 inputs.
+- **Limitations/next**: internal constants of supported runtime-representable types
+  only; exported/extern/threadlocal aligned constants remain explicit NYI. Typed
+  constant address-dependency cycles remain unsupported, not silently resolved with
+  placeholder values. Function declaration/address alignment is next; existing
+  aggregate/float/backend restrictions remain. All enclosing alignment and memory
+  milestones stay partial. Q6 remains deferred until M10.2.
 
 ### CI follow-up: procfs reaping race in cleanup regression
 - da77561 CI exposed ESRCH while reading a just-reaped descendant's procfs file.

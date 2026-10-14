@@ -1,0 +1,3 @@
+tests/tir/errors/global_const_alignment_panic.zig:1:23: error: encountered @panic at comptime: global constant alignment panic
+const value: u8 align(@panic("global constant alignment panic")) = 1;
+                      ^

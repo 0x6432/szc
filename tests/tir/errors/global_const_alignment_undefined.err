@@ -1,0 +1,3 @@
+tests/tir/errors/global_const_alignment_undefined.zig:1:23: error: use of undefined value here causes illegal behavior
+const value: u8 align(undefined) = 1;
+                      ^

@@ -1,3 +1,0 @@
-tests/tir/errors/global_alignment_const.zig:1:1: error: not supported by szc yet: aligned global constants
-const value: u32 align(64) = 7;
-^

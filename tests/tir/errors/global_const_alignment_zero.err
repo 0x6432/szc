@@ -1,0 +1,3 @@
+tests/tir/errors/global_const_alignment_zero.zig:1:23: error: alignment must be >= 1
+const value: u8 align(0) = 1;
+                      ^

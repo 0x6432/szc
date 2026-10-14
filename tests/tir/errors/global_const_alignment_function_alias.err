@@ -1,0 +1,3 @@
+tests/tir/errors/global_const_alignment_function_alias.zig:1:48: error: cannot specify alignment of function alias
+fn target() u8 { return 7; } const value align(64) = target;
+                                               ^

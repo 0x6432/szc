@@ -46,6 +46,7 @@ typedef struct SemaDecl {
 	DeclState state;
 	Operand   value;
 	uint32_t address_identity;
+	uint32_t alignment;	/* immutable declaration storage; 0 means implicit ABI */
 	GlobalId global;
 } SemaDecl;
 
@@ -1042,9 +1043,15 @@ resolve_decl(Block *user, uint32_t src, SemaNamespace *ns, SemaDecl *decl, bool 
 		break;
 	}
 	bool mutable = decl->ir.kind == IR_DECL_VAR;
+	bool aligned_const = decl->ir.kind == IR_DECL_CONST && decl->ir.alignment_body != 0;
 	if (mutable && (decl->ir.flags & (IR_DECL_THREADLOCAL | IR_DECL_EXPORT | IR_DECL_EXTERN)) != 0) {
 		decl->state = DECL_FAILED;
 		sema_error(user, src, "not supported by szc yet: threadlocal, exported, or extern global variables");
+		return operand_none;
+	}
+	if (aligned_const && (decl->ir.flags & (IR_DECL_THREADLOCAL | IR_DECL_EXPORT | IR_DECL_EXTERN)) != 0) {
+		decl->state = DECL_FAILED;
+		sema_error(user, src, "not supported by szc yet: threadlocal, exported, or extern aligned global constants");
 		return operand_none;
 	}
 	decl->state = DECL_IN_PROGRESS;
@@ -1053,6 +1060,16 @@ resolve_decl(Block *user, uint32_t src, SemaNamespace *ns, SemaDecl *decl, bool 
 	Block block;
 	block_init_comptime(&block, sema, ns, &map, decl->ir.name);
 	uint32_t alignment = 0;
+	if (aligned_const && decl->ir.type_body != 0) {
+		BodyResult declared = analyze_body(&block, decl->ir.type_body);
+		TypeId type;
+		if (declared.end != BODY_BREAK_RESULT || !operand_to_type(&block, declared.result, decl->ir.src, &type)
+			|| !analyze_alignment(&block, decl->ir.alignment_body, decl->ir.alignment_src, &alignment)) {
+			decl->state = DECL_FAILED;
+			return operand_none;
+		}
+		block.declaration_type = type;
+	}
 	if (mutable && decl->global == 0) {
 		TypeId type = 0;
 		if (decl->ir.type_body != 0) {
@@ -1099,6 +1116,19 @@ resolve_decl(Block *user, uint32_t src, SemaNamespace *ns, SemaDecl *decl, bool 
 		sema->globals[decl->global]->result.initializer = result.result.value;
 		queue_value_functions(&block, result.result.value, decl->ir.src);
 	} else {
+		if (aligned_const) {
+			if (decl->ir.type_body == 0 && !analyze_alignment(&block, decl->ir.alignment_body, decl->ir.alignment_src, &alignment)) {
+				decl->state = DECL_FAILED;
+				return operand_none;
+			}
+			if (is_comptime_only_type(sema, result.result.type)) {
+				const char *reason = sema->types[result.result.type].kind == TYPE_FN ? "function alias" : "comptime-only type";
+				sema_error(&block, decl->ir.alignment_src, "cannot specify alignment of %s", reason);
+				decl->state = DECL_FAILED;
+				return operand_none;
+			}
+			decl->alignment = alignment;
+		}
 		decl->value = result.result;
 	}
 	decl->state = DECL_RESOLVED;
@@ -2941,7 +2971,7 @@ analyze_inst(Block *block, IrInstIndex index, Operand *break_value)
 		} else if (inst->op == IR_DECL_REF) {
 			if (decl->address_identity == 0)
 				decl->address_identity = ++sema->next_address_identity;
-			result = analyze_ref(block, result, src, decl->address_identity, 0);
+			result = analyze_ref(block, result, src, decl->address_identity, decl->alignment);
 		}
 		break;
 	}

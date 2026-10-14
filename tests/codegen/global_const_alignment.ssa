@@ -1,0 +1,45 @@
+function w $szc.main.1() {
+@start
+	%t1 =w call $szc.read.2(l $szc.const.3)
+	%t3 =w cnew %t1, 42
+	jnz %t3, @c9_then, @c9_else
+@c9_then
+	%t4 =w copy 1
+	jmp @b4
+@c9_else
+	%t4 =w copy 0
+	jmp @b4
+@b4
+	jnz %t4, @c15_then, @c15_else
+@c15_then
+	%t10 =w copy 1
+	jmp @b10
+@c15_else
+	%t10 =w copy 0
+	jmp @b10
+@b10
+	jnz %t10, @c20_then, @c20_else
+@c20_then
+	ret 1
+@c20_else
+	jmp @b16
+@b16
+	ret 0
+}
+
+function w $szc.read.2(l %t0) {
+@start
+	%t1 =l loadl %t0
+	%t2 =w loadw %t1
+	ret %t2
+}
+
+section ".rodata"
+data $szc.const.2 = align 64 { w 42 }
+section ".data.rel.ro"
+data $szc.const.3 = align 32 { l $szc.const.2 }
+export function w $main() {
+@start
+	%status =w call $szc.main.1()
+	ret %status
+}

@@ -1860,7 +1860,7 @@ global_var_body(IrGen *gen, Scope *scope, AstVarDecl *decl, IrDecl *out)
 	body_init(&body, gen, scope, true);
 	IrRef type = IR_REF_NONE;
 	if (decl->type != NULL) {
-		if (decl->is_const) {
+		if (decl->is_const && decl->align == NULL) {
 			type = type_expr(&body, &body.base, decl->type);
 		} else {
 			GenBody type_body;
@@ -1874,12 +1874,8 @@ global_var_body(IrGen *gen, Scope *scope, AstVarDecl *decl, IrDecl *out)
 	if (decl->addrspace != NULL || decl->linksection != NULL)
 		unsupported(&body, &decl->base, "align/addrspace/linksection on globals");
 	if (decl->align != NULL) {
-		if (decl->is_const)
-			unsupported(&body, &decl->base, "aligned global constants");
-		else {
-			out->alignment_body = alignment_body(gen, scope, decl->align);
-			out->alignment_src = decl->align->offset;
-		}
+		out->alignment_body = alignment_body(gen, scope, decl->align);
+		out->alignment_src = decl->align->offset;
 	}
 	IrRef value;
 	if (decl->init == NULL) {

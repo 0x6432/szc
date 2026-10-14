@@ -1,0 +1,3 @@
+tests/tir/errors/global_const_alignment_enum_literal.zig:1:25: error: not supported by szc yet: enum_literal
+const value align(64) = .tag;
+                        ^

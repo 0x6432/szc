@@ -313,8 +313,8 @@ typedef struct IrDecl {
 	IrDeclKind	kind;
 	uint32_t		flags;
 	uint32_t		src;
-	IrBody			type_body;	/* explicit mutable global type, otherwise zero */
-	IrBody			alignment_body;	/* mutable global alignment, otherwise zero */
+	IrBody			type_body;	/* explicit mutable/aligned-const global type, otherwise zero */
+	IrBody			alignment_body;	/* global alignment, otherwise zero */
 	uint32_t		alignment_src;
 	IrBody			value_body;	/* ends with break_inline of the value */
 } IrDecl;
