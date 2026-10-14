@@ -34,7 +34,8 @@ Read this first when resuming work (the sandbox resets often).
 - Done: M5.1a runtime single pointers, mutable-local addresses, dereference and nested const rules.
 - Done: M5.1b definition-anchored references, immutable constant objects and pointer equality.
 - Done: M5.1c1 internal mutable scalar globals, lazy type/init resolution and writable relocations.
-- Next: **M5.1c2** function addresses/calls and pointer attributes. M5.1 remains partial.
+- Done: M5.1c2a function types, symbolic addresses, signature variance and indirect calls.
+- Next: **M5.1c2b** pointer attributes. M5.1/M5.1c/M5.1c2 remain partial.
 - Run `PATH=/data/tools/bin:$PATH ZIG=/data/zig/zig-x86_64-linux-0.17.0/zig make e2e-test`
   locally. `tools/build_qbe.sh` builds the pinned QBE into `build/qbe-src` on CI.
 - Tools: `SZC_QBE`/`qbe`, `SZC_CC`/`cc`; pinned QBE revision
@@ -46,6 +47,47 @@ Read this first when resuming work (the sandbox resets often).
   M5.1c1 run 38548134671 passed GCC/Clang/fuzz and all 45 native/reference inputs,
   but seven reference safety compilations hit the old 15-second harness timeout.
   Compilation now has a separate 120-second budget; execution still has 15 seconds.
+  Its follow-up 1731927/run 38549587896 passed compiler/fuzz jobs but the differential
+  runner received a shutdown signal during safety testing (no completed safety result).
+  CI now flushes per-case safety progress so interruptions retain the active case.
+
+## Validation at M5.1c2a
+
+- GCC/Clang -Werror ASan/UBSan and optimized GCC: 554 unit checks, 579 goldens,
+  48 ordinary/reference executable inputs plus two szc-only inputs, 12 driver checks,
+  11 PIE/storage checks, four assembly-backed ABI checks and 166 panic cases. All 486
+  function-signature/qualifier comparisons and 168 existing pointer-qualifier cases
+  match Zig; both differential scripts are in CI. Four 60-second fuzz targets and
+  standalone 20,000 mutations per stage pass; final sema/codegen was re-fuzzed.
+  Corpus: irgen 23, sema 32 inputs. Check this checkpoint's push CI run.
+- IR_FN_TYPE shares function prototype lowering, but returns a TYPE_TYPE value and
+  must not allocate a function record. VALUE_FUNCTION can be a body or pointer value;
+  its TypeId distinguishes them while FuncId keeps original symbol identity. Function
+  addresses and aliases are symbols, not immutable objects containing function bytes.
+- TypeFn interns parameter noalias flags and FunctionConvention (auto/C/inline).
+  Preserve memory_coercion_allowed's function return covariance, reversed parameter
+  coercion and mutable-outer invariance. Noreturn return widening is not valid through
+  mutable outer pointers; integer-width changes are not memory-compatible coercions.
+  The 486-case checker caught pointer-parameter variance that exact matching misses.
+- Runtime function pointers call via TirCall.indirect; direct callees use FuncId and
+  indirect=TIR_REF_NONE. Argument result contexts use the signature TypeId, not a
+  presumed declaration. Keep callee loads before argument effects. Known function
+  pointer dereference recovers a body; runtime `p.*` is a comptime-only-load error.
+- queue_value_functions follows nested VALUE_REF objects before queuing a symbol.
+  Materialized function addresses and global pointer initializers must emit bodies
+  even if the function is never directly called. Do not queue discarded known generic
+  addresses; runtime emission of generic function bodies still gives explicit NYI.
+- Normalize integer/bool results after every non-zero-sized TIR_CALL. C only defines
+  meaningful low bits for narrow returns; unnormalized upper bits broke callbacks.
+  tests/run_function_abi.py links deterministic .s helpers and optionally Zig to check
+  direct/indirect u8/i8/bool results. This complements PIE/RELRO function-address checks.
+- Explicit callconv expressions, inline addresses and generic runtime addresses are
+  still NYI; comptime specialization belongs to M7. C convention identity inferred
+  from extern/export declarations is preserved, but full C/aggregate/variadic ABI
+  support is not claimed. The szc-only libc callback fixture matches Zig with -lc.
+- Next: M5.1c2b pointer attributes; inspect actual 0.17 alignment/volatile/allowzero
+  rules before implementing. Keep every attribute checkpoint tested/committed/pushed.
+  Continue to defer the compiler build/bootstrap-options question until M10.2.
 
 ## Validation at M5.1c1
 
@@ -74,7 +116,7 @@ Read this first when resuming work (the sandbox resets often).
 - Internal integers/bools/pointers/void/u0 only. Extern/export/TLS globals, custom global
   attributes, aggregate storage and mutable comptime interpretation remain NYI/later
   work. Exported variables are eager roots, so even an unreferenced export errors.
-- Next M5.1c2: function address/type/call integration and pointer attributes. Confirm
+- At this checkpoint, next was M5.1c2: function address/type/call integration and pointer attributes. Confirm
   each against the actual Zig 0.17 sources/binary; keep checkpoints small. Do not ask
   the deferred compiler build/bootstrap-options question until M10.2.
 

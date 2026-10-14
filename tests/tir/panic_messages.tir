@@ -1,4 +1,4 @@
-export fn abort_message: fn (bool) noreturn {
+export fn abort_message: fn (bool) callconv(.c) noreturn {
   %0: bool = arg 0
   %1: noreturn = call szc.fail.3(%0)
   %2: noreturn = trap

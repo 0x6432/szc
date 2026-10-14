@@ -1,0 +1,3 @@
+tests/tir/errors/function_runtime_deref.zig:1:47: error: cannot load comptime-only type 'fn () void'
+fn f()void{}fn invoke(p:*const fn()void)void{p.*();}pub fn main()void{invoke(&f);}
+                                              ^

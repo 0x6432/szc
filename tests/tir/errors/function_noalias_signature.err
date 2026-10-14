@@ -1,0 +1,3 @@
+tests/tir/errors/function_noalias_signature.zig:1:75: error: expected type '*const fn (noalias *u8) void', found '*const fn (*u8) void'
+fn f(p:*u8)void{_=p;}pub fn main()void{const p:*const fn(noalias *u8)void=&f;_=p;}
+                                                                          ^

@@ -21,6 +21,15 @@ def binary_case(name, integer_type, operator, lhs, rhs, message="integer overflo
 
 
 def cases():
+    yield "function_pointer_noreturn_coercion", ('fn stop() noreturn { @panic("coerced callback"); }\n'
+          'fn invoke(p: *const fn () void) void { p(); }\n'
+          'pub fn main() void { invoke(&stop); }\n'), "coerced callback"
+    yield "function_pointer_noreturn", ('fn stop() noreturn { @panic("callback"); }\n'
+          'fn invoke(p: *const fn () noreturn) noreturn { p(); }\n'
+          'pub fn main() void { invoke(&stop); }\n'), "callback"
+    yield "function_pointer_overflow", ('fn operation(n: u8) u8 { return n + 1; }\n'
+          'fn invoke(p: *const fn (u8) u8) void { _ = p(255); }\n'
+          'pub fn main() void { invoke(&operation); }\n'), "integer overflow"
     for label, body, message in (
         ("overflow", "n += 1;", "integer overflow"),
         ("cast", "const x: u4 = @intCast(n); _ = x;", "integer does not fit in destination type"),
@@ -187,6 +196,8 @@ def main():
             try:
                 message_bytes = message.encode() if isinstance(message, str) else message
                 for compiler in ([szc, zig] if zig else [szc]):
+                    if os.environ.get("GITHUB_ACTIONS") == "true":
+                        print(f"checking safety {name}: {compiler}", flush=True)
                     exe = root / ("reference" if compiler == zig else "native")
                     command = ([compiler, "build-exe", str(src), f"-femit-bin={exe}"]
                                if compiler == zig else
@@ -206,9 +217,9 @@ def main():
                         raise AssertionError("panic message mismatch: " + result.stderr.decode(errors="replace"))
                 passed += 1
             except (AssertionError, subprocess.TimeoutExpired) as error:
-                print(f"FAIL {name}: {error}")
+                print(f"FAIL {name}: {error}", flush=True)
                 failed += 1
-    print(f"safety: {passed} passed, {failed} failed")
+    print(f"safety: {passed} passed, {failed} failed", flush=True)
     return int(failed != 0)
 
 

@@ -1,0 +1,3 @@
+tests/tir/errors/function_body_join.zig:1:55: error: value with comptime-only type 'fn () void' depends on runtime control flow
+fn f()void{}fn g()void{}fn choose(c:bool)void{const p=if(c)f else g;p();}pub fn main()void{choose(true);}
+                                                      ^

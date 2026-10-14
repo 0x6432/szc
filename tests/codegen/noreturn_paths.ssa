@@ -1,7 +1,9 @@
 function w $szc.main.1() {
 @start
 	%t2 =w call $szc.choose.2(w 1, w 7)
+	%t2 =w and %t2, 255
 	%t4 =w call $szc.cleanup.3(w 0)
+	%t4 =w and %t4, 255
 	%t5 =w add %t2, %t4
 	%t5 =w and %t5, 255
 	%g5_overflow =w cultw %t5, %t2

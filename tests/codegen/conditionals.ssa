@@ -3,14 +3,17 @@ function w $szc.main.1() {
 	%t0 =l alloc4 1
 	storeb 0, %t0
 	%t6 =w call $szc.choose.2(w 1, w 3, w 4)
+	%t6 =w and %t6, 65535
 	%t8 =w ceqw %t6, 3
 	jnz %t8, @c18_then, @c18_else
 @c18_then
 	%t11 =w call $szc.early.3(w 0)
+	%t11 =w and %t11, 255
 	storeb %t11, %t0
 	jmp @b9
 @c18_else
 	%t14 =w call $szc.all.4(w 1)
+	%t14 =w and %t14, 255
 	storeb %t14, %t0
 	jmp @b9
 @b9

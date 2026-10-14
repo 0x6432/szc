@@ -1,9 +1,11 @@
 function w $szc.main.1() {
 @start
 	%t1 =w call $szc.identity.2(w 0)
+	%t1 =w and %t1, 1
 	jnz %t1, @c7_then, @c7_else
 @c7_then
 	%t3 =w call $szc.fail.3()
+	%t3 =w and %t3, 1
 	%t2 =w copy %t3
 	jmp @b2
 @c7_else
@@ -11,19 +13,23 @@ function w $szc.main.1() {
 	jmp @b2
 @b2
 	%t9 =w call $szc.identity.2(w 1)
+	%t9 =w and %t9, 1
 	jnz %t9, @c15_then, @c15_else
 @c15_then
 	%t10 =w copy 1
 	jmp @b10
 @c15_else
 	%t11 =w call $szc.fail.3()
+	%t11 =w and %t11, 1
 	%t10 =w copy %t11
 	jmp @b10
 @b10
 	%t17 =w call $szc.identity.2(w 1)
+	%t17 =w and %t17, 1
 	jnz %t17, @c24_then, @c24_else
 @c24_then
 	%t20 =w call $szc.identity.2(w 1)
+	%t20 =w and %t20, 1
 	%t18 =w copy %t20
 	jmp @b18
 @c24_else
@@ -31,19 +37,23 @@ function w $szc.main.1() {
 	jmp @b18
 @b18
 	%t26 =w call $szc.identity.2(w 0)
+	%t26 =w and %t26, 1
 	jnz %t26, @c33_then, @c33_else
 @c33_then
 	%t27 =w copy 1
 	jmp @b27
 @c33_else
 	%t29 =w call $szc.identity.2(w 1)
+	%t29 =w and %t29, 1
 	%t27 =w copy %t29
 	jmp @b27
 @b27
 	%t35 =w call $szc.identity.2(w 1)
+	%t35 =w and %t35, 1
 	jnz %t35, @c42_then, @c42_else
 @c42_then
 	%t38 =w call $szc.identity.2(w 0)
+	%t38 =w and %t38, 1
 	%t36 =w copy %t38
 	jmp @b36
 @c42_else
@@ -56,11 +66,14 @@ function w $szc.main.1() {
 	jmp @b43
 @c49_else
 	%t45 =w call $szc.identity.2(w 1)
+	%t45 =w and %t45, 1
 	%t43 =w copy %t45
 	jmp @b43
 @b43
 	%t52 =w call $szc.combine.4(w 1, w 1)
+	%t52 =w and %t52, 1
 	%t54 =w call $szc.identity.2(w 0)
+	%t54 =w and %t54, 1
 	%t55 =w xor %t54, 1
 	%t55 =w and %t55, 1
 	%t56 =w copy %t2

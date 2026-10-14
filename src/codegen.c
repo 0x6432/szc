@@ -187,7 +187,7 @@ emit_binary(Codegen *cg, TirRef ref, QbeClass cls, const char *op, TirRef lhs, T
 	fputs("\n", cg->out);
 }
 
-/* Brings %tN of integer type `type` back into canonical form. */
+/* Brings an integer/bool %tN back into canonical form. */
 static void
 normalize(Codegen *cg, TirRef ref, TypeId type, QbeClass cls)
 {
@@ -706,7 +706,12 @@ emit_inst(Codegen *cg, TirRef ref)
 			fputs("\t", out);
 		else
 			print_dest(cg, ref, cls);
-		fprintf(out, "call $%s(", sema_func(cg->sema, call.callee)->symbol);
+		fputs("call ", out);
+		if (call.callee != 0)
+			fprintf(out, "$%s", sema_func(cg->sema, call.callee)->symbol);
+		else
+			print_operand(cg, call.indirect);
+		fputs("(", out);
 		bool first = true;
 		for (uint32_t i = 0; i < call.arg_count; i++) {
 			const TirInst *arg = inst_at(cg, args[i]);
@@ -718,6 +723,9 @@ emit_inst(Codegen *cg, TirRef ref)
 			first = false;
 		}
 		fputs(")\n", out);
+		TypeKind kind = sema_type(cg->sema, inst->type)->kind;
+		if (cls != QBE_NONE && (kind == TYPE_INT || kind == TYPE_BOOL))
+			normalize(cg, ref, inst->type, cls);
 		return;
 	}
 	case TIR_FOR_LEN_CHECK:
@@ -922,6 +930,9 @@ emit_data_object(Codegen *cg, ValueId stored, const char *symbol, bool immutable
 		break;
 	case VALUE_BOOL:
 		fputs(value->as.boolean ? "1" : "0", cg->out);
+		break;
+	case VALUE_FUNCTION:
+		fprintf(cg->out, "$%s", sema_func(cg->sema, value->as.function)->symbol);
 		break;
 	case VALUE_GLOBAL:
 		fprintf(cg->out, "$%s", sema_global(cg->sema, value->as.global)->symbol);

@@ -59,7 +59,7 @@ typedef uint32_t TirBody;	/* extra index of a body, 0 = none */
 	X(LOAD, "load")	/* un: pointer */ \
 	X(STORE, "store")	/* bin: pointer, value */ \
 	X(FOR_LEN_CHECK, "for_len_check")	/* bin: assert equal usize lengths */ \
-	X(CALL, "call")	/* payload: callee FuncId, arg count, args */ \
+	X(CALL, "call")	/* payload: direct FuncId or indirect TirRef, arg count, args */ \
 	X(RET, "ret")	/* un */ \
 	X(BLOCK, "block")	/* payload: body; breaks target it */ \
 	X(BR, "br")	/* bin: lhs = block instruction, rhs = value */ \
@@ -96,7 +96,8 @@ typedef struct TirInst {
 } TirInst;
 
 typedef struct TirCall {
-	FuncId   callee;
+	FuncId   callee;	/* 0 for indirect call */
+	TirRef   indirect;	/* TIR_REF_NONE for direct call */
 	uint32_t arg_count;	/* followed by arg_count TirRefs */
 } TirCall;
 

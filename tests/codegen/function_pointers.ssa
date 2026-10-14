@@ -1,0 +1,42 @@
+function w $szc.main.1() {
+@start
+	%t1 =l loadl $szc.g.1
+	%t2 =w call $szc.invoke.2(l %t1)
+	%t2 =w and %t2, 255
+	ret %t2
+}
+
+function w $szc.invoke.2(l %t0) {
+@start
+	%t2 =w call %t0(w 7)
+	%t2 =w and %t2, 255
+	ret %t2
+}
+
+function w $szc.first.3(w %t0) {
+@start
+	%t2 =w add %t0, 1
+	%t2 =w and %t2, 255
+	%g2_overflow =w cultw %t2, %t0
+	jnz %g2_overflow, @g2_overflow_panic, @g2_overflow_ok
+@g2_overflow_panic
+	call $szc.panic.0()
+	hlt
+@g2_overflow_ok
+	ret %t2
+}
+
+data $szc.g.1 = align 8 { l $szc.first.3 }
+data $szc.panic.msg.0 = { b "integer overflow\n", b 0 }
+function $szc.panic.0() {
+@start
+	call $write(w 2, l $szc.panic.msg.0, l 17)
+	call $abort()
+	hlt
+}
+
+export function w $main() {
+@start
+	%status =w call $szc.main.1()
+	ret %status
+}

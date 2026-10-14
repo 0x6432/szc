@@ -497,6 +497,7 @@ local_init(LocalScope *local, Scope *parent, StringId name, LocalKind kind, IrRe
 
 static IrRef expr(GenBody *body, Scope *scope, ResultInfo info, AstNode *node);
 static IrRef type_expr(GenBody *body, Scope *scope, AstNode *node);
+static IrRef function_proto(GenBody *body, Scope *scope, AstFnProto *proto, StringId name, uint32_t flags, StringId extern_lib, AstNode *definition, IrOp op);
 static void  block_statements(GenBody *body, Scope *scope, AstBlock *block);
 static IrRef container_decl(GenBody *body, Scope *scope, AstContainerDecl *decl, StringId name);
 
@@ -1491,6 +1492,8 @@ expr(GenBody *body, Scope *scope, ResultInfo info, AstNode *node)
 		return rvalue(body, info, number_literal(body, node), node->offset);
 	case AST_IDENTIFIER:
 		return identifier(body, scope, info, node);
+	case AST_FN_PROTO:
+		return rvalue(body, info, function_proto(body, scope, AST_CAST(AstFnProto, node, AST_FN_PROTO), STRING_NONE, 0, STRING_NONE, NULL, IR_FN_TYPE), node->offset);
 	case AST_POINTER_TYPE:
 		return rvalue(body, info, pointer_type(body, scope, AST_CAST(AstPointerType, node, AST_POINTER_TYPE)), node->offset);
 	case AST_DEREF:
@@ -1717,10 +1720,9 @@ block_statements(GenBody *body, Scope *scope, AstBlock *block)
 /* ---------- Declarations ---------- */
 
 static IrRef
-fn_decl(GenBody *body, Scope *scope, AstFnDecl *decl, StringId name)
+function_proto(GenBody *body, Scope *scope, AstFnProto *proto, StringId name, uint32_t flags, StringId extern_lib, AstNode *definition, IrOp op)
 {
 	IrGen *gen = body->gen;
-	AstFnProto *proto = decl->proto;
 	uint32_t param_count = proto->param_count;
 	IrInstIndex *params = arena_alloc(gen->arena, (param_count + 1) * sizeof(IrInstIndex), alignof(IrInstIndex));
 	Scope *param_scope = scope;
@@ -1766,20 +1768,12 @@ fn_decl(GenBody *body, Scope *scope, AstFnDecl *decl, StringId name)
 	memset(&header, 0, sizeof(header));
 	header.name = name;
 	header.param_count = param_count;
-	if (decl->modifier == AST_FN_MODIFIER_INLINE)
-		header.flags = header.flags | IR_FUNC_INLINE;
-	if (decl->modifier == AST_FN_MODIFIER_NOINLINE)
-		header.flags = header.flags | IR_FUNC_NOINLINE;
-	if (decl->modifier == AST_FN_MODIFIER_EXTERN)
-		header.flags = header.flags | IR_FUNC_EXTERN;
-	if (decl->modifier == AST_FN_MODIFIER_EXPORT)
-		header.flags = header.flags | IR_FUNC_EXPORT;
+	header.flags = flags;
+	header.extern_lib = extern_lib;
 	if (proto->is_var_args)
 		header.flags = header.flags | IR_FUNC_VAR_ARGS;
 	if (proto->inferred_error)
 		header.flags = header.flags | IR_FUNC_INFERRED_ERROR;
-	if (decl->has_extern_lib)
-		header.extern_lib = intern(gen->interner, gen->source + decl->extern_lib.start + 1, decl->extern_lib.end - decl->extern_lib.start - 2);
 	if (proto->align != NULL || proto->addrspace != NULL || proto->linksection != NULL)
 		unsupported(body, &proto->base, "align/addrspace/linksection on functions");
 
@@ -1797,13 +1791,13 @@ fn_decl(GenBody *body, Scope *scope, AstFnDecl *decl, StringId name)
 		header.callconv_body = body_finish(&cc_body);
 	}
 
-	if (decl->body != NULL) {
+	if (definition != NULL) {
 		GenBody fn_body;
 		body_init(&fn_body, gen, param_scope, false);
 		fn_body.in_function = true;
-		block_statements(&fn_body, &fn_body.base, AST_CAST(AstBlock, decl->body, AST_BLOCK));
+		block_statements(&fn_body, &fn_body.base, AST_CAST(AstBlock, definition, AST_BLOCK));
 		if (!body_is_terminated(&fn_body))
-			emit_none(&fn_body, IR_RET_IMPLICIT, decl->body->end > 0 ? decl->body->end - 1 : decl->body->offset);
+			emit_none(&fn_body, IR_RET_IMPLICIT, definition->end > 0 ? definition->end - 1 : definition->offset);
 		header.body = body_finish_extra(&fn_body, params, param_count);
 		header.flags = header.flags | IR_FUNC_HAS_BODY;
 	}
@@ -1811,7 +1805,24 @@ fn_decl(GenBody *body, Scope *scope, AstFnDecl *decl, StringId name)
 	uint32_t payload = APPEND_EXTRA(gen, header);
 	uint32_t param_words = reserve_extra(gen, param_count);
 	memcpy(&gen->ir->extra[param_words], params, param_count * sizeof(IrInstIndex));
-	return emit_payload(body, IR_FUNC, proto->base.offset, payload);
+	return emit_payload(body, op, proto->base.offset, payload);
+}
+
+static IrRef
+fn_decl(GenBody *body, Scope *scope, AstFnDecl *decl, StringId name)
+{
+	uint32_t flags = 0;
+	switch (decl->modifier) {
+	case AST_FN_MODIFIER_INLINE: flags = IR_FUNC_INLINE; break;
+	case AST_FN_MODIFIER_NOINLINE: flags = IR_FUNC_NOINLINE; break;
+	case AST_FN_MODIFIER_EXTERN: flags = IR_FUNC_EXTERN; break;
+	case AST_FN_MODIFIER_EXPORT: flags = IR_FUNC_EXPORT; break;
+	case AST_FN_MODIFIER_NONE: break;
+	}
+	StringId lib = STRING_NONE;
+	if (decl->has_extern_lib)
+		lib = intern(body->gen->interner, body->gen->source + decl->extern_lib.start + 1, decl->extern_lib.end - decl->extern_lib.start - 2);
+	return function_proto(body, scope, decl->proto, name, flags, lib, decl->body, IR_FUNC);
 }
 
 /* Value body of a container-level `const`/`var`. */
@@ -2302,6 +2313,7 @@ dump_inst(const IrDumper *dumper, IrInstIndex index, uint32_t depth)
 		dump_struct_decl(dumper, inst->data.payload, depth);
 		break;
 	case IR_FUNC:
+	case IR_FN_TYPE:
 		fputc(' ', out);
 		dump_func(dumper, inst->data.payload, depth);
 		break;

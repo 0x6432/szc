@@ -75,7 +75,25 @@ def main():
                 assert fields[6] in writable, "mutable global has read-only storage"
         assert len(globals_found) >= 10, "expected scalar, pointer and zero-sized globals"
         assert all(fields[4] == "LOCAL" for fields in globals_found), "internal globals must not be exported"
-    print("reference storage: 8 passed, 0 failed")
+        result = run([compiler, "build-exe", "tests/run/function_pointers.zig", "-o", str(executable)], env)
+        assert not result.stderr, result.stderr.decode(errors="replace")
+        result = run([str(executable)])
+        assert not result.stdout and not result.stderr
+        dynamic = run(["readelf", "-d", str(executable)]).stdout
+        assert b"TEXTREL" not in dynamic, "function address caused a text relocation"
+        sections = run(["readelf", "-SW", str(executable)]).stdout.decode()
+        match = re.search(r"\]\s+\.data.rel.ro\s+\S+\s+([0-9a-f]+)\s+[0-9a-f]+\s+([0-9a-f]+)", sections)
+        assert match, "expected immutable function-pointer backing object"
+        address, size = (int(value, 16) for value in match.groups())
+        segments = run(["readelf", "-lW", str(executable)]).stdout.decode()
+        protected = False
+        for line in segments.splitlines():
+            fields = line.split()
+            if fields and fields[0] == "GNU_RELRO":
+                base, length = int(fields[2], 16), int(fields[5], 16)
+                protected |= base <= address and address + size <= base + length
+        assert protected, "constant function-pointer object is not protected by GNU_RELRO"
+    print("reference storage: 11 passed, 0 failed")
 
 
 if __name__ == "__main__":

@@ -125,6 +125,7 @@ typedef enum IrDataKind {
 #define IR_OP_LIST(X) \
 	/* Declarations and functions */ \
 	X(STRUCT_DECL, "struct_decl", IR_DATA_PAYLOAD)	/* IrContainerHeader + fields + decls */ \
+	X(FN_TYPE, "fn_type", IR_DATA_PAYLOAD)	/* IrFuncHeader + params; signature only */ \
 	X(FUNC, "func", IR_DATA_PAYLOAD)	/* IrFuncHeader, params, bodies */ \
 	X(PARAM, "param", IR_DATA_PAYLOAD)	/* name, flags, type body */ \
 	X(PARAM_ANYTYPE, "param_anytype", IR_DATA_NAME)	/* name */ \

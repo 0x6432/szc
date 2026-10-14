@@ -1,10 +1,12 @@
 function w $szc.main.1() {
 @start
 	%t3 =w call $szc.choose.2(w 1, w 3, w 300)
+	%t3 =w and %t3, 65535
 	%t5 =w ceqw %t3, 3
 	jnz %t5, @c12_then, @c12_else
 @c12_then
 	%t8 =w call $szc.nested.3(w 0)
+	%t8 =w and %t8, 255
 	%t6 =w copy %t8
 	jmp @b6
 @c12_else

@@ -1,6 +1,7 @@
 function w $szc.main.1() {
 @start
 	%t3 =w call $szc.operation.2(w 4, w 2, w 0)
+	%t3 =w extsb %t3
 	%g4_negative =w csltw %t3, 0
 	jnz %g4_negative, @g4_negative_panic, @g4_negative_ok
 @g4_negative_panic

@@ -4,6 +4,7 @@ function w $szc.main.1() {
 	storel 0, %t0
 	%t3 =l loadl %t0
 	%t5 =l call $szc.wrap_u33.2(l 8589934591)
+	%t5 =l and %t5, 8589934591
 	%t6 =l copy %t5
 	%t7 =l add %t3, %t6
 	%g7_overflow =w cultl %t7, %t3
@@ -14,9 +15,12 @@ function w $szc.main.1() {
 @g7_overflow_ok
 	storel %t7, %t0
 	%t10 =l call $szc.wrap_i40.3(l 549755813887)
+	%t10 =l shl %t10, 24
+	%t10 =l sar %t10, 24
 	%t12 =l call $szc.widen_signed.4(w -1)
 	%t13 =l loadl %t0
 	%t16 =w call $szc.shl_u8.5(w 255, w 4)
+	%t16 =w and %t16, 255
 	%t17 =l extuw %t16
 	%t18 =l add %t13, %t17
 	%g18_overflow =w cultl %t18, %t13
@@ -28,6 +32,7 @@ function w $szc.main.1() {
 	storel %t18, %t0
 	%t20 =l loadl %t0
 	%t23 =w call $szc.rem_u16.7(w 1000, w 7)
+	%t23 =w and %t23, 65535
 	%t24 =l call $szc.widen.6(w %t23)
 	%t25 =l add %t20, %t24
 	%g25_overflow =w cultl %t25, %t20
@@ -49,6 +54,7 @@ function w $szc.main.1() {
 	storel %t31, %t0
 	%t33 =l loadl %t0
 	%t35 =w call $szc.not_u5.9(w 1)
+	%t35 =w and %t35, 31
 	%t36 =l extuw %t35
 	%t37 =l add %t33, %t36
 	%g37_overflow =w cultl %t37, %t33
@@ -59,6 +65,7 @@ function w $szc.main.1() {
 @g37_overflow_ok
 	storel %t37, %t0
 	%t41 =w call $szc.shr_i16.10(w -64, w 3)
+	%t41 =w extsh %t41
 	%t44 =w call $szc.xor_i32.11(w -1, w 5)
 	%t45 =w copy %t41
 	%t46 =w add %t45, %t44
@@ -168,6 +175,7 @@ function w $szc.main.1() {
 	hlt
 @g67_overflow_ok
 	%t68 =w call $szc.to_u8.12(l %t65, l %t67)
+	%t68 =w and %t68, 255
 	ret %t68
 }
 
@@ -263,7 +271,9 @@ function w $szc.xor_i32.11(w %t0, w %t1) {
 function w $szc.to_u8.12(l %t0, l %t1) {
 @start
 	%t2 =w call $szc.low.13(l %t0)
+	%t2 =w and %t2, 255
 	%t3 =w call $szc.low_signed.14(l %t1)
+	%t3 =w and %t3, 255
 	%t4 =w add %t2, %t3
 	%t4 =w and %t4, 255
 	%g4_overflow =w cultw %t4, %t2

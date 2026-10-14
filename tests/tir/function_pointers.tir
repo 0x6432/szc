@@ -1,0 +1,19 @@
+global szc.g.1: *const fn (u8) u8 = szc.first.3
+fn szc.main.1: fn () u8 {
+  %0: **const fn (u8) u8 = const szc.g.1
+  %1: *const fn (u8) u8 = load %0
+  %2: u8 = call szc.invoke.2(%1)
+  %3: noreturn = ret %2
+}
+fn szc.invoke.2: fn (*const fn (u8) u8) u8 {
+  %0: *const fn (u8) u8 = arg 0
+  %1: u8 = const 7
+  %2: u8 = call %0(%1)
+  %3: noreturn = ret %2
+}
+fn szc.first.3: fn (u8) u8 {
+  %0: u8 = arg 0
+  %1: u8 = const 1
+  %2: u8 = add %0, %1
+  %3: noreturn = ret %2
+}

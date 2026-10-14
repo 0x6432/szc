@@ -1,6 +1,7 @@
 function w $szc.main.1() {
 @start
 	%t3 =w call $szc.choose.2(w 3, w 7, w 300)
+	%t3 =w and %t3, 65535
 	%t4 =w copy %t3
 	%t4 =w and %t4, 255
 	ret %t4

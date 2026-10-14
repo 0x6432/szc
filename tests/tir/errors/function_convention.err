@@ -1,0 +1,3 @@
+tests/tir/errors/function_convention.zig:2:45: error: expected type '*const fn (i32) i32', found '*const fn (i32) callconv(.c) i32'
+pub fn main()void{const p:*const fn(i32)i32=&abs;_=p;}
+                                            ^

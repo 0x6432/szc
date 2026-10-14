@@ -60,8 +60,16 @@ typedef struct TypeArray {
 	bool sentinel_zero;
 } TypeArray;
 
+typedef enum FunctionConvention {
+	FUNCTION_AUTO,
+	FUNCTION_C,
+	FUNCTION_INLINE,
+} FunctionConvention;
+
 typedef struct TypeFn {
 	TypeId   *params;
+	bool     *noalias;
+	FunctionConvention convention;
 	uint32_t param_count;
 	TypeId   ret;
 	bool     is_var_args;

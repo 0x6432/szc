@@ -340,6 +340,14 @@ test_constant_references(void)
 	arena_init(&arena);
 	ValueTable table;
 	value_table_init(&table, &arena);
+	ValueId function = value_function(&table, 5, 1);
+	CHECK(function == value_function(&table, 5, 1));
+	CHECK(function != value_function(&table, 6, 1));
+	CHECK(function != value_function(&table, 5, 2));
+	CHECK(value_get(&table, function)->as.function == 1);
+	ValueId function_pointer = value_function(&table, 6, 1);
+	ValueId function_object = value_ref(&table, 7, function_pointer, 0);
+	CHECK(table.objects[value_get(&table, function_object)->as.object].value == function_pointer);
 	ValueId n = value_int_u64(&table, 1, 42);
 	ValueId ref = value_ref(&table, 2, n, 0);
 	CHECK(ref == value_ref(&table, 2, n, 0));

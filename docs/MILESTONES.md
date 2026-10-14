@@ -69,7 +69,9 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
   - [x] **M5.1b Addressable constants/parameters/temporaries and pointer identity**: definition-anchored storage, immutable objects and equality.
   - [~] **M5.1c Remaining pointer integration**: mutable globals, function addresses/calls and pointer attributes.
     - [x] **M5.1c1 Internal mutable scalar globals**: lazy type/initializer resolution and writable pointer relocations.
-    - [ ] **M5.1c2 Function addresses/calls and pointer attributes**.
+    - [~] **M5.1c2 Function addresses/calls and pointer attributes**.
+      - [x] **M5.1c2a Function types, addresses and indirect calls**.
+      - [ ] **M5.1c2b Pointer attributes**.
 - [ ] **M5.2 Arrays, indexing, array literals, `++` at comptime** (0.17.0 has no `**`).
 - [ ] **M5.3 Slices, many-pointers, slicing, `.len`, `.ptr`, for over slices.**
 - [~] **M5.4 String literals, sentinels, `[*:0]const u8`.** Literal byte values landed in M4.5b; general string/memory operations and sentinel pointer syntax remain pending.
@@ -124,11 +126,63 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
 
 (newest first; each entry: what, limitations, interactions)
 
+### M5.1c2a Function types, addresses and indirect calls
+- **What**: IR_FN_TYPE represents a function signature as a type value, without
+  creating a function declaration or consuming a FuncId. Function declarations and
+  type expressions share prototype lowering. TYPE_FN is comptime-only; function
+  addresses are VALUE_FUNCTION values typed as single const pointers, pointing at
+  the original function symbol rather than a scalar constant backing object.
+  Function aliases therefore share address identity with their original declaration.
+- **Calls/reachability**: callable signatures come from either function bodies or
+  single pointers to functions. Known targets retain direct calls; runtime targets
+  use TirCall.indirect and QBE `call %temporary`. Signature-driven argument coercion,
+  arity checks, void/u0 erasure and noreturn termination are shared. Function symbols
+  used in runtime values or nested immutable/global initializers queue their bodies;
+  the existing function/global drain resolves newly reachable definitions. Callees
+  are evaluated before arguments, preserving the old target when an argument changes
+  a global callback. Known pointer dereference recovers the body; runtime dereference
+  rejects loading a comptime-only function body instead of pretending to load bytes.
+- **Signature identity/coercion**: parameter noalias flags and auto/C/inline convention
+  identity are interned. Extern/export declarations infer C convention; explicit
+  callconv expressions remain NYI. Non-pointer noalias parameters and auto variadic
+  types diagnose. Memory-compatible function returns are covariant, parameters are
+  contravariant, noalias/convention/arity are invariant, and mutable outer pointers
+  require bidirectional compatibility. A noreturn return can widen only when the
+  enclosing memory is not mutable. Same-representation integer aliases also match;
+  integer-width widening is not function-pointer covariance.
+- **Backend/ABI**: symbolic function initializers work in writable globals and
+  immutable .data.rel.ro backing objects, with PIE/RELRO regression coverage. All
+  integer/bool call results are normalized, including narrow C callback results whose
+  upper return-register bits are unspecified. An assembly-backed test reproduced
+  the old incorrect result, then checks unsigned/signed byte and boolean returns
+  through both direct and indirect calls against Zig. Eleven QBE snapshots gained
+  the expected canonical-return operations; no unrelated snapshots were regenerated.
+- **Tests**: GCC/Clang -Werror ASan/UBSan, optimized GCC: 554 unit checks, 579 goldens,
+  48 ordinary/reference executable inputs, two szc-only linkage inputs, 12 driver
+  checks, 11 PIE/storage checks, four callback ABI checks and 166 panic cases. All
+  486 function-signature/qualifier pairs and 168 existing pointer-qualifier pairs
+  match Zig 0.17.0; function comparison is now in CI. Generated indirect-call tests
+  cover all 128 signed/unsigned 1–64-bit integer types. Four 60-second fuzz targets
+  and standalone 20,000 mutations per stage pass; final sema/codegen was re-fuzzed.
+- **Reference/interactions**: checked actual Sema.analyzeRef, checkCallArgumentCount,
+  coerceInMemoryAllowedFns/Ptrs and callconvCoerceAllowed, plus binary probes. Existing
+  integer/defer safety and mutable-global lazy initialization remain intact. Imported
+  libc callbacks use szc's cc linkage; their reference fixture was separately checked
+  with Zig -lc rather than silently adding libc to every reference test.
+- **Limitations**: pointer attributes remain M5.1c2b. Inline function addresses,
+  runtime generic function addresses, comptime calls/specialization, explicit calling
+  convention expressions and broader C ABI/aggregate/variadic support remain NYI/later
+  work. Known generic function addresses may be discarded without forcing emission.
+  M5.1/M5.1c/M5.1c2 are still partial; this is not a bootstrap-completion claim.
+
 ### CI follow-up: separate compilation and execution timeouts
 - M5.1c1 CI run 38548134671 passed compiler and fuzz jobs; differential safety failed
   only because seven Zig reference compilations exceeded the 15-second execution
   budget. Safety compilation now has 120 seconds, while execution stays at 15 seconds.
   Compiler failures, runtime hangs and panic/message mismatches remain hard failures.
+  Follow-up run 38549587896 was stopped by runner shutdown during the reference safety
+  loop; its compiler/fuzz jobs passed. Per-case CI progress and failures now flush
+  immediately, preserving the active case on interruption; no CI success is claimed.
 
 ### M5.1c1 Internal mutable scalar globals
 - **What**: internal container-level `var` declarations now have stable GlobalId

@@ -1,0 +1,3 @@
+tests/tir/errors/function_mutable_pointer.zig:1:49: error: expected type '*fn () void', found '*const fn () void'
+fn f()void{}pub fn main()void{const p:*fn()void=&f;_=p;}
+                                                ^

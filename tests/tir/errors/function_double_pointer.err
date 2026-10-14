@@ -1,0 +1,3 @@
+tests/tir/errors/function_double_pointer.zig:1:46: error: type '*const *const fn () void' not a function
+fn f()void{}pub fn main()void{const p=&f;(&p)();}
+                                             ^

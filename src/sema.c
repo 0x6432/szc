@@ -200,10 +200,13 @@ type_hash(const Type *type)
 		break;
 	case TYPE_FN:
 		hash = hash_word(hash, type->as.fn.ret);
+		hash = hash_word(hash, (uint32_t)type->as.fn.convention);
 		hash = hash_word(hash, type->as.fn.is_var_args ? 1u : 0u);
 		hash = hash_word(hash, type->as.fn.is_generic ? 1u : 0u);
-		for (uint32_t i = 0; i < type->as.fn.param_count; i++)
+		for (uint32_t i = 0; i < type->as.fn.param_count; i++) {
 			hash = hash_word(hash, type->as.fn.params[i]);
+			hash = hash_word(hash, type->as.fn.noalias[i] ? 1u : 0u);
+		}
 		break;
 	default:
 		break;
@@ -226,10 +229,10 @@ type_equal(const Type *a, const Type *b)
 	case TYPE_POINTER:
 		return a->as.pointer.child == b->as.pointer.child && a->as.pointer.size == b->as.pointer.size && a->as.pointer.is_const == b->as.pointer.is_const && a->as.pointer.is_volatile == b->as.pointer.is_volatile;
 	case TYPE_FN:
-		if (a->as.fn.ret != b->as.fn.ret || a->as.fn.is_var_args != b->as.fn.is_var_args || a->as.fn.is_generic != b->as.fn.is_generic || a->as.fn.param_count != b->as.fn.param_count)
+		if (a->as.fn.convention != b->as.fn.convention || a->as.fn.ret != b->as.fn.ret || a->as.fn.is_var_args != b->as.fn.is_var_args || a->as.fn.is_generic != b->as.fn.is_generic || a->as.fn.param_count != b->as.fn.param_count)
 			return false;
 		for (uint32_t i = 0; i < a->as.fn.param_count; i++) {
-			if (a->as.fn.params[i] != b->as.fn.params[i])
+			if (a->as.fn.params[i] != b->as.fn.params[i] || a->as.fn.noalias[i] != b->as.fn.noalias[i])
 				return false;
 		}
 		return true;
@@ -282,6 +285,8 @@ type_intern(Sema *sema, const Type *type)
 		TypeId *params = arena_alloc(sema->arena, copy.as.fn.param_count * sizeof(TypeId), alignof(TypeId));
 		memcpy(params, type->as.fn.params, copy.as.fn.param_count * sizeof(TypeId));
 		copy.as.fn.params = params;
+		copy.as.fn.noalias = ARENA_ARRAY(sema->arena, bool, copy.as.fn.param_count);
+		memcpy(copy.as.fn.noalias, type->as.fn.noalias, copy.as.fn.param_count * sizeof(bool));
 	}
 	TypeId id = type_append(sema, &copy, hash);
 	if (sema->type_count * 2 > sema->type_slot_count) {
@@ -469,6 +474,7 @@ is_comptime_only_type(const Sema *sema, TypeId type)
 {
 	switch (sema->types[type].kind) {
 	case TYPE_TYPE:
+	case TYPE_FN:
 	case TYPE_COMPTIME_INT:
 	case TYPE_COMPTIME_FLOAT:
 	case TYPE_NULL:
@@ -516,8 +522,9 @@ sema_type_name(Sema *sema, TypeId type_id)
 	case TYPE_FN: {
 		const char *text = "fn (";
 		for (uint32_t i = 0; i < type->as.fn.param_count; i++)
-			text = arena_sprintf(sema->arena, "%s%s%s", text, i == 0 ? "" : ", ", sema_type_name(sema, type->as.fn.params[i]));
-		return arena_sprintf(sema->arena, "%s%s) %s", text, type->as.fn.is_var_args ? ", ..." : "", sema_type_name(sema, type->as.fn.ret));
+			text = arena_sprintf(sema->arena, "%s%s%s%s", text, i == 0 ? "" : ", ", type->as.fn.noalias[i] ? "noalias " : "", sema_type_name(sema, type->as.fn.params[i]));
+		const char *convention = type->as.fn.convention == FUNCTION_C ? " callconv(.c)" : type->as.fn.convention == FUNCTION_INLINE ? " callconv(.@\"inline\")" : "";
+		return arena_sprintf(sema->arena, "%s%s)%s %s", text, type->as.fn.is_var_args ? (type->as.fn.param_count == 0 ? "..." : ", ...") : "", convention, sema_type_name(sema, type->as.fn.ret));
 	}
 	case TYPE_STRUCT:
 		return type->name != STRING_NONE ? intern_text(sema->interner, type->name) : "struct";
@@ -807,12 +814,33 @@ block_finish(Block *block)
 	return index;
 }
 
+static void func_queue(Sema *sema, FuncId id);
+
+static void
+queue_value_functions(Block *block, ValueId id, uint32_t src)
+{
+	Sema *sema = block->sema;
+	const Value *value = value_get(&sema->values, id);
+	while (value->kind == VALUE_REF) {
+		id = sema->values.objects[value->as.object].value;
+		value = value_get(&sema->values, id);
+	}
+	if (value->kind != VALUE_FUNCTION)
+		return;
+	if (sema->funcs[value->as.function]->is_generic) {
+		sema_error(block, src, "not supported by szc yet: runtime addresses of generic functions");
+		return;
+	}
+	func_queue(sema, value->as.function);
+}
+
 /* Turns an operand into a typed-IR instruction (materializing constants). */
 static TirRef
 materialize(Block *block, Operand operand, uint32_t src)
 {
 	if (operand.kind == OPERAND_RUNTIME)
 		return operand.inst;
+	queue_value_functions(block, operand.value, src);
 	TirRef ref = emit_tir(block, TIR_CONST, operand.type, src);
 	block->tir->insts[ref].data.value = operand.value;
 	return ref;
@@ -1048,6 +1076,7 @@ resolve_decl(Block *user, uint32_t src, SemaNamespace *ns, SemaDecl *decl, bool 
 			create_global(&block, decl, result.result.type);
 		}
 		sema->globals[decl->global]->result.initializer = result.result.value;
+		queue_value_functions(&block, result.result.value, decl->ir.src);
 	} else {
 		decl->value = result.result;
 	}
@@ -1147,12 +1176,27 @@ operand_to_type(Block *block, Operand operand, uint32_t src, TypeId *out)
 	return true;
 }
 
-/* A mutable outer pointee requires all inner pointer qualifiers to be invariant. */
+/* Memory-compatible types: mutable outer pointees require bidirectional coercions. */
 static bool
-pointer_coercion_allowed(const Sema *sema, TypeId dest, TypeId source, bool dest_is_mut)
+memory_coercion_allowed(const Sema *sema, TypeId dest, TypeId source, bool dest_is_mut)
 {
 	if (dest == source)
 		return true;
+	if (sema->types[dest].kind == TYPE_INT && sema->types[source].kind == TYPE_INT)
+		return sema->types[dest].as.integer.bits == sema->types[source].as.integer.bits && sema->types[dest].as.integer.is_signed == sema->types[source].as.integer.is_signed;
+	if (sema->types[dest].kind == TYPE_FN && sema->types[source].kind == TYPE_FN) {
+		TypeFn to = sema->types[dest].as.fn;
+		TypeFn from = sema->types[source].as.fn;
+		if (to.convention != from.convention || to.is_var_args != from.is_var_args || to.is_generic != from.is_generic || to.param_count != from.param_count)
+			return false;
+		if (!(from.ret == T_NORETURN && !dest_is_mut) && !memory_coercion_allowed(sema, to.ret, from.ret, dest_is_mut))
+			return false;
+		for (uint32_t i = 0; i < to.param_count; i++) {
+			if (to.noalias[i] != from.noalias[i] || !memory_coercion_allowed(sema, from.params[i], to.params[i], dest_is_mut))
+				return false;
+		}
+		return true;
+	}
 	if (sema->types[dest].kind != TYPE_POINTER || sema->types[source].kind != TYPE_POINTER)
 		return false;
 	TypePointer to = sema->types[dest].as.pointer;
@@ -1161,7 +1205,37 @@ pointer_coercion_allowed(const Sema *sema, TypeId dest, TypeId source, bool dest
 		return false;
 	if (to.is_const != from.is_const && (dest_is_mut || !to.is_const))
 		return false;
-	return pointer_coercion_allowed(sema, to.child, from.child, dest_is_mut || !to.is_const);
+	return memory_coercion_allowed(sema, to.child, from.child, dest_is_mut || !to.is_const);
+}
+
+static TypeId
+callable_type(const Sema *sema, TypeId type)
+{
+	if (sema->types[type].kind == TYPE_FN)
+		return type;
+	if (sema->types[type].kind != TYPE_POINTER)
+		return 0;
+	TypePointer pointer = sema->types[type].as.pointer;
+	return pointer.size == POINTER_ONE && sema->types[pointer.child].kind == TYPE_FN ? pointer.child : 0;
+}
+
+static Operand
+function_address(Block *block, Operand value, uint32_t src)
+{
+	Sema *sema = block->sema;
+	TypeId pointer = type_pointer(sema, value.type, POINTER_ONE, true);
+	if (operand_is_undefined(block, value))
+		return comptime_operand(pointer, value_undefined(&sema->values, pointer));
+	if (value.kind != OPERAND_COMPTIME || operand_value(block, value)->kind != VALUE_FUNCTION) {
+		sema_error(block, src, "cannot load comptime-only type '%s'", sema_type_name(sema, value.type));
+		return operand_none;
+	}
+	FuncId id = operand_value(block, value)->as.function;
+	if ((sema->funcs[id]->header.flags & IR_FUNC_INLINE) != 0) {
+		sema_error(block, src, "not supported by szc yet: addresses of inline functions");
+		return operand_none;
+	}
+	return comptime_operand(pointer, value_function(&sema->values, pointer, id));
 }
 
 /* Coerces `operand` to type `dest` (Zig's implicit coercions that szc supports so far). */
@@ -1172,11 +1246,18 @@ coerce(Block *block, Operand operand, TypeId dest, uint32_t src)
 	if (operand.kind == OPERAND_NONE || operand.type == dest || operand.type == T_NORETURN)
 		return operand;
 	TypeKind dest_kind = sema->types[dest].kind;
+	if (dest_kind == TYPE_POINTER && sema->types[operand.type].kind == TYPE_FN) {
+		operand = function_address(block, operand, src);
+		if (operand.kind == OPERAND_NONE)
+			return operand_none;
+		if (operand.type == dest)
+			return operand;
+	}
 	if (operand.kind == OPERAND_COMPTIME) {
 		const Value *value = operand_value(block, operand);
 		if (value->kind == VALUE_UNDEFINED) {
 			bool pointer_conversion = dest_kind == TYPE_POINTER || sema->types[operand.type].kind == TYPE_POINTER;
-			if (!pointer_conversion || operand.type == type_id_of_well_known(IR_REF_TYPE_UNDEFINED) || pointer_coercion_allowed(sema, dest, operand.type, false))
+			if (!pointer_conversion || operand.type == type_id_of_well_known(IR_REF_TYPE_UNDEFINED) || memory_coercion_allowed(sema, dest, operand.type, false))
 				return comptime_operand(dest, value_undefined(&sema->values, dest));
 		}
 		if (value->kind == VALUE_INT && (dest_kind == TYPE_INT || dest_kind == TYPE_COMPTIME_INT)) {
@@ -1188,7 +1269,12 @@ coerce(Block *block, Operand operand, TypeId dest, uint32_t src)
 			return comptime_operand(dest, value_int(&sema->values, dest, &integer));
 		}
 	}
-	if (dest_kind == TYPE_POINTER && pointer_coercion_allowed(sema, dest, operand.type, false)) {
+	if (operand.kind == OPERAND_COMPTIME && dest_kind == TYPE_FN && sema->types[operand.type].kind == TYPE_FN && memory_coercion_allowed(sema, dest, operand.type, false)) {
+		Value value = *operand_value(block, operand);
+		value.type = dest;
+		return comptime_operand(dest, value_intern(&sema->values, &value));
+	}
+	if (dest_kind == TYPE_POINTER && memory_coercion_allowed(sema, dest, operand.type, false)) {
 		if (operand.kind == OPERAND_RUNTIME)
 			return runtime_operand(dest, emit_tir_un(block, TIR_PTR_CAST, dest, src, operand.inst));
 		Value value = *operand_value(block, operand);
@@ -1319,12 +1405,30 @@ peer_type(Block *block, Operand lhs, Operand rhs, uint32_t src, TypeId *out)
 			return true;
 		}
 	}
-	if (ak == TYPE_POINTER && bk == TYPE_POINTER) {
-		if (pointer_coercion_allowed(sema, a, b, false)) {
+	if (ak == TYPE_FN && bk == TYPE_POINTER && sema->types[b].as.pointer.is_const && callable_type(sema, b) != 0 && memory_coercion_allowed(sema, callable_type(sema, b), a, false)) {
+		*out = b;
+		return true;
+	}
+	if (bk == TYPE_FN && ak == TYPE_POINTER && sema->types[a].as.pointer.is_const && callable_type(sema, a) != 0 && memory_coercion_allowed(sema, callable_type(sema, a), b, false)) {
+		*out = a;
+		return true;
+	}
+	if (ak == TYPE_FN && bk == TYPE_FN) {
+		if (memory_coercion_allowed(sema, a, b, false)) {
 			*out = a;
 			return true;
 		}
-		if (pointer_coercion_allowed(sema, b, a, false)) {
+		if (memory_coercion_allowed(sema, b, a, false)) {
+			*out = b;
+			return true;
+		}
+	}
+	if (ak == TYPE_POINTER && bk == TYPE_POINTER) {
+		if (memory_coercion_allowed(sema, a, b, false)) {
+			*out = a;
+			return true;
+		}
+		if (memory_coercion_allowed(sema, b, a, false)) {
 			*out = b;
 			return true;
 		}
@@ -1817,7 +1921,9 @@ analyze_compare(Block *block, const IrInst *inst)
 			const Value *a = operand_value(block, lhs);
 			const Value *b = operand_value(block, rhs);
 			bool equal;
-			if (a->kind == VALUE_GLOBAL && b->kind == VALUE_GLOBAL)
+			if (a->kind == VALUE_FUNCTION && b->kind == VALUE_FUNCTION)
+				equal = a->as.function == b->as.function;
+			else if (a->kind == VALUE_GLOBAL && b->kind == VALUE_GLOBAL)
 				equal = a->as.global == b->as.global;
 			else if (a->kind == VALUE_GLOBAL || b->kind == VALUE_GLOBAL)
 				equal = false;
@@ -2295,7 +2401,7 @@ analyze_condbr(Block *block, const IrInst *inst)
 
 /* ---------- Analysis: functions and calls ---------- */
 
-/* A `func` instruction: creates the function and evaluates its signature. */
+/* Evaluate a signature; declarations also create a function, type expressions do not. */
 static Operand
 analyze_func_inst(Block *block, IrInstIndex index)
 {
@@ -2306,6 +2412,70 @@ analyze_func_inst(Block *block, IrInstIndex index)
 	IR_READ(ir, inst->data.payload, &header);
 	const IrInstIndex *params = &ir->extra[inst->data.payload + IR_WORDS(IrFuncHeader)];
 
+	bool generic = false;
+	Type fn_type = make_type(TYPE_FN);
+	fn_type.as.fn.is_var_args = (header.flags & IR_FUNC_VAR_ARGS) != 0;
+	if ((header.flags & IR_FUNC_INLINE) != 0)
+		fn_type.as.fn.convention = FUNCTION_INLINE;
+	else if (inst->op == IR_FUNC && ((header.flags & (IR_FUNC_EXTERN | IR_FUNC_EXPORT)) != 0 || (header.flags & IR_FUNC_HAS_BODY) == 0))
+		fn_type.as.fn.convention = FUNCTION_C;
+	fn_type.as.fn.ret = T_VOID;
+	for (uint32_t i = 0; i < header.param_count; i++) {
+		const IrInst *param = &ir->insts[params[i]];
+		if (param->op == IR_PARAM_ANYTYPE) {
+			generic = true;
+			continue;
+		}
+		IrParam payload;
+		IR_READ(ir, param->data.payload, &payload);
+		if (payload.flags & IR_PARAM_COMPTIME)
+			generic = true;
+	}
+	if (header.callconv_body != 0) {
+		sema_error(block, inst->src, "not supported by szc yet: callconv");
+		return operand_none;
+	}
+	if (fn_type.as.fn.is_var_args && fn_type.as.fn.convention != FUNCTION_C) {
+		sema_error(block, inst->src, "variadic function does not support 'auto' calling convention");
+		return operand_none;
+	}
+	if (!generic) {
+		TypeId *param_types = arena_alloc(sema->arena, (header.param_count + 1) * sizeof(TypeId), alignof(TypeId));
+		fn_type.as.fn.noalias = ARENA_ARRAY(sema->arena, bool, header.param_count + 1);
+		for (uint32_t i = 0; i < header.param_count; i++) {
+			const IrInst *param = &ir->insts[params[i]];
+			IrParam payload;
+			IR_READ(ir, param->data.payload, &payload);
+			fn_type.as.fn.noalias[i] = (payload.flags & IR_PARAM_NOALIAS) != 0;
+			BodyResult result = analyze_body(block, payload.type_body);
+			if (result.end != BODY_BREAK_RESULT || !operand_to_type(block, result.result, param->src, &param_types[i]))
+				return operand_none;
+			if (fn_type.as.fn.noalias[i] && sema->types[param_types[i]].kind != TYPE_POINTER) {
+				sema_error(block, param->src, "non-pointer parameter declared noalias");
+				return operand_none;
+			}
+			if (is_comptime_only_type(sema, param_types[i]))
+				generic = true;
+		}
+		fn_type.as.fn.params = param_types;
+		fn_type.as.fn.param_count = header.param_count;
+	}
+	if (!generic) {
+		BodyResult result = analyze_body(block, header.ret_type_body);
+		if (result.end != BODY_BREAK_RESULT || !operand_to_type(block, result.result, inst->src, &fn_type.as.fn.ret))
+			return operand_none;
+		if (is_comptime_only_type(sema, fn_type.as.fn.ret))
+			generic = true;
+	}
+	if (generic) {
+		fn_type.as.fn.is_generic = true;
+		fn_type.as.fn.params = NULL;
+		fn_type.as.fn.param_count = 0;
+		fn_type.as.fn.ret = T_VOID;
+	}
+	TypeId type = type_intern(sema, &fn_type);
+	if (inst->op == IR_FN_TYPE)
+		return type_operand(sema, type);
 	FuncId id = func_create(sema);
 	SemaFunc *func = sema->funcs[id];
 	func->namespace_scope = block->namespace_scope;
@@ -2318,54 +2488,9 @@ analyze_func_inst(Block *block, IrInstIndex index)
 	func->state = FUNC_DECLARED;
 	func->symbol = func->is_export || func->is_extern ? intern_text(sema->interner, header.name) : func_symbol(sema, header.name, id);
 
-	Type fn_type = make_type(TYPE_FN);
-	fn_type.as.fn.is_var_args = (header.flags & IR_FUNC_VAR_ARGS) != 0;
-	fn_type.as.fn.ret = T_VOID;
-	for (uint32_t i = 0; i < header.param_count; i++) {
-		const IrInst *param = &ir->insts[params[i]];
-		if (param->op == IR_PARAM_ANYTYPE) {
-			func->is_generic = true;
-			continue;
-		}
-		IrParam payload;
-		IR_READ(ir, param->data.payload, &payload);
-		if (payload.flags & IR_PARAM_COMPTIME)
-			func->is_generic = true;
-	}
-	if (header.callconv_body != 0) {
-		sema_error(block, inst->src, "not supported by szc yet: callconv");
-		return operand_none;
-	}
-	if (!func->is_generic) {
-		TypeId *param_types = arena_alloc(sema->arena, (header.param_count + 1) * sizeof(TypeId), alignof(TypeId));
-		for (uint32_t i = 0; i < header.param_count; i++) {
-			const IrInst *param = &ir->insts[params[i]];
-			IrParam payload;
-			IR_READ(ir, param->data.payload, &payload);
-			BodyResult result = analyze_body(block, payload.type_body);
-			if (result.end != BODY_BREAK_RESULT || !operand_to_type(block, result.result, param->src, &param_types[i]))
-				return operand_none;
-			if (is_comptime_only_type(sema, param_types[i]))
-				func->is_generic = true;
-		}
-		fn_type.as.fn.params = param_types;
-		fn_type.as.fn.param_count = header.param_count;
-	}
-	if (!func->is_generic) {
-		BodyResult result = analyze_body(block, header.ret_type_body);
-		if (result.end != BODY_BREAK_RESULT || !operand_to_type(block, result.result, inst->src, &fn_type.as.fn.ret))
-			return operand_none;
-		if (is_comptime_only_type(sema, fn_type.as.fn.ret))
-			func->is_generic = true;
-	}
-	if (func->is_generic) {
-		fn_type.as.fn.is_generic = true;
-		fn_type.as.fn.params = NULL;
-		fn_type.as.fn.param_count = 0;
-		fn_type.as.fn.ret = T_VOID;
-	}
-	func->type = type_intern(sema, &fn_type);
-	if (func->is_export && !func->is_generic)
+	func->is_generic = generic;
+	func->type = type;
+	if (func->is_export && !generic)
 		func_queue(sema, id);
 	return comptime_operand(func->type, value_function(&sema->values, func->type, id));
 }
@@ -2403,21 +2528,19 @@ analyze_call(Block *block, IrInstIndex index, Operand *out)
 	Operand callee = resolve_ref(block, header.callee);
 	if (callee.kind == OPERAND_NONE)
 		return INST_CONTINUE;
-	if (sema->types[callee.type].kind != TYPE_FN) {
+	TypeId type = callable_type(sema, callee.type);
+	if (type == 0) {
 		sema_error(block, src, "type '%s' not a function", sema_type_name(sema, callee.type));
 		return INST_CONTINUE;
 	}
-	if (callee.kind != OPERAND_COMPTIME) {
-		sema_error(block, src, "not supported by szc yet: calls through function pointers");
-		return INST_CONTINUE;
-	}
-	FuncId id = operand_value(block, callee)->as.function;
-	SemaFunc *func = sema->funcs[id];
-	if (func->is_generic) {
+	TypeFn fn = sema->types[type].as.fn;
+	if (fn.is_generic) {
 		sema_error(block, src, "not supported by szc yet: calls of generic functions");
 		return INST_CONTINUE;
 	}
-	TypeFn fn = sema->types[func->type].as.fn;
+	FuncId id = 0;
+	if (callee.kind == OPERAND_COMPTIME && operand_value(block, callee)->kind == VALUE_FUNCTION)
+		id = operand_value(block, callee)->as.function;
 	bool count_ok = fn.is_var_args ? header.arg_count >= fn.param_count : header.arg_count == fn.param_count;
 	if (!count_ok) {
 		sema_error(block, src, "expected %s%u argument(s), found %u", fn.is_var_args ? "at least " : "", (unsigned)fn.param_count, (unsigned)header.arg_count);
@@ -2426,7 +2549,9 @@ analyze_call(Block *block, IrInstIndex index, Operand *out)
 
 	Operand pending = operand_none;
 	pending.kind = OPERAND_PENDING_CALL;
-	pending.type = func->type;
+	if (!check_defined(block, callee, src))
+		return INST_CONTINUE;
+	pending.type = type;
 	inst_map_put(block->map, sema->arena, index, pending);
 	Operand *args = arena_alloc(sema->arena, (header.arg_count + 1) * sizeof(Operand), alignof(Operand));
 	bool failed = false;
@@ -2448,12 +2573,14 @@ analyze_call(Block *block, IrInstIndex index, Operand *out)
 		sema_error(block, src, "not supported by szc yet: comptime function calls");
 		return INST_CONTINUE;
 	}
-	func_queue(sema, id);
+	if (id != 0)
+		func_queue(sema, id);
 	TirRef *refs = arena_alloc(sema->arena, (header.arg_count + 1) * sizeof(TirRef), alignof(TirRef));
 	for (uint32_t i = 0; i < header.arg_count; i++)
 		refs[i] = materialize(block, args[i], src);
 	TirCall call;
 	call.callee = id;
+	call.indirect = id == 0 ? materialize(block, callee, src) : TIR_REF_NONE;
 	call.arg_count = header.arg_count;
 	uint32_t payload = tir_extra(block->tir, sema->arena, &call, TIR_WORDS(TirCall));
 	tir_extra(block->tir, sema->arena, refs, header.arg_count);
@@ -2477,10 +2604,8 @@ analyze_ref(Block *block, Operand value, uint32_t src, uint32_t identity)
 	if (value.kind == OPERAND_NONE)
 		return operand_none;
 	TypeKind kind = sema->types[value.type].kind;
-	if (kind == TYPE_FN) {
-		sema_error(block, src, "not supported by szc yet: addresses of functions");
-		return operand_none;
-	}
+	if (kind == TYPE_FN)
+		return function_address(block, value, src);
 	TypeId pointer = type_pointer(sema, value.type, POINTER_ONE, true);
 	if (value.kind == OPERAND_COMPTIME)
 		return comptime_operand(pointer, value_ref(&sema->values, pointer, value.value, identity));
@@ -2575,6 +2700,8 @@ load_pointer(Block *block, Operand pointer, uint32_t src)
 		return comptime_operand(child, value_int_u64(&sema->values, child, 0));
 	if (pointer.kind == OPERAND_COMPTIME) {
 		const Value *value = operand_value(block, pointer);
+		if (value->kind == VALUE_FUNCTION && sema->types[child].kind == TYPE_FN)
+			return comptime_operand(child, value_function(&sema->values, child, value->as.function));
 		if (value->kind == VALUE_REF) {
 			ValueId stored = sema->values.objects[value->as.object].value;
 			return coerce(block, comptime_operand(value_get(&sema->values, stored)->type, stored), child, src);
@@ -2586,6 +2713,10 @@ load_pointer(Block *block, Operand pointer, uint32_t src)
 				sema_error(block, src, "unable to resolve comptime value");
 			return operand_none;
 		}
+	}
+	if (is_comptime_only_type(sema, child)) {
+		sema_error(block, src, "cannot load comptime-only type '%s'", sema_type_name(sema, child));
+		return operand_none;
 	}
 	TypeKind kind = sema->types[child].kind;
 	if (kind != TYPE_INT && kind != TYPE_BOOL && kind != TYPE_POINTER) {
@@ -2653,6 +2784,7 @@ analyze_inst(Block *block, IrInstIndex index, Operand *break_value)
 		break;
 	}
 	case IR_FUNC:
+	case IR_FN_TYPE:
 		result = analyze_func_inst(block, index);
 		break;
 	case IR_DECL_TYPE:
@@ -3294,7 +3426,10 @@ dump_tir_inst(FILE *out, Sema *sema, const TirFunc *tir, TirRef ref, uint32_t de
 	case TIR_CALL: {
 		TirCall call;
 		memcpy(&call, &tir->extra[inst->data.payload], sizeof(call));
-		fprintf(out, " %s(", sema->funcs[call.callee]->symbol);
+		if (call.callee != 0)
+			fprintf(out, " %s(", sema->funcs[call.callee]->symbol);
+		else
+			fprintf(out, " %%%u(", (unsigned)call.indirect);
 		for (uint32_t i = 0; i < call.arg_count; i++)
 			fprintf(out, "%s%%%u", i == 0 ? "" : ", ", (unsigned)tir->extra[inst->data.payload + TIR_WORDS(TirCall) + i]);
 		fputs(")\n", out);
