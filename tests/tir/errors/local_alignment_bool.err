@@ -1,0 +1,3 @@
+tests/tir/errors/local_alignment_bool.zig:1:42: error: expected type 'u29', found 'bool'
+pub fn main() void { var value: u8 align(true) = 1; value += 0; }
+                                         ^

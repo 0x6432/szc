@@ -325,13 +325,14 @@ type_int(Sema *sema, bool is_signed, uint32_t bits)
 }
 
 static TypeId
-type_pointer(Sema *sema, TypeId child, PointerSize size, bool is_const, bool is_allowzero)
+type_pointer(Sema *sema, TypeId child, PointerSize size, bool is_const, bool is_allowzero, uint32_t alignment)
 {
 	Type type = make_type(TYPE_POINTER);
 	type.as.pointer.child = child;
 	type.as.pointer.size = size;
 	type.as.pointer.is_const = is_const;
 	type.as.pointer.is_allowzero = is_allowzero;
+	type.as.pointer.alignment = alignment;
 	return type_intern(sema, &type);
 }
 
@@ -1008,7 +1009,7 @@ create_global(Block *block, SemaDecl *decl, TypeId type)
 	global->src = decl->ir.src;
 	global->file = block->ir->file;
 	decl->global = id;
-	TypeId pointer = type_pointer(sema, type, POINTER_ONE, false, false);
+	TypeId pointer = type_pointer(sema, type, POINTER_ONE, false, false, 0);
 	decl->value = comptime_operand(pointer, value_global(&sema->values, pointer, id));
 }
 
@@ -1240,7 +1241,7 @@ static Operand
 function_address(Block *block, Operand value, uint32_t src)
 {
 	Sema *sema = block->sema;
-	TypeId pointer = type_pointer(sema, value.type, POINTER_ONE, true, false);
+	TypeId pointer = type_pointer(sema, value.type, POINTER_ONE, true, false, 0);
 	if (operand_is_undefined(block, value))
 		return comptime_operand(pointer, value_undefined(&sema->values, pointer));
 	if (value.kind != OPERAND_COMPTIME || operand_value(block, value)->kind != VALUE_FUNCTION) {
@@ -2087,7 +2088,7 @@ analyze_string(Block *block, const IrInst *inst)
 	array.as.array.length = length;
 	array.as.array.sentinel_zero = true;
 	TypeId child = type_intern(sema, &array);
-	TypeId pointer = type_pointer(sema, child, POINTER_ONE, true, false);
+	TypeId pointer = type_pointer(sema, child, POINTER_ONE, true, false, 0);
 	return comptime_operand(pointer, value_bytes(&sema->values, pointer, (const uint8_t *)intern_text(sema->interner, id), length));
 }
 
@@ -2659,7 +2660,7 @@ analyze_ref(Block *block, Operand value, uint32_t src, uint32_t identity)
 	TypeKind kind = sema->types[value.type].kind;
 	if (kind == TYPE_FN)
 		return function_address(block, value, src);
-	TypeId pointer = type_pointer(sema, value.type, POINTER_ONE, true, false);
+	TypeId pointer = type_pointer(sema, value.type, POINTER_ONE, true, false, 0);
 	if (value.kind == OPERAND_COMPTIME)
 		return comptime_operand(pointer, value_ref(&sema->values, pointer, value.value, identity));
 	if (block->is_comptime || !require_runtime(block, src)) {
@@ -2705,7 +2706,17 @@ analyze_alloc(Block *block, const IrInst *inst)
 		sema_error(block, src, "not supported by szc yet: variables of type '%s'", sema_type_name(sema, type));
 		return operand_none;
 	}
-	TypeId pointer = type_pointer(sema, type, POINTER_ONE, (payload.flags & IR_ALLOC_CONST) != 0, false);
+	uint32_t alignment = 0;
+	if (payload.alignment != IR_REF_NONE) {
+		Operand value = resolve_ref(block, payload.alignment);
+		if (value.kind == OPERAND_NONE)
+			return operand_none;
+		if (value.kind != OPERAND_COMPTIME || !bigint_to_u32(&operand_value(block, value)->as.integer, &alignment)) {
+			sema_error(block, src, "unable to resolve comptime value");
+			return operand_none;
+		}
+	}
+	TypeId pointer = type_pointer(sema, type, POINTER_ONE, (payload.flags & IR_ALLOC_CONST) != 0, false, alignment);
 	TirRef slot = emit_tir(block, TIR_ALLOC, pointer, src);
 	if (!operand_is_undefined(block, init))
 		emit_tir_bin(block, TIR_STORE, T_VOID, src, slot, materialize(block, init, src));
@@ -2933,6 +2944,14 @@ analyze_inst(Block *block, IrInstIndex index, Operand *break_value)
 			break;
 		}
 		result = type_operand(sema, type_int(sema, is_signed, bits));
+		break;
+	}
+	case IR_ALIGN: {
+		uint32_t alignment;
+		if (analyze_alignment(block, inst->data.payload, src, &alignment)) {
+			TypeId type = type_id_of_well_known(IR_REF_TYPE_U29);
+			result = comptime_operand(type, value_int_u64(&sema->values, type, alignment));
+		}
 		break;
 	}
 	case IR_PTR_TYPE: {

@@ -156,6 +156,14 @@ prints a file's IR.
   and mutable outer pointees require bidirectional compatibility. A branch join
   can combine top-level const/allowzero flags only when both inputs can coerce to
   the resulting pointer. Existing references and storage addresses remain nonzero.
+- `align` is IR_ALIGN with an isolated comptime body, using the same body generator
+  and validation as pointer type alignment. It yields a validated u29 before a
+  mutable local's initializer is analyzed. IrAlloc.alignment references that value,
+  or NONE for implicit ABI alignment. The alloc dump appends `align=%ref` only for
+  an explicit attribute; TIR_ALLOC records it in the slot pointer type. Child ABI
+  layout is unchanged. QBE slots above alignment 16 use private over-allocation
+  and upward address rounding; initialization is not hoisted with the allocation.
+  Explicit alignment on local constants/globals/functions remains unsupported.
 - Address-of mutable locals reuses ALLOC refs. Source `deref(pointer)` validates
   the pointer and produces a typed load, or an OPV void/u0 constant without memory.
   `ref_deref(pointer)` performs the same validation and returns the pointer itself

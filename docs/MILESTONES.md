@@ -75,7 +75,9 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
         - [x] **M5.1c2b1 Allowzero pointer qualification**.
         - [~] **M5.1c2b2 Pointer alignment**.
           - [x] **M5.1c2b2a Alignment-qualified pointer types and unaligned memory**.
-          - [ ] **M5.1c2b2b Explicit declaration/storage alignment**.
+          - [~] **M5.1c2b2b Explicit declaration/storage alignment**.
+            - [x] **M5.1c2b2b1 Aligned mutable locals**.
+            - [ ] Aligned local constants, global objects and functions.
         - [ ] **M5.1c2b3 Volatile pointer accesses**.
 - [ ] **M5.2 Arrays, indexing, array literals, `++` at comptime** (0.17.0 has no `**`).
 - [ ] **M5.3 Slices, many-pointers, slicing, `.len`, `.ptr`, for over slices.**
@@ -130,6 +132,45 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
 ## Completed milestone log
 
 (newest first; each entry: what, limitations, interactions)
+
+### M5.1c2b2b1 Aligned mutable locals
+- **What**: mutable local declarations accept explicit integer alignment, including
+  inferred types, weak alignment and explicit natural alignment. A new IR_ALIGN
+  instruction evaluates an isolated comptime body before the initializer; this
+  keeps invalid attributes observable even when initialization fails or terminates.
+  Pointer types and declarations share alignment-body generation and validation:
+  defined u29, nonzero power of two, no captured runtime execution.
+- **Storage/codegen**: IrAlloc carries the validated alignment ref; sema retains it
+  in the slot pointer type instead of changing the child's ABI layout. QBE uses
+  alloc4/8/16 for alignments up to 16. Larger alignments privately over-allocate
+  max(size, 1) + alignment - 1 bytes and round the address upward with add/and;
+  the entire object remains inside its allocation. Slots remain per activation,
+  hoisted to function entry; initializers still execute at their declaration sites.
+- **Interactions**: explicit natural alignment remains type-distinct from implicit
+  alignment, and address coercions can weaken, never strengthen, the guarantee.
+  Pointer/function-pointer slot alignment is independent of pointee alignment.
+  Recursive activation identity, loop reinitialization, aliases, defer writes,
+  void/u0 storage and weak-alignment scalar accesses have executable coverage.
+- **Reference grounding**: Zig 0.17 Sema.zig zirAllocExtended resolves declaration
+  alignment before initialization and retains explicit alignment in pointer flags.
+  Acceptance/type-identity probes and invalid-attribute fixtures were checked
+  against the actual 0.17.0 binary, not inferred from QBE's allocation primitives.
+- **Tests**: added IR/TIR/QBE goldens, 12 reference-rejected diagnostic cases and an
+  explicit aligned-local-constant NYI fixture. The runtime assembly helper checks
+  actual addresses for 15 value types at nine alignments (135 cases); the local
+  alignment/coercion differential matrix has 300 cases and runs in CI. GCC/Clang
+  -Werror ASan/UBSan pass 554 unit checks, 636 goldens, 51 ordinary executable
+  inputs plus two szc-only inputs, 12 driver, 11 storage, four callback ABI, seven
+  unaligned memory, 135 local alignment and 166 safety cases. GCC reference checks
+  and optimized GCC goldens/executables/address checks pass. All 300 new cases
+  match Zig and sanitized replay; the existing 1,035 pointer-alignment comparisons
+  also match Zig. Four 60-second fuzz targets and 20,000 standalone mutations per
+  stage pass. Corpus: irgen 26, sema 47 inputs.
+- **Limitations/next**: this completes mutable locals only. Aligned local constants,
+  globals and functions remain separate storage work; do not implement constants
+  as runtime variables and lose comptime values/reference identity. Float alignment
+  expressions, general comptime interpretation and other pointer attributes remain
+  pending. All enclosing M5.1/M5.1c/M5.1c2/M5.1c2b/M5.1c2b2/M5.1c2b2b stay partial.
 
 ### M5.1c2b2a Alignment-qualified pointer types and unaligned memory
 - **What**: single-pointer types accept `align(integer_expression)`. IrPointerType

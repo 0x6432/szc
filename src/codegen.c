@@ -845,11 +845,24 @@ emit_function(Codegen *cg, const SemaFunc *func)
 		const TirInst *inst = inst_at(cg, ref);
 		if (inst->op != TIR_ALLOC)
 			continue;
-		TypeId child = sema_type(cg->sema, inst->type)->as.pointer.child;
-		uint64_t size = sema_type_size(cg->sema, child);
-		uint32_t align = sema_type_align(cg->sema, child);
-		uint32_t slot_align = align <= 4 ? 4 : align <= 8 ? 8 : 16;
-		fprintf(out, "\t%%t%u =l alloc%u %" PRIu64 "\n", (unsigned)ref, (unsigned)slot_align, size == 0 ? 1 : size);
+		TypePointer pointer = sema_type(cg->sema, inst->type)->as.pointer;
+		uint64_t size = sema_type_size(cg->sema, pointer.child);
+		if (size == 0)
+			size = 1;
+		uint32_t align = pointer.alignment != 0 ? pointer.alignment : sema_type_align(cg->sema, pointer.child);
+		if (align <= 16) {
+			uint32_t slot_align = align <= 4 ? 4 : align <= 8 ? 8 : 16;
+			fprintf(out, "\t%%t%u =l alloc%u %" PRIu64 "\n", (unsigned)ref, (unsigned)slot_align, size);
+		} else {
+			/* Round a private over-allocation up; the complete object remains in its slot. */
+			if (size > UINT64_MAX - (align - 1)) {
+				codegen_error(cg, inst->src, "stack allocation size is too large");
+				continue;
+			}
+			fprintf(out, "\t%%a%u_raw =l alloc16 %" PRIu64 "\n", (unsigned)ref, size + align - 1);
+			fprintf(out, "\t%%a%u_round =l add %%a%u_raw, %u\n", (unsigned)ref, (unsigned)ref, (unsigned)(align - 1));
+			fprintf(out, "\t%%t%u =l and %%a%u_round, -%u\n", (unsigned)ref, (unsigned)ref, (unsigned)align);
+		}
 	}
 	emit_body(cg, cg->tir->body);
 	fputs("}\n\n", out);

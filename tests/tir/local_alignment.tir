@@ -1,0 +1,100 @@
+fn szc.main.1: fn () u8 {
+  %0: *align(64) u32 = alloc
+  %1: u32 = const 5
+  %2: void = store %0, %1
+  %3: u32 = load %0
+  %4: u32 = const 1
+  %5: u32 = add %3, %4
+  %6: void = store %0, %5
+  %7: *align(1) u64 = alloc
+  %8: u64 = const 9
+  %9: void = store %7, %8
+  %10: u64 = load %7
+  %11: u64 = const 1
+  %12: u64 = add %10, %11
+  %13: void = store %7, %12
+  %14: *align(4) u32 = alloc
+  %15: u32 = const 2
+  %16: void = store %14, %15
+  %17: u32 = load %14
+  %18: u32 = const 1
+  %19: u32 = add %17, %18
+  %20: void = store %14, %19
+  %21: *align(128) u16 = alloc
+  %22: u16 = const 7
+  %23: void = store %21, %22
+  %24: u16 = load %21
+  %25: u16 = const 1
+  %26: u16 = add %24, %25
+  %27: void = store %21, %26
+  %28: u32 = call szc.add.2(%0)
+  %29: u32 = const 8
+  %30: bool = cmp_neq %28, %29
+  %31: bool = block {
+    %38: noreturn = condbr %30 then {
+      %36: bool = const true
+      %37: noreturn = br %31, %36
+    } else {
+      %32: u32 = load %0
+      %33: u32 = const 9
+      %34: bool = cmp_neq %32, %33
+      %35: noreturn = br %31, %34
+    }
+  }
+  %39: void = block {
+    %43: noreturn = condbr %31 then {
+      %40: u8 = const 1
+      %41: noreturn = ret %40
+    } else {
+      %42: noreturn = br %39
+    }
+  }
+  %44: u64 = load %7
+  %45: u64 = const 10
+  %46: bool = cmp_neq %44, %45
+  %47: bool = block {
+    %54: noreturn = condbr %46 then {
+      %52: bool = const true
+      %53: noreturn = br %47, %52
+    } else {
+      %48: u32 = load %14
+      %49: u32 = const 3
+      %50: bool = cmp_neq %48, %49
+      %51: noreturn = br %47, %50
+    }
+  }
+  %55: bool = block {
+    %62: noreturn = condbr %47 then {
+      %60: bool = const true
+      %61: noreturn = br %55, %60
+    } else {
+      %56: u16 = load %21
+      %57: u16 = const 8
+      %58: bool = cmp_neq %56, %57
+      %59: noreturn = br %55, %58
+    }
+  }
+  %63: void = block {
+    %67: noreturn = condbr %55 then {
+      %64: u8 = const 2
+      %65: noreturn = ret %64
+    } else {
+      %66: noreturn = br %63
+    }
+  }
+  %68: u8 = const 0
+  %69: noreturn = ret %68
+}
+fn szc.add.2: fn (*align(64) u32) u32 {
+  %0: *align(64) u32 = arg 0
+  %1: u32 = load %0
+  %2: u32 = const 2
+  %3: u32 = add %1, %2
+  %4: void = store %0, %3
+  %5: u32 = load %0
+  %6: u32 = load %0
+  %7: u32 = const 1
+  %8: u32 = add %6, %7
+  %9: void = store %0, %8
+  %10: noreturn = ret %5
+}

@@ -1,0 +1,3 @@
+tests/tir/errors/local_alignment_undefined.zig:1:42: error: use of undefined value here causes illegal behavior
+pub fn main() void { var value: u8 align(undefined) = 1; value += 0; }
+                                         ^

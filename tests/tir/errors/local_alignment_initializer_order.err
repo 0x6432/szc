@@ -1,0 +1,6 @@
+tests/tir/errors/local_alignment_initializer_order.zig:1:42: error: alignment must be >= 1
+pub fn main() void { var value: u8 align(0) = true; value = 2; }
+                                         ^
+tests/tir/errors/local_alignment_initializer_order.zig:1:47: error: expected type 'u8', found 'bool'
+pub fn main() void { var value: u8 align(0) = true; value = 2; }
+                                              ^

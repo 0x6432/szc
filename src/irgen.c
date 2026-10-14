@@ -848,6 +848,17 @@ address_of(GenBody *body, Scope *scope, ResultInfo info, AstNode *node)
 	return reference_value(body, operand, node->offset);
 }
 
+static IrBody
+alignment_body(IrGen *gen, Scope *scope, AstNode *node)
+{
+	GenBody body;
+	body_init(&body, gen, scope, true);
+	IrRef value = expr(&body, &body.base, result_type(IR_REF_TYPE_U29), node);
+	if (!body_is_terminated(&body))
+		emit_break(&body, IR_BREAK_INLINE, node->offset, IR_BODY_RESULT, value);
+	return body_finish(&body);
+}
+
 static IrRef
 pointer_type(GenBody *body, Scope *scope, AstPointerType *node)
 {
@@ -858,12 +869,7 @@ pointer_type(GenBody *body, Scope *scope, AstPointerType *node)
 	IrRef child = type_expr(body, scope, node->child);
 	IrPointerType payload = {child, 0, 0, 0};
 	if (node->align != NULL) {
-		GenBody alignment;
-		body_init(&alignment, body->gen, scope, true);
-		IrRef value = expr(&alignment, &alignment.base, result_type(IR_REF_TYPE_U29), node->align);
-		if (!body_is_terminated(&alignment))
-			emit_break(&alignment, IR_BREAK_INLINE, node->align->offset, IR_BODY_RESULT, value);
-		payload.alignment_body = body_finish(&alignment);
+		payload.alignment_body = alignment_body(body->gen, scope, node->align);
 		payload.alignment_src = node->align->offset;
 	}
 	if (node->is_const)
@@ -1384,7 +1390,7 @@ for_expr(GenBody *body, Scope *scope, ResultInfo info, AstNode *node)
 		error_at(gen, node->offset, "%s", "unbounded for loop");
 		return IR_REF_VOID_VALUE;
 	}
-	IrAlloc alloc = {IR_REF_TYPE_USIZE, IR_REF_ZERO_USIZE, 0};
+	IrAlloc alloc = {IR_REF_TYPE_USIZE, IR_REF_ZERO_USIZE, 0, IR_REF_NONE};
 	IrRef index_ptr = emit_payload(body, IR_ALLOC, node->offset, APPEND_EXTRA(gen, alloc));
 	IrRef *starts = ARENA_ARRAY(gen->arena, IrRef, loop->input_count);
 	IrRef *ends = ARENA_ARRAY(gen->arena, IrRef, loop->input_count);
@@ -1567,12 +1573,17 @@ local_var_decl(GenBody *body, Scope *scope, AstVarDecl *decl)
 	IrGen *gen = body->gen;
 	StringId name = intern_span(gen, decl->name);
 	check_shadowing(gen, scope, name, decl->base.offset);
-	if (decl->align != NULL || decl->addrspace != NULL || decl->linksection != NULL)
+	if (decl->addrspace != NULL || decl->linksection != NULL)
 		unsupported(body, &decl->base, "align/addrspace/linksection on locals");
+	if (decl->align != NULL && decl->is_const)
+		unsupported(body, &decl->base, "aligned local constants");
 
 	IrRef type = IR_REF_NONE;
 	if (decl->type != NULL)
 		type = type_expr(body, scope, decl->type);
+	IrRef alignment = IR_REF_NONE;
+	if (decl->align != NULL)
+		alignment = emit_payload(body, IR_ALIGN, decl->align->offset, alignment_body(gen, scope, decl->align));
 	ResultInfo info = type == IR_REF_NONE ? result_none : result_type(type);
 	IrRef init = expr(body, scope, info, decl->init);
 
@@ -1584,6 +1595,7 @@ local_var_decl(GenBody *body, Scope *scope, AstVarDecl *decl)
 	IrAlloc alloc;
 	alloc.type = type;
 	alloc.init = init;
+	alloc.alignment = alignment;
 	alloc.flags = decl->is_comptime ? IR_ALLOC_COMPTIME : 0;
 	if (decl->is_const)
 		alloc.flags = alloc.flags | IR_ALLOC_CONST;
@@ -2384,6 +2396,10 @@ dump_inst(const IrDumper *dumper, IrInstIndex index, uint32_t depth)
 			fputs(" comptime", out);
 		if (payload.flags & IR_ALLOC_CONST)
 			fputs(" const", out);
+		if (payload.alignment != IR_REF_NONE) {
+			fputs(" align=", out);
+			dump_ref(dumper, payload.alignment);
+		}
 		break;
 	}
 	case IR_BLOCK:
@@ -2401,6 +2417,9 @@ dump_inst(const IrDumper *dumper, IrInstIndex index, uint32_t depth)
 		dump_labeled_body(dumper, "else", payload.else_body, depth);
 		break;
 	}
+	case IR_ALIGN:
+		dump_labeled_body(dumper, "value", inst->data.payload, depth);
+		break;
 	case IR_PTR_TYPE: {
 		IrPointerType payload;
 		IR_READ(ir, inst->data.payload, &payload);

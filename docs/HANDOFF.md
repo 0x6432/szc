@@ -37,8 +37,10 @@ Read this first when resuming work (the sandbox resets often).
 - Done: M5.1c2a function types, symbolic addresses, signature variance and indirect calls.
 - Done: M5.1c2b1 allowzero pointer qualification, nested coercions and qualifier joins.
 - Done: M5.1c2b2a alignment-qualified pointer types and actual unaligned memory tests.
-- Next: **M5.1c2b2b** explicit declaration/storage alignment, then M5.1c2b3 volatile.
-  M5.1/M5.1c/M5.1c2/M5.1c2b/M5.1c2b2 remain partial.
+- Done: M5.1c2b2b1 explicit alignment on mutable locals, including over-aligned slots.
+- Next: finish **M5.1c2b2b** with aligned local constants, globals and functions
+  in small checkpoints, then M5.1c2b3 volatile.
+  M5.1/M5.1c/M5.1c2/M5.1c2b/M5.1c2b2/M5.1c2b2b remain partial.
 - Run `PATH=/data/tools/bin:$PATH ZIG=/data/zig/zig-x86_64-linux-0.17.0/zig make e2e-test`
   locally. `tools/build_qbe.sh` builds the pinned QBE into `build/qbe-src` on CI.
 - Tools: `SZC_QBE`/`qbe`, `SZC_CC`/`cc`; pinned QBE revision
@@ -57,7 +59,43 @@ Read this first when resuming work (the sandbox resets often).
   job lost communication with the hosted runner during native/reference tests.
   The check annotation confirms runner communication loss, not a completed test
   result. The next checkpoint, M5.1c2b1 55ad2cd/run 38564405059, passed all
-  GCC/Clang/fuzz/differential jobs, restoring green CI. Check each new push's run.
+  GCC/Clang/fuzz/differential jobs, restoring green CI. M5.1c2b2a 8b1d3cf
+  also passed all jobs (run 38590520673). Check each new push's run.
+
+## Validation at M5.1c2b2b1
+
+- GCC/Clang -Werror ASan/UBSan: 554 unit checks, 636 goldens, 51 ordinary
+  executable inputs plus two szc-only inputs, 12 driver checks, 11 PIE/storage
+  checks, four callback ABI cases, seven unaligned-memory cases, 135 local-address
+  alignment checks and 166 safety cases pass. GCC also runs ordinary inputs,
+  assembly-backed memory checks and safety cases against Zig 0.17.0. Optimized
+  GCC passes goldens, ordinary executables and the 135 address checks (also run
+  with Zig). All 300 new local-alignment/coercion cases match Zig and replay
+  identically under ASan/UBSan; all 1,035 existing pointer-alignment comparisons
+  still match Zig. Four 60-second fuzz targets and 20,000 standalone mutations
+  per stage pass. Corpus: irgen 26, sema 47 inputs. Check this push's remote CI;
+  local success does not imply the new GitHub run has completed.
+- IR_ALIGN yields a validated comptime u29 from an isolated body before local
+  initialization; IrAlloc.alignment is NONE for implicit ABI alignment, otherwise
+  that ref. Pointer type attributes reuse the same irgen alignment_body helper.
+  type_pointer now takes an explicit final alignment argument; ordinary address
+  constructors pass zero, analyze_alloc passes the declaration's alignment.
+- Local mutable storage retains explicit alignment in its pointer type. Child ABI
+  alignment is unchanged. For A > 16, codegen allocates max(size, 1) + A - 1 bytes
+  at QBE alignment 16, then rounds upward with add/and. This is real per-activation
+  storage, not a static object or an unsupported QBE alloc variant. Ordinary slots
+  retain their previous emission. Initialization stays at the source declaration.
+- tests/run_local_alignment.py checks 135 physical addresses (15 types x nine
+  alignments through 4096), mutations and readbacks through linked assembly;
+  optional ZIG runs the same source/helpers. tools/diff_local_alignment.py covers
+  300 typed/inferred locals and address coercions and is in differential CI.
+  tests/run/local_alignment.zig additionally covers recursion/identity, aliases,
+  defer, loop reinitialization, aligned pointer/function-pointer slots and OPVs.
+- Next: aligned local constants first, then global/function declaration alignment.
+  Constants must retain comptime values and definition-anchored immutable object
+  identity; do not turn them into mutable runtime allocations to reuse this path.
+  Explicit aligned constants still produce an honest NYI diagnostic. Global and
+  function attributes are unchanged. Keep Q6 deferred until M10.2.
 
 ## Validation at M5.1c2b2a
 
@@ -88,11 +126,9 @@ Read this first when resuming work (the sandbox resets often).
   unaligned scalar/pointer reads/writes with guard bytes; optional ZIG executes the
   same source and helpers. make e2e-test runs it. tools/diff_pointer_alignment.py is
   in differential CI, alongside existing qualifier/function comparisons.
-- Explicit declaration/storage alignment is next (M5.1c2b2b). Existing local/global
-  and immutable storage stays naturally aligned; do not promise over-aligned backing
-  objects merely because a pointer type can express align(16) or greater. QBE's
-  alloc4/8/16 limit needs an honest strategy for larger stack alignment. Function
-  alignment and constant-object/reference identity must also be considered.
+- At this checkpoint explicit storage alignment remained pending. Mutable locals
+  are now implemented in M5.1c2b2b1 above. Global/immutable/function alignment still
+  needs real backing-storage guarantees and preserved reference identity.
 - Integer alignment expressions work within existing comptime support. Zig accepts
   align(4.0), but floats are still explicit NYI here; do not add a literal-only hack.
   @alignCast/@ptrCast/@intFromPtr/@ptrFromInt remain later casting work. Address
