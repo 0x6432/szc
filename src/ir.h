@@ -139,7 +139,7 @@ typedef enum IrDataKind {
 	X(STR, "str", IR_DATA_NAME)	/* string literal bytes (interned) */ \
 	X(ENUM_LITERAL, "enum_literal", IR_DATA_NAME)	/* .name */ \
 	X(INT_TYPE, "int_type", IR_DATA_INT)	/* bit 16 = signed, bits 0..15 = bit count */ \
-	X(PTR_TYPE, "ptr_type", IR_DATA_BIN)	/* child type, const qualifier (true/false) */ \
+	X(PTR_TYPE, "ptr_type", IR_DATA_PAYLOAD)	/* IrPointerType */ \
 	/* Result types and coercion */ \
 	X(AS_RETURN, "as_return", IR_DATA_BIN)	/* direct return-value coercion */ \
 	X(AS, "as", IR_DATA_BIN)	/* coerce rhs to type lhs */ \
@@ -248,6 +248,16 @@ typedef struct IrInst {
 } IrInst;
 
 /* ---------- Payload layouts (in IrFile.extra) ---------- */
+
+typedef enum IrPointerFlags {
+	IR_POINTER_CONST = 0x1,
+	IR_POINTER_ALLOWZERO = 0x2,
+} IrPointerFlags;
+
+typedef struct IrPointerType {
+	IrRef			child;
+	uint32_t	flags;
+} IrPointerType;
 
 /* STRUCT_DECL: header, then field_count IrField, then decl_count IrDecl. */
 typedef enum IrContainerFlags {

@@ -1,0 +1,3 @@
+tests/tir/errors/pointer_allowzero_noreturn.zig:1:43: error: pointer to noreturn not allowed
+pub fn main() void { const P = *allowzero noreturn; _ = P; }
+                                          ^

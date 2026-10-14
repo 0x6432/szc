@@ -1,0 +1,3 @@
+tests/tir/errors/pointer_allowzero_parameter.zig:1:71: error: expected type '*const fn (*allowzero u8) void', found '*const fn (*u8) void'
+fn f(p: *const fn (*u8) void) *const fn (*allowzero u8) void { return p; }
+                                                                      ^

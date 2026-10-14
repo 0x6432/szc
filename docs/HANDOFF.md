@@ -35,7 +35,9 @@ Read this first when resuming work (the sandbox resets often).
 - Done: M5.1b definition-anchored references, immutable constant objects and pointer equality.
 - Done: M5.1c1 internal mutable scalar globals, lazy type/init resolution and writable relocations.
 - Done: M5.1c2a function types, symbolic addresses, signature variance and indirect calls.
-- Next: **M5.1c2b** pointer attributes. M5.1/M5.1c/M5.1c2 remain partial.
+- Done: M5.1c2b1 allowzero pointer qualification, nested coercions and qualifier joins.
+- Next: **M5.1c2b2** pointer alignment, then M5.1c2b3 volatile accesses.
+  M5.1/M5.1c/M5.1c2/M5.1c2b remain partial.
 - Run `PATH=/data/tools/bin:$PATH ZIG=/data/zig/zig-x86_64-linux-0.17.0/zig make e2e-test`
   locally. `tools/build_qbe.sh` builds the pinned QBE into `build/qbe-src` on CI.
 - Tools: `SZC_QBE`/`qbe`, `SZC_CC`/`cc`; pinned QBE revision
@@ -50,6 +52,42 @@ Read this first when resuming work (the sandbox resets often).
   Its follow-up 1731927/run 38549587896 passed compiler/fuzz jobs but the differential
   runner received a shutdown signal during safety testing (no completed safety result).
   CI now flushes per-case safety progress so interruptions retain the active case.
+  M5.1c2a 54fcbb4/run 38554387430 also passed GCC/Clang/fuzz; its differential
+  job lost communication with the hosted runner during native/reference tests.
+  The check annotation confirms runner communication loss, not a completed test
+  result. Reference CI remains unverified; check the next push's fresh run.
+
+## Validation at M5.1c2b1
+
+- GCC/Clang -Werror ASan/UBSan and optimized GCC are clean: 554 unit checks,
+  590 goldens, 49 ordinary/reference executable inputs plus two szc-only inputs,
+  12 driver checks, 11 PIE/storage checks, four callback ABI checks and 166 panic
+  cases pass. All 864 new allowzero, 168 existing const-only pointer and 486
+  function-signature comparisons match Zig 0.17.0; the entire allowzero matrix also
+  matches debug output under ASan/UBSan. Four 60-second fuzz targets and standalone
+  20,000 mutations per stage pass. Corpus: irgen 24, sema 34 inputs. Check push CI.
+- Restored libasan/libubsan/Clang/compiler-rt after this sandbox reset; these are
+  test environment dependencies, not repository changes.
+- IR_PTR_TYPE now reads IrPointerType from extra, not data.bin. All new payload
+  consumers must use IR_READ; its text dump intentionally preserves old const
+  snapshots. TypePointer.is_allowzero participates in type hash/equality/names.
+- type_pointer takes explicit const/allowzero booleans. Ordinary references and
+  local/global storage addresses pass allowzero=false; qualifier widening retags
+  existing values instead of creating different backing objects or symbols.
+- memory_coercion_allowed may add allowzero only outside mutable outer memory;
+  retain function parameter contravariance and nested mutable invariance. Typed
+  undefined does not bypass either qualifier rule. Peer merging ORs top-level
+  qualifiers and verifies both input conversions; do not recursively synthesize
+  a child type without checking actual Zig peer rules.
+- tools/diff_pointer_allowzero.py covers 864 const/allowzero conversions and joins:
+  depth-one/two cross-products, depth-three allowzero, typed undefined, scalar
+  branch joins and nullable function-pointer parameter/return variance. CI runs it
+  alongside the existing const-only and function-signature comparisons.
+- No new pointer representation or null constant. @ptrFromInt/@intFromPtr/@ptrCast
+  are still M5.5. Next inspect actual 0.17 alignment rules and x86_64/QBE unaligned
+  memory behavior for M5.1c2b2; volatile needs real access semantics, not a type-only
+  flag. Address spaces/packed offsets/non-single pointer kinds remain later work.
+- Keep the compiler build/bootstrap-options question deferred until M10.2.
 
 ## Validation at M5.1c2a
 

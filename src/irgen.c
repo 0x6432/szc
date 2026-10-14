@@ -851,12 +851,17 @@ address_of(GenBody *body, Scope *scope, ResultInfo info, AstNode *node)
 static IrRef
 pointer_type(GenBody *body, Scope *scope, AstPointerType *node)
 {
-	if (node->size != AST_POINTER_ONE || node->sentinel != NULL || node->align != NULL || node->bit_offset != NULL || node->host_size != NULL || node->addrspace != NULL || node->is_volatile || node->is_allowzero) {
+	if (node->size != AST_POINTER_ONE || node->sentinel != NULL || node->align != NULL || node->bit_offset != NULL || node->host_size != NULL || node->addrspace != NULL || node->is_volatile) {
 		unsupported(body, &node->base, "pointer sizes other than single pointers or pointer attributes");
 		return IR_REF_VOID_VALUE;
 	}
 	IrRef child = type_expr(body, scope, node->child);
-	return emit_bin(body, IR_PTR_TYPE, node->child->offset, child, node->is_const ? IR_REF_TRUE : IR_REF_FALSE);
+	IrPointerType payload = {child, 0};
+	if (node->is_const)
+		payload.flags |= IR_POINTER_CONST;
+	if (node->is_allowzero)
+		payload.flags |= IR_POINTER_ALLOWZERO;
+	return emit_payload(body, IR_PTR_TYPE, node->child->offset, APPEND_EXTRA(body->gen, payload));
 }
 
 static IrOp
@@ -2385,6 +2390,17 @@ dump_inst(const IrDumper *dumper, IrInstIndex index, uint32_t depth)
 		dump_ref(dumper, payload.condition);
 		dump_labeled_body(dumper, "then", payload.then_body, depth);
 		dump_labeled_body(dumper, "else", payload.else_body, depth);
+		break;
+	}
+	case IR_PTR_TYPE: {
+		IrPointerType payload;
+		IR_READ(ir, inst->data.payload, &payload);
+		fputc(' ', out);
+		dump_ref(dumper, payload.child);
+		fputs(", ", out);
+		dump_ref(dumper, (payload.flags & IR_POINTER_CONST) != 0 ? IR_REF_TRUE : IR_REF_FALSE);
+		if ((payload.flags & IR_POINTER_ALLOWZERO) != 0)
+			fputs(" allowzero", out);
 		break;
 	}
 	case IR_CALL: {

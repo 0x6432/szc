@@ -1,0 +1,3 @@
+tests/tir/errors/pointer_allowzero_null.zig:1:47: error: expected type '*allowzero u8', found '@TypeOf(null)'
+pub fn main() void { const p: *allowzero u8 = null; _ = p; }
+                                              ^

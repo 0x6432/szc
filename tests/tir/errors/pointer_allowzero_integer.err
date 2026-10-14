@@ -1,0 +1,3 @@
+tests/tir/errors/pointer_allowzero_integer.zig:1:47: error: expected type '*allowzero u8', found 'comptime_int'
+pub fn main() void { const p: *allowzero u8 = 0; _ = p; }
+                                              ^

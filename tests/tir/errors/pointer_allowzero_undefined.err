@@ -1,0 +1,3 @@
+tests/tir/errors/pointer_allowzero_undefined.zig:3:20: error: expected type '*u8', found '*allowzero u8'
+    const q: *u8 = p;
+                   ^

@@ -143,8 +143,13 @@ prints a file's IR.
 
 ## Single-pointer operations
 
-- `ptr_type(child_type, is_const)` builds a single pointer type; the qualifier is
-  a well-known true/false ref. The source location identifies the child type.
+- `ptr_type` uses an IrPointerType payload with a child type ref and const/allowzero
+  flags. Its text dump retains the old `child, @true/@false` const notation and
+  appends `allowzero` when set. The source location identifies the child type.
+  Pointer identity includes allowzero; coercion may add it but cannot discard it,
+  and mutable outer pointees require bidirectional compatibility. A branch join
+  can combine top-level const/allowzero flags only when both inputs can coerce to
+  the resulting pointer. Existing references and storage addresses remain nonzero.
 - Address-of mutable locals reuses ALLOC refs. Source `deref(pointer)` validates
   the pointer and produces a typed load, or an OPV void/u0 constant without memory.
   `ref_deref(pointer)` performs the same validation and returns the pointer itself

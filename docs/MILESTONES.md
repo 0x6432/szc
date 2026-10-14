@@ -71,7 +71,10 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
     - [x] **M5.1c1 Internal mutable scalar globals**: lazy type/initializer resolution and writable pointer relocations.
     - [~] **M5.1c2 Function addresses/calls and pointer attributes**.
       - [x] **M5.1c2a Function types, addresses and indirect calls**.
-      - [ ] **M5.1c2b Pointer attributes**.
+      - [~] **M5.1c2b Pointer attributes**.
+        - [x] **M5.1c2b1 Allowzero pointer qualification**.
+        - [ ] **M5.1c2b2 Pointer alignment**.
+        - [ ] **M5.1c2b3 Volatile pointer accesses**.
 - [ ] **M5.2 Arrays, indexing, array literals, `++` at comptime** (0.17.0 has no `**`).
 - [ ] **M5.3 Slices, many-pointers, slicing, `.len`, `.ptr`, for over slices.**
 - [~] **M5.4 String literals, sentinels, `[*:0]const u8`.** Literal byte values landed in M4.5b; general string/memory operations and sentinel pointer syntax remain pending.
@@ -125,6 +128,41 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
 ## Completed milestone log
 
 (newest first; each entry: what, limitations, interactions)
+
+### M5.1c2b1 Allowzero pointer qualification
+- **What**: single-pointer syntax accepts `allowzero`, independent of `const`.
+  IR_PTR_TYPE uses an IrPointerType payload with a child ref and qualifier flags;
+  the text dump preserves existing const notation and appends allowzero. Type
+  interning and diagnostic names retain the qualifier, including nested and function
+  pointers. Ordinary address-of results and storage addresses remain nonzero types.
+- **Coercion/joins**: nonzero pointers may widen to allowzero; implicit conversion
+  cannot discard allowzero. Mutable outer pointees require bidirectional compatibility,
+  preventing a nullable pointer from being stored through an alias of a nonzero slot.
+  The same rule applies to typed undefined pointers. Branch joins combine top-level
+  const/allowzero flags only if both inputs can coerce to the resulting pointer,
+  selecting an existing memory-compatible child rather than inventing a new pointee.
+  Function parameter contravariance and return covariance include allowzero.
+- **Runtime/interactions**: existing pointer casts, scalar loads/stores, comparisons,
+  writable globals, immutable backing objects and direct/indirect calls carry the
+  qualification without changing the x86_64 representation. Void/u0 accesses remain
+  no-ops, even through undefined pointers; other undefined dereferences still error.
+  Runtime tests cover both branch orders, nested qualification, globals, immutable
+  object identity, callback signatures and qualifier-sensitive type identity.
+- **Reference**: verified actual 0.17 Sema.coerceInMemoryAllowedPtrs,
+  resolvePeerTypes pointer merging, resolvePairInMemoryCoercible and Type.ptrAllowsZero;
+  nine negative diagnostic fixtures were also checked with the official binary.
+- **Validation**: GCC/Clang -Werror ASan/UBSan and optimized GCC: 554 unit checks,
+  590 goldens, 49 ordinary/reference executable inputs plus two szc-only inputs,
+  12 driver checks, 11 PIE/storage checks, four callback ABI checks and 166 panic
+  cases pass. All 864 allowzero comparisons match Zig 0.17.0; sanitized replay
+  matches debug output for every case. Existing 168 const-only pointer and 486
+  function-signature comparisons also match. Four 60-second fuzz targets and
+  standalone 20,000 mutations per stage pass (irgen corpus 24, sema corpus 34).
+- **Limitations**: this checkpoint implements allowzero qualification, not integer
+  pointer construction. @ptrFromInt/@intFromPtr/@ptrCast remain M5.5; there is no new
+  null-pointer value or optional representation. Alignment, volatile memory semantics,
+  address spaces, packed pointer fields and non-single pointer kinds remain pending.
+  M5.1/M5.1c/M5.1c2/M5.1c2b remain partial; next is M5.1c2b2 pointer alignment.
 
 ### M5.1c2a Function types, addresses and indirect calls
 - **What**: IR_FN_TYPE represents a function signature as a type value, without

@@ -48,10 +48,11 @@ typedef enum PointerSize {
 } PointerSize;
 
 typedef struct TypePointer {
-	TypeId      child;
-	PointerSize size;
-	bool        is_const;
-	bool        is_volatile;
+	TypeId			child;
+	PointerSize	size;
+	bool				is_const;
+	bool				is_volatile;
+	bool				is_allowzero;
 } TypePointer;
 
 typedef struct TypeArray {

@@ -1,0 +1,3 @@
+tests/tir/errors/pointer_allowzero_nested.zig:1:39: error: expected type '**allowzero u8', found '**u8'
+fn f(p: **u8) **allowzero u8 { return p; }
+                                      ^

@@ -197,6 +197,7 @@ type_hash(const Type *type)
 		hash = hash_word(hash, (uint32_t)type->as.pointer.size);
 		hash = hash_word(hash, type->as.pointer.is_const ? 1u : 0u);
 		hash = hash_word(hash, type->as.pointer.is_volatile ? 1u : 0u);
+		hash = hash_word(hash, type->as.pointer.is_allowzero ? 1u : 0u);
 		break;
 	case TYPE_FN:
 		hash = hash_word(hash, type->as.fn.ret);
@@ -227,7 +228,7 @@ type_equal(const Type *a, const Type *b)
 	case TYPE_ARRAY:
 		return a->as.array.child == b->as.array.child && a->as.array.length == b->as.array.length && a->as.array.sentinel_zero == b->as.array.sentinel_zero;
 	case TYPE_POINTER:
-		return a->as.pointer.child == b->as.pointer.child && a->as.pointer.size == b->as.pointer.size && a->as.pointer.is_const == b->as.pointer.is_const && a->as.pointer.is_volatile == b->as.pointer.is_volatile;
+		return a->as.pointer.child == b->as.pointer.child && a->as.pointer.size == b->as.pointer.size && a->as.pointer.is_const == b->as.pointer.is_const && a->as.pointer.is_volatile == b->as.pointer.is_volatile && a->as.pointer.is_allowzero == b->as.pointer.is_allowzero;
 	case TYPE_FN:
 		if (a->as.fn.convention != b->as.fn.convention || a->as.fn.ret != b->as.fn.ret || a->as.fn.is_var_args != b->as.fn.is_var_args || a->as.fn.is_generic != b->as.fn.is_generic || a->as.fn.param_count != b->as.fn.param_count)
 			return false;
@@ -323,12 +324,13 @@ type_int(Sema *sema, bool is_signed, uint32_t bits)
 }
 
 static TypeId
-type_pointer(Sema *sema, TypeId child, PointerSize size, bool is_const)
+type_pointer(Sema *sema, TypeId child, PointerSize size, bool is_const, bool is_allowzero)
 {
 	Type type = make_type(TYPE_POINTER);
 	type.as.pointer.child = child;
 	type.as.pointer.size = size;
 	type.as.pointer.is_const = is_const;
+	type.as.pointer.is_allowzero = is_allowzero;
 	return type_intern(sema, &type);
 }
 
@@ -517,7 +519,7 @@ sema_type_name(Sema *sema, TypeId type_id)
 		return arena_sprintf(sema->arena, "[%u%s]%s", type->as.array.length, type->as.array.sentinel_zero ? ":0" : "", sema_type_name(sema, type->as.array.child));
 	case TYPE_POINTER: {
 		const char *prefix = type->as.pointer.size == POINTER_ONE ? "*" : type->as.pointer.size == POINTER_MANY ? "[*]" : type->as.pointer.size == POINTER_SLICE ? "[]" : "[*c]";
-		return arena_sprintf(sema->arena, "%s%s%s", prefix, type->as.pointer.is_const ? "const " : "", sema_type_name(sema, type->as.pointer.child));
+		return arena_sprintf(sema->arena, "%s%s%s%s", prefix, type->as.pointer.is_allowzero ? "allowzero " : "", type->as.pointer.is_const ? "const " : "", sema_type_name(sema, type->as.pointer.child));
 	}
 	case TYPE_FN: {
 		const char *text = "fn (";
@@ -1003,7 +1005,7 @@ create_global(Block *block, SemaDecl *decl, TypeId type)
 	global->src = decl->ir.src;
 	global->file = block->ir->file;
 	decl->global = id;
-	TypeId pointer = type_pointer(sema, type, POINTER_ONE, false);
+	TypeId pointer = type_pointer(sema, type, POINTER_ONE, false, false);
 	decl->value = comptime_operand(pointer, value_global(&sema->values, pointer, id));
 }
 
@@ -1203,6 +1205,8 @@ memory_coercion_allowed(const Sema *sema, TypeId dest, TypeId source, bool dest_
 	TypePointer from = sema->types[source].as.pointer;
 	if (to.size != from.size || to.is_volatile != from.is_volatile)
 		return false;
+	if (to.is_allowzero != from.is_allowzero && (dest_is_mut || !to.is_allowzero))
+		return false;
 	if (to.is_const != from.is_const && (dest_is_mut || !to.is_const))
 		return false;
 	return memory_coercion_allowed(sema, to.child, from.child, dest_is_mut || !to.is_const);
@@ -1223,7 +1227,7 @@ static Operand
 function_address(Block *block, Operand value, uint32_t src)
 {
 	Sema *sema = block->sema;
-	TypeId pointer = type_pointer(sema, value.type, POINTER_ONE, true);
+	TypeId pointer = type_pointer(sema, value.type, POINTER_ONE, true, false);
 	if (operand_is_undefined(block, value))
 		return comptime_operand(pointer, value_undefined(&sema->values, pointer));
 	if (value.kind != OPERAND_COMPTIME || operand_value(block, value)->kind != VALUE_FUNCTION) {
@@ -1434,6 +1438,23 @@ peer_type(Block *block, Operand lhs, Operand rhs, uint32_t src, TypeId *out)
 		}
 		TypePointer ap = sema->types[a].as.pointer;
 		TypePointer bp = sema->types[b].as.pointer;
+		if (ap.size == bp.size) {
+			Type candidate = make_type(TYPE_POINTER);
+			candidate.as.pointer = ap;
+			candidate.as.pointer.is_const = ap.is_const || bp.is_const;
+			candidate.as.pointer.is_allowzero = ap.is_allowzero || bp.is_allowzero;
+			TypeId merged = type_intern(sema, &candidate);
+			if (memory_coercion_allowed(sema, merged, a, false) && memory_coercion_allowed(sema, merged, b, false)) {
+				*out = merged;
+				return true;
+			}
+			candidate.as.pointer.child = bp.child;
+			merged = type_intern(sema, &candidate);
+			if (memory_coercion_allowed(sema, merged, a, false) && memory_coercion_allowed(sema, merged, b, false)) {
+				*out = merged;
+				return true;
+			}
+		}
 		if (ap.size == POINTER_ONE && bp.size == POINTER_ONE && sema->types[ap.child].kind == TYPE_ARRAY && sema->types[bp.child].kind == TYPE_ARRAY) {
 			sema_error(block, src, "not supported by szc yet: runtime slice joins");
 			return false;
@@ -2038,7 +2059,7 @@ analyze_string(Block *block, const IrInst *inst)
 	array.as.array.length = length;
 	array.as.array.sentinel_zero = true;
 	TypeId child = type_intern(sema, &array);
-	TypeId pointer = type_pointer(sema, child, POINTER_ONE, true);
+	TypeId pointer = type_pointer(sema, child, POINTER_ONE, true, false);
 	return comptime_operand(pointer, value_bytes(&sema->values, pointer, (const uint8_t *)intern_text(sema->interner, id), length));
 }
 
@@ -2606,7 +2627,7 @@ analyze_ref(Block *block, Operand value, uint32_t src, uint32_t identity)
 	TypeKind kind = sema->types[value.type].kind;
 	if (kind == TYPE_FN)
 		return function_address(block, value, src);
-	TypeId pointer = type_pointer(sema, value.type, POINTER_ONE, true);
+	TypeId pointer = type_pointer(sema, value.type, POINTER_ONE, true, false);
 	if (value.kind == OPERAND_COMPTIME)
 		return comptime_operand(pointer, value_ref(&sema->values, pointer, value.value, identity));
 	if (block->is_comptime || !require_runtime(block, src)) {
@@ -2652,7 +2673,7 @@ analyze_alloc(Block *block, const IrInst *inst)
 		sema_error(block, src, "not supported by szc yet: variables of type '%s'", sema_type_name(sema, type));
 		return operand_none;
 	}
-	TypeId pointer = type_pointer(sema, type, POINTER_ONE, (payload.flags & IR_ALLOC_CONST) != 0);
+	TypeId pointer = type_pointer(sema, type, POINTER_ONE, (payload.flags & IR_ALLOC_CONST) != 0, false);
 	TirRef slot = emit_tir(block, TIR_ALLOC, pointer, src);
 	if (!operand_is_undefined(block, init))
 		emit_tir_bin(block, TIR_STORE, T_VOID, src, slot, materialize(block, init, src));
@@ -2837,7 +2858,9 @@ analyze_inst(Block *block, IrInstIndex index, Operand *break_value)
 		break;
 	}
 	case IR_PTR_TYPE: {
-		Operand child = resolve_ref(block, inst->data.bin.lhs);
+		IrPointerType payload;
+		IR_READ(block->ir, inst->data.payload, &payload);
+		Operand child = resolve_ref(block, payload.child);
 		TypeId type;
 		if (!operand_to_type(block, child, src, &type))
 			break;
@@ -2845,7 +2868,7 @@ analyze_inst(Block *block, IrInstIndex index, Operand *break_value)
 			sema_error(block, src, "pointer to noreturn not allowed");
 			break;
 		}
-		result = type_operand(sema, type_pointer(sema, type, POINTER_ONE, inst->data.bin.rhs == IR_REF_TRUE));
+		result = type_operand(sema, type_pointer(sema, type, POINTER_ONE, (payload.flags & IR_POINTER_CONST) != 0, (payload.flags & IR_POINTER_ALLOWZERO) != 0));
 		break;
 	}
 	case IR_REF:

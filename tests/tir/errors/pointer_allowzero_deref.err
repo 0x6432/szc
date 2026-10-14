@@ -1,0 +1,3 @@
+tests/tir/errors/pointer_allowzero_deref.zig:3:10: error: cannot dereference undefined value
+    _ = p.*;
+         ^

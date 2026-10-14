@@ -1,0 +1,3 @@
+tests/tir/errors/pointer_allowzero_discard.zig:1:37: error: expected type '*u8', found '*allowzero u8'
+fn f(p: *allowzero u8) *u8 { return p; }
+                                    ^

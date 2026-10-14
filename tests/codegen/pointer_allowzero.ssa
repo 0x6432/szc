@@ -1,0 +1,91 @@
+function w $szc.main.1() {
+@start
+	%t1 =l loadl $szc.g.1
+	%t2 =w loadub %t1
+	%t4 =w add %t2, 1
+	%t4 =w and %t4, 255
+	%g4_overflow =w cultw %t4, %t2
+	jnz %g4_overflow, @g4_overflow_panic, @g4_overflow_ok
+@g4_overflow_panic
+	call $szc.panic.0()
+	hlt
+@g4_overflow_ok
+	storeb %t4, %t1
+	%t7 =l loadl $szc.g.1
+	%t10 =l call $szc.select.2(w 0, l $szc.g.2, l %t7)
+	%t11 =w loadub %t10
+	%t13 =l loadl $szc.g.1
+	%t14 =w call $szc.read.3(l %t13)
+	%t14 =w and %t14, 255
+	%t15 =w add %t11, %t14
+	%t15 =w and %t15, 255
+	%g15_overflow =w cultw %t15, %t11
+	jnz %g15_overflow, @g15_overflow_panic, @g15_overflow_ok
+@g15_overflow_panic
+	call $szc.panic.0()
+	hlt
+@g15_overflow_ok
+	%t17 =w call $szc.call.4(l $szc.read.3)
+	%t17 =w and %t17, 255
+	%t18 =w add %t15, %t17
+	%t18 =w and %t18, 255
+	%g18_overflow =w cultw %t18, %t15
+	jnz %g18_overflow, @g18_overflow_panic, @g18_overflow_ok
+@g18_overflow_panic
+	call $szc.panic.0()
+	hlt
+@g18_overflow_ok
+	%t20 =w sub %t18, 36
+	%t20 =w and %t20, 255
+	%g20_overflow =w cultw %t18, 36
+	jnz %g20_overflow, @g20_overflow_panic, @g20_overflow_ok
+@g20_overflow_panic
+	call $szc.panic.0()
+	hlt
+@g20_overflow_ok
+	ret %t20
+}
+
+function l $szc.select.2(w %t0, l %t1, l %t2) {
+@start
+	jnz %t0, @c8_then, @c8_else
+@c8_then
+	%t4 =l copy %t1
+	%t3 =l copy %t4
+	jmp @b3
+@c8_else
+	%t6 =l copy %t2
+	%t3 =l copy %t6
+	jmp @b3
+@b3
+	ret %t3
+}
+
+function w $szc.read.3(l %t0) {
+@start
+	%t1 =w loadub %t0
+	ret %t1
+}
+
+function w $szc.call.4(l %t0) {
+@start
+	%t2 =w call %t0(l $szc.g.2)
+	%t2 =w and %t2, 255
+	ret %t2
+}
+
+data $szc.g.1 = align 8 { l $szc.g.2 }
+data $szc.g.2 = align 1 { b 11 }
+data $szc.panic.msg.0 = { b "integer overflow\n", b 0 }
+function $szc.panic.0() {
+@start
+	call $write(w 2, l $szc.panic.msg.0, l 17)
+	call $abort()
+	hlt
+}
+
+export function w $main() {
+@start
+	%status =w call $szc.main.1()
+	ret %status
+}

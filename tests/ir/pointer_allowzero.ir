@@ -1,0 +1,212 @@
+%153 = struct_decl (flags=0) {
+  decl var "value" type {
+    %0 = break_inline result, @type_u8
+  } value {
+    %1 = decl_type
+    %2 = int 11
+    %3 = as %1, %2
+    %4 = break_inline result, %3
+  }
+  decl var "pointer" type {
+    %5 = ptr_type @type_u8, @false allowzero
+    %6 = as @type_type, %5
+    %7 = break_inline result, %6
+  } value {
+    %8 = decl_type
+    %9 = decl_ref "value"
+    %10 = as %8, %9
+    %11 = break_inline result, %10
+  }
+  decl const "saved" value {
+    %12 = ptr_type @type_u8, @true allowzero
+    %13 = as @type_type, %12
+    %14 = ref_type %13
+    %15 = int 13
+    %16 = as @type_u8, %15
+    %17 = as %14, %16
+    %18 = ref %17
+    %19 = as %13, %18
+    %20 = break_inline result, %19
+  }
+  decl fn "read" value {
+    %30 = func "read" {
+      %24 = param "p" type {
+        %21 = ptr_type @type_u8, @true allowzero
+        %22 = as @type_type, %21
+        %23 = break_inline result, %22
+      }
+      ret type {
+        %25 = break_inline result, @type_u8
+      }
+      body insts {
+        %26 = ret_type
+        %27 = deref %24
+        %28 = as_return %26, %27
+        %29 = ret %28
+      }
+    }
+    %31 = break_inline result, %30
+  }
+  decl fn "select" value {
+    %52 = func "select" {
+      %33 = param "c" type {
+        %32 = break_inline result, @type_bool
+      }
+      %37 = param "a" type {
+        %34 = ptr_type @type_u8, @true
+        %35 = as @type_type, %34
+        %36 = break_inline result, %35
+      }
+      %41 = param "b" type {
+        %38 = ptr_type @type_u8, @false allowzero
+        %39 = as @type_type, %38
+        %40 = break_inline result, %39
+      }
+      ret type {
+        %42 = ptr_type @type_u8, @true allowzero
+        %43 = as @type_type, %42
+        %44 = break_inline result, %43
+      }
+      body insts {
+        %45 = as @type_bool, %33
+        %48 = if %45 then {
+          %46 = break_inline result, %37
+        } else {
+          %47 = break_inline result, %41
+        }
+        %49 = ret_type
+        %50 = as_return %49, %48
+        %51 = ret %50
+      }
+    }
+    %53 = break_inline result, %52
+  }
+  decl fn "call" value {
+    %74 = func "call" {
+      %64 = param "p" type {
+        %59 = fn_type "" {
+          %57 = param "" type {
+            %54 = ptr_type @type_u8, @false
+            %55 = as @type_type, %54
+            %56 = break_inline result, %55
+          }
+          ret type {
+            %58 = break_inline result, @type_u8
+          }
+        }
+        %60 = as @type_type, %59
+        %61 = ptr_type %60, @true allowzero
+        %62 = as @type_type, %61
+        %63 = break_inline result, %62
+      }
+      ret type {
+        %65 = break_inline result, @type_u8
+      }
+      body insts {
+        %66 = ret_type
+        %67 = call %64 arg0 {
+          %68 = arg_type %67, 0
+          %69 = decl_ref "value"
+          %70 = as %68, %69
+          %71 = break_inline result, %70
+        }
+        %72 = as_return %66, %67
+        %73 = ret %72
+      }
+    }
+    %75 = break_inline result, %74
+  }
+  decl fn "main" pub value {
+    %151 = func "main" {
+      ret type {
+        %76 = break_inline result, @type_u8
+      }
+      body insts {
+        %77 = decl_val "pointer"
+        %78 = ref_deref %77
+        %79 = load %78
+        %80 = int 1
+        %81 = elem_type %78
+        %82 = as %81, %80
+        %83 = add %79, %82
+        %84 = elem_type %78
+        %85 = as %84, %83
+        %86 = store %78, %85
+        %87 = ptr_type @type_u8, @true allowzero
+        %88 = as @type_type, %87
+        %89 = ptr_type %88, @true
+        %90 = as @type_type, %89
+        %91 = decl_ref "pointer"
+        %92 = as %90, %91
+        %93 = ptr_type @type_u8, @true allowzero
+        %94 = as @type_type, %93
+        %95 = ref_type %94
+        %96 = int 13
+        %97 = as @type_u8, %96
+        %98 = as %95, %97
+        %99 = ref %98
+        %100 = as %94, %99
+        %101 = decl_val "saved"
+        %102 = cmp_neq %100, %101
+        %108 = if %102 then {
+          %103 = ret_type
+          %104 = int 1
+          %105 = as_return %103, %104
+          %106 = ret %105
+        } else {
+          %107 = break_inline result, @void_value
+        }
+        %109 = ptr_type @type_u8, @false allowzero
+        %110 = ptr_type @type_u8, @false
+        %111 = cmp_eq %109, %110
+        %117 = if %111 then {
+          %112 = ret_type
+          %113 = int 2
+          %114 = as_return %112, %113
+          %115 = ret %114
+        } else {
+          %116 = break_inline result, @void_value
+        }
+        %118 = ret_type
+        %119 = decl_val "select"
+        %120 = call %119 arg0 {
+          %121 = arg_type %120, 0
+          %122 = as %121, @false
+          %123 = break_inline result, %122
+        } arg1 {
+          %124 = arg_type %120, 1
+          %125 = decl_ref "value"
+          %126 = as %124, %125
+          %127 = break_inline result, %126
+        } arg2 {
+          %128 = arg_type %120, 2
+          %129 = decl_val "pointer"
+          %130 = as %128, %129
+          %131 = break_inline result, %130
+        }
+        %132 = deref %120
+        %133 = decl_val "read"
+        %134 = call %133 arg0 {
+          %135 = arg_type %134, 0
+          %136 = deref %92
+          %137 = as %135, %136
+          %138 = break_inline result, %137
+        }
+        %139 = add %132, %134
+        %140 = decl_val "call"
+        %141 = call %140 arg0 {
+          %142 = arg_type %141, 0
+          %143 = decl_val "read"
+          %144 = as %142, %143
+          %145 = break_inline result, %144
+        }
+        %146 = add %139, %141
+        %147 = int 36
+        %148 = sub %146, %147
+        %149 = as_return %118, %148
+        %150 = ret %149
+      }
+    }
+    %152 = break_inline result, %151
+  }
+}
