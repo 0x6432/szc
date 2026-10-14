@@ -1,0 +1,3 @@
+tests/tir/errors/constant_ref_result_type.zig:1:37: error: expected type 'u8', found pointer
+pub fn main() void { const n: u8 = &1; _ = n; }
+                                    ^

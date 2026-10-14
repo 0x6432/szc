@@ -1,0 +1,63 @@
+function w $szc.main.1() {
+@start
+	%t1 =w call $szc.load.3(l $szc.const.2)
+	%t3 =w call $szc.select.2(w %t1, w 0)
+	%t5 =w add %t3, 23
+	%t5 =w and %t5, 255
+	%g5_overflow =w cultw %t5, %t3
+	jnz %g5_overflow, @g5_overflow_panic, @g5_overflow_ok
+@g5_overflow_panic
+	call $szc.panic.0()
+	hlt
+@g5_overflow_ok
+	ret %t5
+}
+
+function w $szc.select.2(w %t0, w %t1) {
+@start
+	%t4 =l alloc4 1
+	%t3 =w add %t0, 1
+	%t3 =w and %t3, 255
+	%g3_overflow =w cultw %t3, %t0
+	jnz %g3_overflow, @g3_overflow_panic, @g3_overflow_ok
+@g3_overflow_panic
+	call $szc.panic.0()
+	hlt
+@g3_overflow_ok
+	storeb %t3, %t4
+	jnz %t1, @c9_then, @c9_else
+@c9_then
+	%t6 =l copy %t4
+	jmp @b6
+@c9_else
+	%t6 =l copy %t4
+	jmp @b6
+@b6
+	%t10 =w loadub %t6
+	ret %t10
+}
+
+function w $szc.load.3(l %t0) {
+@start
+	%t1 =l loadl %t0
+	%t2 =w loadub %t1
+	ret %t2
+}
+
+section ".rodata"
+data $szc.const.1 = align 1 { b 19 }
+section ".data.rel.ro"
+data $szc.const.2 = align 8 { l $szc.const.1 }
+data $szc.panic.msg.0 = { b "integer overflow\n", b 0 }
+function $szc.panic.0() {
+@start
+	call $write(w 2, l $szc.panic.msg.0, l 17)
+	call $abort()
+	hlt
+}
+
+export function w $main() {
+@start
+	%status =w call $szc.main.1()
+	ret %status
+}

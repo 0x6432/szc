@@ -32,7 +32,8 @@ Read this first when resuming work (the sandbox resets often).
 - Done: M4.5a safe explicit unreachable, noreturn return/cast diagnostics and terminating joins.
 - Done: M4.5b explicit @panic and first-class string-literal byte values.
 - Done: M5.1a runtime single pointers, mutable-local addresses, dereference and nested const rules.
-- Next: **M5.1b** declaration-backed addresses for constants/parameters/temporaries and pointer identity.
+- Done: M5.1b definition-anchored references, immutable constant objects and pointer equality.
+- Next: **M5.1c** remaining pointer integration: mutable globals, function addresses/calls, attributes.
 - Run `PATH=/data/tools/bin:$PATH ZIG=/data/zig/zig-x86_64-linux-0.17.0/zig make e2e-test`
   locally. `tools/build_qbe.sh` builds the pinned QBE into `build/qbe-src` on CI.
 - Tools: `SZC_QBE`/`qbe`, `SZC_CC`/`cc`; pinned QBE revision
@@ -40,8 +41,40 @@ Read this first when resuming work (the sandbox resets often).
 - Restored sandbox needed libasan/libubsan/clang/compiler-rt reinstalled. Git
   credentials are not persisted; use transient authentication for future pushes.
 - M3.4 (`1882ced`) and M3.5 (`7b36edd`) are pushed to `main`.
-- CI through M4.5b (`c877ab7`): completed successfully (run 38505459099).
-  Check the M5.1a push run.
+- CI through M5.1a (`4fb6cf2`): completed successfully (run 38532277680).
+  Check the M5.1b push run.
+
+## Validation at M5.1b
+
+- GCC/Clang -Werror ASan/UBSan: 542 unit checks, 538 goldens, 42 ordinary/reference
+  executable inputs plus one szc-only input, 12 driver checks, four PIE/RELRO checks,
+  159 panic cases and 168 coercion differential cases. Optimized GCC is clean.
+  Four 60-second fuzz targets and standalone 20,000 mutations per stage pass.
+  Unit tests cover immutable object ownership/identity and hash-table growth.
+- IR_REF is cached by defining instruction and inserted after that definition when
+  its containing body is finalized. Parameter reference chains are prepended to
+  the function body after sema's TIR_ARG setup. Keep this dominance/identity model;
+  do not move allocation initialization back into the first address-taking branch.
+  Known constants remain values, so address taking does not break comptime folding.
+- VALUE_REF uses ConstObjectId from ValueTable.objects. Object identity 0 means a
+  deduplicated anonymous value address; named global constants use stable nonzero
+  declaration identities. Const coercions preserve object IDs. Distinct globals
+  with equal values must not alias each other or an anonymous local constant.
+- Known reference loads recover their stored ValueId and coerce to the pointee
+  type. Runtime references use activation-local TIR_ALLOC/STORE, including params,
+  captures and reusable defer expansions. No mutable static temporary storage.
+- Codegen emits reachable immutable scalar objects in .rodata, pointer objects in
+  .data.rel.ro, and marks nested object/byte dependencies. The latter section has
+  loader relocations but is protected by GNU_RELRO; tests require no TEXTREL in a
+  PIE. `tests/run_reference_storage.py` is part of make e2e-test/CI (needs readelf).
+- Temporary literals use result pointee context; named bindings retain their type.
+  Pointer equality handles both runtime and immutable objects. An undefined pointer
+  comparison propagates undefined bool; discarding it is legal, a known condition
+  use is not. Actual Zig 0.17 probes/sources verify these distinctions.
+- M5.1c remains: mutable global data and function-pointer/address integration, plus
+  attributes. Arrays/aggregate memory are later phases. Runtime storage of unsupported
+  comptime-only objects is a hard NYI, not a dummy zero object. Escaping a runtime
+  local pointer is not diagnosed by Zig; do not add tests that use expired pointers.
 
 ## Validation at M5.1a
 
@@ -62,12 +95,9 @@ Read this first when resuming work (the sandbox resets often).
 - OPV void/u0 dereferences/stores do not access memory, even through known undefined
   pointers. Other known undefined source dereferences are errors. Existing pointer
   storage uses allocation-backed runtime addresses, never static mutable state.
-- M5.1b must design declaration-backed const/parameter storage and pointer identity;
-  do not lazily allocate at the first address-taking expression in a branch.
-  Preserve existing const comptime knowledge and dominance/lifetime guarantees.
-  Constant, parameter, global and temporary addresses currently report NYI;
-  pointer equality reports NYI, while ordering single pointers is rejected by 0.17.
-  Pointer attributes/many/slice/C pointer syntax and aggregate reads are still NYI.
+- At this checkpoint constants/parameter/global/temporary addresses and pointer
+  equality were still NYI; M5.1b above supersedes those limitations. Pointer
+  attributes/many/slice/C pointer syntax and aggregate reads remain pending.
 
 ## Validation at M4.5b
 

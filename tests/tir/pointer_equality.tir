@@ -1,0 +1,13 @@
+fn szc.main.1: fn () void {
+  %0: *u8 = alloc
+  %1: u8 = const 1
+  %2: void = store %0, %1
+  %3: bool = call szc.same.2(%0, %0)
+  %4: noreturn = ret
+}
+fn szc.same.2: fn (*u8, *u8) bool {
+  %0: *u8 = arg 0
+  %1: *u8 = arg 1
+  %2: bool = cmp_eq %0, %1
+  %3: noreturn = ret %2
+}

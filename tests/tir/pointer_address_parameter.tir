@@ -1,0 +1,11 @@
+fn szc.main.1: fn () void {
+  %0: u8 = const 1
+  %1: void = call szc.f.2(%0)
+  %2: noreturn = ret
+}
+fn szc.f.2: fn (u8) void {
+  %0: u8 = arg 0
+  %1: *const u8 = alloc
+  %2: void = store %1, %0
+  %3: noreturn = ret
+}

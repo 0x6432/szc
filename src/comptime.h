@@ -15,6 +15,7 @@
 typedef uint32_t TypeId;
 typedef uint32_t ValueId;
 typedef uint32_t FuncId;
+typedef uint32_t ConstObjectId;
 
 #define VALUE_NONE ((ValueId)0)
 
@@ -31,6 +32,7 @@ typedef enum ValueKind {
 	VALUE_INT,	/* integer of any integer type, including comptime_int */
 	VALUE_TYPE,
 	VALUE_FUNCTION,
+	VALUE_REF,	/* immutable address of an interned value */
 	VALUE_BYTES,	/* immutable bytes; length excludes the zero sentinel */
 	VALUE_UNDEFINED,	/* `undefined` of any type */
 } ValueKind;
@@ -49,8 +51,15 @@ typedef struct Value {
 		TypeId type_value;
 		FuncId function;
 		ByteString bytes;
+		ConstObjectId object;
 	} as;
 } Value;
+
+/* Identity 0 denotes a deduplicated value address; declarations use unique identities. */
+typedef struct ConstObject {
+	ValueId value;
+	uint32_t identity;
+} ConstObject;
 
 typedef struct ValueTable {
 	Arena    *arena;
@@ -60,12 +69,18 @@ typedef struct ValueTable {
 	uint32_t capacity;
 	uint32_t *slots;	/* open addressing; 0 = empty */
 	uint32_t slot_count;
+	ConstObject *objects;	/* objects[0] is unused */
+	uint32_t object_count;
+	uint32_t object_capacity;
+	uint32_t *object_slots;
+	uint32_t object_slot_count;
 } ValueTable;
 
 void         value_table_init(ValueTable *table, Arena *arena);
 ValueId      value_intern(ValueTable *table, const Value *value);	/* copies limbs */
 const Value *value_get(const ValueTable *table, ValueId id);
 
+ValueId value_ref(ValueTable *table, TypeId type, ValueId pointee, uint32_t identity);
 ValueId value_bytes(ValueTable *table, TypeId type, const uint8_t *data, uint32_t length);
 ValueId value_void(ValueTable *table, TypeId void_type);
 ValueId value_bool(ValueTable *table, TypeId bool_type, bool value);

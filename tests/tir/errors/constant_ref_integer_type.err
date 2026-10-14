@@ -1,0 +1,3 @@
+tests/tir/errors/constant_ref_integer_type.zig:2:42: error: expected type '*const u8', found '*const comptime_int'
+pub fn main() u8 { const n = 1; return f(&n); }
+                                         ^

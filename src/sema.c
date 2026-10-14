@@ -44,6 +44,7 @@ typedef struct SemaDecl {
 	IrDecl    ir;
 	DeclState state;
 	Operand   value;
+	uint32_t address_identity;
 } SemaDecl;
 
 struct SemaNamespace {
@@ -78,6 +79,7 @@ struct Sema {
 	uint32_t   queue_count;
 	uint32_t   queue_capacity;
 	FuncId     main_func;
+	uint32_t next_address_identity;
 };
 
 /* Maps IR instruction indices to operands while a body is analysed. */
@@ -1710,8 +1712,32 @@ analyze_compare(Block *block, const IrInst *inst)
 		return runtime_operand(T_BOOL, emit_tir_bin(block, tir_arith_op(op), T_BOOL, src, l, r));
 	}
 	if (is_equality && lk == TYPE_POINTER && rk == TYPE_POINTER) {
-		sema_error(block, src, "not supported by szc yet: pointer equality");
-		return operand_none;
+		TypeId type;
+		if (!peer_type(block, lhs, rhs, src, &type))
+			return operand_none;
+		lhs = coerce(block, lhs, type, src);
+		rhs = coerce(block, rhs, type, src);
+		if (operand_is_undefined(block, lhs) || operand_is_undefined(block, rhs))
+			return comptime_operand(T_BOOL, value_undefined(&sema->values, T_BOOL));
+		if (lhs.kind == OPERAND_COMPTIME && rhs.kind == OPERAND_COMPTIME) {
+			const Value *a = operand_value(block, lhs);
+			const Value *b = operand_value(block, rhs);
+			bool equal;
+			if (a->kind == VALUE_REF && b->kind == VALUE_REF)
+				equal = a->as.object == b->as.object;
+			else if (a->kind == VALUE_BYTES && b->kind == VALUE_BYTES)
+				equal = lhs.value == rhs.value;
+			else {
+				sema_error(block, src, "not supported by szc yet: comptime pointer equality");
+				return operand_none;
+			}
+			return bool_operand(sema, (op == IR_CMP_EQ) == equal);
+		}
+		if (!require_runtime(block, src))
+			return operand_none;
+		TirRef left = materialize(block, lhs, src);
+		TirRef right = materialize(block, rhs, src);
+		return runtime_operand(T_BOOL, emit_tir_bin(block, tir_arith_op(op), T_BOOL, src, left, right));
 	}
 	if (!is_int_or_comptime_int(sema, lhs.type) || !is_int_or_comptime_int(sema, rhs.type)) {
 		const char *text = op == IR_CMP_EQ ? "==" : op == IR_CMP_NEQ ? "!=" : op == IR_CMP_LT ? "<" : op == IR_CMP_GT ? ">" : op == IR_CMP_LTE ? "<=" : ">=";
@@ -2345,6 +2371,34 @@ analyze_call(Block *block, IrInstIndex index, Operand *out)
 
 /* ---------- Analysis: memory ---------- */
 
+/* Known values have immutable backing objects; runtime values have anchored stack slots. */
+static Operand
+analyze_ref(Block *block, Operand value, uint32_t src, uint32_t identity)
+{
+	Sema *sema = block->sema;
+	if (value.kind == OPERAND_NONE)
+		return operand_none;
+	TypeKind kind = sema->types[value.type].kind;
+	if (kind == TYPE_FN) {
+		sema_error(block, src, "not supported by szc yet: addresses of functions");
+		return operand_none;
+	}
+	TypeId pointer = type_pointer(sema, value.type, POINTER_ONE, true);
+	if (value.kind == OPERAND_COMPTIME)
+		return comptime_operand(pointer, value_ref(&sema->values, pointer, value.value, identity));
+	if (block->is_comptime || !require_runtime(block, src)) {
+		sema_error(block, src, "unable to evaluate comptime expression");
+		return operand_none;
+	}
+	if (kind != TYPE_INT && kind != TYPE_BOOL && kind != TYPE_POINTER && kind != TYPE_VOID) {
+		sema_error(block, src, "not supported by szc yet: address of runtime '%s'", sema_type_name(sema, value.type));
+		return operand_none;
+	}
+	TirRef slot = emit_tir(block, TIR_ALLOC, pointer, src);
+	emit_tir_bin(block, TIR_STORE, T_VOID, src, slot, value.inst);
+	return runtime_operand(pointer, slot);
+}
+
 static Operand
 analyze_alloc(Block *block, const IrInst *inst)
 {
@@ -2435,6 +2489,12 @@ analyze_deref(Block *block, const IrInst *inst)
 		return void_operand(sema);
 	if (zero_int)
 		return comptime_operand(type.child, value_int_u64(&sema->values, type.child, 0));
+	if (pointer.kind == OPERAND_COMPTIME && operand_value(block, pointer)->kind == VALUE_REF) {
+		ConstObjectId object = operand_value(block, pointer)->as.object;
+		ValueId pointee = sema->values.objects[object].value;
+		TypeId stored_type = value_get(&sema->values, pointee)->type;
+		return coerce(block, comptime_operand(stored_type, pointee), type.child, inst->src);
+	}
 	TypeKind child_kind = sema->types[type.child].kind;
 	if (child_kind != TYPE_INT && child_kind != TYPE_BOOL && child_kind != TYPE_POINTER) {
 		sema_error(block, inst->src, "not supported by szc yet: dereference of '%s'", sema_type_name(sema, type.child));
@@ -2476,6 +2536,7 @@ analyze_inst(Block *block, IrInstIndex index, Operand *break_value)
 	case IR_FUNC:
 		result = analyze_func_inst(block, index);
 		break;
+	case IR_DECL_REF:
 	case IR_DECL_VAL: {
 		StringId name = inst->data.name.name;
 		SemaDecl *decl = NULL;
@@ -2490,6 +2551,11 @@ analyze_inst(Block *block, IrInstIndex index, Operand *break_value)
 			break;
 		}
 		result = resolve_decl(block, src, ns, decl);
+		if (inst->op == IR_DECL_REF) {
+			if (decl->address_identity == 0)
+				decl->address_identity = ++sema->next_address_identity;
+			result = analyze_ref(block, result, src, decl->address_identity);
+		}
 		break;
 	}
 	case IR_INT:
@@ -2522,6 +2588,25 @@ analyze_inst(Block *block, IrInstIndex index, Operand *break_value)
 			break;
 		}
 		result = type_operand(sema, type_pointer(sema, type, POINTER_ONE, inst->data.bin.rhs == IR_REF_TRUE));
+		break;
+	}
+	case IR_REF:
+		result = analyze_ref(block, resolve_ref(block, inst->data.un.operand), src, 0);
+		break;
+	case IR_REF_TYPE: {
+		Operand operand = resolve_ref(block, inst->data.un.operand);
+		if (operand.kind == OPERAND_NO_RESULT_TYPE) {
+			result = operand;
+			break;
+		}
+		TypeId type;
+		if (!operand_to_type(block, operand, src, &type))
+			break;
+		if (sema->types[type].kind != TYPE_POINTER) {
+			sema_error(block, src, "expected type '%s', found pointer", sema_type_name(sema, type));
+			break;
+		}
+		result = type_operand(sema, sema->types[type].as.pointer.child);
 		break;
 	}
 	case IR_DEREF:
@@ -2770,7 +2855,6 @@ analyze_inst(Block *block, IrInstIndex index, Operand *break_value)
 		break;
 	case IR_FLOAT:
 	case IR_ENUM_LITERAL:
-	case IR_DECL_REF:
 		result = unsupported_inst(block, inst);
 		break;
 	case IR_OP_COUNT:
@@ -2981,6 +3065,11 @@ value_text(Sema *sema, ValueId id)
 		return sema_type_name(sema, value->as.type_value);
 	case VALUE_FUNCTION:
 		return sema->funcs[value->as.function]->symbol;
+	case VALUE_REF: {
+		char *text = arena_alloc(sema->arena, 32, 1);
+		snprintf(text, 32, "ref(object.%u)", (unsigned)value->as.object);
+		return text;
+	}
 	case VALUE_BYTES: {
 		ByteString bytes = value->as.bytes;
 		char *text = arena_alloc(sema->arena, (size_t)bytes.length * 4 + 3, 1);

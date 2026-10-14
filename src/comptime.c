@@ -531,6 +531,9 @@ value_hash(const Value *value)
 	case VALUE_TYPE:
 		hash = hash_mix(hash, value->as.type_value);
 		break;
+	case VALUE_REF:
+		hash = hash_mix(hash, value->as.object);
+		break;
 	case VALUE_BYTES:
 		hash = hash_mix(hash, value->as.bytes.length);
 		for (uint32_t i = 0; i < value->as.bytes.length; i++)
@@ -558,6 +561,8 @@ value_equal(const Value *a, const Value *b)
 		return bigint_compare(&a->as.integer, &b->as.integer) == 0;
 	case VALUE_TYPE:
 		return a->as.type_value == b->as.type_value;
+	case VALUE_REF:
+		return a->as.object == b->as.object;
 	case VALUE_BYTES:
 		return a->as.bytes.length == b->as.bytes.length && (a->as.bytes.length == 0 || memcmp(a->as.bytes.data, b->as.bytes.data, a->as.bytes.length) == 0);
 	case VALUE_FUNCTION:
@@ -569,6 +574,11 @@ value_equal(const Value *a, const Value *b)
 void
 value_table_init(ValueTable *table, Arena *arena)
 {
+	table->objects = NULL;
+	table->object_count = 0;
+	table->object_capacity = 0;
+	table->object_slots = NULL;
+	table->object_slot_count = 0;
 	table->arena = arena;
 	table->capacity = 256;
 	table->values = arena_zalloc(arena, table->capacity * sizeof(Value), alignof(Value));
@@ -705,6 +715,68 @@ value_function(ValueTable *table, TypeId fn_type, FuncId function)
 {
 	Value value = make_value(VALUE_FUNCTION, fn_type);
 	value.as.function = function;
+	return value_intern(table, &value);
+}
+
+static uint32_t
+object_hash(ValueId value, uint32_t identity)
+{
+	return hash_mix(hash_mix(2166136261u, value), identity);
+}
+
+static void
+insert_object_slot(uint32_t *slots, uint32_t count, const ConstObject *object, ConstObjectId id)
+{
+	uint32_t mask = count - 1;
+	uint32_t index = object_hash(object->value, object->identity) & mask;
+	while (slots[index] != 0)
+		index = (index + 1) & mask;
+	slots[index] = id;
+}
+
+static ConstObjectId
+intern_object(ValueTable *table, ValueId value, uint32_t identity)
+{
+	if (table->object_count == 0) {
+		table->object_capacity = 64;
+		table->object_count = 1;
+		table->objects = ARENA_ARRAY(table->arena, ConstObject, table->object_capacity);
+		table->object_slot_count = 128;
+		table->object_slots = ARENA_ARRAY(table->arena, uint32_t, table->object_slot_count);
+	}
+	uint32_t mask = table->object_slot_count - 1;
+	for (uint32_t index = object_hash(value, identity) & mask; table->object_slots[index] != 0; index = (index + 1) & mask) {
+		ConstObjectId id = table->object_slots[index];
+		const ConstObject *object = &table->objects[id];
+		if (object->value == value && object->identity == identity)
+			return id;
+	}
+	if (table->object_count == table->object_capacity) {
+		uint32_t capacity = table->object_capacity * 2;
+		table->objects = arena_grow_array(table->arena, table->objects, table->object_count, capacity, sizeof(ConstObject), alignof(ConstObject));
+		table->object_capacity = capacity;
+	}
+	ConstObjectId id = table->object_count++;
+	table->objects[id].value = value;
+	table->objects[id].identity = identity;
+	if (table->object_count * 2 > table->object_slot_count) {
+		uint32_t count = table->object_slot_count * 2;
+		uint32_t *slots = ARENA_ARRAY(table->arena, uint32_t, count);
+		for (ConstObjectId other = 1; other < table->object_count; other++)
+			insert_object_slot(slots, count, &table->objects[other], other);
+		table->object_slots = slots;
+		table->object_slot_count = count;
+	} else {
+		insert_object_slot(table->object_slots, table->object_slot_count, &table->objects[id], id);
+	}
+	return id;
+}
+
+ValueId
+value_ref(ValueTable *table, TypeId type, ValueId pointee, uint32_t identity)
+{
+	Value value = make_value(VALUE_REF, type);
+	value.as.object = intern_object(table, pointee, identity);
 	return value_intern(table, &value);
 }
 

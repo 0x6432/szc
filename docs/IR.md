@@ -158,3 +158,27 @@ prints a file's IR.
   not permitted. Peer resolution can choose either compatible existing pointer
   type. Addressable constants/temporaries, identity and general comptime memory
   are intentionally deferred, not simulated with conditional stack spills.
+
+## Definition-anchored references and immutable objects
+
+- IR_REF takes a value and returns a const single pointer. Irgen caches one
+  reference per defining instruction and inserts it immediately after the value
+  when finalizing its body; parameter reference chains appear at function entry.
+  Taking an address only in one branch still yields a dominating initialization.
+  References of references are appended in dependency order. Mutable locals keep
+  their existing allocation refs, and named constants/params keep their value refs.
+- IR_REF_TYPE extracts the child of an expected address result type. It applies
+  result context to temporary values, not named bindings; `&1` can receive u8
+  context while a named comptime_int constant retains its original pointee type.
+- Sema lowers runtime references to stack allocation plus initialization, and known
+  ones to VALUE_REF/ConstObjectId. ConstObject records an immutable ValueId and an
+  identity: anonymous value addresses deduplicate; each named global constant has
+  its own identity. Retyping a compatible pointer does not change its object.
+- Known dereferences recover the stored value without losing comptime knowledge.
+  Pointer equality compares object IDs or runtime address bits. A known undefined
+  pointer comparison yields undefined bool, diagnosed only when a defined result
+  is needed (for example a compile-time branch condition).
+- Codegen marks transitive immutable object dependencies and emits scalar backing
+  objects in .rodata. Pointer-valued objects use .data.rel.ro, preserving PIE/RELRO
+  without text relocations. Literal bytes retain their separate read-only storage.
+  Runtime local/parameter values never become static mutable temporary objects.

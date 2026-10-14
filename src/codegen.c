@@ -43,6 +43,7 @@ typedef struct Codegen {
 	bool					failed;
 	bool					panic_used[PANIC_COUNT];
 	bool *bytes_used;
+	bool *constants_used;
 	bool explicit_panic_used;
 } Codegen;
 
@@ -146,6 +147,10 @@ print_operand(Codegen *cg, TirRef ref)
 			fprintf(cg->out, "%" PRId64, (int64_t)bits);
 		return;
 	}
+	case VALUE_REF:
+		cg->constants_used[value->as.object] = true;
+		fprintf(cg->out, "$szc.const.%u", (unsigned)value->as.object);
+		return;
 	case VALUE_BYTES:
 		cg->bytes_used[inst->data.value] = true;
 		fprintf(cg->out, "$szc.bytes.%u", (unsigned)inst->data.value);
@@ -854,6 +859,72 @@ emit_entry(Codegen *cg, const SemaFunc *main_func)
 	fputs("}\n", out);
 }
 
+/* Nested objects predate their parents, so descending IDs close all dependencies. */
+static void
+mark_constant_dependencies(Codegen *cg)
+{
+	const ValueTable *values = sema_values(cg->sema);
+	for (ConstObjectId id = values->object_count; id > 1;) {
+		id--;
+		if (!cg->constants_used[id])
+			continue;
+		ValueId stored = values->objects[id].value;
+		const Value *value = value_get(values, stored);
+		if (value->kind == VALUE_REF)
+			cg->constants_used[value->as.object] = true;
+		else if (value->kind == VALUE_BYTES)
+			cg->bytes_used[stored] = true;
+	}
+}
+
+static void
+emit_constant_object(Codegen *cg, ConstObjectId id)
+{
+	ValueId stored = sema_values(cg->sema)->objects[id].value;
+	const Value *value = value_get(sema_values(cg->sema), stored);
+	const Type *type = sema_type(cg->sema, value->type);
+	uint64_t size = sema_type_size(cg->sema, value->type);
+	uint32_t align = sema_type_align(cg->sema, value->type);
+	if (type->kind != TYPE_VOID && type->kind != TYPE_BOOL && type->kind != TYPE_POINTER && type->kind != TYPE_INT) {
+		codegen_error(cg, 0, "not supported by szc yet: runtime storage of this constant type");
+		return;
+	}
+	if (type->kind == TYPE_INT && type->as.integer.bits > 64) {
+		codegen_error(cg, 0, "not supported by szc yet: integers wider than 64 bits");
+		return;
+	}
+	fputs(type->kind == TYPE_POINTER ? "section \".data.rel.ro\"\n" : "section \".rodata\"\n", cg->out);
+	fprintf(cg->out, "data $szc.const.%u = align %u { ", (unsigned)id, (unsigned)align);
+	if (size == 0) {
+		fputs("b 0 }\n", cg->out);
+		return;
+	}
+	char cls = size == 1 ? 'b' : size == 2 ? 'h' : size == 4 ? 'w' : 'l';
+	fprintf(cg->out, "%c ", cls);
+	switch (value->kind) {
+	case VALUE_UNDEFINED:
+		fputs("0", cg->out);
+		break;
+	case VALUE_INT:
+		fprintf(cg->out, "%" PRId64, (int64_t)bigint_to_u64_bits(&value->as.integer));
+		break;
+	case VALUE_BOOL:
+		fputs(value->as.boolean ? "1" : "0", cg->out);
+		break;
+	case VALUE_REF:
+		fprintf(cg->out, "$szc.const.%u", (unsigned)value->as.object);
+		break;
+	case VALUE_BYTES:
+		fprintf(cg->out, "$szc.bytes.%u", (unsigned)stored);
+		break;
+	default:
+		codegen_error(cg, 0, "not supported by szc yet: constant object initializer");
+		fputs("0", cg->out);
+		break;
+	}
+	fputs(" }\n", cg->out);
+}
+
 bool
 codegen_qbe(FILE *out, Sema *sema, Diag *diag)
 {
@@ -865,12 +936,17 @@ codegen_qbe(FILE *out, Sema *sema, Diag *diag)
 	Arena arena;
 	arena_init(&arena);
 	cg.bytes_used = ARENA_ARRAY(&arena, bool, sema_values(sema)->count);
+	cg.constants_used = ARENA_ARRAY(&arena, bool, sema_values(sema)->object_count);
 	for (FuncId id = 1; id < sema_func_count(sema); id++) {
 		const SemaFunc *func = sema_func(sema, id);
 		if (func->state == FUNC_ANALYSED && !func->is_extern)
 			emit_function(&cg, func);
 	}
+	mark_constant_dependencies(&cg);
 	const ValueTable *values = sema_values(sema);
+	for (ConstObjectId id = 1; id < values->object_count; id++)
+		if (cg.constants_used[id])
+			emit_constant_object(&cg, id);
 	for (ValueId id = 1; id < values->count; id++) {
 		if (!cg.bytes_used[id])
 			continue;

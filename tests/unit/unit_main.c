@@ -334,6 +334,36 @@ test_byte_values(void)
 }
 
 static void
+test_constant_references(void)
+{
+	Arena arena;
+	arena_init(&arena);
+	ValueTable table;
+	value_table_init(&table, &arena);
+	ValueId n = value_int_u64(&table, 1, 42);
+	ValueId ref = value_ref(&table, 2, n, 0);
+	CHECK(ref == value_ref(&table, 2, n, 0));
+	CHECK(ref != value_ref(&table, 3, n, 0));
+	CHECK(value_get(&table, ref)->as.object == value_get(&table, value_ref(&table, 3, n, 0))->as.object);
+	ValueId named = value_ref(&table, 2, n, 1);
+	CHECK(named != ref);
+	CHECK(named != value_ref(&table, 2, n, 2));
+	CHECK(table.objects[value_get(&table, named)->as.object].value == n);
+	ValueId refs[512];
+	for (uint32_t i = 0; i < 512; i++)
+		refs[i] = value_ref(&table, 2, value_int_u64(&table, 1, i), i + 3);
+	bool preserved = true;
+	for (uint32_t i = 0; i < 512; i++)
+		if (refs[i] != value_ref(&table, 2, value_int_u64(&table, 1, i), i + 3))
+			preserved = false;
+	CHECK(preserved);
+	CHECK(table.object_capacity >= 1024 && table.object_slot_count >= 2048);
+	ValueId outer = value_ref(&table, 4, ref, 0);
+	CHECK(table.objects[value_get(&table, outer)->as.object].value == ref);
+	arena_free(&arena);
+}
+
+static void
 test_binary_diagnostics(void)
 {
 	Arena arena;
@@ -376,6 +406,7 @@ main(void)
 	test_bigint_random();
 	test_bigint_div_zero();
 	test_byte_values();
+	test_constant_references();
 	test_binary_diagnostics();
 
 	printf("unit: %u checks, %u failed\n", checks, failures);

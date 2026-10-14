@@ -66,7 +66,8 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
 
 - [~] **M5.1 Single pointers, `&`, `.*`, `const` pointers.**
   - [x] **M5.1a Runtime single pointers**: mutable-local addresses, dereference reads/writes, nested const coercions.
-  - [ ] **M5.1b Addressable constants/parameters/temporaries and pointer identity**: declaration-backed storage, lifetime rules and equality.
+  - [x] **M5.1b Addressable constants/parameters/temporaries and pointer identity**: definition-anchored storage, immutable objects and equality.
+  - [ ] **M5.1c Remaining pointer integration**: mutable globals, function addresses/calls and pointer attributes.
 - [ ] **M5.2 Arrays, indexing, array literals, `++` at comptime** (0.17.0 has no `**`).
 - [ ] **M5.3 Slices, many-pointers, slicing, `.len`, `.ptr`, for over slices.**
 - [~] **M5.4 String literals, sentinels, `[*:0]const u8`.** Literal byte values landed in M4.5b; general string/memory operations and sentinel pointer syntax remain pending.
@@ -120,6 +121,49 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
 ## Completed milestone log
 
 (newest first; each entry: what, limitations, interactions)
+
+### M5.1b Definition-anchored references and immutable object identity
+- **What**: `&` now accepts local constants, parameters, ordinary temporaries and
+  named global constants. A dense irgen reference table caches addresses by value
+  instruction. Body finalization inserts IR_REF immediately after its definition,
+  with parameter references at function entry. This preserves identity for aliases
+  and dominance across branches, captures and deferred bodies without speculative
+  use-site spills. Runtime storage is per invocation, not mutable static memory.
+- **Comptime/storage**: VALUE_REF points to an interned ConstObject, not a raw host
+  pointer. Anonymous immutable objects deduplicate by value; named declarations
+  have separate identities, even for equal initializers. Pointer qualification
+  preserves object identity. Known dereferences keep their comptime values,
+  including type values; runtime references use existing TIR_ALLOC/STORE/LOAD.
+  Codegen marks transitive object dependencies and emits only referenced storage.
+  Scalar objects live in .rodata; pointer objects use .data.rel.ro so PIE relocation
+  does not introduce TEXTREL and GNU_RELRO protects them after loader relocation.
+- **Language behavior**: `==`/`!=` compare runtime pointers or known immutable object
+  identities; single-pointer ordering stays invalid. Undefined pointer comparisons
+  produce an undefined bool, accepted when discarded but rejected when used as a
+  compile-time condition. Context can type temporary literals (`read(&1)`), but
+  does not retype a named comptime_int binding (`read(&constant)` still diagnoses
+  `*const comptime_int`). Writes through const references are rejected normally.
+- **Tests**: GCC/Clang -Werror ASan/UBSan: 542 unit checks, 538 goldens, 42 ordinary/
+  reference executable inputs plus one szc-only input, 12 driver checks, four new
+  PIE/RELRO storage checks and 159 panic cases. The all-width generator now covers
+  parameter/alias addresses and materialized min/max constants for all 1–64-bit
+  integer types. Tests cover recursion, skipped-branch first uses, loop captures,
+  cleanup reads, global identity, nested backing objects, context and type values.
+  All 168 qualifier comparisons still match Zig. Optimized GCC, four 60-second fuzz
+  targets and standalone 20,000 mutations per stage pass; final sema was re-fuzzed.
+- **Reference**: checked actual 0.17 AstGen.ref_table/rvalue/body fixups, plus
+  Sema.analyzeRef/analyzeNavRef/cmpSelf and binary probes. Global declarations and
+  anonymous constant addresses are deliberately not conflated. Returning a runtime
+  stack pointer is not diagnosed by the reference; tests never dereference one
+  after its lifetime ends. Known pointer comparison poison is preserved, not
+  eagerly diagnosed merely because a comparison expression exists.
+- **Limitations/interactions**: mutable container variables, function addresses and
+  calls through function pointers, pointer attributes and non-single pointer kinds
+  remain explicitly unsupported (M5.1c/other memory work). General array/aggregate
+  loads and mutable comptime memory remain M5.2/M6/M7. Comptime-only objects can be
+  referenced/folded, but unsupported runtime object layouts produce hard errors.
+  Existing integer/call/defer lowering and literal byte storage remain unchanged;
+  four previous NYI error cases are now positive TIR snapshots.
 
 ### M5.1a Runtime single pointers and const qualification
 - **What**: source `*T`/`*const T` types use structural pointer interning. Address-of

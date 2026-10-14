@@ -23,6 +23,7 @@ typedef struct IrGen {
 	IrFile     *ir;
 	uint32_t   inst_capacity;
 	uint32_t   extra_capacity;
+	IrRef      *references;	/* instruction -> anchored immutable reference, or NONE */
 } IrGen;
 
 /*
@@ -138,6 +139,8 @@ new_inst(IrGen *gen, IrOp op, uint32_t src, IrData data)
 	if (ir->inst_count == gen->inst_capacity) {
 		uint32_t new_capacity = gen->inst_capacity * 2;
 		ir->insts = arena_grow_array(gen->arena, ir->insts, ir->inst_count, new_capacity, sizeof(IrInst), alignof(IrInst));
+		gen->references = arena_grow_array(gen->arena, gen->references, ir->inst_count, new_capacity, sizeof(IrRef), alignof(IrRef));
+		memset(gen->references + ir->inst_count, 0, (new_capacity - ir->inst_count) * sizeof(IrRef));
 		gen->inst_capacity = new_capacity;
 	}
 	IrInstIndex index = ir->inst_count;
@@ -277,15 +280,71 @@ body_init(GenBody *body, IrGen *gen, Scope *parent, bool is_comptime)
 	}
 }
 
-/* Copies a finished body into extra (`count, inst...`) and returns its index. */
+/* References are anchored after their defining value, never in a use-site branch. */
+static uint32_t
+reference_count(const IrGen *gen, IrInstIndex index)
+{
+	uint32_t count = 0;
+	while (gen->references[index] != IR_REF_NONE) {
+		index = ir_ref_inst(gen->references[index]);
+		count++;
+	}
+	return count;
+}
+
+static uint32_t
+append_references(IrGen *gen, uint32_t cursor, IrInstIndex index)
+{
+	while (gen->references[index] != IR_REF_NONE) {
+		index = ir_ref_inst(gen->references[index]);
+		gen->ir->extra[cursor++] = index;
+	}
+	return cursor;
+}
+
+/* Extra definitions (function parameters) have references but no body instruction. */
+static IrBody
+body_finish_extra(GenBody *body, const IrInstIndex *definitions, uint32_t definition_count)
+{
+	IrGen *gen = body->gen;
+	uint32_t count = body->count;
+	for (uint32_t i = 0; i < definition_count; i++)
+		count += reference_count(gen, definitions[i]);
+	for (uint32_t i = 0; i < body->count; i++)
+		count += reference_count(gen, body->insts[i]);
+	uint32_t index = reserve_extra(gen, 1 + count);
+	gen->ir->extra[index] = count;
+	uint32_t cursor = index + 1;
+	for (uint32_t i = 0; i < definition_count; i++)
+		cursor = append_references(gen, cursor, definitions[i]);
+	for (uint32_t i = 0; i < body->count; i++) {
+		gen->ir->extra[cursor++] = body->insts[i];
+		cursor = append_references(gen, cursor, body->insts[i]);
+	}
+	return index;
+}
+
 static IrBody
 body_finish(GenBody *body)
 {
+	return body_finish_extra(body, NULL, 0);
+}
+
+static IrRef
+reference_value(GenBody *body, IrRef operand, uint32_t src)
+{
 	IrGen *gen = body->gen;
-	uint32_t index = reserve_extra(gen, 1 + body->count);
-	gen->ir->extra[index] = body->count;
-	memcpy(&gen->ir->extra[index + 1], body->insts, body->count * sizeof(IrInstIndex));
-	return index;
+	if (!ir_ref_is_inst(operand))
+		return emit_un(body, IR_REF, src, operand);
+	IrInstIndex index = ir_ref_inst(operand);
+	if (gen->references[index] == IR_REF_NONE) {
+		IrData data;
+		memset(&data, 0, sizeof(data));
+		data.un.operand = operand;
+		IrInstIndex reference = new_inst(gen, IR_REF, src, data);
+		gen->references[index] = ir_ref_of_inst(reference);
+	}
+	return gen->references[index];
 }
 
 /* True if the body's last instruction is a syntactic terminator. */
@@ -761,24 +820,31 @@ lvalue(GenBody *body, Scope *scope, AstNode *node)
 	return IR_REF_VOID_VALUE;
 }
 
-/* Addressable constants need declaration-backed storage, not branch-local spills. */
+/* Named bindings keep their type; only temporary values use the result context. */
 static IrRef
-address_of(GenBody *body, Scope *scope, AstNode *node)
+address_of(GenBody *body, Scope *scope, ResultInfo info, AstNode *node)
 {
 	if (node->kind == AST_GROUPED)
-		return address_of(body, scope, AST_CAST(AstWrap, node, AST_GROUPED)->operand);
+		return address_of(body, scope, info, AST_CAST(AstWrap, node, AST_GROUPED)->operand);
 	if (node->kind == AST_DEREF)
 		return lvalue(body, scope, node);
 	if (node->kind == AST_IDENTIFIER) {
 		StringId name = intern_span(body->gen, AST_CAST(AstIdentifier, node, AST_IDENTIFIER)->name);
 		Lookup found = lookup_name(scope, name);
-		if (found.kind == LOOKUP_LOCAL && found.local->local_kind == LOCAL_VAR)
-			return found.local->ref;
-		if (found.kind != LOOKUP_LOCAL && found.kind != LOOKUP_DECL)
-			return lvalue(body, scope, node);
+		if (found.kind == LOOKUP_LOCAL)
+			return found.local->local_kind == LOCAL_VAR ? found.local->ref : reference_value(body, found.local->ref, node->offset);
+		if (found.kind == LOOKUP_DECL)
+			return emit_name(body, IR_DECL_REF, node->offset, name, IR_REF_NONE);
 	}
-	unsupported(body, node, "address of constants, parameters, or temporary values");
-	return IR_REF_VOID_VALUE;
+	ResultInfo operand_info = result_none;
+	if (info.kind != RESULT_NONE) {
+		IrRef type = info.kind == RESULT_TYPE ? info.ref : emit_un(body, IR_ELEM_TYPE, node->offset, info.ref);
+		operand_info = result_type(emit_un(body, IR_REF_TYPE, node->offset, type));
+	}
+	IrRef operand = expr(body, scope, operand_info, node);
+	if (body_is_terminated(body))
+		return IR_REF_VOID_VALUE;
+	return reference_value(body, operand, node->offset);
 }
 
 static IrRef
@@ -880,7 +946,7 @@ unary(GenBody *body, Scope *scope, ResultInfo info, AstNode *node)
 	IrOp op;
 	switch (unary_node->op) {
 	case AST_UNARY_ADDRESS_OF:
-		return rvalue(body, info, address_of(body, scope, unary_node->operand), node->offset);
+		return rvalue(body, info, address_of(body, scope, info, unary_node->operand), node->offset);
 	case AST_UNARY_BOOL_NOT:
 		op = IR_BOOL_NOT;
 		break;
@@ -1738,7 +1804,7 @@ fn_decl(GenBody *body, Scope *scope, AstFnDecl *decl, StringId name)
 		block_statements(&fn_body, &fn_body.base, AST_CAST(AstBlock, decl->body, AST_BLOCK));
 		if (!body_is_terminated(&fn_body))
 			emit_none(&fn_body, IR_RET_IMPLICIT, decl->body->end > 0 ? decl->body->end - 1 : decl->body->offset);
-		header.body = body_finish(&fn_body);
+		header.body = body_finish_extra(&fn_body, params, param_count);
 		header.flags = header.flags | IR_FUNC_HAS_BODY;
 	}
 
@@ -1955,6 +2021,7 @@ irgen_file(Arena *arena, Diag *diag, Interner *interner, const SourceFile *sourc
 	gen.ir = ARENA_NEW(arena, IrFile);
 	gen.ir->file = file;
 	gen.inst_capacity = 256;
+	gen.references = ARENA_ARRAY(arena, IrRef, gen.inst_capacity);
 	gen.ir->insts = arena_alloc(arena, gen.inst_capacity * sizeof(IrInst), alignof(IrInst));
 	gen.ir->inst_count = 0;
 	gen.extra_capacity = 1024;

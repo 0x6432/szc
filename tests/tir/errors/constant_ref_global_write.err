@@ -1,0 +1,3 @@
+tests/tir/errors/constant_ref_global_write.zig:2:24: error: cannot assign to constant
+pub fn main() void { n = 2; }
+                       ^

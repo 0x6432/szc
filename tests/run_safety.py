@@ -29,6 +29,10 @@ def cases():
         source = (f"fn operation(p: *u8) void {{ {body} }}\n"
                   "pub fn main() void { var n: u8 = 255; operation(&n); }\n")
         yield f"pointer_{label}", source, message
+    yield "panic_reference", 'pub fn main() void { @panic((&"reference").*); }\n', "reference"
+    source = ('fn operation(p: *const u8) u4 { return @intCast(p.*); }\n'
+              'pub fn main() void { const n: u8 = 255; _ = operation(&n); }\n')
+    yield "constant_pointer_cast", source, "integer does not fit in destination type"
     for label, literal, message in (
         ("plain", '"explicit panic"', "explicit panic"),
         ("empty", '""', ""),

@@ -194,6 +194,8 @@ typedef enum IrDataKind {
 	X(ALLOC, "alloc", IR_DATA_PAYLOAD)	/* type ref (or NONE: inferred), init ref, flags: local variable */ \
 	X(DEREF, "deref", IR_DATA_UN)	/* validated source dereference */ \
 	X(REF_DEREF, "ref_deref", IR_DATA_UN)	/* validated address of dereference */ \
+	X(REF, "ref", IR_DATA_UN)	/* immutable address, anchored after operand definition */ \
+	X(REF_TYPE, "ref_type", IR_DATA_UN)	/* pointee of an address-of result type */ \
 	X(LOAD, "load", IR_DATA_UN)	/* pointer */ \
 	X(STORE, "store", IR_DATA_BIN)	/* pointer, value */ \
 	/* Control flow */ \
