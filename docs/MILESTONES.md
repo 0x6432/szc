@@ -78,7 +78,9 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
           - [~] **M5.1c2b2b Explicit declaration/storage alignment**.
             - [x] **M5.1c2b2b1 Aligned mutable locals**.
             - [x] **M5.1c2b2b2 Aligned local constants** (known values and runtime initializers).
-            - [ ] Aligned global objects and function declarations/addresses.
+            - [x] **M5.1c2b2b3a Internal mutable global alignment**.
+            - [ ] **M5.1c2b2b3b Aligned global constants**.
+            - [ ] Aligned function declarations/addresses.
         - [ ] **M5.1c2b3 Volatile pointer accesses**.
 - [ ] **M5.2 Arrays, indexing, array literals, `++` at comptime** (0.17.0 has no `**`).
 - [ ] **M5.3 Slices, many-pointers, slicing, `.len`, `.ptr`, for over slices.**
@@ -133,6 +135,52 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
 ## Completed milestone log
 
 (newest first; each entry: what, limitations, interactions)
+
+### M5.1c2b2b3a Internal mutable global alignment
+- **What**: internal mutable globals accept explicit alignment with declared or
+  inferred types. IrDecl carries a separate isolated alignment body/source location.
+  Type and alignment resolve before publishing a typed global's address; inferred
+  declarations resolve the initializer/type first, then alignment. SemaGlobal keeps
+  byte alignment independently of its value type, and the published pointer retains
+  explicit natural alignment as well as weak/strong guarantees.
+- **Lazy resolution/identity**: DECL_TYPED reuses the already validated address and
+  alignment while deferred initialization drains. Forward references, address cycles
+  and invalid initializers reached only through an address remain checked. An
+  unused invalid alignment remains lazy. Alignment expressions cannot load mutable
+  global contents at comptime or leak runtime execution into attribute evaluation.
+- **Codegen/storage**: ordinary QBE data records use the actual explicit alignment.
+  Above QBE's static limit of 64, the existing assembly companion emits writable
+  .data with .balign; zero/undefined storage uses .zero. Pointer/function-pointer
+  relocations stay writable, not in the immutable .data.rel.ro section. Global
+  address identity is unchanged by weakening a pointer type.
+- **Reference grounding**: Zig 0.17 Zcu/PerThread.zig analyzeNavType resolves declared
+  type/layout then pointer modifiers; analyzeNavVal handles modifiers after inferred
+  initializer/type resolution. Typed/inferred error-order fixtures, pointer type
+  probes and executable behavior were checked against the actual reference binary.
+- **Tests**: added IR/TIR/QBE goldens, 15 reference-rejected diagnostic cases and an
+  explicit global-constant NYI fixture. The physical matrix checks 153 global
+  addresses/readbacks across weak/natural/over-alignment, including zero and
+  undefined storage, pointers, callbacks and OPVs, with no TEXTREL. The reference
+  coercion matrix covers 300 typed/inferred global cases and is in CI. Executable
+  coverage includes forward address cycles, lazy invalid declarations, defer writes
+  and mutations through aligned pointer/function-pointer slots. GCC/Clang -Werror
+  ASan/UBSan pass 558 unit checks, 671 goldens, 53 ordinary executable inputs plus
+  two szc-only inputs, 16 driver, 11 storage, four ABI, seven unaligned, 135 local,
+  270 constant, 153 global address and 166 safety cases. GCC reference integration
+  and optimized GCC checks pass. The 300 global comparisons match Zig and sanitized
+  replay; existing 626 constant cases retain sanitizer parity. Four 60-second fuzz
+  targets and 20,000 standalone mutations per stage pass. Corpus: irgen 29, sema 58.
+- **CI follow-up**: prior 8bf59f5 passed GCC/Clang/fuzz, but reference Zig timed out
+  after 120 seconds on shl_size_33/shr_size_33 (164/166 safety cases completed).
+  Safety reference compilations now pass -j2 to bound worker parallelism, retaining
+  the 120-second compilation and 15-second execution budgets and all assertions.
+  Both affected reference programs compile in under one second locally with -j2
+  and produce the expected panic; remote success still requires checking push CI.
+- **Limitations/next**: only internal mutable globals. Global const alignment,
+  exported/extern/threadlocal variables and function declaration/address alignment
+  retain their explicit limitations. Do not reuse global-variable storage for known
+  constants or silently promise alignment on code symbols. Enclosing alignment and
+  memory milestones stay partial; Q6 remains deferred until M10.2.
 
 ### M5.1c2b2b2 Aligned local constants
 - **What**: explicit local const alignment preserves the immutable binding's value,

@@ -1854,7 +1854,7 @@ fn_decl(GenBody *body, Scope *scope, AstFnDecl *decl, StringId name)
 
 /* Value body of a container-level `const`/`var`. */
 static IrBody
-global_var_body(IrGen *gen, Scope *scope, AstVarDecl *decl, IrBody *decl_type_body)
+global_var_body(IrGen *gen, Scope *scope, AstVarDecl *decl, IrDecl *out)
 {
 	GenBody body;
 	body_init(&body, gen, scope, true);
@@ -1867,12 +1867,20 @@ global_var_body(IrGen *gen, Scope *scope, AstVarDecl *decl, IrBody *decl_type_bo
 			body_init(&type_body, gen, scope, true);
 			IrRef declared = type_expr(&type_body, &type_body.base, decl->type);
 			emit_break(&type_body, IR_BREAK_INLINE, decl->type->offset, IR_BODY_RESULT, declared);
-			*decl_type_body = body_finish(&type_body);
+			out->type_body = body_finish(&type_body);
 			type = emit_none(&body, IR_DECL_TYPE, decl->type->offset);
 		}
 	}
-	if (decl->align != NULL || decl->addrspace != NULL || decl->linksection != NULL)
+	if (decl->addrspace != NULL || decl->linksection != NULL)
 		unsupported(&body, &decl->base, "align/addrspace/linksection on globals");
+	if (decl->align != NULL) {
+		if (decl->is_const)
+			unsupported(&body, &decl->base, "aligned global constants");
+		else {
+			out->alignment_body = alignment_body(gen, scope, decl->align);
+			out->alignment_src = decl->align->offset;
+		}
+	}
 	IrRef value;
 	if (decl->init == NULL) {
 		if (decl->modifier != AST_VAR_MODIFIER_EXTERN)
@@ -1998,7 +2006,7 @@ container_decl(GenBody *body, Scope *scope, AstContainerDecl *decl, StringId nam
 			AstVarDecl *var = AST_CAST(AstVarDecl, member, AST_VAR_DECL);
 			out->kind = var->is_const ? IR_DECL_CONST : IR_DECL_VAR;
 			out->flags = (var->is_pub ? IR_DECL_PUB : 0) | (var->is_threadlocal ? IR_DECL_THREADLOCAL : 0) | (var->modifier == AST_VAR_MODIFIER_EXPORT ? IR_DECL_EXPORT : 0) | (var->modifier == AST_VAR_MODIFIER_EXTERN ? IR_DECL_EXTERN : 0);
-			out->value_body = global_var_body(gen, member_scope, var, &out->type_body);
+			out->value_body = global_var_body(gen, member_scope, var, out);
 			break;
 		}
 		case AST_FN_DECL: {
@@ -2246,6 +2254,8 @@ dump_struct_decl(const IrDumper *dumper, uint32_t payload, uint32_t depth)
 			fputs(" threadlocal", dumper->out);
 		if (decl.type_body != 0)
 			dump_labeled_body(dumper, "type", decl.type_body, depth + 1);
+		if (decl.alignment_body != 0)
+			dump_labeled_body(dumper, "align", decl.alignment_body, depth + 1);
 		dump_labeled_body(dumper, "value", decl.value_body, depth + 1);
 		fputc('\n', dumper->out);
 	}

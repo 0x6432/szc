@@ -39,8 +39,9 @@ Read this first when resuming work (the sandbox resets often).
 - Done: M5.1c2b2a alignment-qualified pointer types and actual unaligned memory tests.
 - Done: M5.1c2b2b1 explicit alignment on mutable locals, including over-aligned slots.
 - Done: M5.1c2b2b2 aligned local constants, preserving comptime values and addresses.
-- Next: finish **M5.1c2b2b** with aligned globals and function declarations/addresses
-  in small checkpoints, then M5.1c2b3 volatile.
+- Done: M5.1c2b2b3a explicit alignment on internal mutable global objects.
+- Next: **M5.1c2b2b3b** aligned global constants, then function declaration/address
+  alignment, then M5.1c2b3 volatile. Keep these as small checkpoints.
   M5.1/M5.1c/M5.1c2/M5.1c2b/M5.1c2b2/M5.1c2b2b remain partial.
 - Run `PATH=/data/tools/bin:$PATH ZIG=/data/zig/zig-x86_64-linux-0.17.0/zig make e2e-test`
   locally. `tools/build_qbe.sh` builds the pinned QBE into `build/qbe-src` on CI.
@@ -63,6 +64,53 @@ Read this first when resuming work (the sandbox resets often).
   GCC/Clang/fuzz/differential jobs, restoring green CI. M5.1c2b2a 8b1d3cf
   also passed all jobs (run 38590520673), as did M5.1c2b2b1 ecfb6ab
   (run 38593742928). Check each new push's run.
+
+## Validation at M5.1c2b2b3a
+
+- GCC/Clang -Werror ASan/UBSan pass 558 unit checks, 671 goldens, 53 ordinary
+  executable inputs plus two szc-only inputs, 16 driver checks, 11 storage cases,
+  four callback ABI cases, seven unaligned-memory cases, 135 mutable-local,
+  270 constant and 153 mutable-global address checks, and 166 safety cases.
+  GCC's full executable/memory/safety suite also passes against Zig 0.17.0 with
+  bounded safety compiler jobs. Optimized GCC passes goldens, ordinary executables
+  and the 153 global-address checks (also run with the reference binary). All 300
+  new global coercions match Zig and sanitized replay; the existing 626 constant
+  cases retain sanitizer parity. Four 60-second fuzz targets and 20,000 standalone
+  mutations per stage pass. Corpus: irgen 29, sema 58 inputs. Final style-only
+  cleanup was rebuilt and rechecked through units/goldens/reference address tests.
+  Remote success still requires checking this checkpoint's push CI.
+- The sandbox restored ecfb6ab; fast-forwarded from GitHub to the pushed 8bf59f5
+  before this work. Reinstalled Clang/libasan/libubsan/compiler-rt. Credentials
+  remain transient, not in files/config. The prior 8bf59f5 CI run 38605337173 passed
+  GCC/Clang/fuzz but failed differential safety on reference compiler timeouts:
+  shl_size_33 and shr_size_33 exceeded 120 seconds (164/166 completed). No szc
+  compiler failure was reported. Safety reference commands now use verified Zig
+  -j2 support; budgets/assertions are unchanged. Focused reference probes compile
+  in 0.92s/0.67s locally and confirm expected panics. Check this push's remote run.
+- IrDecl.alignment_body/alignment_src describe an isolated mutable-global attribute;
+  zero means absent. global_var_body fills them, leaving aligned global const as
+  explicit NYI. Explicit mutable type resolves before alignment/address publication;
+  inferred type comes from the initializer, so attribute validation follows it.
+  This matches Zcu/PerThread.zig analyzeNavType/analyzeNavVal ordering, not local
+  allocation ordering. Diagnostic fixtures preserve both paths.
+- SemaGlobal.alignment stores 0 for implicit ABI, otherwise byte units. create_global
+  uses it in the published pointer type; DECL_TYPED reuses that exact address/type
+  on later initialization. Do not publish a pointer before its alignment is known.
+  Deferred initialization still drains when only the address was requested, and
+  unreferenced invalid attributes stay lazy.
+- Codegen emits explicit alignment for QBE data through 64. Larger mutable data
+  uses the existing assembly companion, .data/.balign and .zero for zero/undefined
+  storage. Immutable objects still use .rodata/.data.rel.ro. Test real mutations,
+  not just pointer metadata, when changing section selection.
+- tests/run_global_alignment.py checks 153 physical addresses/readbacks, including
+  nine zero and nine undefined objects, plus writable pointer/callback relocations
+  and no TEXTREL. tools/diff_global_alignment.py covers 300 typed/inferred pointer
+  conversions in CI. The integration fixture exercises typed forward cycles,
+  inferred globals, defer writes, weak/natural metadata, OPVs and lazy bad alignment.
+- Next: aligned global constants, then function declaration/address alignment.
+  Preserve comptime values and immutable identities; bare-function aliases still
+  need honest code-symbol alignment. Threadlocal/exported/extern mutable globals
+  remain NYI. Keep Q6 deferred until M10.2.
 
 ## Validation at M5.1c2b2b2
 

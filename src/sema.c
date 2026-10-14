@@ -971,6 +971,7 @@ block_init_comptime(Block *block, Sema *sema, SemaNamespace *ns, InstMap *map, S
 
 static bool operand_to_type(Block *block, Operand operand, uint32_t src, TypeId *out);
 static bool require_runtime(Block *block, uint32_t src);
+static bool analyze_alignment(Block *block, IrBody body, uint32_t src, uint32_t *out);
 
 static bool
 global_type_allowed(Block *block, TypeId type, uint32_t src)
@@ -988,9 +989,9 @@ global_type_allowed(Block *block, TypeId type, uint32_t src)
 	return true;
 }
 
-/* Publish an address after resolving its type, before evaluating its initializer. */
+/* Publish a stable address after its type and alignment have resolved. */
 static void
-create_global(Block *block, SemaDecl *decl, TypeId type)
+create_global(Block *block, SemaDecl *decl, TypeId type, uint32_t alignment)
 {
 	Sema *sema = block->sema;
 	if (sema->global_count == sema->global_capacity) {
@@ -1005,11 +1006,12 @@ create_global(Block *block, SemaDecl *decl, TypeId type)
 	sema->globals[id] = entry;
 	SemaGlobal *global = &entry->result;
 	global->type = type;
+	global->alignment = alignment;
 	global->symbol = arena_sprintf(sema->arena, "szc.g.%u", (unsigned)id);
 	global->src = decl->ir.src;
 	global->file = block->ir->file;
 	decl->global = id;
-	TypeId pointer = type_pointer(sema, type, POINTER_ONE, false, false, 0);
+	TypeId pointer = type_pointer(sema, type, POINTER_ONE, false, false, alignment);
 	decl->value = comptime_operand(pointer, value_global(&sema->values, pointer, id));
 }
 
@@ -1050,14 +1052,23 @@ resolve_decl(Block *user, uint32_t src, SemaNamespace *ns, SemaDecl *decl, bool 
 	inst_map_init(&map, sema->arena);
 	Block block;
 	block_init_comptime(&block, sema, ns, &map, decl->ir.name);
-	if (mutable && decl->ir.type_body != 0 && decl->global == 0) {
-		BodyResult declared = analyze_body(&block, decl->ir.type_body);
-		TypeId type;
-		if (declared.end != BODY_BREAK_RESULT || !operand_to_type(&block, declared.result, decl->ir.src, &type) || !global_type_allowed(&block, type, decl->ir.src)) {
-			decl->state = DECL_FAILED;
-			return operand_none;
+	uint32_t alignment = 0;
+	if (mutable && decl->global == 0) {
+		TypeId type = 0;
+		if (decl->ir.type_body != 0) {
+			BodyResult declared = analyze_body(&block, decl->ir.type_body);
+			if (declared.end != BODY_BREAK_RESULT || !operand_to_type(&block, declared.result, decl->ir.src, &type) || !global_type_allowed(&block, type, decl->ir.src)) {
+				decl->state = DECL_FAILED;
+				return operand_none;
+			}
 		}
-		create_global(&block, decl, type);
+		if (type != 0) {
+			if (!analyze_alignment(&block, decl->ir.alignment_body, decl->ir.alignment_src, &alignment)) {
+				decl->state = DECL_FAILED;
+				return operand_none;
+			}
+			create_global(&block, decl, type, alignment);
+		}
 	}
 	if (mutable && decl->global != 0) {
 		block.declaration_type = sema->globals[decl->global]->result.type;
@@ -1079,7 +1090,11 @@ resolve_decl(Block *user, uint32_t src, SemaNamespace *ns, SemaDecl *decl, bool 
 				decl->state = DECL_FAILED;
 				return operand_none;
 			}
-			create_global(&block, decl, result.result.type);
+			if (!analyze_alignment(&block, decl->ir.alignment_body, decl->ir.alignment_src, &alignment)) {
+				decl->state = DECL_FAILED;
+				return operand_none;
+			}
+			create_global(&block, decl, result.result.type, alignment);
 		}
 		sema->globals[decl->global]->result.initializer = result.result.value;
 		queue_value_functions(&block, result.result.value, decl->ir.src);
@@ -3630,8 +3645,12 @@ sema_dump(FILE *out, Sema *sema)
 {
 	for (GlobalId id = 1; id < sema->global_count; id++) {
 		const SemaGlobal *global = &sema->globals[id]->result;
-		if (global->initializer != VALUE_NONE)
-			fprintf(out, "global %s: %s = %s\n", global->symbol, sema_type_name(sema, global->type), value_text(sema, global->initializer));
+		if (global->initializer != VALUE_NONE) {
+			fprintf(out, "global %s: %s", global->symbol, sema_type_name(sema, global->type));
+			if (global->alignment != 0)
+				fprintf(out, " align(%u)", (unsigned)global->alignment);
+			fprintf(out, " = %s\n", value_text(sema, global->initializer));
+		}
 	}
 	for (FuncId id = 1; id < sema->func_count; id++) {
 		const SemaFunc *func = sema->funcs[id];

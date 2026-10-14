@@ -1,0 +1,3 @@
+tests/tir/errors/global_alignment_typed_order.zig:1:21: error: alignment must be >= 1
+var value: u8 align(0) = true;
+                    ^

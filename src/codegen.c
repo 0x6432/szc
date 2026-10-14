@@ -926,7 +926,10 @@ emit_data_object(Codegen *cg, ValueId stored, const char *symbol, bool immutable
 	}
 	FILE *out = outlined ? cg->assembly : cg->out;
 	if (outlined) {
-		fputs(type->kind == TYPE_POINTER ? ".section .data.rel.ro,\"aw\",@progbits\n" : ".section .rodata,\"a\",@progbits\n", out);
+		if (immutable)
+			fputs(type->kind == TYPE_POINTER ? ".section .data.rel.ro,\"aw\",@progbits\n" : ".section .rodata,\"a\",@progbits\n", out);
+		else
+			fputs(".data\n", out);
 		fprintf(out, ".balign %u\n%s:\n", (unsigned)align, symbol);
 	} else {
 		if (immutable)
@@ -937,7 +940,7 @@ emit_data_object(Codegen *cg, ValueId stored, const char *symbol, bool immutable
 		|| (value->kind == VALUE_BOOL && !value->as.boolean)
 		|| (value->kind == VALUE_INT && value->as.integer.limb_count == 0);
 	if (!immutable && zero) {
-		fprintf(out, "z %" PRIu64 " }\n", size == 0 ? UINT64_C(1) : size);
+		fprintf(out, outlined ? ".zero %" PRIu64 "\n" : "z %" PRIu64 " }\n", size == 0 ? UINT64_C(1) : size);
 		return;
 	}
 	if (size == 0) {
@@ -1016,7 +1019,7 @@ codegen_qbe(FILE *out, FILE *assembly, Sema *sema, Diag *diag)
 	for (GlobalId id = 1; id < sema_global_count(sema); id++) {
 		const SemaGlobal *global = sema_global(sema, id);
 		cg.file = global->file;
-		emit_data_object(&cg, global->initializer, global->symbol, false, global->src, 0);
+		emit_data_object(&cg, global->initializer, global->symbol, false, global->src, global->alignment);
 	}
 	for (ValueId id = 1; id < values->count; id++) {
 		if (!cg.bytes_used[id])

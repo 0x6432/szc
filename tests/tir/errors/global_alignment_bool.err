@@ -1,0 +1,3 @@
+tests/tir/errors/global_alignment_bool.zig:1:21: error: expected type 'u29', found 'bool'
+var value: u8 align(true) = 1;
+                    ^

@@ -1,0 +1,3 @@
+tests/tir/errors/global_alignment_unreachable.zig:1:21: error: reached unreachable code
+var value: u8 align(unreachable) = 1;
+                    ^

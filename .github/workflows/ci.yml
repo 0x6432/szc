@@ -81,6 +81,8 @@ jobs:
         run: python3 tools/diff_local_alignment.py build/asan/szc "$ZIG"
       - name: Compare aligned constant bindings and addresses
         run: python3 tools/diff_const_alignment.py build/asan/szc "$ZIG"
+      - name: Compare aligned mutable global declarations
+        run: python3 tools/diff_global_alignment.py build/asan/szc "$ZIG"
       - name: Compare function-pointer signatures and qualifiers
         run: python3 tools/diff_function_pointers.py build/asan/szc "$ZIG"
       - name: Compare AST node spans with std.zig.Ast over the Zig lib

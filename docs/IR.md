@@ -163,8 +163,8 @@ prints a file's IR.
   an explicit attribute; TIR_ALLOC records it in the slot pointer type. Child ABI
   layout is unchanged. QBE slots above alignment 16 use private over-allocation
   and upward address rounding; initialization is not hoisted with the allocation.
-  Aligned local constants use CONST_BIND below; global/function declaration
-  alignment remains pending.
+  Aligned local constants use CONST_BIND below; mutable globals use IrDecl
+  alignment bodies. Global const/function declaration alignment remains pending.
 - Address-of mutable locals reuses ALLOC refs. Source `deref(pointer)` validates
   the pointer and produces a typed load, or an OPV void/u0 constant without memory.
   `ref_deref(pointer)` performs the same validation and returns the pointer itself
@@ -225,3 +225,17 @@ prints a file's IR.
   pipeline, and retained .s output includes the outlined data. Pointer objects use
   .data.rel.ro in both streams; there are no text relocations or mutable statics
   standing in for runtime local values.
+
+## Mutable global declaration alignment
+
+- IrDecl adds alignment_body/alignment_src for a mutable global's optional isolated
+  comptime attribute. Declared type/layout resolves first, then alignment, before
+  publishing the address; inferred globals resolve initializer/type before alignment.
+  Re-entering a typed declaration reuses its pointer modifiers without reevaluation.
+- SemaGlobal stores byte alignment (0 means implicit ABI); its VALUE_GLOBAL address
+  has the corresponding pointer type. TIR dumps append align(N) only when explicit.
+  Existing lazy initializer draining and declaration dependency diagnostics remain.
+- Static alignment through 64 uses ordinary QBE data; larger mutable objects use
+  outlined writable .data with .balign, including .zero for zero/undefined bytes.
+  Immutable data sections do not change. Global const and function alignment are
+  separate pending work; threadlocal/export/extern variable limitations remain.

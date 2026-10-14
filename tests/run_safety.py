@@ -199,7 +199,7 @@ def main():
                     if os.environ.get("GITHUB_ACTIONS") == "true":
                         print(f"checking safety {name}: {compiler}", flush=True)
                     exe = root / ("reference" if compiler == zig else "native")
-                    command = ([compiler, "build-exe", str(src), f"-femit-bin={exe}"]
+                    command = ([compiler, "build-exe", "-j2", str(src), f"-femit-bin={exe}"]
                                if compiler == zig else
                                [compiler, "build-exe", str(src), "-o", str(exe)])
                     compiled = run(command, timeout=120)

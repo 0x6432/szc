@@ -49,8 +49,8 @@ QBE must be on `PATH` (or set `SZC_QBE`); `SZC_CC` selects the system C compiler
 Both variables name executables, not shell commands. QBE revision used for testing:
 `e786f06032fefa2e3790d6b1c9e31ed138f475a6`.
 
-Aligned local variables and constants are supported. Static constant alignment
-above 64 bytes needs an assembly data companion because of QBE's data-alignment
+Aligned local variables/constants and internal mutable globals are supported.
+Static data alignment above 64 bytes needs an assembly companion because of QBE's data-alignment
 limit: use `build-exe` or `run`; standalone `emit-qbe` reports this limitation.
 `--keep-temps` retains the complete assembly, including any outlined data.
 

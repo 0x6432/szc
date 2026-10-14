@@ -1,0 +1,3 @@
+tests/tir/errors/global_alignment_self.zig:1:21: error: value of declaration 'global_alignment_self.value' depends on itself here
+var value: u8 align(value) = 4;
+                    ^

@@ -1,0 +1,3 @@
+tests/tir/errors/global_alignment_inferred_noreturn.zig:1:22: error: reached unreachable code
+var value align(0) = unreachable;
+                     ^

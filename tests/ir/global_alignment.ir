@@ -1,0 +1,114 @@
+%85 = struct_decl (flags=0) {
+  decl var "value" type {
+    %0 = break_inline result, @type_u32
+  } align {
+    %2 = int 64
+    %3 = as @type_u29, %2
+    %4 = break_inline result, %3
+  } value {
+    %1 = decl_type
+    %5 = int 7
+    %6 = as %1, %5
+    %7 = break_inline result, %6
+  }
+  decl var "zero" type {
+    %8 = break_inline result, @type_u64
+  } align {
+    %10 = int 32
+    %11 = as @type_u29, %10
+    %12 = break_inline result, %11
+  } value {
+    %9 = decl_type
+    %13 = int 0
+    %14 = as %9, %13
+    %15 = break_inline result, %14
+  }
+  decl var "pointer" type {
+    %19 = ptr_type @type_u32, @false align {
+      %16 = int 64
+      %17 = as @type_u29, %16
+      %18 = break_inline result, %17
+    }
+    %20 = as @type_type, %19
+    %21 = break_inline result, %20
+  } align {
+    %23 = int 16
+    %24 = as @type_u29, %23
+    %25 = break_inline result, %24
+  } value {
+    %22 = decl_type
+    %26 = decl_ref "value"
+    %27 = as %22, %26
+    %28 = break_inline result, %27
+  }
+  decl var "inferred" align {
+    %29 = int 8
+    %30 = as @type_u29, %29
+    %31 = break_inline result, %30
+  } value {
+    %32 = int 3
+    %33 = as @type_u8, %32
+    %34 = break_inline result, %33
+  }
+  decl fn "main" pub value {
+    %83 = func "main" {
+      ret type {
+        %35 = break_inline result, @type_u8
+      }
+      body insts {
+        %36 = decl_val "pointer"
+        %37 = ref_deref %36
+        %38 = load %37
+        %39 = int 1
+        %40 = elem_type %37
+        %41 = as %40, %39
+        %42 = add %38, %41
+        %43 = elem_type %37
+        %44 = as %43, %42
+        %45 = store %37, %44
+        %46 = decl_ref "zero"
+        %47 = int 9
+        %48 = elem_type %46
+        %49 = as %48, %47
+        %50 = store %46, %49
+        %51 = decl_ref "inferred"
+        %52 = load %51
+        %53 = int 1
+        %54 = elem_type %51
+        %55 = as %54, %53
+        %56 = add %52, %55
+        %57 = elem_type %51
+        %58 = as %57, %56
+        %59 = store %51, %58
+        %60 = decl_val "value"
+        %61 = int 8
+        %62 = cmp_neq %60, %61
+        %67 = bool_or %62 rhs {
+          %63 = decl_val "zero"
+          %64 = int 9
+          %65 = cmp_neq %63, %64
+          %66 = break_inline result, %65
+        }
+        %72 = bool_or %67 rhs {
+          %68 = decl_val "inferred"
+          %69 = int 4
+          %70 = cmp_neq %68, %69
+          %71 = break_inline result, %70
+        }
+        %78 = if %72 then {
+          %73 = ret_type
+          %74 = int 1
+          %75 = as_return %73, %74
+          %76 = ret %75
+        } else {
+          %77 = break_inline result, @void_value
+        }
+        %79 = ret_type
+        %80 = int 0
+        %81 = as_return %79, %80
+        %82 = ret %81
+      }
+    }
+    %84 = break_inline result, %83
+  }
+}
