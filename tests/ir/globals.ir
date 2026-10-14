@@ -1,0 +1,38 @@
+%24 = struct_decl (flags=0) {
+  decl var "n" type {
+    %0 = break_inline result, @type_u16
+  } value {
+    %1 = decl_type
+    %2 = int 7
+    %3 = as %1, %2
+    %4 = break_inline result, %3
+  }
+  decl var "p" value {
+    %5 = decl_ref "n"
+    %6 = break_inline result, %5
+  }
+  decl fn "main" pub value {
+    %22 = func "main" {
+      ret type {
+        %7 = break_inline result, @type_u8
+      }
+      body insts {
+        %8 = decl_val "p"
+        %9 = ref_deref %8
+        %10 = load %9
+        %11 = int 2
+        %12 = elem_type %9
+        %13 = as %12, %11
+        %14 = add %10, %13
+        %15 = elem_type %9
+        %16 = as %15, %14
+        %17 = store %9, %16
+        %18 = ret_type
+        %19 = decl_val "n"
+        %20 = int_cast %18, %19
+        %21 = ret %20
+      }
+    }
+    %23 = break_inline result, %22
+  }
+}

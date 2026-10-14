@@ -124,6 +124,14 @@ typedef struct SemaFunc {
 	TirFunc       tir;
 } SemaFunc;
 
+typedef struct SemaGlobal {
+	TypeId type;
+	ValueId initializer;
+	const char *symbol;
+	FileId file;
+	uint32_t src;
+} SemaGlobal;
+
 typedef struct Sema Sema;
 
 Sema *sema_create(Arena *arena, Diag *diag, Interner *interner, SourceTable *sources);
@@ -138,6 +146,8 @@ bool sema_analyze_executable(Sema *sema, FileId file, const IrFile *ir);
 /* Results for codegen. */
 const Type       *sema_type(const Sema *sema, TypeId type);
 TypeId            sema_void_type(const Sema *sema);
+uint32_t          sema_global_count(const Sema *sema);
+const SemaGlobal *sema_global(const Sema *sema, GlobalId global);
 uint32_t          sema_func_count(const Sema *sema);
 const SemaFunc   *sema_func(const Sema *sema, FuncId func);
 FuncId            sema_main_func(const Sema *sema);

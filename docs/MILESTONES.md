@@ -67,7 +67,9 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
 - [~] **M5.1 Single pointers, `&`, `.*`, `const` pointers.**
   - [x] **M5.1a Runtime single pointers**: mutable-local addresses, dereference reads/writes, nested const coercions.
   - [x] **M5.1b Addressable constants/parameters/temporaries and pointer identity**: definition-anchored storage, immutable objects and equality.
-  - [ ] **M5.1c Remaining pointer integration**: mutable globals, function addresses/calls and pointer attributes.
+  - [~] **M5.1c Remaining pointer integration**: mutable globals, function addresses/calls and pointer attributes.
+    - [x] **M5.1c1 Internal mutable scalar globals**: lazy type/initializer resolution and writable pointer relocations.
+    - [ ] **M5.1c2 Function addresses/calls and pointer attributes**.
 - [ ] **M5.2 Arrays, indexing, array literals, `++` at comptime** (0.17.0 has no `**`).
 - [ ] **M5.3 Slices, many-pointers, slicing, `.len`, `.ptr`, for over slices.**
 - [~] **M5.4 String literals, sentinels, `[*:0]const u8`.** Literal byte values landed in M4.5b; general string/memory operations and sentinel pointer syntax remain pending.
@@ -121,6 +123,47 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
 ## Completed milestone log
 
 (newest first; each entry: what, limitations, interactions)
+
+### M5.1c1 Internal mutable scalar globals
+- **What**: internal container-level `var` declarations now have stable GlobalId
+  records, typed comptime initializers and writable scalar storage. VALUE_GLOBAL
+  represents a known address, never a constant snapshot of the stored value.
+  Explicit types have a separate IR type body; IR_DECL_TYPE supplies the initializer
+  result context. DECL_TYPED publishes the address without forcing initialization.
+  Executable analysis drains pending initializers and functions to a fixed point.
+  Forward references, self-address initializers and address cycles work independently
+  of first-use order, including an inferred global pointer into a typed cycle.
+- **Memory/backend**: direct and indirect reads/stores reuse TIR_LOAD/STORE with
+  materialized global symbols. Integer, bool, pointer, void and u0 globals are
+  supported; zero-sized accesses remain no-ops. QBE emits internal writable data,
+  zero-filled objects with `z`, and static relocations to mutable globals, immutable
+  backing objects and literal bytes. Dependency marking includes global initializers
+  before immutable-object closure; immutable pointer backing remains in .data.rel.ro.
+  Unsupported wide integer storage diagnoses at the global declaration location.
+- **Language behavior**: mutable global reads are runtime even when the initializer
+  is known. Comptime reads/writes of non-OPV mutable storage fail, including undefined
+  stores and indirect access; self-reads use Zig's declaration-dependency diagnostic.
+  Void/u0 accesses need no memory and remain valid at comptime, with direct declaration
+  resolution still detecting a self-dependent initializer. Unreferenced declarations
+  stay lazy; exported declarations remain eager roots and explicitly diagnose NYI.
+- **Tests**: 549 unit checks, 557 goldens, 45 ordinary/reference executable inputs
+  plus one szc-only input, 12 driver checks, eight PIE/RELRO/storage checks and 163
+  panic cases. The global generator covers all 128 signed/unsigned 1–64-bit integer
+  types and grows global/pointer records. Runtime tests cover recursion, defer,
+  pointer reassignment, live const pointers, address cycles and reference snapshots.
+  Diagnostic probes agree with actual Zig 0.17.0; 168 qualifier cases still match.
+  GCC/Clang -Werror ASan/UBSan, optimized GCC, four 60-second fuzz targets and standalone
+  20,000 mutations per stage pass; the final lazy-resolution change was re-fuzzed.
+- **Reference/interactions**: checked Sema.analyzeNavRefInner/ensureNavResolved's
+  type-versus-fully distinction, declaration loads, OPV handling and actual binary
+  probes. Existing reference dominance, const-object identity, arithmetic safety,
+  panic byte storage and pointer qualification remain unchanged. Initializers are
+  validated even when the global is only referenced by address.
+- **Limitations**: this is internal scalar storage only. Extern/export/TLS globals,
+  custom global align/linksection/addrspace, function pointers/calls, pointer attributes,
+  aggregate globals and general mutable comptime memory remain explicit NYI/later work.
+  Comptime calls needed for richer global initializers remain M7. M5.1 and M5.1c are
+  still partial; next checkpoint is M5.1c2, not a claim of full bootstrap support.
 
 ### M5.1b Definition-anchored references and immutable object identity
 - **What**: `&` now accepts local constants, parameters, ordinary temporaries and

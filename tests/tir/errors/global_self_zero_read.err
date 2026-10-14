@@ -1,0 +1,3 @@
+tests/tir/errors/global_self_zero_read.zig:1:13: error: value of declaration 'global_self_zero_read.n' depends on itself here
+var n: u0 = n;
+            ^

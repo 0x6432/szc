@@ -33,7 +33,8 @@ Read this first when resuming work (the sandbox resets often).
 - Done: M4.5b explicit @panic and first-class string-literal byte values.
 - Done: M5.1a runtime single pointers, mutable-local addresses, dereference and nested const rules.
 - Done: M5.1b definition-anchored references, immutable constant objects and pointer equality.
-- Next: **M5.1c** remaining pointer integration: mutable globals, function addresses/calls, attributes.
+- Done: M5.1c1 internal mutable scalar globals, lazy type/init resolution and writable relocations.
+- Next: **M5.1c2** function addresses/calls and pointer attributes. M5.1 remains partial.
 - Run `PATH=/data/tools/bin:$PATH ZIG=/data/zig/zig-x86_64-linux-0.17.0/zig make e2e-test`
   locally. `tools/build_qbe.sh` builds the pinned QBE into `build/qbe-src` on CI.
 - Tools: `SZC_QBE`/`qbe`, `SZC_CC`/`cc`; pinned QBE revision
@@ -41,8 +42,39 @@ Read this first when resuming work (the sandbox resets often).
 - Restored sandbox needed libasan/libubsan/clang/compiler-rt reinstalled. Git
   credentials are not persisted; use transient authentication for future pushes.
 - M3.4 (`1882ced`) and M3.5 (`7b36edd`) are pushed to `main`.
-- CI through M5.1a (`4fb6cf2`): completed successfully (run 38532277680).
-  Check the M5.1b push run.
+- CI through M5.1b (`4e31f1e`): completed successfully (run 38545269536).
+  Check the M5.1c1 push run.
+
+## Validation at M5.1c1
+
+- GCC/Clang -Werror ASan/UBSan: 549 unit checks, 557 goldens, 45 ordinary/reference
+  executable inputs plus one szc-only input, 12 driver checks, eight PIE/storage
+  checks, 163 panic cases and 168 pointer-qualification differential cases. Optimized
+  GCC is clean. Four 60-second fuzz targets and standalone 20,000 mutations per stage
+  pass; final lazy sema was separately re-fuzzed. Corpus: irgen 19, sema 28 inputs.
+- VALUE_GLOBAL is a typed symbolic address into stable Global records. It must never
+  fold a mutable global's initializer into a read. Use materialize() before runtime
+  LOAD/STORE: a known pointer operand has no valid `.inst` until materialized.
+- Explicit mutable global types live in IrDecl.type_body; IR_DECL_TYPE supplies the
+  initializer's result context. DECL_TYPED means address known, initializer pending.
+  Taking an address resolves only its type, not its initializer; a full read resolves
+  both. Drain globals/functions before codegen. Preserve this distinction so inferred
+  pointer/address cycles do not depend on first-use order. Do not eagerly initialize
+  every unrelated declaration: unused invalid globals must remain lazy.
+- Global output is internal writable QBE data with scalar/zero-fill initializers or
+  relocations to globals, immutable objects and bytes. Mark global initializer
+  dependencies before immutable-object closure. Immutable pointer objects still use
+  .data.rel.ro and runtime globals must not be placed in read-only sections.
+- Non-OPV comptime reads/writes fail, with self-read dependency diagnostics even for
+  indirect reads. Void/u0 memory accesses remain no-ops at comptime; direct `var z:u0=z`
+  still diagnoses a declaration dependency. Global checked operations and cleanup use
+  existing safety panics, and runtime reference snapshots retain definition dominance.
+- Internal integers/bools/pointers/void/u0 only. Extern/export/TLS globals, custom global
+  attributes, aggregate storage and mutable comptime interpretation remain NYI/later
+  work. Exported variables are eager roots, so even an unreferenced export errors.
+- Next M5.1c2: function address/type/call integration and pointer attributes. Confirm
+  each against the actual Zig 0.17 sources/binary; keep checkpoints small. Do not ask
+  the deferred compiler build/bootstrap-options question until M10.2.
 
 ## Validation at M5.1b
 
@@ -71,8 +103,7 @@ Read this first when resuming work (the sandbox resets often).
   Pointer equality handles both runtime and immutable objects. An undefined pointer
   comparison propagates undefined bool; discarding it is legal, a known condition
   use is not. Actual Zig 0.17 probes/sources verify these distinctions.
-- M5.1c remains: mutable global data and function-pointer/address integration, plus
-  attributes. Arrays/aggregate memory are later phases. Runtime storage of unsupported
+- After M5.1c1, function-pointer/address integration and pointer attributes remain. Arrays/aggregate memory are later phases. Runtime storage of unsupported
   comptime-only objects is a hard NYI, not a dummy zero object. Escaping a runtime
   local pointer is not diagnosed by Zig; do not add tests that use expired pointers.
 

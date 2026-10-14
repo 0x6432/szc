@@ -1,0 +1,3 @@
+tests/tir/errors/global_inferred_integer.zig:1:5: error: variable of type 'comptime_int' must be const or comptime
+var n = 1;
+    ^

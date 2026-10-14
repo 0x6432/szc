@@ -364,6 +364,32 @@ test_constant_references(void)
 }
 
 static void
+test_global_references(void)
+{
+	Arena arena;
+	arena_init(&arena);
+	ValueTable table;
+	value_table_init(&table, &arena);
+	ValueId address = value_global(&table, 2, 1);
+	CHECK(address == value_global(&table, 2, 1));
+	CHECK(address != value_global(&table, 3, 1));
+	CHECK(address != value_global(&table, 2, 2));
+	CHECK(value_get(&table, address)->as.global == 1);
+	ValueId ids[512];
+	for (uint32_t i = 0; i < 512; i++)
+		ids[i] = value_global(&table, 2, i + 3);
+	bool preserved = true;
+	for (uint32_t i = 0; i < 512; i++)
+		if (ids[i] != value_global(&table, 2, i + 3))
+			preserved = false;
+	CHECK(preserved);
+	CHECK(table.capacity >= 1024 && table.slot_count >= 2048);
+	ValueId outer = value_ref(&table, 4, address, 0);
+	CHECK(table.objects[value_get(&table, outer)->as.object].value == address);
+	arena_free(&arena);
+}
+
+static void
 test_binary_diagnostics(void)
 {
 	Arena arena;
@@ -407,6 +433,7 @@ main(void)
 	test_bigint_div_zero();
 	test_byte_values();
 	test_constant_references();
+	test_global_references();
 	test_binary_diagnostics();
 
 	printf("unit: %u checks, %u failed\n", checks, failures);

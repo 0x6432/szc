@@ -531,6 +531,9 @@ value_hash(const Value *value)
 	case VALUE_TYPE:
 		hash = hash_mix(hash, value->as.type_value);
 		break;
+	case VALUE_GLOBAL:
+		hash = hash_mix(hash, value->as.global);
+		break;
 	case VALUE_REF:
 		hash = hash_mix(hash, value->as.object);
 		break;
@@ -561,6 +564,8 @@ value_equal(const Value *a, const Value *b)
 		return bigint_compare(&a->as.integer, &b->as.integer) == 0;
 	case VALUE_TYPE:
 		return a->as.type_value == b->as.type_value;
+	case VALUE_GLOBAL:
+		return a->as.global == b->as.global;
 	case VALUE_REF:
 		return a->as.object == b->as.object;
 	case VALUE_BYTES:
@@ -770,6 +775,14 @@ intern_object(ValueTable *table, ValueId value, uint32_t identity)
 		insert_object_slot(table->object_slots, table->object_slot_count, &table->objects[id], id);
 	}
 	return id;
+}
+
+ValueId
+value_global(ValueTable *table, TypeId type, GlobalId global)
+{
+	Value value = make_value(VALUE_GLOBAL, type);
+	value.as.global = global;
+	return value_intern(table, &value);
 }
 
 ValueId

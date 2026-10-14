@@ -1,0 +1,48 @@
+function w $szc.main.1() {
+@start
+	%t1 =l loadl $szc.g.2
+	%t2 =w loaduh %t1
+	%t4 =w add %t2, 2
+	%t4 =w and %t4, 65535
+	%g4_overflow =w cultw %t4, %t2
+	jnz %g4_overflow, @g4_overflow_panic, @g4_overflow_ok
+@g4_overflow_panic
+	call $szc.panic.0()
+	hlt
+@g4_overflow_ok
+	storeh %t4, %t1
+	%t7 =w loaduh $szc.g.1
+	%g8_high =w cugtw %t7, 255
+	jnz %g8_high, @g8_high_panic, @g8_high_ok
+@g8_high_panic
+	call $szc.panic.1()
+	hlt
+@g8_high_ok
+	%t8 =w copy %t7
+	%t8 =w and %t8, 255
+	ret %t8
+}
+
+data $szc.g.1 = align 2 { h 7 }
+data $szc.g.2 = align 8 { l $szc.g.1 }
+data $szc.panic.msg.0 = { b "integer overflow\n", b 0 }
+function $szc.panic.0() {
+@start
+	call $write(w 2, l $szc.panic.msg.0, l 17)
+	call $abort()
+	hlt
+}
+
+data $szc.panic.msg.1 = { b "integer does not fit in destination type\n", b 0 }
+function $szc.panic.1() {
+@start
+	call $write(w 2, l $szc.panic.msg.1, l 41)
+	call $abort()
+	hlt
+}
+
+export function w $main() {
+@start
+	%status =w call $szc.main.1()
+	ret %status
+}

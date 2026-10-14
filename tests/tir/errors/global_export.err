@@ -1,0 +1,3 @@
+tests/tir/errors/global_export.zig:1:12: error: not supported by szc yet: threadlocal, exported, or extern global variables
+export var n: u8 = 1;
+           ^

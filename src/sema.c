@@ -21,6 +21,7 @@
 typedef enum DeclState {
 	DECL_UNRESOLVED,
 	DECL_IN_PROGRESS,
+	DECL_TYPED,	/* mutable global address is known; initializer is still pending */
 	DECL_RESOLVED,
 	DECL_FAILED,
 } DeclState;
@@ -45,6 +46,7 @@ typedef struct SemaDecl {
 	DeclState state;
 	Operand   value;
 	uint32_t address_identity;
+	GlobalId global;
 } SemaDecl;
 
 struct SemaNamespace {
@@ -56,6 +58,13 @@ struct SemaNamespace {
 	SemaDecl      *decls;
 	uint32_t      decl_count;
 };
+
+/* Stable output and private initializer ownership for each mutable global. */
+typedef struct Global {
+	SemaGlobal result;
+	SemaNamespace *namespace_scope;
+	SemaDecl *decl;
+} Global;
 
 struct Sema {
 	Arena      *arena;
@@ -80,6 +89,9 @@ struct Sema {
 	uint32_t   queue_capacity;
 	FuncId     main_func;
 	uint32_t next_address_identity;
+	Global **globals;	/* stable records, GlobalId 0 unused */
+	uint32_t global_count;
+	uint32_t global_capacity;
 };
 
 /* Maps IR instruction indices to operands while a body is analysed. */
@@ -124,6 +136,7 @@ typedef struct Block {
 	uint32_t      count;
 	uint32_t      capacity;
 	ControlTarget *control;
+	TypeId declaration_type;	/* explicit mutable global initializer context */
 } Block;
 
 /* How the analysis of a body ended. */
@@ -923,25 +936,79 @@ block_init_comptime(Block *block, Sema *sema, SemaNamespace *ns, InstMap *map, S
 	block->decl_name = decl_name;
 }
 
+static bool operand_to_type(Block *block, Operand operand, uint32_t src, TypeId *out);
+
+static bool
+global_type_allowed(Block *block, TypeId type, uint32_t src)
+{
+	Sema *sema = block->sema;
+	if (is_comptime_only_type(sema, type)) {
+		sema_error(block, src, "variable of type '%s' must be const or comptime", sema_type_name(sema, type));
+		return false;
+	}
+	TypeKind kind = sema->types[type].kind;
+	if (kind != TYPE_INT && kind != TYPE_BOOL && kind != TYPE_POINTER && kind != TYPE_VOID) {
+		sema_error(block, src, "not supported by szc yet: global variables of type '%s'", sema_type_name(sema, type));
+		return false;
+	}
+	return true;
+}
+
+/* Publish an address after resolving its type, before evaluating its initializer. */
+static void
+create_global(Block *block, SemaDecl *decl, TypeId type)
+{
+	Sema *sema = block->sema;
+	if (sema->global_count == sema->global_capacity) {
+		uint32_t capacity = sema->global_capacity * 2;
+		sema->globals = arena_grow_array(sema->arena, sema->globals, sema->global_count, capacity, sizeof(Global *), alignof(Global *));
+		sema->global_capacity = capacity;
+	}
+	GlobalId id = sema->global_count++;
+	Global *entry = ARENA_NEW(sema->arena, Global);
+	entry->decl = decl;
+	entry->namespace_scope = block->namespace_scope;
+	sema->globals[id] = entry;
+	SemaGlobal *global = &entry->result;
+	global->type = type;
+	global->symbol = arena_sprintf(sema->arena, "szc.g.%u", (unsigned)id);
+	global->src = decl->ir.src;
+	global->file = block->ir->file;
+	decl->global = id;
+	TypeId pointer = type_pointer(sema, type, POINTER_ONE, false);
+	decl->value = comptime_operand(pointer, value_global(&sema->values, pointer, id));
+}
+
 /* Analyses the value of a container-level declaration (once). */
 static Operand
-resolve_decl(Block *user, uint32_t src, SemaNamespace *ns, SemaDecl *decl)
+resolve_decl(Block *user, uint32_t src, SemaNamespace *ns, SemaDecl *decl, bool as_reference)
 {
 	Sema *sema = user->sema;
 	switch (decl->state) {
 	case DECL_RESOLVED:
 		return decl->value;
+	case DECL_TYPED:
+		if (as_reference)
+			return decl->value;
+		break;
 	case DECL_FAILED:
 		return operand_none;
 	case DECL_IN_PROGRESS:
-		sema_error(user, src, "dependency loop detected");
+		if (decl->ir.kind == IR_DECL_VAR) {
+			if (as_reference && decl->global != 0)
+				return decl->value;
+			sema_error(user, src, "value of declaration '%s.%s' depends on itself here", sema_type_name(sema, ns->type), intern_text(sema->interner, decl->ir.name));
+		} else {
+			sema_error(user, src, "dependency loop detected");
+		}
 		return operand_none;
 	case DECL_UNRESOLVED:
 		break;
 	}
-	if (decl->ir.kind == IR_DECL_VAR) {
+	bool mutable = decl->ir.kind == IR_DECL_VAR;
+	if (mutable && (decl->ir.flags & (IR_DECL_THREADLOCAL | IR_DECL_EXPORT | IR_DECL_EXTERN)) != 0) {
 		decl->state = DECL_FAILED;
-		sema_error(user, src, "not supported by szc yet: container-level variables");
+		sema_error(user, src, "not supported by szc yet: threadlocal, exported, or extern global variables");
 		return operand_none;
 	}
 	decl->state = DECL_IN_PROGRESS;
@@ -949,6 +1016,22 @@ resolve_decl(Block *user, uint32_t src, SemaNamespace *ns, SemaDecl *decl)
 	inst_map_init(&map, sema->arena);
 	Block block;
 	block_init_comptime(&block, sema, ns, &map, decl->ir.name);
+	if (mutable && decl->ir.type_body != 0 && decl->global == 0) {
+		BodyResult declared = analyze_body(&block, decl->ir.type_body);
+		TypeId type;
+		if (declared.end != BODY_BREAK_RESULT || !operand_to_type(&block, declared.result, decl->ir.src, &type) || !global_type_allowed(&block, type, decl->ir.src)) {
+			decl->state = DECL_FAILED;
+			return operand_none;
+		}
+		create_global(&block, decl, type);
+	}
+	if (mutable && decl->global != 0) {
+		block.declaration_type = sema->globals[decl->global]->result.type;
+		if (as_reference) {
+			decl->state = DECL_TYPED;
+			return decl->value;
+		}
+	}
 	BodyResult result = analyze_body(&block, decl->ir.value_body);
 	if (result.end != BODY_BREAK_RESULT || result.result.kind != OPERAND_COMPTIME) {
 		if (result.result.kind == OPERAND_RUNTIME)
@@ -956,7 +1039,18 @@ resolve_decl(Block *user, uint32_t src, SemaNamespace *ns, SemaDecl *decl)
 		decl->state = DECL_FAILED;
 		return operand_none;
 	}
-	decl->value = result.result;
+	if (mutable) {
+		if (decl->global == 0) {
+			if (!global_type_allowed(&block, result.result.type, decl->ir.src)) {
+				decl->state = DECL_FAILED;
+				return operand_none;
+			}
+			create_global(&block, decl, result.result.type);
+		}
+		sema->globals[decl->global]->result.initializer = result.result.value;
+	} else {
+		decl->value = result.result;
+	}
 	decl->state = DECL_RESOLVED;
 	return decl->value;
 }
@@ -1723,7 +1817,11 @@ analyze_compare(Block *block, const IrInst *inst)
 			const Value *a = operand_value(block, lhs);
 			const Value *b = operand_value(block, rhs);
 			bool equal;
-			if (a->kind == VALUE_REF && b->kind == VALUE_REF)
+			if (a->kind == VALUE_GLOBAL && b->kind == VALUE_GLOBAL)
+				equal = a->as.global == b->as.global;
+			else if (a->kind == VALUE_GLOBAL || b->kind == VALUE_GLOBAL)
+				equal = false;
+			else if (a->kind == VALUE_REF && b->kind == VALUE_REF)
 				equal = a->as.object == b->as.object;
 			else if (a->kind == VALUE_BYTES && b->kind == VALUE_BYTES)
 				equal = lhs.value == rhs.value;
@@ -2454,11 +2552,49 @@ pointer_operand(Block *block, Operand operand, uint32_t src)
 {
 	if (!pointer_type_operand(block, operand, src))
 		return false;
+	if (operand.kind == OPERAND_COMPTIME && operand_value(block, operand)->kind == VALUE_GLOBAL)
+		return true;
 	if (operand.kind != OPERAND_RUNTIME) {
 		sema_error(block, src, "not supported by szc yet: comptime pointers");
 		return false;
 	}
 	return true;
+}
+
+/* The address of a runtime global is known, but reading its contents needs runtime. */
+static Operand
+load_pointer(Block *block, Operand pointer, uint32_t src)
+{
+	Sema *sema = block->sema;
+	if (!pointer_type_operand(block, pointer, src))
+		return operand_none;
+	TypeId child = sema->types[pointer.type].as.pointer.child;
+	if (child == T_VOID)
+		return void_operand(sema);
+	if (is_int(sema, child) && sema->types[child].as.integer.bits == 0)
+		return comptime_operand(child, value_int_u64(&sema->values, child, 0));
+	if (pointer.kind == OPERAND_COMPTIME) {
+		const Value *value = operand_value(block, pointer);
+		if (value->kind == VALUE_REF) {
+			ValueId stored = sema->values.objects[value->as.object].value;
+			return coerce(block, comptime_operand(value_get(&sema->values, stored)->type, stored), child, src);
+		}
+		if (value->kind == VALUE_GLOBAL && block->is_comptime) {
+			Global *global = sema->globals[value->as.global];
+			Operand resolved = resolve_decl(block, src, global->namespace_scope, global->decl, false);
+			if (resolved.kind != OPERAND_NONE)
+				sema_error(block, src, "unable to resolve comptime value");
+			return operand_none;
+		}
+	}
+	TypeKind kind = sema->types[child].kind;
+	if (kind != TYPE_INT && kind != TYPE_BOOL && kind != TYPE_POINTER) {
+		sema_error(block, src, "not supported by szc yet: dereference of '%s'", sema_type_name(sema, child));
+		return operand_none;
+	}
+	if (!pointer_operand(block, pointer, src) || !require_runtime(block, src))
+		return operand_none;
+	return runtime_operand(child, emit_tir_un(block, TIR_LOAD, child, src, materialize(block, pointer, src)));
 }
 
 /* Validate even &p.*: cancelling the address must not hide an invalid dereference. */
@@ -2485,24 +2621,7 @@ analyze_deref(Block *block, const IrInst *inst)
 	}
 	if (inst->op == IR_REF_DEREF)
 		return pointer;
-	if (type.child == T_VOID)
-		return void_operand(sema);
-	if (zero_int)
-		return comptime_operand(type.child, value_int_u64(&sema->values, type.child, 0));
-	if (pointer.kind == OPERAND_COMPTIME && operand_value(block, pointer)->kind == VALUE_REF) {
-		ConstObjectId object = operand_value(block, pointer)->as.object;
-		ValueId pointee = sema->values.objects[object].value;
-		TypeId stored_type = value_get(&sema->values, pointee)->type;
-		return coerce(block, comptime_operand(stored_type, pointee), type.child, inst->src);
-	}
-	TypeKind child_kind = sema->types[type.child].kind;
-	if (child_kind != TYPE_INT && child_kind != TYPE_BOOL && child_kind != TYPE_POINTER) {
-		sema_error(block, inst->src, "not supported by szc yet: dereference of '%s'", sema_type_name(sema, type.child));
-		return operand_none;
-	}
-	if (!pointer_operand(block, pointer, inst->src))
-		return operand_none;
-	return runtime_operand(type.child, emit_tir_un(block, TIR_LOAD, type.child, inst->src, pointer.inst));
+	return load_pointer(block, pointer, inst->src);
 }
 
 /* ---------- Analysis: instructions ---------- */
@@ -2536,6 +2655,10 @@ analyze_inst(Block *block, IrInstIndex index, Operand *break_value)
 	case IR_FUNC:
 		result = analyze_func_inst(block, index);
 		break;
+	case IR_DECL_TYPE:
+		if (block->declaration_type != 0)
+			result = type_operand(sema, block->declaration_type);
+		break;
 	case IR_DECL_REF:
 	case IR_DECL_VAL: {
 		StringId name = inst->data.name.name;
@@ -2550,8 +2673,11 @@ analyze_inst(Block *block, IrInstIndex index, Operand *break_value)
 			sema_error(block, src, "use of undeclared identifier '%s'", intern_text(sema->interner, name));
 			break;
 		}
-		result = resolve_decl(block, src, ns, decl);
-		if (inst->op == IR_DECL_REF) {
+		result = resolve_decl(block, src, ns, decl, inst->op == IR_DECL_REF);
+		if (decl->ir.kind == IR_DECL_VAR) {
+			if (inst->op == IR_DECL_VAL)
+				result = load_pointer(block, result, src);
+		} else if (inst->op == IR_DECL_REF) {
 			if (decl->address_identity == 0)
 				decl->address_identity = ++sema->next_address_identity;
 			result = analyze_ref(block, result, src, decl->address_identity);
@@ -2750,14 +2876,9 @@ analyze_inst(Block *block, IrInstIndex index, Operand *break_value)
 	case IR_ALLOC:
 		result = analyze_alloc(block, inst);
 		break;
-	case IR_LOAD: {
-		Operand pointer = resolve_ref(block, inst->data.un.operand);
-		if (!pointer_operand(block, pointer, src))
-			break;
-		TypeId child = sema->types[pointer.type].as.pointer.child;
-		result = runtime_operand(child, emit_tir_un(block, TIR_LOAD, child, src, pointer.inst));
+	case IR_LOAD:
+		result = load_pointer(block, resolve_ref(block, inst->data.un.operand), src);
 		break;
-	}
 	case IR_STORE: {
 		Operand pointer = resolve_ref(block, inst->data.bin.lhs);
 		Operand value = resolve_ref(block, inst->data.bin.rhs);
@@ -2770,8 +2891,16 @@ analyze_inst(Block *block, IrInstIndex index, Operand *break_value)
 		TypeId child = sema->types[pointer.type].as.pointer.child;
 		value = coerce(block, value, child, src);
 		bool no_storage = child == T_VOID || (is_int(sema, child) && sema->types[child].as.integer.bits == 0);
-		if (value.kind != OPERAND_NONE && !no_storage && !operand_is_undefined(block, value) && pointer_operand(block, pointer, src))
-			emit_tir_bin(block, TIR_STORE, T_VOID, src, pointer.inst, materialize(block, value, src));
+		if (value.kind != OPERAND_NONE && !no_storage) {
+			if (block->is_comptime && pointer.kind == OPERAND_COMPTIME && operand_value(block, pointer)->kind == VALUE_GLOBAL) {
+				sema_error(block, src, "unable to evaluate comptime expression");
+				break;
+			}
+			if (!operand_is_undefined(block, value) && pointer_operand(block, pointer, src)) {
+				TirRef address = materialize(block, pointer, src);
+				emit_tir_bin(block, TIR_STORE, T_VOID, src, address, materialize(block, value, src));
+			}
+		}
 		result = void_operand(sema);
 		break;
 	}
@@ -2937,6 +3066,9 @@ sema_create(Arena *arena, Diag *diag, Interner *interner, SourceTable *sources)
 	sema->func_capacity = 16;
 	sema->funcs = ARENA_ARRAY(arena, SemaFunc *, sema->func_capacity);
 	sema->func_count = 1;	/* FuncId 0 is "none" */
+	sema->global_capacity = 16;
+	sema->global_count = 1;
+	sema->globals = ARENA_ARRAY(arena, Global *, sema->global_capacity);
 	sema->queue_capacity = 16;
 	sema->queue = ARENA_ARRAY(arena, FuncId, sema->queue_capacity);
 	return sema;
@@ -2967,10 +3099,10 @@ sema_analyze_executable(Sema *sema, FileId file, const IrFile *ir)
 	block_init_comptime(&block, sema, root, &map, root_name);
 	uint32_t root_src = ir->insts[ir->root].src;
 
-	/* Exported functions are analysed even if nothing references them. */
+	/* Exported declarations are analysed even if nothing references them. */
 	for (uint32_t i = 0; i < root->decl_count; i++) {
 		if (root->decls[i].ir.flags & IR_DECL_EXPORT)
-			resolve_decl(&block, root->decls[i].ir.src, root, &root->decls[i]);
+			resolve_decl(&block, root->decls[i].ir.src, root, &root->decls[i], false);
 	}
 
 	StringId main_name = intern_cstr(sema->interner, "main");
@@ -2980,7 +3112,7 @@ sema_analyze_executable(Sema *sema, FileId file, const IrFile *ir)
 	} else if ((main_decl->ir.flags & IR_DECL_PUB) == 0) {
 		sema_error(&block, main_decl->ir.src, "'main' is not marked 'pub'");
 	} else {
-		Operand main = resolve_decl(&block, main_decl->ir.src, root, main_decl);
+		Operand main = resolve_decl(&block, main_decl->ir.src, root, main_decl, false);
 		if (main.kind == OPERAND_COMPTIME && sema->types[main.type].kind == TYPE_FN) {
 			FuncId id = operand_value(&block, main)->as.function;
 			TypeFn fn = sema->types[main.type].as.fn;
@@ -2998,8 +3130,17 @@ sema_analyze_executable(Sema *sema, FileId file, const IrFile *ir)
 		}
 	}
 
-	for (uint32_t i = 0; i < sema->queue_count; i++)
-		analyze_func_body(sema, sema->queue[i]);
+	uint32_t function_index = 0;
+	GlobalId global_index = 1;
+	while (function_index < sema->queue_count || global_index < sema->global_count) {
+		while (function_index < sema->queue_count)
+			analyze_func_body(sema, sema->queue[function_index++]);
+		while (global_index < sema->global_count) {
+			Global *global = sema->globals[global_index++];
+			if (global->decl->state == DECL_TYPED)
+				resolve_decl(&block, global->result.src, global->namespace_scope, global->decl, false);
+		}
+	}
 	return sema->diag->error_count == errors_before;
 }
 
@@ -3025,6 +3166,18 @@ const ValueTable *
 sema_values(const Sema *sema)
 {
 	return &sema->values;
+}
+
+uint32_t
+sema_global_count(const Sema *sema)
+{
+	return sema->global_count;
+}
+
+const SemaGlobal *
+sema_global(const Sema *sema, GlobalId global)
+{
+	return &sema->globals[global]->result;
 }
 
 const Interner *
@@ -3065,6 +3218,8 @@ value_text(Sema *sema, ValueId id)
 		return sema_type_name(sema, value->as.type_value);
 	case VALUE_FUNCTION:
 		return sema->funcs[value->as.function]->symbol;
+	case VALUE_GLOBAL:
+		return sema->globals[value->as.global]->result.symbol;
 	case VALUE_REF: {
 		char *text = arena_alloc(sema->arena, 32, 1);
 		snprintf(text, 32, "ref(object.%u)", (unsigned)value->as.object);
@@ -3186,6 +3341,11 @@ dump_tir_body(FILE *out, Sema *sema, const TirFunc *tir, TirBody body, uint32_t 
 void
 sema_dump(FILE *out, Sema *sema)
 {
+	for (GlobalId id = 1; id < sema->global_count; id++) {
+		const SemaGlobal *global = &sema->globals[id]->result;
+		if (global->initializer != VALUE_NONE)
+			fprintf(out, "global %s: %s = %s\n", global->symbol, sema_type_name(sema, global->type), value_text(sema, global->initializer));
+	}
 	for (FuncId id = 1; id < sema->func_count; id++) {
 		const SemaFunc *func = sema->funcs[id];
 		if (func->state != FUNC_ANALYSED && !(func->is_extern && func->state == FUNC_QUEUED))

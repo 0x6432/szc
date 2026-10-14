@@ -22,6 +22,13 @@ def binary_case(name, integer_type, operator, lhs, rhs, message="integer overflo
 
 def cases():
     for label, body, message in (
+        ("overflow", "n += 1;", "integer overflow"),
+        ("cast", "const x: u4 = @intCast(n); _ = x;", "integer does not fit in destination type"),
+        ("cleanup", "defer n += 1;", "integer overflow"),
+    ):
+        yield f"global_{label}", f"var n: u8 = 255;\npub fn main() void {{ {body} }}\n", message
+    yield "panic_global", 'var text = "first";\npub fn main() void { text = "later"; @panic(text); }\n', "later"
+    for label, body, message in (
         ("overflow", "p.* += 1;", "integer overflow"),
         ("cast", "const n: u4 = @intCast(p.*); _ = n;", "integer does not fit in destination type"),
         ("cleanup", "defer p.* += 1;", "integer overflow"),

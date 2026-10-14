@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Check immutable reference backing objects under PIE and ELF RELRO."""
+"""Check immutable references and mutable global storage under PIE and ELF RELRO."""
 import os
 from pathlib import Path
 import re
@@ -53,7 +53,29 @@ def main():
                 base, length = int(fields[2], 16), int(fields[5], 16)
                 protected |= base <= address and address + size <= base + length
         assert protected, "constant pointer objects are not protected by GNU_RELRO"
-    print("reference storage: 4 passed, 0 failed")
+        result = run([compiler, "build-exe", "tests/run/globals.zig", "-o", str(executable)], env)
+        assert not result.stderr, result.stderr.decode(errors="replace")
+        result = run([str(executable)])
+        assert not result.stdout and not result.stderr
+        dynamic = run(["readelf", "-d", str(executable)]).stdout
+        assert b"TEXTREL" not in dynamic, "global pointer initializer caused a text relocation"
+        sections = run(["readelf", "-SW", str(executable)]).stdout.decode()
+        writable = set()
+        for index, flags in re.findall(
+            r"\[\s*(\d+)\]\s+\S+\s+\S+\s+[0-9a-f]+\s+[0-9a-f]+\s+[0-9a-f]+\s+[0-9a-f]+\s+(\S+)", sections
+        ):
+            if "W" in flags:
+                writable.add(index)
+        symbols = run(["readelf", "-sW", str(executable)]).stdout.decode()
+        globals_found = []
+        for line in symbols.splitlines():
+            fields = line.split()
+            if len(fields) == 8 and fields[7].startswith("szc.g."):
+                globals_found.append(fields)
+                assert fields[6] in writable, "mutable global has read-only storage"
+        assert len(globals_found) >= 10, "expected scalar, pointer and zero-sized globals"
+        assert all(fields[4] == "LOCAL" for fields in globals_found), "internal globals must not be exported"
+    print("reference storage: 8 passed, 0 failed")
 
 
 if __name__ == "__main__":

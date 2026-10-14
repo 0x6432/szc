@@ -1,0 +1,3 @@
+tests/tir/errors/global_type_value.zig:1:5: error: variable of type 'type' must be const or comptime
+var T = u8;
+    ^

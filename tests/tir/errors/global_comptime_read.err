@@ -1,0 +1,3 @@
+tests/tir/errors/global_comptime_read.zig:2:11: error: unable to resolve comptime value
+const c = n;
+          ^
