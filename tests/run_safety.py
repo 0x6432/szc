@@ -10,7 +10,20 @@ from pathlib import Path
 
 
 def run(command, timeout=15):
-    return subprocess.run(command, capture_output=True, timeout=timeout)
+    # Drivers and reference programs can spawn children that inherit output pipes.
+    # Killing only the immediate child leaves work running and communicate blocked.
+    with subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                          start_new_session=True) as process:
+        try:
+            stdout, stderr = process.communicate(timeout=timeout)
+        except subprocess.TimeoutExpired:
+            try:
+                os.killpg(process.pid, signal.SIGKILL)
+            except ProcessLookupError:
+                pass
+            stdout, stderr = process.communicate()
+            raise subprocess.TimeoutExpired(command, timeout, output=stdout, stderr=stderr)
+        return subprocess.CompletedProcess(command, process.returncode, stdout, stderr)
 
 
 def binary_case(name, integer_type, operator, lhs, rhs, message="integer overflow"):

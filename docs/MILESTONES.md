@@ -136,6 +136,35 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
 
 (newest first; each entry: what, limitations, interactions)
 
+### CI follow-up: safety subprocess-group timeout cleanup
+- **What**: safety commands now start in a new session. On a compilation/execution
+  deadline, the harness kills the whole process group, drains captured output and
+  raises TimeoutExpired with the command, original budget and captured bytes.
+  Successful/nonzero exits and signal statuses retain subprocess.run semantics.
+- **Why**: fc00389/run 38611434252 passed GCC/Clang/fuzz, but differential safety
+  completed 159/166 cases with seven timeouts: four native compilations, two
+  reference compilations and one reference execution. The -j2 reference cap alone
+  did not prevent stalls. The old subprocess.run timeout path only killed its
+  immediate child; inherited pipes from descendants could keep cleanup waiting.
+  This fixes that reproducible harness defect, not a claim that all hosted-runner
+  stalls have been diagnosed or that remote CI has recovered.
+- **Regression coverage**: tests/run_process_timeout.py checks exact stdout/stderr
+  and nonzero status, signal status, a waiting parent with a long-lived child,
+  and an already-exited parent whose child still owns the output pipes. Timeout
+  cases must return promptly with the expected partial output and no live child.
+  e2e-test and safety-test both run these four checks before compiler safety cases.
+- **Validation**: GCC/Clang -Werror ASan/UBSan pass 558 unit checks, 671 goldens,
+  53 ordinary executable inputs, four process-cleanup checks and 166 safety cases.
+  The complete GCC reference-enabled e2e suite also passes existing driver, storage,
+  ABI and local/constant/global alignment checks; all 166 reference safety programs
+  pass with the new helper. Four 60-second fuzz targets and 20,000 standalone
+  mutations per stage pass. No compiler semantics,
+  reference backends, expected panics, -j2 job cap, 120-second compilation budget
+  or 15-second execution budget changed. No timeouts are ignored or retried.
+- **Next**: check push CI; if stalls persist, inspect its new evidence rather than
+  raising budgets blindly. Language work remains aligned global constants, then
+  function alignment; all enclosing memory milestones stay partial.
+
 ### M5.1c2b2b3a Internal mutable global alignment
 - **What**: internal mutable globals accept explicit alignment with declared or
   inferred types. IrDecl carries a separate isolated alignment body/source location.

@@ -67,7 +67,9 @@ compilation failures from nonzero program exits. Generated tests exercise all
 signed/unsigned widths from 1 to 64 bits, including conditional/loop/block result joins; driver tests cover tool failures,
 intermediate retention/cleanup and paths containing spaces. Runtime safety tests
 check panic signals/messages; when `ZIG` is set they also validate behavior against
-the official compiler. `tests/run_szc` separately records known reference-backend
+the official compiler. Safety timeouts terminate the command's entire process group,
+including compiler descendants; `e2e-test` and `safety-test` first verify cleanup
+and captured-output behavior. `tests/run_szc` separately records known reference-backend
 edge discrepancies (currently signed minimum remainder by -1).
 
 ## Layout

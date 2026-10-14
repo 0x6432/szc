@@ -65,6 +65,41 @@ Read this first when resuming work (the sandbox resets often).
   also passed all jobs (run 38590520673), as did M5.1c2b2b1 ecfb6ab
   (run 38593742928). Check each new push's run.
 
+## CI follow-up after M5.1c2b2b3a
+
+- GCC/Clang -Werror ASan/UBSan pass 558 unit checks, 671 goldens, 53 ordinary
+  executable inputs, four process-cleanup regressions and 166 safety cases.
+  GCC's complete e2e suite also passes two szc-only inputs, 16 driver checks,
+  11 storage, four ABI, seven unaligned, 135 local, 270 constant and 153 global
+  alignment checks, with the ordinary/memory/safety reference comparisons enabled.
+  All 166 safety cases pass against Zig 0.17.0 using the new process-group helper.
+  Four 60-second fuzz targets and 20,000 standalone mutations per stage pass.
+  Corpus remains irgen 29/sema 58; compiler sources are unchanged. Reinstalled
+  sanitizer/Clang dependencies after the sandbox reset. Check new push CI before
+  claiming the hosted-runner stalls are resolved.
+- fc00389/run 38611434252 passed GCC/Clang/fuzz but differential safety completed
+  159/166 with seven timeouts: native exact_remainder_i8/exact_remainder_i64/
+  shr_size_5/shr_size_33 compilations; reference shl_size_5/shl_size_33 compilations;
+  reference exact_remainder_u64 execution. Reference -j2 did not eliminate stalls.
+  Do not describe this as a proven reference-only problem or a recovered green CI.
+- tests/run_safety.py now uses Popen(start_new_session=True), communicate with the
+  existing deadline, killpg(SIGKILL) on timeout, then output draining and re-raising
+  TimeoutExpired. The old immediate-child cleanup could leave descendants running
+  or blocked on inherited output pipes. Ordinary stdout/stderr/status/signal
+  behavior is unchanged. Compilation stays at 120s; execution stays at 15s; no
+  retries, skipped cases or relaxed expected diagnostics were added.
+- tests/run_process_timeout.py covers four outcomes, including a waiting driver and
+  an exited driver whose descendant retains stdout/stderr. Both timeout cases use
+  a 60-second descendant and a 3-second deadline; cleanup must finish within 8s,
+  preserve ready output, and leave no live descendant. A killed zombie awaiting
+  PID 1 reaping is allowed. e2e-test and safety-test run this test before safety.
+- This is a harness-hardening checkpoint, not completed language work. Aligned
+  global constants (M5.1c2b2b3b) remain next. The actual Zig source probes confirm
+  comptime-only globals cannot carry alignment and bare function aliases have a
+  specific rejection, unlike aligned local comptime values. The implementation
+  still has its explicit aligned-global-constant NYI. Keep Q6 deferred to M10.2.
+- Check the new push's CI before asserting that hosted-runner stalls are resolved.
+
 ## Validation at M5.1c2b2b3a
 
 - GCC/Clang -Werror ASan/UBSan pass 558 unit checks, 671 goldens, 53 ordinary
