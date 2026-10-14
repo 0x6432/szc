@@ -45,8 +45,11 @@ Read this first when resuming work (the sandbox resets often).
 - Done: M5.1c2b2b4 function declaration/address alignment (internal/exported
   definitions and supplier-guaranteed extern declarations).
 - Done: M5.1c2b3a volatile single-pointer qualification/coercion.
-- Next: M5.1c2b3b observable volatile accesses (temporary explicit access guards).
-  The user requested three checkpoints together this turn only.
+- Done: M5.1c2b3b observable volatile scalar/bool/single-pointer loads/stores.
+  This completes the user-requested three-checkpoint batch; return to small
+  checkpoints next. Remaining alignment gaps: local bare-function alias alignment
+  and typed immutable address-dependency cycles. Plan/ground one of these next;
+  do not claim all M5.1 integration complete.
   M5.1/M5.1c/M5.1c2/M5.1c2b/M5.1c2b2/M5.1c2b2b remain partial.
 - Run `PATH=/data/tools/bin:$PATH ZIG=/data/zig/zig-x86_64-linux-0.17.0/zig make e2e-test`
   locally. `tools/build_qbe.sh` builds the pinned QBE into `build/qbe-src` on CI.
@@ -69,6 +72,57 @@ Read this first when resuming work (the sandbox resets often).
   GCC/Clang/fuzz/differential jobs, restoring green CI. M5.1c2b2a 8b1d3cf
   also passed all jobs (run 38590520673), as did M5.1c2b2b1 ecfb6ab
   (run 38593742928). Check each new push's run.
+
+## Validation at M5.1c2b3b
+
+- TIR_LOAD_VOLATILE/TIR_STORE_VOLATILE preserve runtime access effects. Sema chooses
+  them from TypePointer.is_volatile; no discarded-read pruning is introduced.
+  Stores of undefined currently materialize arbitrary zero rather than silently
+  using a normal store. Known immutable pointer contents and OPVs still fold,
+  matching Sema.zig analyzeLoad/storePtr2; runtime global contents stay unknown.
+  Existing undefined-pointer, const-store, comptime-only load and coercion checks
+  apply before emitting memory operations. Casts/non-single pointers remain NYI.
+- Codegen emits opaque calls to private QBE functions, one per used width/sign for
+  loads and width for stores. Each helper has exactly one memory instruction with
+  a returned load value or pointer-argument store. QBE optimizes functions separately
+  and has no volatile opcode or cross-function inlining; calls preserve otherwise
+  discardable reads/consecutive stores and conservatively barrier memory operations.
+  Do not add purity annotations, inlining or LTO without redesigning this boundary.
+  Load results normalize narrow integer values. emit-qbe is self-contained for
+  these helpers. Volatile is not atomic and supplies no cross-thread synchronization.
+- tests/run_volatile_access.py links tests/helpers/volatile_observer.c. The observer
+  uses Linux/x86_64 PROT_NONE faults plus the single-step flag to re-arm protection
+  after each actual memory instruction; unrelated faults terminate the test. It
+  verifies 44 sequences for 17 types at offsets zero/one, unused reads, consecutive
+  stores and order, loops, compound operations, &p.* cancellation and void/u0.
+  Compound LLVM addb memory instructions fault once as writes, so that dedicated
+  oracle accepts exact wrwr or wwr event sequences; ordinary wwrrwr tests remain
+  exact. Zig Debug and ReleaseFast both pass. A proposed undefined-store count was
+  rejected by actual ReleaseFast behavior (it can omit that store); no test asserts
+  counts for undefined stores or reads their contents. szc's arbitrary-zero choice
+  is covered by TIR/QBE goldens, not claimed as a Zig-guaranteed observable write.
+- Three stage goldens, five reference-rejected errors and executable integration
+  cover globals, immutable comptime pointers, defer/loop/compound sequencing and
+  callback slots. Removed temporary access-NYI fixtures; retained fuzz inputs now
+  exercise valid accesses. Corpus: irgen 33/sema 79. GCC/Clang -Werror ASan/UBSan
+  both pass 558 units, 726 goldens, eight cleanup probes, 57 ordinary/generated
+  executables plus two szc-only inputs, 16 driver, 11 storage, four ABI, seven
+  unaligned, 135 mutable-local, 270 local-constant, 153 mutable-global,
+  153 global-constant, 27 function-alignment, 44 physical volatile sequences and
+  166 safety checks. GCC's full e2e suite is reference-enabled. The observer also
+  passes against Zig Debug/ReleaseFast for Clang and optimized GCC szc builds;
+  optimized GCC passes goldens and all 57 ordinary/generated executables. Final
+  Clang compiler still matches the 77 function-alignment and 240 volatile-qualifier
+  reference cases. Four 60-second fuzz targets and 20,000 standalone mutations
+  per stage pass. Do not infer remote success from local tests.
+- Batch commits before this: 2cc8303 function alignment; 59e3d53 volatile qualifiers.
+  0fc49d8's race-fix CI and 9ee0e66's global-constant CI (38629629954) both
+  completed successfully. At last check 2cc8303/run 38631694505 and
+  59e3d53/run 38633098367 passed GCC/Clang/fuzz, with differential still running.
+  Each newer push needs its own status check. Return to small milestones after this third checkpoint. Existing
+  local aligned bare-function-alias addresses and typed constant address cycles
+  remain unsupported; choose a scoped, reference-grounded follow-up before arrays.
+  Keep enclosing alignment/memory milestones partial. Q6 only at M10.2.
 
 ## Validation at M5.1c2b3a
 

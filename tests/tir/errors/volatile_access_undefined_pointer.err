@@ -1,0 +1,3 @@
+tests/tir/errors/volatile_access_undefined_pointer.zig:1:62: error: cannot dereference undefined value
+pub fn main() void { const p: *volatile u8 = undefined; _ = p.*; }
+                                                             ^

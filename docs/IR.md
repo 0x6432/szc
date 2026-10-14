@@ -280,5 +280,21 @@ prints a file's IR.
   pointers remain invariant; function parameter variance reuses compatibility rules.
 - Pointer joins union const/allowzero/volatile and choose weakest alignment, then
   validate both operands against the resulting type. Qualifiers do not alter size,
-  storage identity or the ABI. The qualification-only checkpoint explicitly rejects
-  accesses until observable volatile memory lowering is implemented.
+  storage identity or the ABI. Observable accesses are lowered as described below.
+
+## Volatile memory accesses
+
+- Runtime dereferences/stores through volatile pointers emit TIR_LOAD_VOLATILE or
+  TIR_STORE_VOLATILE. They share operand shapes with LOAD/STORE but are effectful
+  even for unused read results. Compound assignment retains both operations.
+  Known immutable values and void/u0 still fold; runtime global contents do not.
+- QBE has no native volatile opcode. Codegen emits opaque calls to private outlined
+  QBE helpers, each containing exactly one width-correct load or store. Helpers
+  return load values, receive store pointers/values, and cannot be interprocedurally
+  inlined by QBE. No purity/LTO assumptions are allowed at this boundary. Calls
+  conservatively barrier memory; this is not atomicity or inter-thread ordering.
+  Load results normalize narrow signed/unsigned representations. Standalone IL
+  includes all used helper definitions and needs no separate assembly for them.
+- No memory operation is needed for void/u0. Undefined stores use an arbitrary
+  zero in szc, but no stable value/access-count guarantee is made for undefined
+  values; actual Zig ReleaseFast may omit such a store.

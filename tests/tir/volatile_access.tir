@@ -1,0 +1,170 @@
+global szc.g.1: u8 align(16) = 3
+global szc.g.2: *const fn () u8 = szc.seven.6
+fn szc.main.1: fn () u8 {
+  %0: *volatile u8 = const szc.g.1
+  %1: u8 = call szc.adjust.2(%0)
+  %2: u8 = const 8
+  %3: bool = cmp_neq %1, %2
+  %4: bool = block {
+    %12: noreturn = condbr %3 then {
+      %10: bool = const true
+      %11: noreturn = br %4, %10
+    } else {
+      %5: *align(16) u8 = const szc.g.1
+      %6: u8 = load %5
+      %7: u8 = const 9
+      %8: bool = cmp_neq %6, %7
+      %9: noreturn = br %4, %8
+    }
+  }
+  %13: void = block {
+    %17: noreturn = condbr %4 then {
+      %14: u8 = const 1
+      %15: noreturn = ret %14
+    } else {
+      %16: noreturn = br %13
+    }
+  }
+  %18: *align(1) u8 = alloc
+  %19: u8 = const 4
+  %20: void = store %18, %19
+  %21: *u8 = ptr_cast %18
+  %22: bool = const false
+  %23: *volatile u8 = const szc.g.1
+  %24: *volatile u8 = call szc.choose.3(%22, %23, %21)
+  %25: u8 = const 5
+  %26: void = store_volatile %24, %25
+  %27: u8 = load_volatile %24
+  %28: u8 = const 5
+  %29: bool = cmp_neq %27, %28
+  %30: bool = block {
+    %37: noreturn = condbr %29 then {
+      %35: bool = const true
+      %36: noreturn = br %30, %35
+    } else {
+      %31: u8 = load %18
+      %32: u8 = const 5
+      %33: bool = cmp_neq %31, %32
+      %34: noreturn = br %30, %33
+    }
+  }
+  %38: bool = block {
+    %46: noreturn = condbr %30 then {
+      %44: bool = const true
+      %45: noreturn = br %38, %44
+    } else {
+      %39: *volatile *const fn () u8 = const szc.g.2
+      %40: u8 = call szc.swap.4(%39)
+      %41: u8 = const 9
+      %42: bool = cmp_neq %40, %41
+      %43: noreturn = br %38, %42
+    }
+  }
+  %47: void = block {
+    %51: noreturn = condbr %38 then {
+      %48: u8 = const 2
+      %49: noreturn = ret %48
+    } else {
+      %50: noreturn = br %47
+    }
+  }
+  %52: *const volatile u8 = const szc.g.1
+  %53: u8 = load_volatile %52
+  %54: u8 = const 9
+  %55: bool = cmp_neq %53, %54
+  %56: bool = block {
+    %61: noreturn = condbr %55 then {
+      %59: bool = const true
+      %60: noreturn = br %56, %59
+    } else {
+      %57: bool = const false
+      %58: noreturn = br %56, %57
+    }
+  }
+  %62: void = block {
+    %66: noreturn = condbr %56 then {
+      %63: u8 = const 3
+      %64: noreturn = ret %63
+    } else {
+      %65: noreturn = br %62
+    }
+  }
+  %67: u8 = const undefined
+  %68: void = store_volatile %24, %67
+  %69: u8 = const 0
+  %70: noreturn = ret %69
+}
+fn szc.adjust.2: fn (*volatile u8) u8 {
+  %0: *volatile u8 = arg 0
+  %1: u8 = load_volatile %0
+  %2: u8 = const 2
+  %3: u8 = add %1, %2
+  %4: void = store_volatile %0, %3
+  %5: *usize = alloc
+  %6: usize = const 0
+  %7: void = store %5, %6
+  %8: void = block {
+    %9: noreturn = loop {
+      %10: usize = load %5
+      %11: usize = const 3
+      %12: bool = cmp_lt %10, %11
+      %25: noreturn = condbr %12 then {
+        %13: void = block {
+          %14: u8 = load_volatile %0
+          %15: u8 = const 1
+          %16: u8 = add %14, %15
+          %17: void = store_volatile %0, %16
+          %18: noreturn = block {
+            %19: noreturn = br %13
+          }
+        }
+        %20: usize = const 1
+        %21: usize = add %10, %20
+        %22: void = store %5, %21
+        %23: noreturn = repeat %9
+      } else {
+        %24: noreturn = block {
+          %26: noreturn = br %8
+        }
+      }
+    }
+  }
+  %27: u8 = load_volatile %0
+  %28: u8 = load_volatile %0
+  %29: u8 = load_volatile %0
+  %30: u8 = const 1
+  %31: u8 = add %29, %30
+  %32: void = store_volatile %0, %31
+  %33: noreturn = ret %28
+}
+fn szc.choose.3: fn (bool, *volatile u8, *u8) *volatile u8 {
+  %0: bool = arg 0
+  %1: *volatile u8 = arg 1
+  %2: *u8 = arg 2
+  %3: *volatile u8 = block {
+    %7: noreturn = condbr %0 then {
+      %5: noreturn = br %3, %1
+    } else {
+      %4: *volatile u8 = ptr_cast %2
+      %6: noreturn = br %3, %4
+    }
+  }
+  %8: noreturn = ret %3
+}
+fn szc.swap.4: fn (*volatile *const fn () u8) u8 {
+  %0: *volatile *const fn () u8 = arg 0
+  %1: *const fn () u8 = const szc.nine.5
+  %2: void = store_volatile %0, %1
+  %3: *const fn () u8 = load_volatile %0
+  %4: *const fn () u8 = load_volatile %0
+  %5: u8 = call %4()
+  %6: noreturn = ret %5
+}
+fn szc.nine.5: fn () u8 {
+  %0: u8 = const 9
+  %1: noreturn = ret %0
+}
+fn szc.seven.6: fn () u8 {
+  %0: u8 = const 7
+  %1: noreturn = ret %0
+}

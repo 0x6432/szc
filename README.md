@@ -56,6 +56,10 @@ Static data alignment above 64 bytes needs an assembly companion because of QBE'
 limit: use `build-exe` or `run`; standalone `emit-qbe` reports this limitation.
 `--keep-temps` retains the complete assembly, including any outlined data.
 
+Volatile single-pointer qualifiers and accesses work for supported scalar/bool/pointer
+values. Accesses use opaque outlined QBE helpers so unused reads and consecutive
+stores survive optimization. Volatile is not atomic or a synchronization primitive.
+
 ```sh
 tools/build_qbe.sh
 PATH="$PWD/build/qbe-src:$PATH" make e2e-test

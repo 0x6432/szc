@@ -1,0 +1,213 @@
+function w $szc.main.1() {
+@start
+	%t18 =l alloc4 1
+	%t1 =w call $szc.adjust.2(l $szc.g.1)
+	%t1 =w and %t1, 255
+	%t3 =w cnew %t1, 8
+	jnz %t3, @c12_then, @c12_else
+@c12_then
+	%t4 =w copy 1
+	jmp @b4
+@c12_else
+	%t6 =w loadub $szc.g.1
+	%t8 =w cnew %t6, 9
+	%t4 =w copy %t8
+	jmp @b4
+@b4
+	jnz %t4, @c17_then, @c17_else
+@c17_then
+	ret 1
+@c17_else
+	jmp @b13
+@b13
+	storeb 4, %t18
+	%t21 =l copy %t18
+	%t24 =l call $szc.choose.3(w 0, l $szc.g.1, l %t21)
+	call $szc.volatile.store.8(l %t24, w 5)
+	%t27 =w call $szc.volatile.load.u8(l %t24)
+	%t27 =w and %t27, 255
+	%t29 =w cnew %t27, 5
+	jnz %t29, @c37_then, @c37_else
+@c37_then
+	%t30 =w copy 1
+	jmp @b30
+@c37_else
+	%t31 =w loadub %t18
+	%t33 =w cnew %t31, 5
+	%t30 =w copy %t33
+	jmp @b30
+@b30
+	jnz %t30, @c46_then, @c46_else
+@c46_then
+	%t38 =w copy 1
+	jmp @b38
+@c46_else
+	%t40 =w call $szc.swap.4(l $szc.g.2)
+	%t40 =w and %t40, 255
+	%t42 =w cnew %t40, 9
+	%t38 =w copy %t42
+	jmp @b38
+@b38
+	jnz %t38, @c51_then, @c51_else
+@c51_then
+	ret 2
+@c51_else
+	jmp @b47
+@b47
+	%t53 =w call $szc.volatile.load.u8(l $szc.g.1)
+	%t53 =w and %t53, 255
+	%t55 =w cnew %t53, 9
+	jnz %t55, @c61_then, @c61_else
+@c61_then
+	%t56 =w copy 1
+	jmp @b56
+@c61_else
+	%t56 =w copy 0
+	jmp @b56
+@b56
+	jnz %t56, @c66_then, @c66_else
+@c66_then
+	ret 3
+@c66_else
+	jmp @b62
+@b62
+	call $szc.volatile.store.8(l %t24, w 0)
+	ret 0
+}
+
+function w $szc.adjust.2(l %t0) {
+@start
+	%t5 =l alloc8 8
+	%t1 =w call $szc.volatile.load.u8(l %t0)
+	%t1 =w and %t1, 255
+	%t3 =w add %t1, 2
+	%t3 =w and %t3, 255
+	%g3_overflow =w cultw %t3, %t1
+	jnz %g3_overflow, @g3_overflow_panic, @g3_overflow_ok
+@g3_overflow_panic
+	call $szc.panic.0()
+	hlt
+@g3_overflow_ok
+	call $szc.volatile.store.8(l %t0, w %t3)
+	storel 0, %t5
+@l9
+	%t10 =l loadl %t5
+	%t12 =w cultl %t10, 3
+	jnz %t12, @c25_then, @c25_else
+@c25_then
+	%t14 =w call $szc.volatile.load.u8(l %t0)
+	%t14 =w and %t14, 255
+	%t16 =w add %t14, 1
+	%t16 =w and %t16, 255
+	%g16_overflow =w cultw %t16, %t14
+	jnz %g16_overflow, @g16_overflow_panic, @g16_overflow_ok
+@g16_overflow_panic
+	call $szc.panic.0()
+	hlt
+@g16_overflow_ok
+	call $szc.volatile.store.8(l %t0, w %t16)
+	jmp @b13
+@b13
+	%t21 =l add %t10, 1
+	%g21_overflow =w cultl %t21, %t10
+	jnz %g21_overflow, @g21_overflow_panic, @g21_overflow_ok
+@g21_overflow_panic
+	call $szc.panic.0()
+	hlt
+@g21_overflow_ok
+	storel %t21, %t5
+	jmp @l9
+@c25_else
+	jmp @b8
+@b8
+	%t27 =w call $szc.volatile.load.u8(l %t0)
+	%t27 =w and %t27, 255
+	%t28 =w call $szc.volatile.load.u8(l %t0)
+	%t28 =w and %t28, 255
+	%t29 =w call $szc.volatile.load.u8(l %t0)
+	%t29 =w and %t29, 255
+	%t31 =w add %t29, 1
+	%t31 =w and %t31, 255
+	%g31_overflow =w cultw %t31, %t29
+	jnz %g31_overflow, @g31_overflow_panic, @g31_overflow_ok
+@g31_overflow_panic
+	call $szc.panic.0()
+	hlt
+@g31_overflow_ok
+	call $szc.volatile.store.8(l %t0, w %t31)
+	ret %t28
+}
+
+function l $szc.choose.3(w %t0, l %t1, l %t2) {
+@start
+	jnz %t0, @c7_then, @c7_else
+@c7_then
+	%t3 =l copy %t1
+	jmp @b3
+@c7_else
+	%t4 =l copy %t2
+	%t3 =l copy %t4
+	jmp @b3
+@b3
+	ret %t3
+}
+
+function w $szc.swap.4(l %t0) {
+@start
+	call $szc.volatile.store.64(l %t0, l $szc.nine.5)
+	%t3 =l call $szc.volatile.load.u64(l %t0)
+	%t4 =l call $szc.volatile.load.u64(l %t0)
+	%t5 =w call %t4()
+	%t5 =w and %t5, 255
+	ret %t5
+}
+
+function w $szc.nine.5() {
+@start
+	ret 9
+}
+
+function w $szc.seven.6() {
+@start
+	ret 7
+}
+
+data $szc.g.1 = align 16 { b 3 }
+data $szc.g.2 = align 8 { l $szc.seven.6 }
+function w $szc.volatile.load.u8(l %ptr) {
+@start
+	%value =w loadub %ptr
+	ret %value
+}
+
+function $szc.volatile.store.8(l %ptr, w %value) {
+@start
+	storeb %value, %ptr
+	ret
+}
+
+function l $szc.volatile.load.u64(l %ptr) {
+@start
+	%value =l loadl %ptr
+	ret %value
+}
+
+function $szc.volatile.store.64(l %ptr, l %value) {
+@start
+	storel %value, %ptr
+	ret
+}
+
+data $szc.panic.msg.0 = { b "integer overflow\n", b 0 }
+function $szc.panic.0() {
+@start
+	call $write(w 2, l $szc.panic.msg.0, l 17)
+	call $abort()
+	hlt
+}
+
+export function w $main() {
+@start
+	%status =w call $szc.main.1()
+	ret %status
+}

@@ -81,9 +81,9 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
             - [x] **M5.1c2b2b3a Internal mutable global alignment**.
             - [x] **M5.1c2b2b3b Aligned global constants** (internal, supported runtime-representable types).
             - [x] **M5.1c2b2b4 Aligned function declarations/addresses** (local explicitly aligned bare-function aliases remain NYI).
-        - [~] **M5.1c2b3 Volatile pointer accesses**.
+        - [x] **M5.1c2b3 Volatile pointer accesses** (supported scalar/bool/single-pointer values).
           - [x] **M5.1c2b3a Volatile pointer qualification/coercion**.
-          - [ ] **M5.1c2b3b Observable volatile loads/stores**.
+          - [x] **M5.1c2b3b Observable volatile loads/stores**.
 - [ ] **M5.2 Arrays, indexing, array literals, `++` at comptime** (0.17.0 has no `**`).
 - [ ] **M5.3 Slices, many-pointers, slicing, `.len`, `.ptr`, for over slices.**
 - [~] **M5.4 String literals, sentinels, `[*:0]const u8`.** Literal byte values landed in M4.5b; general string/memory operations and sentinel pointer syntax remain pending.
@@ -137,6 +137,45 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
 ## Completed milestone log
 
 (newest first; each entry: what, limitations, interactions)
+
+### M5.1c2b3b Observable volatile loads/stores
+- **What**: TIR_LOAD_VOLATILE/TIR_STORE_VOLATILE distinguish runtime observable
+  accesses from ordinary memory. Sema keeps volatile reads even when discarded,
+  carries the flag through compound assignments/joins/calls, and preserves the
+  usual const-store, undefined-pointer and comptime diagnostics. Known immutable
+  values and one-possible-value void/u0 still fold as in Zig's analyzeLoad/storePtr2.
+- **Backend**: QBE has no volatile load/store instruction. Each access calls a
+  private outlined QBE helper containing exactly one width-correct load or store;
+  QBE calls are opaque side effects and cannot be removed, merged or reordered as
+  ordinary loads. No interprocedural inlining/LTO is introduced. Load results are
+  normalized for signedness/subword integer widths; x86_64 handles weak alignment.
+  Standalone emit-qbe includes helper definitions and needs no assembly companion.
+  These calls conservatively inhibit optimization; they are not atomic operations
+  or a promise of cross-thread memory ordering.
+- **Physical tests**: a Linux/x86_64 mprotect/single-step observer counts actual
+  memory faults and records access order. Forty-four sequences cover 17 scalar/
+  bool/pointer/callback-slot types at aligned and offset-one addresses, discarded
+  reads, consecutive stores, loops, compound assignment, &p.* cancellation and
+  void/u0 no-access behavior. The same oracle passes with Zig Debug/ReleaseFast.
+  Compound assignment accepts either separate read/write instructions or LLVM's
+  single read-modify-write instruction (reported as a write fault). Undefined
+  stores have no cross-compiler access-count assertion: ReleaseFast can omit them;
+  szc currently emits an arbitrary zero store. No undefined contents are read.
+- **Regression coverage**: IR/TIR/QBE goldens, five reference-rejected diagnostics,
+  an executable with globals, defer/loop/compound effects, indirect callback slots,
+  known volatile comptime pointers and OPVs. Removed temporary access-NYI goldens;
+  their fuzz inputs now exercise successful accesses. CI e2e includes the observer.
+  Corpus grows to irgen 33/sema 79. GCC/Clang -Werror ASan/UBSan pass 558 units,
+  726 goldens, complete native executable/memory/166 safety suites; GCC's full e2e
+  is reference-enabled. Optimized GCC also passes goldens/executables/observer,
+  final Clang retains all 317 new function/qualifier reference comparisons, and
+  four 60-second fuzz targets plus 20,000 standalone mutations per stage pass.
+  Exact totals and hosted CI status are recorded in HANDOFF.md.
+- **Limits/next**: only existing supported value layouts; no atomics, fences,
+  memory-mapped-device-specific access protocol, aggregate/vector/wide-int/float
+  expansion or non-single pointers. The three-checkpoint batch is complete; return
+  to small milestones. Function-alias alignment and constant address cycles remain
+  explicit gaps in enclosing M5.1 alignment integration. Q6 stays at M10.2.
 
 ### M5.1c2b3a Volatile pointer qualification/coercion
 - **What**: single-pointer syntax lowers IR_POINTER_VOLATILE. Interning already

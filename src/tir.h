@@ -58,6 +58,8 @@ typedef uint32_t TirBody;	/* extra index of a body, 0 = none */
 	X(ALLOC, "alloc")	/* type is the pointer type; stack slot */ \
 	X(LOAD, "load")	/* un: pointer */ \
 	X(STORE, "store")	/* bin: pointer, value */ \
+	X(LOAD_VOLATILE, "load_volatile")	/* un: observable runtime load */ \
+	X(STORE_VOLATILE, "store_volatile")	/* bin: observable runtime store */ \
 	X(FOR_LEN_CHECK, "for_len_check")	/* bin: assert equal usize lengths */ \
 	X(CALL, "call")	/* payload: direct FuncId or indirect TirRef, arg count, args */ \
 	X(RET, "ret")	/* un */ \

@@ -34,6 +34,14 @@ typedef enum PanicKind {
 	PANIC_COUNT,
 } PanicKind;
 
+typedef enum MemoryWidth {
+	MEMORY_BYTE,
+	MEMORY_HALF,
+	MEMORY_WORD,
+	MEMORY_LONG,
+	MEMORY_WIDTH_COUNT,
+} MemoryWidth;
+
 typedef struct Codegen {
 	Sema					*sema;
 	FILE					*out;
@@ -47,6 +55,8 @@ typedef struct Codegen {
 	bool *bytes_used;
 	bool *constants_used;
 	bool explicit_panic_used;
+	bool volatile_loads[2][MEMORY_WIDTH_COUNT];
+	bool volatile_stores[MEMORY_WIDTH_COUNT];
 } Codegen;
 
 static void
@@ -527,6 +537,43 @@ store_op(Codegen *cg, TypeId type)
 	}
 }
 
+/* Calls are opaque to QBE; each outlined helper performs exactly one access. */
+static MemoryWidth
+memory_width(Codegen *cg, TypeId type)
+{
+	switch (sema_type_size(cg->sema, type)) {
+	case 1: return MEMORY_BYTE;
+	case 2: return MEMORY_HALF;
+	case 4: return MEMORY_WORD;
+	default: return MEMORY_LONG;
+	}
+}
+
+static void
+emit_volatile_helpers(Codegen *cg)
+{
+	static const char *const loads[2][MEMORY_WIDTH_COUNT] = {
+		{"loadub", "loaduh", "loadw", "loadl"},
+		{"loadsb", "loadsh", "loadw", "loadl"},
+	};
+	static const char *const stores[MEMORY_WIDTH_COUNT] = {"storeb", "storeh", "storew", "storel"};
+	for (uint32_t index = 0; index < MEMORY_WIDTH_COUNT; index++) {
+		MemoryWidth width = (MemoryWidth)index;
+		uint32_t bits = 8u << index;
+		char cls = width == MEMORY_LONG ? 'l' : 'w';
+		for (uint32_t sign = 0; sign < 2; sign++) {
+			if (!cg->volatile_loads[sign][width])
+				continue;
+			fprintf(cg->out, "function %c $szc.volatile.load.%c%u(l %%ptr) {\n@start\n", cls, sign ? 'i' : 'u', (unsigned)bits);
+			fprintf(cg->out, "\t%%value =%c %s %%ptr\n\tret %%value\n}\n\n", cls, loads[sign][width]);
+		}
+		if (cg->volatile_stores[width]) {
+			fprintf(cg->out, "function $szc.volatile.store.%u(l %%ptr, %c %%value) {\n@start\n", (unsigned)bits, cls);
+			fprintf(cg->out, "\t%s %%value, %%ptr\n\tret\n}\n\n", stores[width]);
+		}
+	}
+}
+
 /* ---------- Instructions ---------- */
 
 static void emit_body(Codegen *cg, TirBody body);
@@ -678,6 +725,33 @@ emit_inst(Codegen *cg, TirRef ref)
 		fputs("\n", out);
 		if (type_bits(cg, inst->type) < type_bits(cg, operand->type) || type_is_signed(cg, inst->type) != type_is_signed(cg, operand->type))
 			normalize(cg, ref, inst->type, cls);
+		return;
+	}
+	case TIR_LOAD_VOLATILE: {
+		if (cls == QBE_NONE)
+			return;
+		MemoryWidth width = memory_width(cg, inst->type);
+		bool is_signed = type_is_signed(cg, inst->type);
+		cg->volatile_loads[is_signed ? 1 : 0][width] = true;
+		print_dest(cg, ref, cls);
+		fprintf(out, "call $szc.volatile.load.%c%u(l ", is_signed ? 'i' : 'u', (unsigned)(8u << width));
+		print_operand(cg, inst->data.un.operand);
+		fputs(")\n", out);
+		normalize(cg, ref, inst->type, cls);
+		return;
+	}
+	case TIR_STORE_VOLATILE: {
+		const TirInst *value = inst_at(cg, inst->data.bin.rhs);
+		QbeClass value_class = type_class(cg, value->type, inst->src);
+		if (value_class == QBE_NONE)
+			return;
+		MemoryWidth width = memory_width(cg, value->type);
+		cg->volatile_stores[width] = true;
+		fprintf(out, "\tcall $szc.volatile.store.%u(l ", (unsigned)(8u << width));
+		print_operand(cg, inst->data.bin.lhs);
+		fprintf(out, ", %c ", class_char(value_class));
+		print_operand(cg, inst->data.bin.rhs);
+		fputs(")\n", out);
 		return;
 	}
 	case TIR_LOAD:
@@ -1045,6 +1119,7 @@ codegen_qbe(FILE *out, FILE *assembly, Sema *sema, Diag *diag)
 		fputs("\tcall $write(w 2, l %ptr, l %len)\n", out);
 		fputs("\tcall $write(w 2, l $szc.panic.newline, l 1)\n\tcall $abort()\n\thlt\n}\n\n", out);
 	}
+	emit_volatile_helpers(&cg);
 	emit_panic_stubs(&cg);
 	FuncId main_id = sema_main_func(sema);
 	if (main_id != 0)

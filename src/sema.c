@@ -2816,10 +2816,6 @@ load_pointer(Block *block, Operand pointer, uint32_t src)
 		return operand_none;
 	TypePointer pointer_type = sema->types[pointer.type].as.pointer;
 	TypeId child = pointer_type.child;
-	if (pointer_type.is_volatile) {
-		sema_error(block, src, "not supported by szc yet: volatile memory accesses");
-		return operand_none;
-	}
 	if (child == T_VOID)
 		return void_operand(sema);
 	if (is_int(sema, child) && sema->types[child].as.integer.bits == 0)
@@ -2851,7 +2847,7 @@ load_pointer(Block *block, Operand pointer, uint32_t src)
 	}
 	if (!pointer_operand(block, pointer, src) || !require_runtime(block, src))
 		return operand_none;
-	return runtime_operand(child, emit_tir_un(block, TIR_LOAD, child, src, materialize(block, pointer, src)));
+	return runtime_operand(child, emit_tir_un(block, pointer_type.is_volatile ? TIR_LOAD_VOLATILE : TIR_LOAD, child, src, materialize(block, pointer, src)));
 }
 
 /* Validate even &p.*: cancelling the address must not hide an invalid dereference. */
@@ -3229,10 +3225,6 @@ analyze_inst(Block *block, IrInstIndex index, Operand *break_value)
 			sema_error(block, src, "cannot assign to constant");
 			break;
 		}
-		if (sema->types[pointer.type].as.pointer.is_volatile) {
-			sema_error(block, src, "not supported by szc yet: volatile memory accesses");
-			break;
-		}
 		TypeId child = sema->types[pointer.type].as.pointer.child;
 		value = coerce(block, value, child, src);
 		bool no_storage = child == T_VOID || (is_int(sema, child) && sema->types[child].as.integer.bits == 0);
@@ -3243,9 +3235,10 @@ analyze_inst(Block *block, IrInstIndex index, Operand *break_value)
 			}
 			if (!require_runtime(block, src))
 				break;
-			if (!operand_is_undefined(block, value) && pointer_operand(block, pointer, src)) {
+			bool is_volatile = sema->types[pointer.type].as.pointer.is_volatile;
+			if ((is_volatile || !operand_is_undefined(block, value)) && pointer_operand(block, pointer, src)) {
 				TirRef address = materialize(block, pointer, src);
-				emit_tir_bin(block, TIR_STORE, T_VOID, src, address, materialize(block, value, src));
+				emit_tir_bin(block, is_volatile ? TIR_STORE_VOLATILE : TIR_STORE, T_VOID, src, address, materialize(block, value, src));
 			}
 		}
 		result = void_operand(sema);
@@ -3623,6 +3616,7 @@ dump_tir_inst(FILE *out, Sema *sema, const TirFunc *tir, TirRef ref, uint32_t de
 	case TIR_TRUNCATE:
 	case TIR_INT_FROM_BOOL:
 	case TIR_LOAD:
+	case TIR_LOAD_VOLATILE:
 	case TIR_REPEAT:
 		fprintf(out, " %%%u\n", (unsigned)inst->data.un.operand);
 		return;
