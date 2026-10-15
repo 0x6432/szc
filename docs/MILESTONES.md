@@ -94,7 +94,7 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
     - [x] **M5.2c3 Element address provenance and aggregate value/ABI integration**.
       - [x] **M5.2c3a Internal array calls/returns and runtime aggregate joins**.
       - [x] **M5.2c3b General comptime element-pointer provenance** (root/subobject identity, checked offsets and loads).
-    - [ ] **M5.2c4 Mutable array globals** (lazy initialization, borrowed element accesses and runtime snapshots).
+    - [x] **M5.2c4 Mutable array globals** (lazy initialization, borrowed element accesses and runtime snapshots).
 - [ ] **M5.3 Slices, many-pointers, slicing, `.len`, `.ptr`, for over slices.**
 - [~] **M5.4 String literals, sentinels, `[*:0]const u8`.** Literal byte values landed in M4.5b; general string/memory operations and sentinel pointer syntax remain pending.
 - [ ] **M5.5 Casting builtins**: `@intCast`, `@truncate`, `@ptrCast`, `@intFromPtr`, `@ptrFromInt`, `@bitCast`, `@as`.
@@ -147,6 +147,46 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
 ## Completed milestone log
 
 (newest first; each entry: what, limitations, interactions)
+
+### M5.2c4 Mutable array globals
+- **What**: internal mutable typed/inferred and nested array globals, checked layout,
+  lazy known initialization, persistent scalar/pointer/callback element mutation,
+  whole-array assignment and owned snapshots. Known global element addresses support
+  aliases, forward declarations and legal address-only initializer dependencies.
+- **Interactions**: global array validation reuses supported aggregate leaf/layout
+  rules. VALUE_GLOBAL remains a known address; mutable_global_pointer strips element/
+  qualifier paths and checks the actual declaration, never pointer constness. Reads
+  through const views of mutable storage remain runtime loads; comptime reads reject
+  except existing one-possible u0/void behavior. Known indices create c3b provenance
+  pointers; dynamic nested accesses borrow live global backing through index effects.
+  Array loads and call/return/cleanup values retain c2/c3a owned snapshots.
+- **Length fields**: IR_FIELD_REF supports type-only `.len` through binding/index/deref
+  addresses, without loading mutable arrays or array-pointer variables. Ordinary
+  rvalue/call bases still evaluate their effects. Undefined dereferences and index
+  bounds stay validated; taking length is not permission to dereference undefined.
+  Existing typed constant-pointer length goldens now publish harmless backing globals.
+- **Storage**: existing global emission creates writable .data/zero storage and writable
+  root-plus-offset pointer relocations, including outlined over-aligned arrays. Shared
+  static layout/16 MiB budgets remain checked; zero-size objects retain address backing.
+  Pointer/callback dependencies are resolved by the existing lazy global/function queue.
+- **Tests**: three native/reference global array programs, 24-width snapshot/mutation/
+  assignment roundtrips, TIR/SSA goldens, ten initialization/comptime/const/layout/flag/
+  volatile error cases, four bounds safety cases and three fuzz seeds. A C/PIE/ELF
+  harness checks four alignments, root-relative element addresses, foreign element/
+  pointer-table writes and const-alias visibility versus independent array snapshots.
+  Fifty-five new array matrix cases compare mutable/global/type-only behavior with Zig.
+- **Validation**: frozen GCC -Werror ASan/UBSan/reference suite passes 612 units,
+  813 goldens, 73 ordinary/generated programs, 185 safety cases and all existing
+  lifecycle/driver/storage/ABI/alignment/volatile suites, plus four C/ELF global-array
+  cases. All 542 array comparisons match actual Zig. Clang sanitizer units/goldens/
+  15 array+global programs/C storage/185 safety cases and optimized GCC global-array
+  checks pass. Four 60s fuzzers and 20k mutations per stage pass; no sanitizer finding.
+  Retained irgen/sema corpus counts are 40/96.
+- **Limits**: exported/extern/threadlocal globals remain NYI, as do volatile whole-array
+  copies, unsupported aggregate leaves, explicit sentinel syntax and broader array-child
+  coercions. Undefined initialized storage has no stable language-level contents.
+  Enclosing M5.2 remains partial. Next is M5.3 many-pointers and slices; preserve this
+  global-address/runtime-contents split when adding array-to-pointer conversions.
 
 ### M5.2c3b Comptime element-pointer provenance
 - **What**: known array element addresses retain their real root and selection path;

@@ -1637,8 +1637,18 @@ expr(GenBody *body, Scope *scope, ResultInfo info, AstNode *node)
 	}
 	case AST_FIELD_ACCESS: {
 		AstFieldAccess *field = AST_CAST(AstFieldAccess, node, AST_FIELD_ACCESS);
-		IrRef base = expr(body, scope, result_none, field->lhs);
-		return rvalue(body, info, emit_name(body, IR_FIELD_VAL, node->offset, intern_span(body->gen, field->name), base), node->offset);
+		StringId name = intern_span(body->gen, field->name);
+		AstNode *lhs = field->lhs;
+		while (lhs->kind == AST_GROUPED)
+			lhs = AST_CAST(AstWrap, lhs, AST_GROUPED)->operand;
+		bool borrow = lhs->kind == AST_DEREF || lhs->kind == AST_INDEX;
+		if (lhs->kind == AST_IDENTIFIER) {
+			Lookup found = lookup_name(scope, intern_span(body->gen, AST_CAST(AstIdentifier, lhs, AST_IDENTIFIER)->name));
+			borrow = found.kind == LOOKUP_DECL || (found.kind == LOOKUP_LOCAL && found.local->local_kind == LOCAL_VAR);
+		}
+		bool field_ref = borrow && name == intern_cstr(body->gen->interner, "len");
+		IrRef base = field_ref ? address_of(body, scope, result_none, field->lhs) : expr(body, scope, result_none, field->lhs);
+		return rvalue(body, info, emit_name(body, field_ref ? IR_FIELD_REF : IR_FIELD_VAL, node->offset, name, base), node->offset);
 	}
 	case AST_STRING_LITERAL:
 		return rvalue(body, info, string_literal(body, node), node->offset);

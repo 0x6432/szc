@@ -1,0 +1,3 @@
+tests/tir/errors/global_array_layout.zig:1:5: error: not supported by szc yet: global array storage layout
+var a: [2]u128 = undefined;
+    ^

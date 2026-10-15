@@ -39,6 +39,12 @@ function w $szc.other.4() {
 	ret 29
 }
 
+section ".data.rel.ro"
+data $szc.g.1 = align 8 { z 8 }
+section ".data.rel.ro"
+data $szc.g.2 = align 8 { z 8 }
+section ".data.rel.ro"
+data $szc.g.3 = align 8 { z 8 }
 data $szc.panic.msg.0 = { b "integer overflow\n", b 0 }
 function $szc.panic.0() {
 @start

@@ -1,3 +1,6 @@
+constant szc.g.1: *const [5]u8 = undefined
+constant szc.g.2: *const [4294967296]u0 = undefined
+constant szc.g.3: *const [18446744073709551615]u0 = undefined
 fn szc.main.1: fn () u8 {
   %0: u8 = const 9
   %1: u8 = const 7

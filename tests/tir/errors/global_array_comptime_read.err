@@ -1,0 +1,3 @@
+tests/tir/errors/global_array_comptime_read.zig:2:12: error: unable to resolve comptime value
+const n = a[0];
+           ^

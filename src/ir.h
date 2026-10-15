@@ -150,6 +150,7 @@ typedef enum IrDataKind {
 	X(ARRAY_INIT_PTR, "array_init_ptr", IR_DATA_BIN)	/* validate anonymous initializer destination and count */ \
 	X(ARRAY_INDEX, "array_index", IR_DATA_BIN)	/* array/pointer value, usize index */ \
 	X(ARRAY_CAT, "array_cat", IR_DATA_BIN)	/* concatenate indexable constants */ \
+	X(FIELD_REF, "field_ref", IR_DATA_NAME)	/* type-only array .len through an expression address */ \
 	X(FIELD_VAL, "field_val", IR_DATA_NAME)	/* field name, base operand (array .len initially) */ \
 	X(PTR_TYPE, "ptr_type", IR_DATA_PAYLOAD)	/* IrPointerType */ \
 	/* Result types and coercion */ \

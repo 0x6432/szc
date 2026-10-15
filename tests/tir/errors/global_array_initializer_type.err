@@ -1,0 +1,3 @@
+tests/tir/errors/global_array_initializer_type.zig:1:18: error: expected type 'u8', found 'bool'
+var a: [2]u8 = .{true,2};
+                 ^

@@ -9,6 +9,26 @@ from compiler_process import run_compiler
 
 
 def cases():
+    for child, value in (("u8", "7"), ("i33", "-7"), ("bool", "true"), ("u0", "0"), ("void", "{}")):
+        for body in ("const b = a; a = b;", f"a[1] = {value};", "const p = &a[1]; _ = p.*;",
+                     "const p: *const [2]T = &a; _ = p[1];", "const p = &a; p.* = a;",
+                     "const n = a.len; _ = n;", "const p: *volatile [2]T = &a; _ = p[1];"):
+            yield (f"var a: [2]{child} = .{{{value},{value}}}; "
+                   f"pub fn main() void {{ {body.replace('T',child)} }}\n")
+        yield (f"var a: [2]{child} = .{{{value},{value}}}; const n = a[0]; "
+               "pub fn main() void { _ = n; }\n")
+        yield (f"var a: [2]{child} = .{{{value},{value}}}; const p = &a[1]; const n = p.*; "
+               "pub fn main() void { _ = n; }\n")
+        yield (f"var a: [2]{child} = .{{{value},{value}}}; const n = a.len; "
+               "pub fn main() void { _ = n; }\n")
+    for source in (
+        'var a: [2][2]u8 = .{.{1,2},.{3,4}}; const n = a[0].len; pub fn main() void { _ = n; }',
+        'var p: *[2]u8 = undefined; const n = p.len; pub fn main() void { _ = n; }',
+        'var a: [2]u8 = .{1,2}; var p: [2]*u8 = .{&a[0],&a[1]}; pub fn main() void { p[0].* = 7; }',
+        'var a: [2]u8 = .{1,2}; var b: [2]u8 = a; pub fn main() void { _ = &b; }',
+        'var a: [2]u8 = .{1,2}; pub fn main() void { a = [_]u16{1,2}; }',
+    ):
+        yield source + "\n"
     for child, value in (("u8", "7"), ("i33", "-7"), ("bool", "true"), ("u0", "0"),
                          ("void", "{}"), ("type", "u8")):
         for index in ("0", "1", "2", "-1", "undefined"):

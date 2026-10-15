@@ -11,7 +11,10 @@ Read this first when resuming work (the sandbox resets often).
    QBE: `git clone git://c9x.me/qbe.git && make -C qbe` (needed from M3.4).
 4. `make test && make fuzz-standalone` must pass before new work.
 5. Check `docs/MILESTONES.md` for the next unchecked milestone.
-6. Push after every milestone (and more often during long ones).
+6. Implement/test/fix/document/commit/push each coherent milestone, then continue
+   directly to the next without pausing for user approval. Periodically inspect prior
+   CI runs and fix actual failures; ask only for decisions/blockers (Q6 at M10.2).
+   Push after every milestone (and more often during long ones).
    The GitHub token is **never** committed. Restore authenticated Git access if needed.
 
 ## Current state
@@ -61,14 +64,22 @@ Read this first when resuming work (the sandbox resets often).
 - Done: M5.2c3b known element-pointer provenance, namespace/comptime loads/equality,
   real root-relative relocations and upstream-derived element alignment/allowzero.
   M5.2c3 is complete for the current array/type system; M5.2c and M5.2 stay partial.
+- Continuous-run strategy: move to the next milestone after local validation and push;
+  do not stop solely because a checkpoint completed. Periodically monitor earlier CI
+  while developing, triage actual failures, and ask only when input is needed.
+- Done: M5.2c4 internal mutable array globals, lazy known initialization, persistent
+  nested/element mutation, forward element-pointer relocations and owned loads/copies.
+  Type-only `.len` avoids reading mutable contents, including array-pointer variables.
 - Current batching preference: group related straightforward milestones when practical;
   keep complex semantic changes independently tested/documented/committed. Do not return
   to an unconditional one-checkpoint policy. Select the next independently implementable
   memory item without pretending the blocked function-alias case is complete. Next is
-  M5.2c4: mutable array globals (checked lazy initialization, real global backing,
-  borrowed element accesses and owned runtime loads/copies). Known VALUE_GLOBAL roots
-  are addresses, not known mutable contents; extend element-pointer loads to runtime
-  without folding a mutable initializer. Preserve const-address/value resolution.
+  M5.3: many-pointers and slices. Start with a coherent many-pointer conversion/indexing
+  slice of work before general slice values/slicing. Many-pointer indices have no
+  language-level length guard; known dereferences still need valid backing semantics.
+  Preserve actual root provenance and the mutable-global address/contents split rather
+  than treating a const view as immutable memory. Extend parser/IR/sema/codegen together
+  and ground array-to-pointer coercion and comptime bounds behavior in actual Zig.
   Keep coherent work batched, targeted checks during development and a single full
   validation pass per stable batch; independent checks can run on immutable binaries.
   Preserve owned snapshot versus borrowed pointer semantics, and scope by-value ABI
@@ -94,6 +105,49 @@ Read this first when resuming work (the sandbox resets often).
   GCC/Clang/fuzz/differential jobs, restoring green CI. M5.1c2b2a 8b1d3cf
   also passed all jobs (run 38590520673), as did M5.1c2b2b1 ecfb6ab
   (run 38593742928). Check each new push's run.
+
+## M5.2c4 mutable array globals
+
+- global_type_allowed admits recursive bool/pointer/void/u0/integer<=64 array leaves
+  with checked physical layout. Typed globals publish addresses before initializer
+  resolution; inferred globals resolve their initializer type first. Existing scalar
+  global queues retain lazy initialization and pointer/callback dependency reachability.
+- mutable_global_pointer checks a known pointer's actual root declaration, including
+  VALUE_ELEMENT_PTR and qualification paths. Const-qualified aliases into mutable
+  globals are not known immutable contents. Runtime loads emit memory reads/snapshots;
+  comptime loads resolve diagnostics, never fold the initializer. Zero-bit/void OPV
+  behavior stays as verified against Zig. Comptime writes through derived global
+  element addresses use the same guard as whole global addresses.
+- Known global indices produce c3b root-relative pointers; dynamic indices use existing
+  bounds-checked TIR_ARRAY_ELEM_PTR. Nested roots stay borrowed through index side
+  effects; never snapshot the global before evaluating an index that mutates it.
+  Whole-array loads/calls/returns/defer capture retain c2/c3a owned snapshots.
+- IR_FIELD_REF is name(field, expression-address), currently for `.len`. It queries the
+  address's child type (an array or a single array pointer), without loading mutable
+  storage. Grouped/binding/index/deref bases use this path, ordinary rvalues/calls use
+  FIELD_VAL and retain effects. Undefined deref and index validation still happen.
+  Grounding is actual Sema.zig fieldVal/fieldPtr plus official namespace length probes.
+- Existing emit_data_object handles writable arrays, zero initialization and outlined
+  >64-byte alignment. Root addends in mutable pointer tables go to writable storage,
+  not RELRO; C/ELF tests verify offsets, writability, const-alias visibility and snapshot
+  independence at alignments 1/2/16/256. Existing static budgets apply across immutable
+  and mutable arrays; no wrapped allocation or static-variable workaround is added.
+- Validation: frozen GCC -Werror ASan/UBSan/reference suite passes 612 units,
+  813 goldens, 73 ordinary/generated native+Zig programs, two scoped szc-only programs,
+  lifecycle/runner 8/18, driver 16, reference storage 15, immutable array storage eight,
+  mutable C storage, four new global-array C/ELF cases, ABI four, unaligned seven,
+  alignment 135/270/153/153/27, volatile 44 and safety 185. All 542 array comparisons
+  match actual Zig 0.17. Clang sanitizers pass units/goldens/15 array+global programs,
+  global/mutable C storage and 185 safety cases. Optimized GCC passes four new/global
+  generated programs and four C/ELF cases. Four 60s fuzzers pass
+  (1022206/25679/23521/27801 runs), plus 20k standalone mutations per stage; irgen/sema
+  corpora 40/96. No sanitizer finding. Previous 1db8afa CI has green compiler/fuzz jobs;
+  its differential run and the older 53efbd5 differential run remain active when checked.
+- Remaining: exported/extern/threadlocal arrays, volatile whole-array copies, explicit
+  sentinel syntax, unsupported leaves/wider integers and broader element coercions.
+  General many-pointers/slices are next; no user decision is needed until a blocker or
+  the deferred M10.2 build-strategy question. Keep developing across checkpoints and
+  inspect previous CI periodically rather than waiting for a reply at every commit.
 
 ## M5.2c3b known element pointers
 

@@ -23,6 +23,13 @@ def binary_case(name, integer_type, operator, lhs, rhs, message="integer overflo
 
 
 def cases():
+    for label, operation in (("read", "_ = a[n];"), ("store", "a[n] = 3;"),
+                             ("address", "_ = &a[n];"), ("nested", "_ = a[0][n];")):
+        ty = "[2][2]u8" if label == "nested" else "[2]u8"
+        value = ".{.{1,2},.{3,4}}" if label == "nested" else ".{1,2}"
+        source = (f"var a: {ty} = {value}; fn operation(n: usize) void {{ {operation} }} "
+                  "pub fn main() void { operation(2); }\n")
+        yield "global_array_" + label, source, "index out of bounds"
     yield "array_callback_noreturn", 'fn stop(a: u8, b: u8, c: u8, d: u8, e: u8, f: u8, g: u8, h: u8) noreturn {\n    if (a != 1 or b != 2 or c != 3 or d != 4 or e != 5 or f != 6 or g != 7 or h != 8) @panic("wrong array callback arguments");\n    @panic("array callback terminated");\n}\nfn invoke(p: *const fn (u8, u8, u8, u8, u8, u8, u8, u8) [2]u8) void { _ = p(1,2,3,4,5,6,7,8); }\npub fn main() void { invoke(&stop); }\n', "array callback terminated"
     for name, operation in (
         ("store", "a[n] = 3;"),

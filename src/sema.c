@@ -1052,6 +1052,7 @@ static TirRef array_slot(Block *block, TypeId pointer, uint32_t src);
 static Operand array_snapshot(Block *block, Operand source, uint32_t alignment, uint32_t src);
 static Operand analyze_ref(Block *block, Operand value, uint32_t src, uint32_t identity, uint32_t alignment);
 static bool store_array(Block *block, Operand pointer, Operand value, uint32_t src);
+static bool array_storage_allowed(Sema *sema, TypeId type);
 
 /* Until repeated/lazy aggregate values land, bound dense compile-time array work. */
 static bool
@@ -1075,6 +1076,18 @@ global_type_allowed(Block *block, TypeId type, uint32_t src)
 		return false;
 	}
 	TypeKind kind = sema->types[type].kind;
+	if (kind == TYPE_ARRAY) {
+		if (!array_storage_allowed(sema, type)) {
+			sema_error(block, src, "not supported by szc yet: global array storage layout");
+			return false;
+		}
+		uint64_t size;
+		if (!sema_type_size(sema, type, &size)) {
+			sema_error(block, src, "not supported by szc yet: array layout size exceeds 64-bit address space");
+			return false;
+		}
+		return true;
+	}
 	if (kind != TYPE_INT && kind != TYPE_BOOL && kind != TYPE_POINTER && kind != TYPE_VOID) {
 		sema_error(block, src, "not supported by szc yet: global variables of type '%s'", sema_type_name(sema, type));
 		return false;
@@ -3146,13 +3159,27 @@ pointer_type_operand(Block *block, Operand operand, uint32_t src)
 	return true;
 }
 
+/* A known global address does not make its mutable contents comptime-known. */
+static bool
+mutable_global_pointer(Block *block, Operand pointer)
+{
+	if (pointer.kind != OPERAND_COMPTIME)
+		return false;
+	PointerAddress address = value_pointer_address(&block->sema->values, pointer.value);
+	const Value *root = value_get(&block->sema->values, address.root);
+	return root->kind == VALUE_GLOBAL && !block->sema->globals[root->as.global]->result.is_const;
+}
+
 static bool
 pointer_operand(Block *block, Operand operand, uint32_t src)
 {
 	if (!pointer_type_operand(block, operand, src))
 		return false;
-	if (operand.kind == OPERAND_COMPTIME && operand_value(block, operand)->kind == VALUE_GLOBAL)
-		return true;
+	if (operand.kind == OPERAND_COMPTIME) {
+		PointerAddress address = value_pointer_address(&block->sema->values, operand.value);
+		if (value_get(&block->sema->values, address.root)->kind == VALUE_GLOBAL)
+			return true;
+	}
 	if (operand.kind != OPERAND_RUNTIME) {
 		sema_error(block, src, "not supported by szc yet: comptime pointers");
 		return false;
@@ -3175,7 +3202,16 @@ load_pointer(Block *block, Operand pointer, uint32_t src)
 		return void_operand(sema);
 	if (is_int(sema, child) && sema->types[child].as.integer.bits == 0)
 		return comptime_operand(child, value_int_u64(&sema->values, child, 0));
-	if (pointer.kind == OPERAND_COMPTIME) {
+	bool mutable_global = mutable_global_pointer(block, pointer);
+	if (mutable_global && block->is_comptime) {
+		PointerAddress address = value_pointer_address(&sema->values, pointer.value);
+		Global *global = sema->globals[value_get(&sema->values, address.root)->as.global];
+		Operand resolved = resolve_decl(block, src, global->namespace_scope, global->decl, false);
+		if (resolved.kind != OPERAND_NONE)
+			sema_error(block, src, "unable to resolve comptime value");
+		return operand_none;
+	}
+	if (pointer.kind == OPERAND_COMPTIME && !mutable_global) {
 		const Value *value = operand_value(block, pointer);
 		if (value->kind == VALUE_FUNCTION && sema->types[child].kind == TYPE_FN)
 			return comptime_operand(child, value_function(&sema->values, child, value->as.function));
@@ -3614,6 +3650,10 @@ analyze_array_index(Block *block, const IrInst *inst, bool address_only, bool bo
 		if (base.kind == OPERAND_COMPTIME) {
 			if (address_only || (borrow && sema->types[array.child].kind == TYPE_ARRAY))
 				return constant_array_pointer(block, base, index, array, inst->src);
+			if (mutable_global_pointer(block, base)) {
+				Operand pointer = constant_array_pointer(block, base, index, array, inst->src);
+				return load_pointer(block, pointer, inst->src);
+			}
 			return constant_array_element(block, base, array, item, inst->src);
 		}
 	} else if (array.length == 0 && !array.sentinel_zero) {
@@ -3802,11 +3842,18 @@ analyze_inst(Block *block, IrInstIndex index, Operand *break_value)
 	case IR_ARRAY_CAT:
 		result = analyze_array_cat(block, inst);
 		break;
+	case IR_FIELD_REF:
 	case IR_FIELD_VAL: {
 		Operand base = resolve_ref(block, inst->data.name.operand);
 		if (base.kind == OPERAND_NONE)
 			break;
-		TypeId type = indexable_array_type(sema, base.type);
+		TypeId base_type = base.type;
+		if (inst->op == IR_FIELD_REF) {
+			if (!pointer_type_operand(block, base, src))
+				break;
+			base_type = sema->types[base.type].as.pointer.child;
+		}
+		TypeId type = indexable_array_type(sema, base_type);
 		if (type != 0 && inst->data.name.name == intern_cstr(sema->interner, "len"))
 			result = comptime_operand(T_USIZE, value_int_u64(&sema->values, T_USIZE, sema->types[type].as.array.length));
 		else
@@ -4121,7 +4168,7 @@ analyze_inst(Block *block, IrInstIndex index, Operand *break_value)
 		}
 		bool no_storage = child == T_VOID || (is_int(sema, child) && sema->types[child].as.integer.bits == 0);
 		if (value.kind != OPERAND_NONE && !no_storage) {
-			if (block->is_comptime && pointer.kind == OPERAND_COMPTIME && operand_value(block, pointer)->kind == VALUE_GLOBAL) {
+			if (block->is_comptime && mutable_global_pointer(block, pointer)) {
 				sema_error(block, src, "unable to evaluate comptime expression");
 				break;
 			}

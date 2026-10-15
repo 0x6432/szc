@@ -429,3 +429,24 @@ prints a file's IR.
   and become FUNC_FAILED. Discarding a known extern address is not runtime use and
   does not force ABI validation. Private array transport is never silently used as a
   C convention or claimed to match another Zig compiler's object-file ABI.
+
+## Mutable array globals and type-only length fields
+
+- Internal array globals use existing VALUE_GLOBAL/SemaGlobal identities, lazy typed
+  address publication and initializer/dependency queues. Runtime loads of whole arrays
+  create owned aggregate snapshots; stores copy through ARRAY_COPY. Nested indexing
+  borrows live global storage through index side effects, exactly like mutable locals.
+- mutable_global_pointer strips element/qualification paths to inspect the root
+  declaration's mutability. A `*const` alias into a mutable global still needs runtime
+  loads; it cannot expose the initializer as a comptime value. Zero-bit/void OPV loads
+  retain existing behavior, with actual bounds validation at indexing boundaries.
+- Derived global element pointers may be materialized for loads/stores and writable
+  initializer relocations; the same root-global guard rejects comptime mutation.
+- IR_FIELD_REF uses name(field, expression-address), unlike FIELD_VAL's value operand.
+  `.len` derives the expression type from the address's child and returns known usize
+  for arrays/single array pointers without reading storage. Undefined dereference and
+  index checks still run. General call/rvalue field bases keep normal evaluation.
+- Writable aggregate .data/zero storage reuses checked recursive data emission, real
+  alignment and the shared 16 MiB static array budget. Pointer tables are writable
+  rather than RELRO; over-aligned data uses the assembly path. Unsupported global
+  flags, leaves and volatile whole-array operations remain explicitly rejected.

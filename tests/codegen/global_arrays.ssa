@@ -1,0 +1,73 @@
+function w $szc.main.1() {
+@start
+	%t0 =l alloc4 4
+	call $memmove(l %t0, l $szc.g.1, l 4)
+	storeb 7, $szc.g.1
+	%t6 =l add $szc.g.1, 2
+	storeb 5, %t6
+	%e10_offset =l mul 0, 2
+	%t10 =l add %t0, %e10_offset
+	%e12_offset =l mul 0, 1
+	%t12 =l add %t10, %e12_offset
+	%t13 =w loadub %t12
+	%t14 =l call $szc.index.2()
+	%t15 =l add $szc.g.1, 2
+	%g16_index =w cugel %t14, 2
+	jnz %g16_index, @g16_index_panic, @g16_index_ok
+@g16_index_panic
+	call $szc.panic.7()
+	hlt
+@g16_index_ok
+	%e16_offset =l mul %t14, 1
+	%t16 =l add %t15, %e16_offset
+	%t17 =w loadub %t16
+	%t18 =w add %t13, %t17
+	%t18 =w and %t18, 255
+	%g18_overflow =w cultw %t18, %t13
+	jnz %g18_overflow, @g18_overflow_panic, @g18_overflow_ok
+@g18_overflow_panic
+	call $szc.panic.0()
+	hlt
+@g18_overflow_ok
+	%t19 =l add $szc.g.1, 2
+	%t20 =w loadub %t19
+	%t21 =w add %t18, %t20
+	%t21 =w and %t21, 255
+	%g21_overflow =w cultw %t21, %t18
+	jnz %g21_overflow, @g21_overflow_panic, @g21_overflow_ok
+@g21_overflow_panic
+	call $szc.panic.0()
+	hlt
+@g21_overflow_ok
+	ret %t21
+}
+
+function l $szc.index.2() {
+@start
+	%t0 =l add $szc.g.1, 2
+	storeb 9, %t0
+	ret 0
+}
+
+data $szc.g.1 = align 1 { b 1, b 2, b 3, b 4 }
+data $szc.panic.msg.0 = { b "integer overflow\n", b 0 }
+function $szc.panic.0() {
+@start
+	call $write(w 2, l $szc.panic.msg.0, l 17)
+	call $abort()
+	hlt
+}
+
+data $szc.panic.msg.7 = { b "index out of bounds\n", b 0 }
+function $szc.panic.7() {
+@start
+	call $write(w 2, l $szc.panic.msg.7, l 20)
+	call $abort()
+	hlt
+}
+
+export function w $main() {
+@start
+	%status =w call $szc.main.1()
+	ret %status
+}

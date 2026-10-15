@@ -1,0 +1,3 @@
+tests/tir/errors/global_array_volatile_copy.zig:3:33: error: not supported by szc yet: volatile whole-array copies
+pub fn main() void { const b = p.*; _ = b; }
+                                ^

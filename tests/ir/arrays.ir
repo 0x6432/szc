@@ -346,8 +346,8 @@
         } else {
           %265 = break_inline result, @void_value
         }
-        %267 = decl_val "text"
-        %268 = field_val "len", %267
+        %267 = decl_ref "text"
+        %268 = field_ref "len", %267
         %269 = int 4
         %270 = cmp_neq %268, %269
         %279 = bool_or %270 rhs {
@@ -378,8 +378,8 @@
         } else {
           %293 = break_inline result, @void_value
         }
-        %295 = decl_val "mixed"
-        %296 = field_val "len", %295
+        %295 = decl_ref "mixed"
+        %296 = field_ref "len", %295
         %297 = int 2
         %298 = cmp_neq %296, %297
         %307 = bool_or %298 rhs {
@@ -513,13 +513,13 @@
         } else {
           %412 = break_inline result, @void_value
         }
-        %414 = decl_val "undef_array"
-        %415 = field_val "len", %414
+        %414 = decl_ref "undef_array"
+        %415 = field_ref "len", %414
         %416 = int 3
         %417 = cmp_neq %415, %416
         %423 = bool_or %417 rhs {
-          %418 = decl_val "undef_pointer"
-          %419 = field_val "len", %418
+          %418 = decl_ref "undef_pointer"
+          %419 = field_ref "len", %418
           %420 = int 5
           %421 = cmp_neq %419, %420
           %422 = break_inline result, %421
@@ -567,13 +567,13 @@
         } else {
           %459 = break_inline result, @void_value
         }
-        %461 = decl_val "huge"
-        %462 = field_val "len", %461
+        %461 = decl_ref "huge"
+        %462 = field_ref "len", %461
         %463 = int 4294967296
         %464 = cmp_neq %462, %463
         %470 = bool_or %464 rhs {
-          %465 = decl_val "max"
-          %466 = field_val "len", %465
+          %465 = decl_ref "max"
+          %466 = field_ref "len", %465
           %467 = int 18446744073709551615
           %468 = cmp_neq %466, %467
           %469 = break_inline result, %468
