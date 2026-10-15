@@ -149,6 +149,7 @@ typedef enum IrDataKind {
 	X(ARRAY_INDEX_BASE, "array_index_base", IR_DATA_BIN)	/* borrow nested array storage for indexing */ \
 	X(ARRAY_INIT_PTR, "array_init_ptr", IR_DATA_BIN)	/* validate anonymous initializer destination and count */ \
 	X(ARRAY_INDEX, "array_index", IR_DATA_BIN)	/* array/pointer value, usize index */ \
+	X(SLICE, "slice", IR_DATA_PAYLOAD)	/* IrSlice: borrowed view with optional end */ \
 	X(ARRAY_CAT, "array_cat", IR_DATA_BIN)	/* concatenate indexable constants */ \
 	X(FIELD_REF, "field_ref", IR_DATA_NAME)	/* type-only array .len through an expression address */ \
 	X(FIELD_VAL, "field_val", IR_DATA_NAME)	/* field name, base operand (array .len initially) */ \
@@ -402,12 +403,21 @@ typedef enum IrCallModifier {
 	IR_CALL_COMPTIME,	/* comptime f() */
 } IrCallModifier;
 
-/* CALL: header, then arg_count bodies. Each arg body ends with break of the value. */
+/* SLICE: base is an address; bounds are usize and end may be omitted. */
+typedef struct IrSlice {
+	IrRef base;
+	IrRef start;
+	IrRef end;	/* NONE for an omitted bound */
+	uint32_t start_src;
+	uint32_t end_src;
+} IrSlice;
+
 typedef struct IrPanic {
 	IrRef message;
 	uint32_t argument_src;
 } IrPanic;
 
+/* CALL: header, then arg_count bodies. Each arg body ends with break of the value. */
 typedef struct IrCallHeader {
 	IrRef          callee;
 	IrCallModifier modifier;

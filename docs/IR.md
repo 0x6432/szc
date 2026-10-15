@@ -544,3 +544,29 @@ borrowed elements or materializes a slice as a scalar pointer. Common sentinel
 slices remain NYI unless an explicit unsentinelled result type coerces the arms.
 After peer resolution, slice equality is rejected before pointer-root comparison,
 including when two array-pointer operands infer a slice as their common type.
+
+
+### Borrowed slicing expressions
+
+IR_SLICE contains an addressable base and usize start/end references plus bound
+source locations. End may be NONE. Evaluate the operand address before both
+bounds, but load a pointer/slice descriptor at SLICE analysis after bound effects,
+matching Zig AstGen/Sema. Do not replace this with an early descriptor snapshot.
+
+Known start/end produce a single pointer to an array of end-start elements;
+runtime bounds produce a descriptor, even for repeated runtime `n..n`. Omitted
+ends use logical array/slice length; an open many-pointer tail stays a many pointer.
+Single-item pointers require compile-time bounds [0..0], [0..1] or [1..1].
+SLICE_START_CHECK enforces unsigned start <= end before SLICE_END_CHECK enforces
+end <= available length; the latter includes a physical array sentinel when present.
+Known out-of-bounds ends are diagnosed before reversed known bounds. Runtime
+panics use the minimal simple_panic messages rather than FullPanic's numeric detail.
+
+Pointer offset/cast values retain the original root and cumulative byte offset.
+Constant view dereference reconstructs only its own array extent; element reads
+follow the underlying many-pointer projection without copying the entire view.
+Byte views honor their offset and physical sentinel boundary. Runtime windows
+borrow storage and reuse descriptor/aggregate ABI transport; no backing copy is made.
+A zero sentinel is inherited only at the original logical end. Known-length
+sentinel array views work; runtime sentinel descriptors and explicit sentinel
+slicing deliberately reject until their type/checking support is implemented.

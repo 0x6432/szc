@@ -35,6 +35,20 @@ def cases():
     ):
         yield "panic_slice_" + label, source + "\n", message
 
+    for label, ty in (('array', '*[3]u8'), ('slice', '[]u8'), ('many', '[*]u8')):
+        for lo, hi in ((2,1), (4,3), (0,4), (4,4)):
+            if ty == '[*]u8' and lo <= hi:
+                continue
+            message = 'start index is larger than end index' if lo > hi else 'index out of bounds'
+            source = (f'fn operation(p: {ty}, lo: usize, hi: usize) void {{ _ = p[lo..hi]; }} '
+                      f'pub fn main() void {{ var a = [3]u8{{7,8,9}}; operation(&a,{lo},{hi}); }}\n')
+            reference_message = f'start index {lo} is larger than end index {hi}' if lo > hi else message
+            yield f'slicing_{label}_{lo}_{hi}', source, message, reference_message
+    for child, value in (('u0','0'), ('void','{}')):
+        source = (f'fn operation(p: []const {child}, n: usize) void {{ _ = p[0..n]; }} '
+                  f'pub fn main() void {{ const a = [2]{child}{{{value},{value}}}; operation(&a,3); }}\n')
+        yield 'slicing_zero_bits_'+child, source, 'index out of bounds'
+
     for n, m in ((1, 2), (0, 1)):
         source = ("fn operation(a: []const u8, b: []const u8) void { for (a,b) |_,_| {} } "
                   f"pub fn main() void {{ operation(&[{n}]u8{{" + ','.join(['7']*n)
@@ -250,7 +264,9 @@ def main():
     passed = failed = 0
     with tempfile.TemporaryDirectory(prefix="szc-safety-") as directory:
         root = Path(directory)
-        for name, source, message in cases():
+        for case in cases():
+            name, source, message = case[:3]
+            reference_message = case[3] if len(case) == 4 else message
             src = root / f"{name}.zig"
             src.write_text(source)
             try:
@@ -271,7 +287,8 @@ def main():
                     if result.stdout:
                         raise AssertionError("unexpected stdout")
                     if compiler == zig:
-                        if message_bytes not in result.stderr:
+                        reference_bytes = reference_message.encode() if isinstance(reference_message, str) else reference_message
+                        if reference_bytes not in result.stderr:
                             raise AssertionError("reference panic message mismatch: " + result.stderr.decode(errors="replace"))
                     elif result.stderr != message_bytes + b"\n":
                         raise AssertionError("panic message mismatch: " + result.stderr.decode(errors="replace"))

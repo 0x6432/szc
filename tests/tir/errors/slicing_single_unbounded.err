@@ -1,0 +1,3 @@
+tests/tir/errors/slicing_single_unbounded.zig:1:26: error: slice of single-item pointer must be bounded
+fn f(p: *u8) void { _ = p[0..]; } pub fn main() void { f(undefined); }
+                         ^

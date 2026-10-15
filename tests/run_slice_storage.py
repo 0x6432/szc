@@ -32,6 +32,7 @@ def main():
             source = root/'test.zig'
             source.write_text('var a: [3]u16 = .{7,9,11}; var b: [2]u16 = .{13,15};\n'
                               f'var current: []u16 align({alignment}) = &a;\n'
+                              'var middle: []u16 = a[1..3];\n'
                               'extern fn check(s: *align(1) const []u16,p: [*]u16,n: usize) u8;\n'
                               'extern fn replace(s: *align(1) []u16,p: [*]u16,n: usize) void;\n'
                               'fn snapshot(s: []u16) u16 { replace(&current,&b,2); return s[0]+@as(u16,@intCast(s.len)); }\n'
@@ -39,7 +40,12 @@ def main():
                               ' if (snapshot(current) != 10) return 2;\n'
                               ' if (current.len != 2 or current[0] != 13) return 3;\n'
                               ' if (check(&current,&b,2) != 0) return 4;\n'
-                              ' current[1] = 17; if (b[1] != 17) return 5; return 0; }\n')
+                              ' current[1] = 17; if (b[1] != 17) return 5;\n'
+                              ' if (check(&middle,middle.ptr,2) != 0 or middle[0] != 9) return 6;\n'
+                              ' middle[1] = 19; if (a[2] != 19) return 7;\n'
+                              ' const cut: []u16 = current[1..2];\n'
+                              ' if (check(&cut,current.ptr + 1,1) != 0 or cut[0] != 17) return 8;\n'
+                              ' cut[0] = 23; if (b[1] != 23) return 9; return 0; }\n')
             executable = root/'native'
             run([compiler,'build-exe',str(source),'-o',str(executable)],env)
             assert run([str(executable)]) == b''

@@ -19,6 +19,33 @@ Read this first when resuming work (the sandbox resets often).
 
 ## Current state
 
+- Latest checkpoint: M5.3d1 borrowed slicing is complete. /data/slicing-final
+  immutable GCC/Clang Werror ASan/UBSan snapshots match integrated compiler
+  sources exactly: 632 units/912 goldens, 83 ordinary/generated + two scoped
+  native programs, 16 driver checks, all C/alignment/ABI/volatile suites and 213
+  safety cases. GCC full suite runs actual Zig too; Clang separately reference-
+  checks slicing.zig and four C view variants. /data/slicing-diff3.log has 204
+  actual-reference cases; /data/slicing-final-existing-slices.log has 252 old
+  cases. Optimized 83 native/213 safety checks, 949 source-hash-verified unchanged
+  array/layout oracle replays, four 60-second fuzzers and 20000 mutations/stage
+  pass. Logs use /data/slicing-final-*; irgen/sema have 52/108 seeds.
+- Slicing uses an addressable operand, bounds, then descriptor load; preserve this
+  evaluation order. Known bounds -> array pointer; dynamic n..n stays a slice.
+  Many-pointer omitted ends return advanced many pointers. Constant array/byte
+  views preserve root/offset provenance. Known inherited zero sentinels work;
+  explicit sentinel syntax and runtime sentinel descriptors intentionally reject.
+- Follow-on underway in /data/slice-deref-work (not integrated in this checkpoint):
+  known slice dereference/address cancellation. Ground in Sema.validateDeref,
+  analyzeLoad and maybeDerefSliceAsArray; zero-bit child loads and mutable global
+  backing have surprising actual 0.17.0 semantics. Do not assume every s.* yields
+  an array. Keep all tests valid and compare actual value types, not just acceptance.
+- CI f97e200/run 38771830468: GCC, Clang and fuzz passed; differential failed.
+  /data/ci-slice-join-differential.log shows 120-second official Zig divCeil i64
+  compile timeout, then szc divCeil u64 compile and divExact i8 execution timeouts,
+  followed by runner shutdown/exit143. All three pass locally under unchanged
+  deadlines (/data/ci-slice-join-reproduction.log), as does the full 213-case
+  reference safety suite. This is not green CI and no timeout was relaxed.
+
 - Latest checkpoint: M5.3c1 slice descriptors, coercions, `.ptr`/`.len`, checked
   indexing, nested storage, globals, internal ABI and joins. Final immutable
   /data/slice-descriptor-final snapshots pass GCC/Clang Werror ASan/UBSan 632
@@ -54,7 +81,7 @@ Read this first when resuming work (the sandbox resets often).
   Logs use the same prefix; /data/slice-join-guard-diff.log is the source-identical
   252-case matrix. Older /data/slice-join-final runs were superseded by the equality
   guard correction and must not be presented as final validation.
-- Next implementation: general slicing syntax, then sentinel slices/strings and
+- Next implementation after M5.3d1: known slice dereference, then sentinel slices/strings and
   remaining descriptor-field/volatile integration. Read actual Zig Sema slicing
   rules first: known bounds may produce array pointers, not slices. Preserve
   root/subobject provenance rather than loading a copied view. Do not silently

@@ -91,6 +91,8 @@ jobs:
         run: python3 tools/diff_volatile_pointers.py build/asan/szc "$ZIG"
       - name: Compare function-pointer signatures and qualifiers
         run: python3 tools/diff_function_pointers.py build/asan/szc "$ZIG"
+      - name: Compare slicing expressions and bounds
+        run: python3 tools/diff_slicing.py build/asan/szc "$ZIG"
       - name: Compare slice descriptors and coercions
         run: python3 tools/diff_slices.py build/asan/szc "$ZIG"
       - name: Compare compile-time arrays and concatenation

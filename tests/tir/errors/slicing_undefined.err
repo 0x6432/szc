@@ -1,0 +1,3 @@
+tests/tir/errors/slicing_undefined.zig:1:56: error: non-zero length slice of undefined pointer
+pub fn main() void { const p: *[3]u8 = undefined; _ = p[0..1]; }
+                                                       ^

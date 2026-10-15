@@ -102,6 +102,7 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
   - [x] **M5.3c1 Slice descriptor values, array coercions, indexing, storage and internal ABI.**
   - [x] **M5.3c2 Array/slice for iteration with value and pointer captures.**
   - [x] **M5.3c3 Inferred unsentinelled array-pointer/slice joins and comparison guards.**
+  - [x] **M5.3d1 Borrowed slicing expressions and bounds checks** (explicit/runtime sentinel slices remain NYI).
 - [~] **M5.4 String literals, sentinels, `[*:0]const u8`.** Literal byte values landed in M4.5b; general string/memory operations and sentinel pointer syntax remain pending.
 - [~] **M5.5 Casting builtins**: `@intCast`, `@truncate`, `@ptrCast`, `@intFromPtr`, `@ptrFromInt`, `@bitCast`, `@as`.
   - [x] **M5.5a Pointer address conversion (`@intFromPtr`).**
@@ -156,6 +157,43 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
 ## Completed milestone log
 
 (newest first; each entry: what, limitations, interactions)
+
+### M5.3d1 Borrowed slicing expressions and bounds checks
+- **What**: array, array-pointer, descriptor, many-pointer and bounded single-item
+  slicing. Known bounds produce array pointers, dynamic bounds produce two-word
+  descriptors; open many-pointer tails stay many pointers. Preserve qualifiers,
+  reduced alignment, borrowed backing, nested views and known zero sentinels.
+- **Grounding**: Zig 0.17.0 Sema.analyzeSlice (31423 onward) and simple_panic.
+  Evaluate the base address then bounds, then load the descriptor; bound calls can
+  replace the descriptor before it is read. Runtime repeated `n..n` stays a slice,
+  not an inferred zero-array pointer. The actual-reference matrix caught and
+  corrected this inference mistake before completion.
+- **Interactions**: IR_SLICE stores base-address/start/end references and source
+  locations. TIR start/end guards enforce <= (not indexing's <), in source order.
+  Constant window dereference and direct element reads retain root/offset identity,
+  including byte views and nested logical arrays. Existing descriptor snapshots,
+  private result transport, pointer offsets and aggregate copies are reused.
+- **Coverage**: three stage goldens, eight error/NYI fixtures, native aliasing,
+  nested/type/byte windows, once-only evaluation and descriptor replacement.
+  C PIE/RELRO checks cover static view relocations and dynamic descriptor windows
+  at four alignments. Twelve new safety cases include empty windows, reversed
+  bounds, end overflow and zero-bit children. Each reversed-bound case checks
+  Zig's numeric FullPanic text independently of szc's minimal generic message.
+- **Validation**: immutable /data/slicing-final GCC/Clang Werror ASan/UBSan
+  builds pass 632 unit checks/912 goldens each, full 83 ordinary/generated + two
+  scoped native programs, 16 driver checks, all C/alignment/ABI/volatile suites
+  and 213 safety cases. The GCC full suite also executes reference Zig; Clang
+  independently reference-checks the new native program and four C view variants.
+  All 204 new slicing and 252 existing slice semantic cases match actual Zig.
+  Optimized GCC passes 83 native programs/213 safety cases. All 949 unchanged
+  array/layout cases pass source-hash-verified replay of the previously
+  actual-reference-validated baseline, not a fresh Zig execution. Four fresh
+  60-second fuzzers execute 2330629/41847/39211/36390 inputs; both compiler
+  builds replay 20000 mutations/stage (irgen 52/sema 108 seeds). Integrated
+  compiler sources match both frozen snapshots byte-for-byte.
+- **Limits/next**: explicit sentinel slicing and runtime sentinel descriptors,
+  descriptor-field assignment, volatile whole-descriptor copies and inline/comptime
+  iteration remain NYI. M5.3 remains partial. Q6 is still deferred to M10.2.
 
 ### M5.3c3 Inferred unsentinelled slice joins and aggregate boundaries
 - **What**: differently sized single-pointer arrays infer a slice in an untyped

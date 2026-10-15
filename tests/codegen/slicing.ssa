@@ -1,0 +1,95 @@
+function w $szc.main.1() {
+@start
+	%t3 =l alloc8 16
+	call $szc.window.2(l $szc.const.1, l 1, l 3, l %t3)
+	%t5 =l copy %t3
+	%t6 =l add %t5, 8
+	%t7 =l loadl %t6
+	%t8 =l copy %t5
+	%t9 =l loadl %t8
+	%g11_index =w cugel 0, %t7
+	jnz %g11_index, @g11_index_panic, @g11_index_ok
+@g11_index_panic
+	call $szc.panic.7()
+	hlt
+@g11_index_ok
+	%e13_offset =l mul 0, 2
+	%t13 =l add %t9, %e13_offset
+	%t14 =w loaduh %t13
+	%g15_high =w cugtw %t14, 255
+	jnz %g15_high, @g15_high_panic, @g15_high_ok
+@g15_high_panic
+	call $szc.panic.1()
+	hlt
+@g15_high_ok
+	%t15 =w copy %t14
+	%t15 =w and %t15, 255
+	ret %t15
+}
+
+function $szc.window.2(l %t0, l %t3, l %t4, l %t5) {
+@start
+	%t1 =l alloc8 16
+	%t6 =l alloc8 16
+	%t16 =l alloc8 16
+	call $memmove(l %t1, l %t0, l 16)
+	call $memmove(l %t6, l %t1, l 16)
+	%t8 =l copy %t6
+	%t9 =l loadl %t8
+	%t10 =l add %t6, 8
+	%t11 =l loadl %t10
+	%g12_slice =w cugtl %t3, %t4
+	jnz %g12_slice, @g12_slice_panic, @g12_slice_ok
+@g12_slice_panic
+	call $szc.panic.8()
+	hlt
+@g12_slice_ok
+	%g13_slice =w cugtl %t4, %t11
+	jnz %g13_slice, @g13_slice_panic, @g13_slice_ok
+@g13_slice_panic
+	call $szc.panic.7()
+	hlt
+@g13_slice_ok
+	%e14_offset =l mul %t3, 2
+	%t14 =l add %t9, %e14_offset
+	%t15 =l sub %t4, %t3
+	%t17 =l copy %t16
+	%t18 =l add %t16, 8
+	storel %t14, %t17
+	storel %t15, %t18
+	call $memmove(l %t5, l %t16, l 16)
+	ret
+}
+
+section ".data.rel.ro"
+data $szc.const.1 = align 8 { l $szc.g.1, l 4 }
+data $szc.g.1 = align 2 { h 2, h 3, h 5, h 7 }
+data $szc.panic.msg.1 = { b "integer does not fit in destination type\n", b 0 }
+function $szc.panic.1() {
+@start
+	call $write(w 2, l $szc.panic.msg.1, l 41)
+	call $abort()
+	hlt
+}
+
+data $szc.panic.msg.7 = { b "index out of bounds\n", b 0 }
+function $szc.panic.7() {
+@start
+	call $write(w 2, l $szc.panic.msg.7, l 20)
+	call $abort()
+	hlt
+}
+
+data $szc.panic.msg.8 = { b "start index is larger than end index\n", b 0 }
+function $szc.panic.8() {
+@start
+	call $write(w 2, l $szc.panic.msg.8, l 37)
+	call $abort()
+	hlt
+}
+
+export function w $main() {
+@start
+	%status =w call $szc.main.1()
+	ret %status
+}

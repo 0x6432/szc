@@ -1,0 +1,45 @@
+global szc.g.1: [4]u16 = array(4 elements)
+fn szc.main.1: fn () u8 {
+  %0: *const []u16 = const ref(object.1)
+  %1: usize = const 1
+  %2: usize = const 3
+  %3: *[]u16 = alloc
+  %4: void = call szc.window.2(%0, %1, %2, %3)
+  %5: *const []u16 = ptr_cast %3
+  %6: *const usize = slice_len_ptr %5
+  %7: usize = load %6
+  %8: *const [*]u16 = ptr_cast %5
+  %9: [*]u16 = load %8
+  %10: usize = const 0
+  %11: void = index_check %10, %7
+  %12: usize = const 0
+  %13: *u16 = ptr_elem_ptr %9, %12
+  %14: u16 = load %13
+  %15: u8 = int_cast %14
+  %16: noreturn = ret %15
+}
+fn szc.window.2: fn ([]u16, usize, usize) []u16 {
+  %0: *align(1) const []u16 = arg 0
+  %1: *const []u16 = alloc
+  %2: void = array_copy %1, %0
+  %3: usize = arg 1
+  %4: usize = arg 2
+  %5: *[]u16 = arg 3
+  %6: *const []u16 = alloc
+  %7: void = array_copy %6, %1
+  %8: *const [*]u16 = ptr_cast %6
+  %9: [*]u16 = load %8
+  %10: *const usize = slice_len_ptr %6
+  %11: usize = load %10
+  %12: void = slice_start_check %3, %4
+  %13: void = slice_end_check %4, %11
+  %14: [*]u16 = ptr_add %9, %3
+  %15: usize = sub_wrap %4, %3
+  %16: *const []u16 = alloc
+  %17: *[*]u16 = ptr_cast %16
+  %18: *usize = slice_len_ptr %16
+  %19: void = store %17, %14
+  %20: void = store %18, %15
+  %21: void = array_copy %5, %16
+  %22: noreturn = ret
+}

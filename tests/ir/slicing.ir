@@ -1,0 +1,86 @@
+%61 = struct_decl (flags=0) {
+  decl var "a" type {
+    %0 = int 4
+    %1 = as @type_usize, %0
+    %2 = array_type %1, @type_u16
+    %3 = as @type_type, %2
+    %4 = break_inline result, %3
+  } value {
+    %5 = decl_type
+    %6 = array_elem_type %5
+    %7 = int 2
+    %8 = as %6, %7
+    %9 = int 3
+    %10 = as %6, %9
+    %11 = int 5
+    %12 = as %6, %11
+    %13 = int 7
+    %14 = as %6, %13
+    %15 = array_init %5, %8, %10, %12, %14
+    %16 = as %5, %15
+    %17 = break_inline result, %16
+  }
+  decl fn "window" value {
+    %36 = func "window" {
+      %21 = param "p" type {
+        %18 = ptr_type @type_u16, @false slice
+        %19 = as @type_type, %18
+        %20 = break_inline result, %19
+      }
+      %23 = param "lo" type {
+        %22 = break_inline result, @type_usize
+      }
+      %25 = param "hi" type {
+        %24 = break_inline result, @type_usize
+      }
+      ret type {
+        %26 = ptr_type @type_u16, @false slice
+        %27 = as @type_type, %26
+        %28 = break_inline result, %27
+      }
+      body insts {
+        %30 = ref %21
+        %29 = ret_type
+        %31 = as @type_usize, %23
+        %32 = as @type_usize, %25
+        %33 = slice %30, %31, %32
+        %34 = as_return %29, %33
+        %35 = ret %34
+      }
+    }
+    %37 = break_inline result, %36
+  }
+  decl fn "main" pub value {
+    %59 = func "main" {
+      ret type {
+        %38 = break_inline result, @type_u8
+      }
+      body insts {
+        %39 = decl_val "window"
+        %40 = call %39 arg0 {
+          %41 = arg_type %40, 0
+          %42 = decl_ref "a"
+          %43 = as %41, %42
+          %44 = break_inline result, %43
+        } arg1 {
+          %45 = arg_type %40, 1
+          %46 = int 1
+          %47 = as %45, %46
+          %48 = break_inline result, %47
+        } arg2 {
+          %49 = arg_type %40, 2
+          %50 = int 3
+          %51 = as %49, %50
+          %52 = break_inline result, %51
+        }
+        %53 = ret_type
+        %54 = int 0
+        %55 = as @type_usize, %54
+        %56 = array_index %40, %55
+        %57 = int_cast %53, %56
+        %58 = ret %57
+      }
+    }
+    %60 = break_inline result, %59
+  }
+}

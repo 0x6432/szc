@@ -32,6 +32,7 @@ typedef enum PanicKind {
 	PANIC_FOR_LEN,
 	PANIC_UNREACHABLE,
 	PANIC_INDEX,
+	PANIC_SLICE_ORDER,
 	PANIC_COUNT,
 } PanicKind;
 
@@ -283,6 +284,7 @@ static const char *const panic_messages[PANIC_COUNT] = {
 	"for loop over objects with non-equal lengths",
 	"reached unreachable code",
 	"index out of bounds",
+	"start index is larger than end index",
 };
 
 /* Bounds as canonical 64-bit bit patterns; wider types have already errored. */
@@ -817,6 +819,15 @@ emit_inst(Codegen *cg, TirRef ref)
 		fputs("add ", out);
 		print_operand(cg, inst->data.un.operand);
 		fputs(", 8\n", out);
+		return;
+	case TIR_SLICE_START_CHECK:
+	case TIR_SLICE_END_CHECK:
+		fprintf(out, "\t%%g%u_slice =w cugtl ", (unsigned)ref);
+		print_operand(cg, inst->data.bin.lhs);
+		fputs(", ", out);
+		print_operand(cg, inst->data.bin.rhs);
+		fputc('\n', out);
+		emit_guard(cg, ref, "slice", inst->op == TIR_SLICE_START_CHECK ? PANIC_SLICE_ORDER : PANIC_INDEX);
 		return;
 	case TIR_INDEX_CHECK:
 		fprintf(out, "\t%%g%u_index =w cugel ", (unsigned)ref);

@@ -1659,6 +1659,20 @@ expr(GenBody *body, Scope *scope, ResultInfo info, AstNode *node)
 		return rvalue(body, info, array_type(body, scope, AST_CAST(AstArrayType, node, AST_ARRAY_TYPE), false, 0), node->offset);
 	case AST_INIT_LIST:
 		return array_init(body, scope, info, AST_CAST(AstInitList, node, AST_INIT_LIST));
+	case AST_SLICE: {
+		AstSlice *slice = AST_CAST(AstSlice, node, AST_SLICE);
+		if (slice->sentinel != NULL) {
+			unsupported(body, node, "sentinel slicing");
+			return IR_REF_VOID_VALUE;
+		}
+		IrSlice payload;
+		payload.base = address_of(body, scope, result_none, slice->lhs);
+		payload.start = expr(body, scope, result_type(IR_REF_TYPE_USIZE), slice->start);
+		payload.end = slice->end == NULL ? IR_REF_NONE : expr(body, scope, result_type(IR_REF_TYPE_USIZE), slice->end);
+		payload.start_src = slice->start->offset;
+		payload.end_src = slice->end == NULL ? node->offset : slice->end->offset;
+		return rvalue(body, info, emit_payload(body, IR_SLICE, node->offset, APPEND_EXTRA(body->gen, payload)), node->offset);
+	}
 	case AST_INDEX: {
 		AstIndex *index = AST_CAST(AstIndex, node, AST_INDEX);
 		IrRef base = index_base_expr(body, scope, index->lhs);
@@ -2541,6 +2555,19 @@ dump_inst(const IrDumper *dumper, IrInstIndex index, uint32_t depth)
 	case IR_INT_TYPE:
 		fprintf(out, " %c%" PRIu64, (inst->data.integer & 0x10000u) ? 'i' : 'u', inst->data.integer & 0xffffu);
 		break;
+	case IR_SLICE: {
+		IrSlice slice;
+		IR_READ(ir, inst->data.payload, &slice);
+		fputc(' ', out);
+		dump_ref(dumper, slice.base);
+		fputs(", ", out);
+		dump_ref(dumper, slice.start);
+		if (slice.end != IR_REF_NONE) {
+			fputs(", ", out);
+			dump_ref(dumper, slice.end);
+		}
+		break;
+	}
 	case IR_PANIC: {
 		IrPanic payload;
 		IR_READ(ir, inst->data.payload, &payload);
