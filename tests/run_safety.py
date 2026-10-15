@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Runtime panic regressions, with optional checks against the official Zig binary."""
+import argparse
 import os
 import resource
 import signal
@@ -277,14 +278,32 @@ def cases():
             yield f"{label}_size_{bits}", source, "shift amount is greater than the type size"
 
 
+def selected_cases(shard_index, shard_count):
+    if shard_count < 1 or shard_index < 0 or shard_index >= shard_count:
+        raise ValueError('invalid safety shard')
+    return (case for index, case in enumerate(cases()) if index % shard_count == shard_index)
+
+
+def arguments(argv=None):
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('szc', nargs='?', default='build/asan/szc')
+    parser.add_argument('--shard-index', type=int, default=0)
+    parser.add_argument('--shard-count', type=int, default=1)
+    args = parser.parse_args(argv)
+    if args.shard_count < 1 or not 0 <= args.shard_index < args.shard_count:
+        parser.error('shard count must be positive and 0 <= shard index < shard count')
+    return args
+
+
 def main():
-    szc = sys.argv[1] if len(sys.argv) > 1 else "build/asan/szc"
+    args = arguments()
+    szc = args.szc
     zig = os.environ.get("ZIG")
     resource.setrlimit(resource.RLIMIT_CORE, (0, 0))
     passed = failed = 0
     with tempfile.TemporaryDirectory(prefix="szc-safety-") as directory:
         root = Path(directory)
-        for case in cases():
+        for case in selected_cases(args.shard_index, args.shard_count):
             name, source, message = case[:3]
             reference_message = case[3] if len(case) == 4 else message
             src = root / f"{name}.zig"

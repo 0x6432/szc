@@ -60,9 +60,10 @@ Read this first when resuming work (the sandbox resets often).
   descriptors, inference, inherited slicing and zero-bit view loads. Initial
   256 actual semantic comparisons, native, six panic cases, four C layouts and
   52 volatile sequences pass. Frozen validation found GCC/Clang golden ordering
-  differs for two materialize calls used as C function arguments; sequence those
-  explicitly and rerun before claiming M5.4c complete. No slice changes are yet
-  integrated into the repository. /data/sentinel-slices-final is provisional.
+  differed for two materialize calls used as C function arguments. Those calls
+  are now explicitly sequenced; /data/sentinel-slices-final2 is under full
+  validation and the earlier snapshot is superseded. Do not claim M5.4c complete
+  before all final processes succeed. No slice compiler changes are integrated.
 - CI 7aeb3e5/run 38786030355 failed with runner shutdown/exit143 after native
   run/build timeouts; both reported cases pass with the original frozen compiler
   and unchanged deadlines (/data/ci-slice-fields-native-reproduction.log).
@@ -72,8 +73,13 @@ Read this first when resuming work (the sandbox resets often).
   out before runner shutdown; nine variants of those names pass locally using
   the original compiler/deadlines (/data/ci-dbe-safety-reproduction.log).
   768cdb9/run 38790363308 is still in progress at the latest check. None of these
-  failed/pending runs is counted as green. Exact-coverage four-way safety CI
-  partition work is isolated in /data/ci-safety-next and being reference-tested.
+  failed/pending runs is counted as green. M0.5c four-way safety CI partitioning
+  is complete: 22 partition/CLI proofs, exact preservation of all old Make/CI
+  commands, and four actual native/Zig shards with 55 passing cases each.
+  Maximum reference concurrency stays four; aggregate gating, process deadlines,
+  tool pins and fuzz budgets are unchanged. Local full safety remains unsharded.
+  M5.4b is pushed as 09e535e (new run 38796178970 was queued at last check).
+  No new remote aggregate success is claimed.
 
 - Latest language checkpoint: M5.3e writable/addressable slice descriptor fields
   is complete. /data/slice-fields-final immutable GCC/Clang snapshots match all

@@ -15,6 +15,7 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
 - [x] **M0.5 CI**: GitHub Actions: gcc + clang builds with `-Werror`, ASan/UBSan tests, short libFuzzer run, nightly long fuzz.
   - [x] **M0.5a Bounded parallel reference CI**: independent semantic/native/parser suites and aggregate status.
   - [x] **M0.5b Independent native reference suites**: native/storage/alignment/safety partitions with exact coverage.
+  - [x] **M0.5c Exact-coverage safety reference partitions**: four balanced jobs, unchanged checks/deadlines.
 
 ## Phase 1: Lexer (`src/lexer.c`)
 
@@ -163,6 +164,29 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
 ## Completed milestone log
 
 (newest first; each entry: what, limitations, interactions)
+
+### M0.5c Exact-coverage safety reference partitions
+- **What**: four safety jobs select stable case ordinals modulo four. The default
+  local harness and `make e2e-safety-test` still run every case. Validate positive
+  shard counts and bounded indices before executing any compiler. The aggregate
+  differential gate still requires all suites; maximum reference concurrency
+  remains four and fail-fast remains disabled. No timeout is retried or ignored.
+- **Why**: prior hosted runs time out in unrelated Zig/szc build cases before
+  runner shutdown. Those cases pass locally with their original compilers and
+  deadlines; shorter independently reported jobs limit the affected work without
+  declaring infrastructure failures successful or removing a test.
+- **Validation**: 22 partition/CLI checks prove exact multiset coverage and order
+  for 1/2/4/7 shards, balanced sizes and invalid argument rejection. YAML checks
+  retain every other job, the success gate, pins, process deadlines and fuzz
+  budgets; the reference matrix grows from 22 to 25 suites. All four actual
+  native/Zig shards pass 55 cases each using the final M5.4b sanitizer compiler
+  and unchanged deadlines (220 total, none skipped). Make dry-run comparison
+  retains every prior e2e command exactly and adds only the partition proof.
+  Evidence: /data/ci-safety-{partition-validation,final-proof}.log and
+  /data/ci-safety-shard-{0,1,2,3}.log. Remote results remain asynchronous.
+- **Interactions/limits**: no compiler behavior changes; case additions are
+  automatically partitioned and the full local entry point remains unchanged.
+  Hosted runner shutdown can still fail a shard and must remain visible.
 
 ### M5.4b Scalar-sentinel arrays
 - **What**: defined comptime integer/bool sentinel array types/literals, canonical

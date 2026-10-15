@@ -64,7 +64,10 @@ jobs:
           - native
           - storage
           - alignment
-          - safety
+          - safety-0
+          - safety-1
+          - safety-2
+          - safety-3
           - parser
           - diff_pointer_coercions
           - diff_pointer_allowzero
@@ -92,13 +95,19 @@ jobs:
       - name: Build szc with warnings as errors
         run: make EXTRA_CFLAGS=-Werror all asan
       - name: Build pinned QBE for native comparisons
-        if: contains(fromJSON('["native", "storage", "alignment", "safety"]'), matrix.suite)
+        if: contains(fromJSON('["native", "storage", "alignment", "safety-0", "safety-1", "safety-2", "safety-3"]'), matrix.suite)
         run: |
           tools/build_qbe.sh
           echo "PATH=$PWD/build/qbe-src:$PATH" >> "$GITHUB_ENV"
       - name: Compare native programs with Zig 0.17.0
-        if: contains(fromJSON('["native", "storage", "alignment", "safety"]'), matrix.suite)
-        run: make EXTRA_CFLAGS=-Werror "e2e-${{ matrix.suite }}-test"
+        if: contains(fromJSON('["native", "storage", "alignment", "safety-0", "safety-1", "safety-2", "safety-3"]'), matrix.suite)
+        run: |
+          suite="${{ matrix.suite }}"
+          if [[ "$suite" == safety-* ]]; then
+            python3 tests/run_safety.py build/asan/szc --shard-index "${suite#safety-}" --shard-count 4
+          else
+            make EXTRA_CFLAGS=-Werror "e2e-${suite}-test"
+          fi
       - name: Compare semantic acceptance and types
         if: startsWith(matrix.suite, 'diff_')
         run: python3 "tools/${{ matrix.suite }}.py" build/asan/szc "$ZIG"
