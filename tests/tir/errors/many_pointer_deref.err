@@ -1,0 +1,3 @@
+tests/tir/errors/many_pointer_deref.zig:1:56: error: index syntax required for unknown-length pointer type '[*]const u8'
+pub fn main() void { const p: [*]const u8 = "ab"; _ = p.*; }
+                                                       ^

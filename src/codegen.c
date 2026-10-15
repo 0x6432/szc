@@ -793,6 +793,18 @@ emit_inst(Codegen *cg, TirRef ref)
 			normalize(cg, ref, inst->type, cls);
 		return;
 	}
+	case TIR_PTR_ELEM_PTR: {
+		TypePointer pointer = sema_type(cg->sema, inst_at(cg, inst->data.bin.lhs)->type)->as.pointer;
+		uint64_t stride = storage_size(cg, pointer.child, inst->src);
+		fprintf(out, "\t%%e%u_offset =l mul ", (unsigned)ref);
+		print_operand(cg, inst->data.bin.rhs);
+		fprintf(out, ", %" PRIu64 "\n", stride);
+		print_dest(cg, ref, QBE_L);
+		fputs("add ", out);
+		print_operand(cg, inst->data.bin.lhs);
+		fprintf(out, ", %%e%u_offset\n", (unsigned)ref);
+		return;
+	}
 	case TIR_ARRAY_ELEM_PTR: {
 		TypePointer pointer = sema_type(cg->sema, inst_at(cg, inst->data.bin.lhs)->type)->as.pointer;
 		TypeArray array = sema_type(cg->sema, pointer.child)->as.array;

@@ -498,6 +498,7 @@ local_init(LocalScope *local, Scope *parent, StringId name, LocalKind kind, IrRe
 static IrRef expr(GenBody *body, Scope *scope, ResultInfo info, AstNode *node);
 static IrRef type_expr(GenBody *body, Scope *scope, AstNode *node);
 static IrRef address_of(GenBody *body, Scope *scope, ResultInfo info, AstNode *node);
+static IrRef emit_usize(GenBody *body, uint32_t src, uint32_t value);
 static IrRef index_base_expr(GenBody *body, Scope *scope, AstNode *node);
 static IrRef function_proto(GenBody *body, Scope *scope, AstFnProto *proto, StringId name, uint32_t flags, StringId extern_lib, AstNode *definition, IrOp op);
 static void  block_statements(GenBody *body, Scope *scope, AstBlock *block);
@@ -848,9 +849,16 @@ address_of(GenBody *body, Scope *scope, ResultInfo info, AstNode *node)
 			return emit_name(body, IR_DECL_REF, node->offset, name, IR_REF_NONE);
 	}
 	ResultInfo operand_info = result_none;
-	if (info.kind != RESULT_NONE) {
+	if (info.kind != RESULT_NONE && !(node->kind == AST_INIT_LIST
+		&& AST_CAST(AstInitList, node, AST_INIT_LIST)->type != NULL)) {
 		IrRef type = info.kind == RESULT_TYPE ? info.ref : emit_un(body, IR_ELEM_TYPE, node->offset, info.ref);
-		operand_info = result_type(emit_un(body, IR_REF_TYPE, node->offset, type));
+		if (node->kind == AST_INIT_LIST) {
+			uint32_t count = AST_CAST(AstInitList, node, AST_INIT_LIST)->elements.count;
+			IrRef length = emit_usize(body, node->offset, count);
+			operand_info = result_type(emit_bin(body, IR_REF_ARRAY_TYPE, node->offset, type, length));
+		} else {
+			operand_info = result_type(emit_un(body, IR_REF_TYPE, node->offset, type));
+		}
 	}
 	IrRef operand = expr(body, scope, operand_info, node);
 	if (body_is_terminated(body))
@@ -872,12 +880,12 @@ alignment_body(IrGen *gen, Scope *scope, AstNode *node)
 static IrRef
 pointer_type(GenBody *body, Scope *scope, AstPointerType *node)
 {
-	if (node->size != AST_POINTER_ONE || node->sentinel != NULL || node->bit_offset != NULL || node->host_size != NULL || node->addrspace != NULL) {
+	if ((node->size != AST_POINTER_ONE && node->size != AST_POINTER_MANY) || node->sentinel != NULL || node->bit_offset != NULL || node->host_size != NULL || node->addrspace != NULL) {
 		unsupported(body, &node->base, "pointer sizes other than single pointers or pointer attributes");
 		return IR_REF_VOID_VALUE;
 	}
 	IrRef child = type_expr(body, scope, node->child);
-	IrPointerType payload = {child, 0, 0, 0};
+	IrPointerType payload = {child, node->size == AST_POINTER_MANY ? IR_POINTER_MANY : 0, 0, 0};
 	if (node->align != NULL) {
 		payload.alignment_body = alignment_body(body->gen, scope, node->align);
 		payload.alignment_src = node->align->offset;
@@ -2601,6 +2609,8 @@ dump_inst(const IrDumper *dumper, IrInstIndex index, uint32_t depth)
 		dump_ref(dumper, payload.child);
 		fputs(", ", out);
 		dump_ref(dumper, (payload.flags & IR_POINTER_CONST) != 0 ? IR_REF_TRUE : IR_REF_FALSE);
+		if ((payload.flags & IR_POINTER_MANY) != 0)
+			fputs(" many", out);
 		if ((payload.flags & IR_POINTER_ALLOWZERO) != 0)
 			fputs(" allowzero", out);
 		if ((payload.flags & IR_POINTER_VOLATILE) != 0)

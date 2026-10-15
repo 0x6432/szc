@@ -1,1 +1,1 @@
-pub fn main() void { const P = [*]u8; _ = P; }
+pub fn main() void { const P = [*:0]u8; _ = P; }

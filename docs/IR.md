@@ -450,3 +450,22 @@ prints a file's IR.
   alignment and the shared 16 MiB static array budget. Pointer tables are writable
   rather than RELRO; over-aligned data uses the assembly path. Unsupported global
   flags, leaves and volatile whole-array operations remain explicitly rejected.
+
+## Many-pointer indexing and array result contexts
+
+- IR_POINTER_MANY selects `[*]T`; size, qualifiers and alignment are interned in the
+  existing TypePointer. Array-to-many coercion preserves actual pointer provenance
+  through VALUE_PTR_CAST, not a reference to the array value's first copied element.
+- REF_ARRAY_TYPE takes an address-of result type and anonymous literal element count.
+  A single pointer uses its pointee type; a many pointer synthesizes `[count]child`.
+  Explicit typed literals supply their own whole type before final pointer coercion.
+- PTR_ELEM_PTR takes a many pointer and usize index and returns a single element
+  pointer, with alignment weakened by offset/stride and allowzero preserved only when
+  needed. Unlike ARRAY_ELEM_PTR it has no invented array-length safety check.
+- Known many-pointer elements use cumulative physical bytes or logical comptime slots
+  relative to real backing. Loads select the requested child within that root;
+  nonzero-size known out-of-backing loads diagnose, while address formation is allowed.
+  Mutable global roots use runtime loads/snapshots, even through const pointer views.
+- Nested lvalues borrow storage; array-valued reads still own snapshots. Scalar,
+  callback and pointer leaves retain existing physical ABI/relocations/volatile paths.
+  Runtime slices are not scalar pointers and are not implemented by this milestone.

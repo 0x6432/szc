@@ -1,0 +1,3 @@
+tests/tir/errors/many_pointer_oob.zig:1:61: error: dereference of '*const u8' exceeds bounds of containing decl
+const a = [2]u8{7,9}; const p: [*]const u8 = &a; const n = p[2]; pub fn main() void { _ = n; }
+                                                            ^

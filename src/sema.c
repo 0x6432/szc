@@ -1415,8 +1415,12 @@ memory_coercion_allowed(const Sema *sema, TypeId dest, TypeId source, bool dest_
 		return false;
 	TypePointer to = sema->types[dest].as.pointer;
 	TypePointer from = sema->types[source].as.pointer;
-	if (to.size != from.size)
-		return false;
+	if (to.size != from.size) {
+		if (dest_is_mut || to.size != POINTER_MANY || from.size != POINTER_ONE
+			|| sema->types[from.child].kind != TYPE_ARRAY)
+			return false;
+		from.child = sema->types[from.child].as.array.child;
+	}
 	if (to.is_volatile != from.is_volatile && (dest_is_mut || !to.is_volatile))
 		return false;
 	if (to.is_allowzero != from.is_allowzero && (dest_is_mut || !to.is_allowzero))
@@ -1532,7 +1536,8 @@ coerce(Block *block, Operand operand, TypeId dest, uint32_t src)
 			return runtime_operand(dest, emit_tir_un(block, TIR_PTR_CAST, dest, src, operand.inst));
 		}
 		const Value *known = operand_value(block, operand);
-		if (known->kind == VALUE_BYTES || known->kind == VALUE_PTR_CAST)
+		if (known->kind == VALUE_BYTES || known->kind == VALUE_PTR_CAST
+			|| sema->types[dest].as.pointer.size != sema->types[operand.type].as.pointer.size)
 			return comptime_operand(dest, value_pointer_cast(&sema->values, dest, operand.value));
 		Value value = *known;
 		value.type = dest;
@@ -1692,9 +1697,15 @@ peer_type(Block *block, Operand lhs, Operand rhs, uint32_t src, TypeId *out)
 	if (ak == TYPE_POINTER && bk == TYPE_POINTER) {
 		TypePointer ap = sema->types[a].as.pointer;
 		TypePointer bp = sema->types[b].as.pointer;
-		if (ap.size == bp.size) {
+		bool many_array = (ap.size == POINTER_MANY && bp.size == POINTER_ONE && sema->types[bp.child].kind == TYPE_ARRAY)
+			|| (bp.size == POINTER_MANY && ap.size == POINTER_ONE && sema->types[ap.child].kind == TYPE_ARRAY);
+		if (ap.size == bp.size || many_array) {
 			Type candidate = make_type(TYPE_POINTER);
 			candidate.as.pointer = ap;
+			if (many_array) {
+				candidate.as.pointer.size = POINTER_MANY;
+				candidate.as.pointer.child = ap.size == POINTER_MANY ? ap.child : bp.child;
+			}
 			candidate.as.pointer.is_const = ap.is_const || bp.is_const;
 			candidate.as.pointer.is_volatile = ap.is_volatile || bp.is_volatile;
 			candidate.as.pointer.is_allowzero = ap.is_allowzero || bp.is_allowzero;
@@ -1708,7 +1719,7 @@ peer_type(Block *block, Operand lhs, Operand rhs, uint32_t src, TypeId *out)
 				*out = merged;
 				return true;
 			}
-			candidate.as.pointer.child = bp.child;
+			candidate.as.pointer.child = many_array ? candidate.as.pointer.child : bp.child;
 			merged = type_intern(sema, &candidate);
 			if (memory_coercion_allowed(sema, merged, a, false) && memory_coercion_allowed(sema, merged, b, false)) {
 				*out = merged;
@@ -3188,6 +3199,7 @@ pointer_operand(Block *block, Operand operand, uint32_t src)
 }
 
 static Operand constant_array_element(Block *block, Operand base, TypeArray array, uint64_t index, uint32_t src);
+static Operand load_offset_pointer(Block *block, Operand pointer, uint32_t src);
 
 /* Immutable declaration loads resolve their initializer; mutable contents need runtime. */
 static Operand
@@ -3240,6 +3252,8 @@ load_pointer(Block *block, Operand pointer, uint32_t src)
 		if (value->kind == VALUE_ELEMENT_PTR) {
 			ElementPointer element = value->as.element;
 			TypeId base_type = value_get(&sema->values, element.base)->type;
+			if (sema->types[base_type].as.pointer.size == POINTER_MANY)
+				return load_offset_pointer(block, pointer, src);
 			TypeId array_type = sema->types[base_type].as.pointer.child;
 			Operand selected = constant_array_element(block, comptime_operand(base_type, element.base),
 				sema->types[array_type].as.array, element.index, src);
@@ -3292,7 +3306,7 @@ analyze_deref(Block *block, const IrInst *inst)
 	}
 	TypePointer type = sema->types[pointer.type].as.pointer;
 	if (type.size != POINTER_ONE) {
-		sema_error(block, inst->src, "not supported by szc yet: non-single pointer dereference");
+		sema_error(block, inst->src, "index syntax required for unknown-length pointer type '%s'", sema_type_name(sema, pointer.type));
 		return operand_none;
 	}
 	bool zero_int = is_int(sema, type.child) && sema->types[type.child].as.integer.bits == 0;
@@ -3546,9 +3560,49 @@ array_element_pointer_type(Sema *sema, TypePointer pointer, TypeArray array, Ope
 	Type type = make_type(TYPE_POINTER);
 	type.as.pointer = pointer;
 	type.as.pointer.child = array.child;
+	type.as.pointer.size = POINTER_ONE;
 	type.as.pointer.alignment = alignment == sema_type_align(sema, array.child) ? 0 : alignment;
 	type.as.pointer.is_allowzero = pointer.is_allowzero && (index.kind != OPERAND_COMPTIME || item == 0);
 	return type_intern(sema, &type);
+}
+
+static Operand
+load_offset_pointer(Block *block, Operand pointer, uint32_t src)
+{
+	Sema *sema = block->sema;
+	PointerAddress address = value_pointer_address(&sema->values, pointer.value);
+	const Value *root = value_get(&sema->values, address.root);
+	TypeId child = sema->types[pointer.type].as.pointer.child;
+	if (root->kind == VALUE_BYTES) {
+		ByteString bytes = root->as.bytes;
+		if (address.offset <= bytes.length)
+			return comptime_operand(child, value_int_u64(&sema->values, child,
+				address.offset < bytes.length ? bytes.data[address.offset] : 0));
+	} else {
+		Operand stored = load_pointer(block, comptime_operand(root->type, address.root), src);
+		uint64_t offset = address.offset;
+		while (stored.kind == OPERAND_COMPTIME) {
+			if (offset == 0 && memory_coercion_allowed(sema, child, stored.type, false))
+				return coerce(block, stored, child, src);
+			if (sema->types[stored.type].kind != TYPE_ARRAY)
+				break;
+			TypeArray array = sema->types[stored.type].as.array;
+			uint64_t stride;
+			bool logical;
+			if (!array_element_stride(sema, array.child, &stride, &logical))
+				break;
+			uint64_t index = stride == 0 ? 0 : offset / stride;
+			if (index > array.length || (index == array.length && !array.sentinel_zero))
+				break;
+			stored = constant_array_element(block, stored, array, index, src);
+			if (stride != 0)
+				offset %= stride;
+		}
+		if (stored.kind == OPERAND_NONE)
+			return operand_none;
+	}
+	sema_error(block, src, "dereference of '%s' exceeds bounds of containing decl", sema_type_name(sema, pointer.type));
+	return operand_none;
 }
 
 static Operand
@@ -3626,6 +3680,46 @@ runtime_array_element(Block *block, Operand base, Operand index, TypeArray array
 }
 
 static Operand
+analyze_many_index(Block *block, Operand base, Operand index, uint32_t src, bool address_only, bool borrow)
+{
+	Sema *sema = block->sema;
+	if (!check_defined(block, base, src) || !check_defined(block, index, src))
+		return operand_none;
+	TypePointer shape = sema->types[base.type].as.pointer;
+	TypeArray element_shape = {shape.child, 0, false};
+	uint64_t stride;
+	bool logical;
+	if (!array_element_stride(sema, shape.child, &stride, &logical)) {
+		sema_error(block, src, "not supported by szc yet: pointer element offset exceeds 64-bit address space");
+		return operand_none;
+	}
+	TypeId pointer_type = array_element_pointer_type(sema, shape, element_shape, index, stride, logical);
+	Operand pointer;
+	if (base.kind == OPERAND_COMPTIME && index.kind == OPERAND_COMPTIME) {
+		uint64_t item = bigint_to_u64_bits(&operand_value(block, index)->as.integer);
+		PointerAddress address = value_pointer_address(&sema->values, base.value);
+		if (stride != 0 && item > (UINT64_MAX - address.offset) / stride) {
+			sema_error(block, src, "not supported by szc yet: pointer element offset exceeds 64-bit address space");
+			return operand_none;
+		}
+		pointer = comptime_operand(pointer_type, value_element_pointer(&sema->values, pointer_type,
+			base.value, item, address.offset + item * stride, logical));
+	} else {
+		if (!require_runtime(block, src))
+			return operand_none;
+		if (logical || !array_storage_allowed(sema, shape.child)) {
+			sema_error(block, src, "not supported by szc yet: runtime many-pointer element type '%s'", sema_type_name(sema, shape.child));
+			return operand_none;
+		}
+		TirRef base_ref = materialize(block, base, src);
+		TirRef index_ref = materialize(block, index, src);
+		pointer = runtime_operand(pointer_type, emit_tir_bin(block, TIR_PTR_ELEM_PTR, pointer_type, src, base_ref, index_ref));
+	}
+	return address_only || (borrow && sema->types[shape.child].kind == TYPE_ARRAY)
+		? pointer : load_pointer(block, pointer, src);
+}
+
+static Operand
 analyze_array_index(Block *block, const IrInst *inst, bool address_only, bool borrow)
 {
 	Sema *sema = block->sema;
@@ -3633,6 +3727,8 @@ analyze_array_index(Block *block, const IrInst *inst, bool address_only, bool bo
 	Operand index = coerce(block, resolve_ref(block, inst->data.bin.rhs), T_USIZE, inst->src);
 	if (base.kind == OPERAND_NONE || index.kind == OPERAND_NONE)
 		return operand_none;
+	if (sema->types[base.type].kind == TYPE_POINTER && sema->types[base.type].as.pointer.size == POINTER_MANY)
+		return analyze_many_index(block, base, index, inst->src, address_only, borrow);
 	TypeId type = indexable_array_type(sema, base.type);
 	if (type == 0) {
 		sema_error(block, inst->src, "expected array or pointer to array, found '%s'", sema_type_name(sema, base.type));
@@ -3802,7 +3898,8 @@ analyze_inst(Block *block, IrInstIndex index, Operand *break_value)
 		TypeId child = sema->types[pointer.type].as.pointer.child;
 		if (sema->types[child].kind == TYPE_POINTER)
 			pointer = load_pointer(block, pointer, src);
-		if (pointer.kind != OPERAND_NONE && indexable_array_type(sema, pointer.type) != 0)
+		if (pointer.kind != OPERAND_NONE && (indexable_array_type(sema, pointer.type) != 0
+			|| (sema->types[pointer.type].kind == TYPE_POINTER && sema->types[pointer.type].as.pointer.size == POINTER_MANY)))
 			result = pointer;
 		else if (pointer.kind != OPERAND_NONE)
 			sema_error(block, src, "expected array or pointer to array, found '%s'", sema_type_name(sema, child));
@@ -3945,7 +4042,7 @@ analyze_inst(Block *block, IrInstIndex index, Operand *break_value)
 		}
 		Type pointer = make_type(TYPE_POINTER);
 		pointer.as.pointer.child = type;
-		pointer.as.pointer.size = POINTER_ONE;
+		pointer.as.pointer.size = (payload.flags & IR_POINTER_MANY) != 0 ? POINTER_MANY : POINTER_ONE;
 		pointer.as.pointer.is_const = (payload.flags & IR_POINTER_CONST) != 0;
 		pointer.as.pointer.is_allowzero = (payload.flags & IR_POINTER_ALLOWZERO) != 0;
 		pointer.as.pointer.is_volatile = (payload.flags & IR_POINTER_VOLATILE) != 0;
@@ -3990,8 +4087,9 @@ analyze_inst(Block *block, IrInstIndex index, Operand *break_value)
 		result = analyze_ref(block, resolve_ref(block, operand), src, 0, alignment);
 		break;
 	}
+	case IR_REF_ARRAY_TYPE:
 	case IR_REF_TYPE: {
-		Operand operand = resolve_ref(block, inst->data.un.operand);
+		Operand operand = resolve_ref(block, inst->op == IR_REF_ARRAY_TYPE ? inst->data.bin.lhs : inst->data.un.operand);
 		if (operand.kind == OPERAND_NO_RESULT_TYPE) {
 			result = operand;
 			break;
@@ -4003,7 +4101,15 @@ analyze_inst(Block *block, IrInstIndex index, Operand *break_value)
 			sema_error(block, src, "expected type '%s', found pointer", sema_type_name(sema, type));
 			break;
 		}
-		result = type_operand(sema, sema->types[type].as.pointer.child);
+		TypePointer pointer = sema->types[type].as.pointer;
+		TypeId child = pointer.child;
+		if (inst->op == IR_REF_ARRAY_TYPE && pointer.size == POINTER_MANY) {
+			Operand length = resolve_ref(block, inst->data.bin.rhs);
+			if (length.kind != OPERAND_COMPTIME)
+				break;
+			child = array_type_id(sema, child, bigint_to_u64_bits(&operand_value(block, length)->as.integer), false);
+		}
+		result = type_operand(sema, child);
 		break;
 	}
 	case IR_DEREF:

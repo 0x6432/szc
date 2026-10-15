@@ -95,7 +95,9 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
       - [x] **M5.2c3a Internal array calls/returns and runtime aggregate joins**.
       - [x] **M5.2c3b General comptime element-pointer provenance** (root/subobject identity, checked offsets and loads).
     - [x] **M5.2c4 Mutable array globals** (lazy initialization, borrowed element accesses and runtime snapshots).
-- [ ] **M5.3 Slices, many-pointers, slicing, `.len`, `.ptr`, for over slices.**
+- [~] **M5.3 Slices, many-pointers, slicing, `.len`, `.ptr`, for over slices.**
+  - [x] **M5.3a Many-pointer types, array coercions and borrowed indexing.**
+  - [ ] **M5.3b Pointer arithmetic and differences.**
 - [~] **M5.4 String literals, sentinels, `[*:0]const u8`.** Literal byte values landed in M4.5b; general string/memory operations and sentinel pointer syntax remain pending.
 - [ ] **M5.5 Casting builtins**: `@intCast`, `@truncate`, `@ptrCast`, `@intFromPtr`, `@ptrFromInt`, `@bitCast`, `@as`.
 
@@ -147,6 +149,44 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
 ## Completed milestone log
 
 (newest first; each entry: what, limitations, interactions)
+
+### M5.3a Many-pointer types, coercions and borrowed indexing
+- **What**: `[*]T` types with const/volatile/allowzero/alignment qualification;
+  array-pointer coercions and qualifier-preserving joins; runtime reads/writes,
+  nested array borrowing/snapshots, callback/pointer tables, mutable pointer slots,
+  and known element addresses/loads backed by their actual original declaration.
+  Explicit and anonymous array temporaries infer the correct whole-array backing.
+- **Representation/interactions**: IR_POINTER_MANY selects the existing pointer size;
+  REF_ARRAY_TYPE recovers anonymous literal length from a many-pointer result context.
+  PTR_ELEM_PTR lowers to scaled address arithmetic without an invented length guard.
+  Element pointers retain root-relative cumulative offsets; known dereferences walk
+  actual backing, rather than manufacturing copied scalar objects. Mutable globals
+  still load runtime contents even through const many-pointer views. Existing scalar
+  ABI, volatile outlined accesses, unaligned helpers, static relocations, alignment
+  weakening and internal owned array snapshots are reused without a second ABI.
+- **Grounding/coverage**: actual Zig 0.17 Sema.zig elemPtrOneLayerOnly, array-pointer
+  coercion and peer rules, plus real executable probes. Unknown-length addresses may
+  exceed the source array length, but known nonzero-size dereferences must fit the
+  containing backing. Undefined many-pointer indexing rejects even for zero-bit
+  elements; zero-bit defined pointers retain upstream OPV behavior. Add two native
+  programs, TIR/QBE goldens, seven errors, anonymous literal cases, 24 integer-width
+  read/write roundtrips and four PIE/C/foreign-storage variants, including unaligned
+  and volatile mutation, nested relocation offsets and indexes across row boundaries.
+  Retain an explicit sentinel-many-pointer NYI fixture; add two seeds per semantic stage.
+- **Validation**: GCC/Clang -Werror ASan/UBSan pass 612 unit checks and stage
+  goldens (823 final GCC, 822 Clang before the extra IR-only fixture). Full GCC
+  reference-enabled e2e passes 75 ordinary/generated programs, two scoped inputs,
+  16 driver checks, all storage/alignment/ABI/volatile suites and 185 safety cases.
+  Targeted Clang native/reference programs, four foreign variants and all 185 safety
+  cases pass; optimized GCC passes three native inputs and four foreign variants.
+  All 665 array/many-pointer semantic cases match actual Zig (123 added). Four fresh
+  60-second fuzz runs pass (763858/18472/18014/21037 lexer/parser/irgen/sema inputs),
+  plus 20000 standalone mutations per stage (42 irgen/98 sema retained seeds).
+- **Limits/next**: pointer arithmetic/differences are the next independent checkpoint.
+  Slices, slice values/slicing/fields, sentinel pointer syntax, C pointers and array/
+  slice for iteration are not implemented here. Unsupported many-pointer dereference
+  rejects instead of treating it as a single pointer. Enclosing M5.3 remains partial;
+  future slice pairs must not masquerade as one QBE scalar. Q6 stays at M10.2.
 
 ### CI follow-up: bounded native/reference compilation and case progress
 - **Trigger**: prior 53efbd5 run 38737351381 passed GCC/Clang/fuzz jobs, then its

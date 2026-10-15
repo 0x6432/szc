@@ -73,15 +73,17 @@ Read this first when resuming work (the sandbox resets often).
 - Current batching preference: group related straightforward milestones when practical;
   keep complex semantic changes independently tested/documented/committed. Do not return
   to an unconditional one-checkpoint policy. Select the next independently implementable
-  memory item without pretending the blocked function-alias case is complete. Next is
-  M5.3: many-pointers and slices. Start with a coherent many-pointer conversion/indexing
-  slice of work before general slice values/slicing. Many-pointer indices have no
-  language-level length guard; known dereferences still need valid backing semantics.
-  Preserve actual root provenance and the mutable-global address/contents split rather
-  than treating a const view as immutable memory. Extend parser/IR/sema/codegen together
-  and ground array-to-pointer coercion and comptime bounds behavior in actual Zig.
-  Keep coherent work batched, targeted checks during development and a single full
-  validation pass per stable batch; independent checks can run on immutable binaries.
+  memory item without pretending the blocked function-alias case is complete.
+  M5.3a is implemented: many-pointer types, array coercions/joins, runtime borrowed
+  indexing and actual-root comptime loads/relocations. Next is M5.3b pointer arithmetic
+  and differences, grounded in Sema.zig analyzeArithmetic/analyzePtrArithmetic.
+  Many-pointer indices carry no language-level length guard; known dereferences must
+  fit their containing backing. Preserve root provenance, mutable global contents vs
+  addresses, and qualifier/alignment rules. Anonymous array temporaries recover their
+  length with REF_ARRAY_TYPE; explicit typed temporaries keep their own whole type.
+  General slice pairs/slicing/fields follow, using coherent indirect representations.
+  Keep targeted checks during development and full validation per stable batch;
+  independent checks can run on immutable compiler binaries.
   Preserve owned snapshot versus borrowed pointer semantics, and scope by-value ABI
   explicitly rather than pushing array values through scalar QBE temporaries.
 - Run `PATH=/data/tools/bin:$PATH ZIG=/data/zig/zig-x86_64-linux-0.17.0/zig make e2e-test`

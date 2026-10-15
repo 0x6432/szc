@@ -9,6 +9,37 @@ from compiler_process import run_compiler
 
 
 def cases():
+    for expr in ('&.{7,9}', '&([2]u8{7,9})'):
+        yield f'const p: [*]const u8 = {expr}; pub fn main() void {{ _ = p[1]; }}\n'
+    yield 'const p: [*]const [2]u8 = &.{.{1,2},.{3,4}}; pub fn main() void { _ = p[1][1]; }\n'
+    # Many pointers borrow actual roots; only dereferences, not addresses, need backing.
+    for child, value in (("u8", "7"), ("i33", "-7"), ("bool", "true"),
+                         ("u0", "0"), ("void", "{}"), ("type", "u8")):
+        for index, operation in itertools.product(("0", "1", "2", "5", "undefined", "-1"),
+                                                   ("_ = &p[I];", "_ = p[I];")):
+            yield (f"const a = [2]{child}{{{value},{value}}}; const p: [*]const {child} = &a; "
+                   "pub fn main() void { " + operation.replace("I", index) + " }\n")
+    for source_const, target_const, source_align, target_align in itertools.product(
+            ("", "const "), ("", "const "), (1, 8), (1, 8)):
+        yield (f"fn f(p: *align({source_align}) {source_const}[2]u16) void {{ "
+               f"const q: [*]align({target_align}) {target_const}u16 = p; _ = q; }} "
+               "pub fn main() void { f(undefined); }\n")
+    for source, target in itertools.product(("", "const ", "volatile ", "allowzero "), repeat=2):
+        yield (f"fn f(p: [*]{source}u16) void {{ const q: [*]{target}u16 = p; _ = q; }} "
+               "pub fn main() void { f(undefined); }\n")
+    for expression in ("p.*", "p.len", "&p.*", "p[true]", "p[undefined]", "p[-1]", "p[0]"):
+        yield ("fn f(p: [*]const u8) void { _ = " + expression + "; } "
+               "pub fn main() void { f(undefined); }\n")
+    for expression in ("p[0]", "p[1]", "p[2]", "p[3]", "&p[7]"):
+        yield ("const p: [*]const u8 = \"ab\"; pub fn main() void { _ = " + expression + "; }\n")
+    for source in (
+        'const a = [2][2]u8{.{1,2},.{3,4}}; const p: [*]const [2]u8 = &a; '
+        'const check: u8 = if (p[1][0] != 3 or &p[1][1] != &a[1][1]) 256 else 0; _ = check;',
+        'const p: [*]const [2]u8 = &([2][2]u8{.{1,2},.{3,4}}); _ = p[1][1];',
+        'const a = [2]type{u8,u16}; const p: [*]const type = &a; const n: p[1] = 65535; _ = n;',
+        'const a = [2]u8{1,2}; const p: [*]const u8 = &a; const check: u8 = if (&p[1] != &a[1]) 256 else 0; _ = check;',
+    ):
+        yield 'pub fn main() void { ' + source + ' }\n'
     for child, value in (("u8", "7"), ("i33", "-7"), ("bool", "true"), ("u0", "0"), ("void", "{}")):
         for body in ("const b = a; a = b;", f"a[1] = {value};", "const p = &a[1]; _ = p.*;",
                      "const p: *const [2]T = &a; _ = p[1];", "const p = &a; p.* = a;",
