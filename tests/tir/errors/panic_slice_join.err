@@ -1,3 +1,0 @@
-tests/tir/errors/panic_slice_join.zig:1:32: error: not supported by szc yet: runtime slice joins
-fn fail(c: bool) void { @panic(if (c) "a" else "longer"); }
-                               ^

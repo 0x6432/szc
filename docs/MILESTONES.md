@@ -61,6 +61,7 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
 - [x] **M4.5 unreachable, noreturn, `@panic` minimal runtime.**
   - [x] **M4.5a Safe unreachable and noreturn checks**: safety panic, return/cast diagnostics, terminating calls/joins.
   - [x] **M4.5b Explicit @panic**: first-class literal values and minimal fixed-length message runtime.
+  - [x] **M4.5c Dynamic byte-slice panic messages and contextual joins.**
 
 ## Phase 5: Memory
 
@@ -154,6 +155,39 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
 ## Completed milestone log
 
 (newest first; each entry: what, limitations, interactions)
+
+### M4.5c Dynamic byte-slice panic messages
+- **What**: `@panic` accepts byte-slice values with runtime lengths, including
+  parameters, mutable descriptors/globals, mutable byte arrays, cleanup operands
+  and branches with differently sized array/string inputs. The builtin supplies
+  a `[]const u8` result type to its argument; each branch coerces before joining.
+- **Grounding**: actual Sema.zig zirPanic coerces to slice_const_u8, resolves a
+  constant string only during comptime execution and passes the descriptor at
+  runtime. The szc stub already takes pointer/length, so no sentinel scan or new
+  backend ABI is needed. Volatile/allowzero byte slices cannot discard qualifiers.
+- **Comptime/interactions**: resolve immutable bytes through qualified many-pointer
+  indexing and existing provenance-aware loads. This handles byte-array-backed
+  slices as well as literals, preserving embedded NUL/non-UTF8 bytes in diagnostics.
+  No aggregate reaches the scalar materializer; runtime lowering extracts both
+  descriptor words and uses the existing TIR_PANIC and abort/message stub.
+- **Coverage**: eight byte-exact runtime/reference cases cover dynamic parameters,
+  binary bytes, empty messages, globals, short/long joins and deferred panic. Add
+  16 actual-reference semantic cases, three stage goldens, four diagnostics and
+  fuzz seeds. The former different-length panic-join NYI fixture is now positive.
+- **Validation**: immutable GCC/Clang Werror ASan/UBSan pass 632 units/893
+  goldens each, and 180 cases match actual Zig. Full GCC native/reference suite
+  passes 81 ordinary/generated + two scoped programs, 16 driver checks, all C/
+  alignment/ABI/volatile suites and 201 safety cases. Clang passes all 201 safety
+  cases against Zig plus three targeted executables; optimized GCC also passes
+  201 safety cases. A mistyped exploratory native-test filename was corrected
+  and the three-program command rerun successfully. The unchanged 949 array/
+  layout inputs match a source-hash-checked, actual-reference-validated compiler
+  baseline replay; these are not claimed as 949 fresh Zig executions here.
+  Fresh four-stage 60-second fuzzing executes 426616/9122/9407/10106 inputs;
+  20000 mutations/stage pass (irgen 49/sema 105 seeds).
+- **Limits**: undefined runtime messages remain explicit NYI. Comptime message
+  materialization is capped at 16777216 bytes; the general interpreter and string
+  operations are still pending. Panic remains the minimal libc-backed runtime.
 
 ### M5.3c2 Array and slice for iteration
 - **What**: runtime `for` accepts array values, pointers to arrays and slices;

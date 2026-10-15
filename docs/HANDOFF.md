@@ -34,12 +34,18 @@ Read this first when resuming work (the sandbox resets often).
   all C/alignment/volatile suites, 193 safety cases, optimized checks and four
   60-second fuzzers + 20000 mutations/stage. Array operands snapshot, array
   pointers borrow; slices snapshot descriptors only. General slicing stays NYI.
-- Next integrations already tested in isolation: /data/slice-panic-work adds
-  dynamic byte-slice panic messages and contextual different-length branches;
-  /data/slice-join-work adds unsentinelled inferred array-pointer joins and a
-  necessary rejection of slice equality. The latter fixes a scalar-pointer
-  boundary bug found during audit. Final post-fix validation is under
-  /data/slice-join-guard-final; older /data/slice-join-final runs are superseded.
+- M4.5c dynamic byte-slice panic messages is complete: /data/slice-panic-final
+  immutable snapshots pass GCC/Clang sanitizer 632 units/893 goldens, 180 actual
+  Zig semantic cases, full native/reference 81 ordinary/generated + two scoped
+  programs, all C/driver/alignment suites and 201 safety cases. Clang independently
+  passes 201 reference safety cases; optimized GCC passes 201 native safety cases.
+  Fresh four-stage fuzzing and 20000 mutations/stage pass. Unchanged 949 array/
+  layout cases replay against the source-hash-verified reference-validated baseline;
+  see /data/replay_validated_arrays.py and /data/reference-validated-array-oracle.json.
+- Final follow-on /data/slice-join-work adds unsentinelled inferred array-pointer
+  joins and rejects slice equality (a scalar-pointer boundary bug found in audit).
+  Post-fix source-identical validation lives in /data/slice-join-guard-final;
+  older /data/slice-join-final runs are superseded, not final evidence.
 - Push blocked: e29dcf2 is committed locally but not on GitHub. The environment
   rejected the authenticated push. User approval has been requested; do not retry
   any push/authentication workaround until the user gives the go-ahead. Keep all

@@ -1,0 +1,50 @@
+function $szc.main.1() {
+@start
+	call $szc.crash.2(w 1, l $szc.const.1)
+	hlt
+}
+
+function $szc.crash.2(w %t0, l %t1) {
+@start
+	%t2 =l alloc8 16
+	%t5 =l alloc8 16
+	call $memmove(l %t2, l %t1, l 16)
+	jnz %t0, @c11_then, @c11_else
+@c11_then
+	call $memmove(l %t5, l %t2, l 16)
+	jmp @b4
+@c11_else
+	call $memmove(l %t5, l $szc.const.2, l 16)
+	jmp @b4
+@b4
+	%t12 =l copy %t5
+	%t13 =l loadl %t12
+	%t14 =l add %t5, 8
+	%t15 =l loadl %t14
+	call $szc.panic.bytes(l %t13, l %t15)
+	hlt
+}
+
+section ".data.rel.ro"
+data $szc.const.1 = align 8 { l $szc.bytes.10, l 2 }
+section ".data.rel.ro"
+data $szc.const.2 = align 8 { l $szc.bytes.15, l 6 }
+section ".rodata"
+data $szc.bytes.10 = { b 104, b 105, b 0 }
+section ".rodata"
+data $szc.bytes.15 = { b 108, b 111, b 110, b 103, b 101, b 114, b 0 }
+section ".rodata"
+data $szc.panic.newline = { b 10 }
+function $szc.panic.bytes(l %ptr, l %len) {
+@start
+	call $write(w 2, l %ptr, l %len)
+	call $write(w 2, l $szc.panic.newline, l 1)
+	call $abort()
+	hlt
+}
+
+export function w $main() {
+@start
+	call $szc.main.1()
+	ret 0
+}

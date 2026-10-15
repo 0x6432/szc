@@ -142,7 +142,9 @@ prints a file's IR.
   validates the fixed-array pointer -> const-byte-slice conversion, then lowers to
   TIR_PANIC(pointer, length). The outlined helper writes bytes/newline and aborts.
   At comptime it records an error; binary message lengths survive diagnostic printing.
-  Different-length runtime joins/general slice representations await memory lowering.
+  Panic argument expressions now receive a []const u8 result type, so differently
+  sized branch values coerce to descriptors before joining. Runtime panic extracts
+  both words; comptime messages read bytes through provenance-aware element loads.
   Panic's noreturn control flow never causes scope-exit cleanup to run.
 
 ## Single-pointer operations

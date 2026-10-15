@@ -1,0 +1,3 @@
+tests/tir/errors/panic_slice_comptime.zig:1:50: error: encountered @panic at comptime: slice message
+const s: []const u8 = "slice message"; const x = @panic(s); pub fn main() void { _ = x; }
+                                                 ^

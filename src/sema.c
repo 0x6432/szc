@@ -2744,7 +2744,9 @@ analyze_string(Block *block, const IrInst *inst)
 	return comptime_operand(pointer, value_bytes(&sema->values, pointer, (const uint8_t *)intern_text(sema->interner, id), length));
 }
 
-/* Lower the pointer-to-byte-array -> byte-slice conversion directly to ptr/len. */
+static Operand analyze_many_index(Block *block, Operand base, Operand index, uint32_t src, bool address_only, bool borrow);
+
+/* Panic takes a byte slice, including dynamic lengths; it never scans for NUL. */
 static InstOutcome
 analyze_panic(Block *block, const IrInst *inst)
 {
@@ -2754,38 +2756,51 @@ analyze_panic(Block *block, const IrInst *inst)
 	Operand message = resolve_ref(block, payload.message);
 	if (message.kind == OPERAND_NONE)
 		return INST_NORETURN;
-	if (message.type == type_id_of_well_known(IR_REF_TYPE_UNDEFINED) && !block->is_comptime) {
+	if (operand_is_undefined(block, message) && !block->is_comptime) {
 		sema_error(block, payload.argument_src, "not supported by szc yet: undefined panic message");
 		return INST_NORETURN;
 	}
-	if (!check_defined(block, message, payload.argument_src))
+	TypeId type = type_pointer(sema, type_id_of_well_known(IR_REF_TYPE_U8), POINTER_SLICE, true, false, 0);
+	message = coerce(block, message, type, payload.argument_src);
+	if (message.kind == OPERAND_NONE || !check_defined(block, message, payload.argument_src))
 		return INST_NORETURN;
-	const Type *pointer = &sema->types[message.type];
-	const Type *array = pointer->kind == TYPE_POINTER && pointer->as.pointer.size == POINTER_ONE ? &sema->types[pointer->as.pointer.child] : NULL;
-	if (array == NULL || array->kind != TYPE_ARRAY || array->as.array.child != type_id_of_well_known(IR_REF_TYPE_U8)) {
-		sema_error(block, payload.argument_src, "expected type '[]const u8', found '%s'", sema_type_name(sema, message.type));
+	Operand data = slice_field(block, message, false, payload.argument_src);
+	Operand size = slice_field(block, message, true, payload.argument_src);
+	if (data.kind == OPERAND_NONE || size.kind == OPERAND_NONE)
 		return INST_NORETURN;
-	}
-	uint64_t length = array->as.array.length;
 	if (block->is_comptime) {
-		if (message.kind != OPERAND_COMPTIME || operand_value(block, message)->kind != VALUE_BYTES)
-			sema_error(block, inst->src, "unable to evaluate comptime expression");
-		else {
-			static const char prefix[] = "encountered @panic at comptime: ";
-			ByteString bytes = operand_value(block, message)->as.bytes;
-			size_t size = sizeof(prefix) - 1 + (size_t)bytes.length;
-			char *text = arena_alloc(sema->arena, size, 1);
-			memcpy(text, prefix, sizeof(prefix) - 1);
-			memcpy(text + sizeof(prefix) - 1, bytes.data, bytes.length);
-			diag_report_bytes(sema->diag, DIAG_ERROR, block->ir->file, inst->src, text, size);
+		if (size.kind != OPERAND_COMPTIME || !check_defined(block, size, payload.argument_src)) {
+			if (size.kind != OPERAND_COMPTIME)
+				sema_error(block, inst->src, "unable to evaluate comptime expression");
+			return INST_NORETURN;
 		}
+		uint64_t length = bigint_to_u64_bits(&operand_value(block, size)->as.integer);
+		if (length > 16777216) {
+			sema_error(block, inst->src, "not supported by szc yet: comptime panic message exceeds 16777216 bytes");
+			return INST_NORETURN;
+		}
+		static const char prefix[] = "encountered @panic at comptime: ";
+		size_t total = sizeof(prefix) - 1 + (size_t)length;
+		char *text = arena_alloc(sema->arena, total, 1);
+		memcpy(text, prefix, sizeof(prefix) - 1);
+		for (uint64_t i = 0; i < length; i++) {
+			Operand index = comptime_operand(T_USIZE, value_int_u64(&sema->values, T_USIZE, i));
+			Operand byte = analyze_many_index(block, data, index, payload.argument_src, false, false);
+			if (byte.kind == OPERAND_NONE || !check_defined(block, byte, payload.argument_src))
+				return INST_NORETURN;
+			if (byte.kind != OPERAND_COMPTIME) {
+				sema_error(block, inst->src, "unable to evaluate comptime expression");
+				return INST_NORETURN;
+			}
+			text[sizeof(prefix) - 1 + i] = (char)bigint_to_u64_bits(&operand_value(block, byte)->as.integer);
+		}
+		diag_report_bytes(sema->diag, DIAG_ERROR, block->ir->file, inst->src, text, total);
 		return INST_NORETURN;
 	}
 	if (!require_runtime(block, inst->src))
 		return INST_NORETURN;
-	TirRef data = materialize(block, message, inst->src);
-	Operand size = comptime_operand(T_USIZE, value_int_u64(&sema->values, T_USIZE, length));
-	emit_tir_bin(block, TIR_PANIC, T_NORETURN, inst->src, data, materialize(block, size, inst->src));
+	emit_tir_bin(block, TIR_PANIC, T_NORETURN, inst->src,
+		materialize(block, data, inst->src), materialize(block, size, inst->src));
 	return INST_NORETURN;
 }
 

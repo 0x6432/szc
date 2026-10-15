@@ -1,0 +1,53 @@
+%31 = struct_decl (flags=0) {
+  decl fn "crash" value {
+    %16 = func "crash" {
+      %1 = param "c" type {
+        %0 = break_inline result, @type_bool
+      }
+      %5 = param "s" type {
+        %2 = ptr_type @type_u8, @true slice
+        %3 = as @type_type, %2
+        %4 = break_inline result, %3
+      }
+      ret type {
+        %6 = break_inline result, @type_noreturn
+      }
+      body insts {
+        %7 = ptr_type @type_u8, @true slice
+        %8 = as @type_bool, %1
+        %14 = if %8 then {
+          %9 = as %7, %5
+          %10 = break_inline result, %9
+        } else {
+          %11 = str "longer"
+          %12 = as %7, %11
+          %13 = break_inline result, %12
+        }
+        %15 = panic %14
+      }
+    }
+    %17 = break_inline result, %16
+  }
+  decl fn "main" pub value {
+    %29 = func "main" {
+      ret type {
+        %18 = break_inline result, @type_void
+      }
+      body insts {
+        %19 = decl_val "crash"
+        %20 = call %19 arg0 {
+          %21 = arg_type %20, 0
+          %22 = as %21, @true
+          %23 = break_inline result, %22
+        } arg1 {
+          %24 = arg_type %20, 1
+          %25 = str "hi"
+          %26 = as %24, %25
+          %27 = break_inline result, %26
+        }
+        %28 = ret_implicit
+      }
+    }
+    %30 = break_inline result, %29
+  }
+}

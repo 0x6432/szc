@@ -1,10 +1,10 @@
-%44 = struct_decl (flags=0) {
+%48 = struct_decl (flags=0) {
   decl const "message" value {
     %0 = str "base"
     %1 = break_inline result, %0
   }
   decl fn "fail" value {
-    %20 = func "fail" {
+    %22 = func "fail" {
       %3 = param "c" type {
         %2 = break_inline result, @type_bool
       }
@@ -27,50 +27,54 @@
           %15 = break_inline result, %14
         }
         %17 = store %6, %16
-        %18 = load %6
-        %19 = panic %18
+        %18 = ptr_type @type_u8, @true slice
+        %19 = load %6
+        %20 = as %18, %19
+        %21 = panic %20
       }
     }
-    %21 = break_inline result, %20
+    %23 = break_inline result, %22
   }
   decl fn "main" pub value {
-    %31 = func "main" {
+    %35 = func "main" {
       ret type {
-        %22 = break_inline result, @type_u8
+        %24 = break_inline result, @type_u8
       }
       body insts {
-        %23 = str "\x00\xf0\x9f\x98\x80\x0a"
-        %26 = if @false then {
-          %24 = panic %23
+        %25 = str "\x00\xf0\x9f\x98\x80\x0a"
+        %30 = if @false then {
+          %26 = ptr_type @type_u8, @true slice
+          %27 = as %26, %25
+          %28 = panic %27
         } else {
-          %25 = break_inline result, @void_value
+          %29 = break_inline result, @void_value
         }
-        %27 = ret_type
-        %28 = int 0
-        %29 = as_return %27, %28
-        %30 = ret %29
+        %31 = ret_type
+        %32 = int 0
+        %33 = as_return %31, %32
+        %34 = ret %33
       }
     }
-    %32 = break_inline result, %31
+    %36 = break_inline result, %35
   }
   decl fn "abort_message" export value {
-    %42 = func "abort_message" export {
-      %34 = param "c" type {
-        %33 = break_inline result, @type_bool
+    %46 = func "abort_message" export {
+      %38 = param "c" type {
+        %37 = break_inline result, @type_bool
       }
       ret type {
-        %35 = break_inline result, @type_noreturn
+        %39 = break_inline result, @type_noreturn
       }
       body insts {
-        %36 = decl_val "fail"
-        %37 = call %36 arg0 {
-          %38 = arg_type %37, 0
-          %39 = as %38, %34
-          %40 = break_inline result, %39
+        %40 = decl_val "fail"
+        %41 = call %40 arg0 {
+          %42 = arg_type %41, 0
+          %43 = as %42, %38
+          %44 = break_inline result, %43
         }
-        %41 = ret_implicit
+        %45 = ret_implicit
       }
     }
-    %43 = break_inline result, %42
+    %47 = break_inline result, %46
   }
 }

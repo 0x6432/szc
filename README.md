@@ -22,8 +22,8 @@ inputs, unbounded companion counters, captures, labels and loop else/values.
 break and continue. Inline/comptime loops and `errdefer`
 remain pending. Explicit `unreachable` aborts through the safety panic runtime;
 noreturn return/cast diagnostics are checked against Zig 0.17. `@panic` accepts
-first-class string-literal values, aliases, variables and runtime choices with
-statically known message lengths. Literal bytes, escapes, Unicode and multiline
+first-class string/byte-array values, byte slices, aliases, variables and runtime
+choices with dynamic message lengths. Literal bytes, escapes, Unicode and multiline
 strings are supported; general slicing and string operations remain pending.
 
 Fixed-size arrays support typed literals, checked indexing, mutable/immutable backing,

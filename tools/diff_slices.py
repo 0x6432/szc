@@ -38,7 +38,20 @@ def sequence_cases():
     yield 'fn f(p: [*]u8) void { for (p) |_| {} } pub fn main() void { f(undefined); }\n'
 
 
+def panic_cases():
+    for ty in ('[]const u8', '[]u8', '[]volatile const u8', '[]allowzero const u8',
+               '*const [2]u8', '*[2]u8', '[2]u8', '[]const u16', '[*]const u8', 'usize'):
+        yield f'fn f(s: {ty}) noreturn {{ @panic(s); }} pub fn main() void {{ f(undefined); }}\n'
+    yield 'fn f(c: bool) noreturn { @panic(if (c) "a" else "longer"); } pub fn main() void { f(false); }\n'
+    yield 'fn f(c: bool, s: []const u8) noreturn { @panic(if (c) s else "longer"); } pub fn main() void { f(false,"hi"); }\n'
+    yield 'const s: []const u8 = "constant"; const x = @panic(s); pub fn main() void { _ = x; }\n'
+    yield 'const s: []const u8 = &[2]u8{65,66}; const x = @panic(s); pub fn main() void { _ = x; }\n'
+    yield 'const s: []const u8 = ""; const x = @panic(s); pub fn main() void { _ = x; }\n'
+    yield 'pub fn main() void { @panic(&.{65,66}); }\n'
+
+
 def cases():
+    yield from panic_cases()
     yield from sequence_cases()
     for child, value in (("u8","7"),("u16","257"),("u0","0"),("void","{}"),("type","u8")):
         for length in (0, 1, 3):

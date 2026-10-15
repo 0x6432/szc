@@ -23,6 +23,18 @@ def binary_case(name, integer_type, operator, lhs, rhs, message="integer overflo
 
 
 def cases():
+    for label, source, message in (
+        ("parameter", 'fn crash(s: []const u8) noreturn { @panic(s); } pub fn main() void { crash("dynamic message"); }', "dynamic message"),
+        ("binary", 'fn crash(s: []const u8) noreturn { @panic(s); } pub fn main() void { var a = [4]u8{65,0,255,66}; a[3] = 67; crash(&a); }', b"A\x00\xffC"),
+        ("global", 'var s: []const u8 = "old"; pub fn main() void { s = "longer message"; @panic(s); }', "longer message"),
+        ("empty", 'fn crash(s: []const u8) noreturn { @panic(s); } pub fn main() void { crash(""); }', ""),
+        ("join_short", 'fn crash(c: bool) noreturn { @panic(if (c) "x" else "long message"); } pub fn main() void { crash(true); }', "x"),
+        ("join_long", 'fn crash(c: bool) noreturn { @panic(if (c) "x" else "long message"); } pub fn main() void { crash(false); }', "long message"),
+        ("mixed_join", 'fn crash(c: bool, s: []const u8) noreturn { @panic(if (c) s else "tail"); } pub fn main() void { crash(true,"borrowed"); }', "borrowed"),
+        ("cleanup", 'fn crash(s: []const u8) noreturn { defer @panic(s); } pub fn main() void { crash("cleanup slice"); }', "cleanup slice"),
+    ):
+        yield "panic_slice_" + label, source + "\n", message
+
     for n, m in ((1, 2), (0, 1)):
         source = ("fn operation(a: []const u8, b: []const u8) void { for (a,b) |_,_| {} } "
                   f"pub fn main() void {{ operation(&[{n}]u8{{" + ','.join(['7']*n)

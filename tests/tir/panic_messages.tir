@@ -23,6 +23,16 @@ fn szc.fail.3: fn (bool) noreturn {
   }
   %10: void = store %1, %4
   %11: *const [4:0]u8 = load %1
-  %12: usize = const 4
-  %13: noreturn = panic %11, %12
+  %12: [*]const u8 = ptr_cast %11
+  %13: *const []const u8 = alloc
+  %14: *[*]const u8 = ptr_cast %13
+  %15: *usize = slice_len_ptr %13
+  %16: void = store %14, %12
+  %17: usize = const 4
+  %18: void = store %15, %17
+  %19: *const [*]const u8 = ptr_cast %13
+  %20: [*]const u8 = load %19
+  %21: *const usize = slice_len_ptr %13
+  %22: usize = load %21
+  %23: noreturn = panic %20, %22
 }

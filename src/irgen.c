@@ -1136,7 +1136,9 @@ builtin_call(GenBody *body, Scope *scope, ResultInfo info, AstNode *node)
 	switch (builtin->builtin) {
 	case BUILTIN_PANIC: {
 		IrPanic payload;
-		payload.message = expr(body, scope, result_none, args[0]);
+		IrPointerType slice = {IR_REF_TYPE_U8, IR_POINTER_SLICE | IR_POINTER_CONST, 0, 0};
+		IrRef type = emit_payload(body, IR_PTR_TYPE, args[0]->offset, APPEND_EXTRA(gen, slice));
+		payload.message = expr(body, scope, result_type(type), args[0]);
 		payload.argument_src = args[0]->offset;
 		return emit_payload(body, IR_PANIC, node->offset, APPEND_EXTRA(gen, payload));
 	}
