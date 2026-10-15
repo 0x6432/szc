@@ -1,0 +1,3 @@
+tests/tir/errors/slice_deref_const.zig:1:68: error: expected type '*[2]u8', found '*const [2]u8'
+pub fn main() void { const s: []const u8 = "hi"; const p: *[2]u8 = &s.*; _ = p; }
+                                                                   ^

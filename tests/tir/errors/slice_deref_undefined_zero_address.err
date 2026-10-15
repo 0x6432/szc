@@ -1,0 +1,3 @@
+tests/tir/errors/slice_deref_undefined_zero_address.zig:1:55: error: cannot dereference undefined value
+pub fn main() void { const s: []u0 = undefined; _ = &s.*; }
+                                                      ^

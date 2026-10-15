@@ -1,0 +1,3 @@
+tests/tir/errors/slice_deref_runtime_address.zig:1:28: error: index syntax required to access runtime-known slice
+fn f(s: []u8) void { _ = &s.*; } pub fn main() void { f(undefined); }
+                           ^

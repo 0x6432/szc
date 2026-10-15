@@ -103,6 +103,7 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
   - [x] **M5.3c2 Array/slice for iteration with value and pointer captures.**
   - [x] **M5.3c3 Inferred unsentinelled array-pointer/slice joins and comparison guards.**
   - [x] **M5.3d1 Borrowed slicing expressions and bounds checks** (explicit/runtime sentinel slices remain NYI).
+  - [x] **M5.3d2 Known slice dereference and borrowed array addresses.**
 - [~] **M5.4 String literals, sentinels, `[*:0]const u8`.** Literal byte values landed in M4.5b; general string/memory operations and sentinel pointer syntax remain pending.
 - [~] **M5.5 Casting builtins**: `@intCast`, `@truncate`, `@ptrCast`, `@intFromPtr`, `@ptrFromInt`, `@bitCast`, `@as`.
   - [x] **M5.5a Pointer address conversion (`@intFromPtr`).**
@@ -157,6 +158,45 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
 ## Completed milestone log
 
 (newest first; each entry: what, limitations, interactions)
+
+### M5.3d2 Known slice dereference and borrowed array addresses
+- **What**: IR_DEREF/REF_DEREF accept known descriptors. `&s.*` preserves borrowed
+  backing and pointer qualifiers/alignment; direct loads follow Zig's actual
+  constant/runtime fallback rules. Runtime-known descriptors retain the upstream
+  indexing-required diagnostic. No new IR, TIR or codegen instruction is needed.
+- **Grounding**: Sema.validateDeref, analyzeLoad and maybeDerefSliceAsArray plus
+  test/behavior/slice.zig. Direct one-possible-value children fold to an element,
+  not an array; immutable backing gives an array, while mutable global backing
+  (even empty views) falls back to an element load.
+  Explicit `(&s.*).*` copies an array view when backing contents are runtime-known.
+- **Coverage**: native constant/type/byte/zero-bit windows, borrowed mutation,
+  alignment and private array snapshots; three stage goldens, five errors and
+  two fuzz seeds. The semantic matrix tests result types as well as acceptance,
+  including rejected strengthening/discarding of pointer attributes.
+- **Reference quirks**: official Zig crashes on undefined zero-bit address
+  cancellation, and its native backend rejects the nonempty mutable fallback
+  with genSetReg's size error. szc safely diagnoses the invalid address. Mutable
+  fallback types are checked with actual Zig sema, while native reload behavior
+  lives in the explicitly szc-only suite. Neither reference failure counts as a
+  passing native comparison; see docs/IR.md and the dedicated test comments.
+- **Validation**: corrected immutable /data/slice-deref-guard-final GCC/Clang
+  Werror ASan/UBSan builds pass 632 unit checks/920 goldens, full 84 ordinary/
+  generated + three explicitly scoped native programs, 16 driver checks, all
+  C/alignment/ABI/volatile suites and 213 safety cases. Both compilers execute
+  the two slice programs and four C descriptor variants against actual Zig.
+  All 87 dereference + 204 slicing + 252 existing slice semantic cases match
+  actual Zig. Optimized GCC passes 84 ordinary + three scoped native programs
+  and 213 safety cases; 949 unchanged array/layout cases pass source-hash-verified
+  replay of the previously reference-validated oracle (not fresh Zig executions).
+  Fresh four-stage 60-second fuzzers execute 1825141/56471/76535/88773 inputs;
+  both compiler builds replay 20000 mutations/stage (irgen 53/sema 109 seeds).
+  Integrated compiler sources match both corrected immutable snapshots exactly.
+  Older /data/slice-deref-final runs predate the empty-mutable fallback correction
+  and are superseded, not final evidence.
+- **Limits/next**: sentinel descriptors/slicing, writable descriptor fields,
+  volatile whole-descriptor copies and inline/comptime iteration remain pending.
+  The dense one-value array constructor respects existing count/budget limits.
+  M5.3 stays partial and Q6 remains deferred to M10.2.
 
 ### M5.3d1 Borrowed slicing expressions and bounds checks
 - **What**: array, array-pointer, descriptor, many-pointer and bounded single-item

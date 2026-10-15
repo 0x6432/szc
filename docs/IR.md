@@ -570,3 +570,32 @@ borrow storage and reuse descriptor/aggregate ABI transport; no backing copy is 
 A zero sentinel is inherited only at the original logical end. Known-length
 sentinel array views work; runtime sentinel descriptors and explicit sentinel
 slicing deliberately reject until their type/checking support is implemented.
+
+
+### Known slice dereference and address cancellation
+
+IR_DEREF and IR_REF_DEREF accept a comptime-known descriptor. Runtime descriptors
+reject with "index syntax required to access runtime-known slice", including a
+runtime slice whose bounds happened to be equal. `&s.*` yields an array pointer
+with the descriptor's known length and element pointer qualifiers/alignment;
+it borrows the same storage, not a new immutable descriptor snapshot.
+
+Direct `s.*` follows actual Zig 0.17.0 analyzeLoad/maybeDerefSliceAsArray rules:
+- A supported one-possible-value element (void, u0, empty/nested zero-bit array)
+  folds to that element value before conversion to an array. Dense construction
+  remains subject to the existing element budget; it is never represented as undef.
+- Otherwise known immutable backing produces an array value of the slice length.
+- Undefined data pointers do not become valid by having zero length.
+- Known descriptors of mutable global backing (even empty views) follow
+  analyzeLoad's runtime fallback type: a load of the element, rather than an
+  array of the slice length.
+  To explicitly copy the whole array view, use `(&s.*).*`.
+
+Two official backend failures are scoped separately: Zig 0.17.0 crashes (-11)
+for `&undefined_zero_bit_slice.*`, so szc emits an undefined-dereference error;
+the reference semantic matrix never treats that crash as an accepted case.
+For nonempty mutable backing, its sema infers an element value but native emission
+reports "genSetReg called with a value larger than dst_reg". The inferred type is
+reference-checked without native emission; native reload behavior is separately
+covered by tests/run_szc/slice_deref_mutable.zig, never claimed as a successful
+reference execution. Known immutable/address/explicit-copy cases execute against Zig.

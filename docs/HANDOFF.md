@@ -19,6 +19,34 @@ Read this first when resuming work (the sandbox resets often).
 
 ## Current state
 
+- Latest follow-on: M5.3d2 known slice dereference/address cancellation complete.
+  Corrected /data/slice-deref-guard-final GCC/Clang Werror ASan/UBSan snapshots
+  match integrated compiler sources exactly: 632 units/920 goldens; full native
+  84 ordinary/generated + three scoped programs; 16 driver checks, all C/ABI/
+  alignment/volatile suites, 213 safety cases. Both compilers reference-check
+  slicing.zig, slice_deref.zig and four C descriptor variants. Actual-reference
+  matrices pass 87 dereference + 204 slicing + 252 previous slice cases.
+  Optimized GCC passes 84 + three native/213 safety cases; 949 unchanged array/
+  layout cases replay against the source-hash-verified actual-reference oracle.
+  Four fresh 60-second fuzzers execute 1825141/56471/76535/88773 inputs;
+  both builds replay 20000 mutations/stage (53 irgen/109 sema seeds). Logs use
+  /data/slice-deref-guard-final-*. Earlier /data/slice-deref-final is superseded.
+- Dereference caveats: &s.* gives a borrowed array pointer only when the descriptor
+  is known. Direct s.* follows actual analyzeLoad behavior: OPV child -> element,
+  immutable contents -> array, mutable-global contents (even empty views) ->
+  runtime element fallback. Use (&s.*).* for explicit array copies. Runtime
+  descriptors reject. /data/slice-deref-official-quirks.log proves upstream's
+  SIGSEGV on undefined-zero-bit address cancellation and genSetReg backend error
+  on mutable element fallback. The 87-case matrix excludes the crash cases;
+  only sema types are reference-checked for the latter, with native execution
+  in tests/run_szc/slice_deref_mutable.zig. Never claim these reference bugs pass.
+- M5.3d1 was pushed as db49ca9; CI run 38775924855 has passed GCC/Clang/fuzz,
+  with differential still running at last check. Next: sentinel descriptors/
+  slicing and writable descriptor fields, then remaining memory integration;
+  no build-Zig question before M10.2. A separate bounded CI-sharding improvement
+  is prepared in /data/ci-sharded.yml; coverage validation is in
+  /data/ci-sharding-validation.log (all 14 semantic + native/parser suites).
+
 - Latest checkpoint: M5.3d1 borrowed slicing is complete. /data/slicing-final
   immutable GCC/Clang Werror ASan/UBSan snapshots match integrated compiler
   sources exactly: 632 units/912 goldens, 83 ordinary/generated + two scoped
@@ -34,11 +62,6 @@ Read this first when resuming work (the sandbox resets often).
   Many-pointer omitted ends return advanced many pointers. Constant array/byte
   views preserve root/offset provenance. Known inherited zero sentinels work;
   explicit sentinel syntax and runtime sentinel descriptors intentionally reject.
-- Follow-on underway in /data/slice-deref-work (not integrated in this checkpoint):
-  known slice dereference/address cancellation. Ground in Sema.validateDeref,
-  analyzeLoad and maybeDerefSliceAsArray; zero-bit child loads and mutable global
-  backing have surprising actual 0.17.0 semantics. Do not assume every s.* yields
-  an array. Keep all tests valid and compare actual value types, not just acceptance.
 - CI f97e200/run 38771830468: GCC, Clang and fuzz passed; differential failed.
   /data/ci-slice-join-differential.log shows 120-second official Zig divCeil i64
   compile timeout, then szc divCeil u64 compile and divExact i8 execution timeouts,
@@ -81,7 +104,7 @@ Read this first when resuming work (the sandbox resets often).
   Logs use the same prefix; /data/slice-join-guard-diff.log is the source-identical
   252-case matrix. Older /data/slice-join-final runs were superseded by the equality
   guard correction and must not be presented as final validation.
-- Next implementation after M5.3d1: known slice dereference, then sentinel slices/strings and
+- Next implementation after M5.3d2: sentinel slices/strings and
   remaining descriptor-field/volatile integration. Read actual Zig Sema slicing
   rules first: known bounds may produce array pointers, not slices. Preserve
   root/subobject provenance rather than loading a copied view. Do not silently

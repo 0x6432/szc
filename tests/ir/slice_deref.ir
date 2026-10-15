@@ -1,0 +1,59 @@
+%44 = struct_decl (flags=0) {
+  decl var "a" type {
+    %0 = int 2
+    %1 = as @type_usize, %0
+    %2 = array_type %1, @type_u8
+    %3 = as @type_type, %2
+    %4 = break_inline result, %3
+  } value {
+    %5 = decl_type
+    %6 = array_elem_type %5
+    %7 = int 7
+    %8 = as %6, %7
+    %9 = int 9
+    %10 = as %6, %9
+    %11 = array_init %5, %8, %10
+    %12 = as %5, %11
+    %13 = break_inline result, %12
+  }
+  decl const "s" type {
+    %14 = ptr_type @type_u8, @false slice
+    %15 = as @type_type, %14
+    %16 = break_inline result, %15
+  } value {
+    %17 = decl_type
+    %18 = decl_ref "a"
+    %19 = as %17, %18
+    %20 = break_inline result, %19
+  }
+  decl fn "main" pub value {
+    %42 = func "main" {
+      ret type {
+        %21 = break_inline result, @type_u8
+      }
+      body insts {
+        %22 = decl_val "s"
+        %23 = ref_deref %22
+        %24 = deref %23
+        %25 = decl_val "s"
+        %26 = ref_deref %25
+        %27 = ref %26
+        %28 = array_base_ptr %27
+        %29 = int 0
+        %30 = as @type_usize, %29
+        %31 = array_index_ptr %28, %30
+        %32 = int 3
+        %33 = elem_type %31
+        %34 = as %33, %32
+        %35 = store %31, %34
+        %36 = ret_type
+        %37 = int 0
+        %38 = as @type_usize, %37
+        %39 = array_index %24, %38
+        %40 = as_return %36, %39
+        %41 = ret %40
+      }
+    }
+    %43 = break_inline result, %42
+  }
+}

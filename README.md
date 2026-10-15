@@ -35,7 +35,9 @@ array/string coercions, storage and internal calls/returns. Differently sized
 unsentinelled array pointers can infer a slice at runtime joins. Array/slice loops
 support values and pointer captures. Slicing checks bounds and returns array pointers
 for constant bounds, descriptors for dynamic bounds, and many pointers for open
-many-pointer tails. Integer ABI sizes and pointer strides include
+many-pointer tails. Known descriptors support borrowed `&slice.*` array
+addresses and direct dereference following Zig 0.17.0 constant-load rules
+(see docs/IR.md for zero-bit and mutable-backing behavior). Integer ABI sizes and pointer strides include
 widths beyond 64 bits, but runtime
 wide-integer values/arithmetic are still unsupported. Structs, sentinel slices, modules/imports,
 generic functions and the full comptime interpreter remain pending; szc does not yet

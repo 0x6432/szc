@@ -3625,6 +3625,7 @@ pointer_operand(Block *block, Operand operand, uint32_t src)
 
 static Operand constant_array_element(Block *block, Operand base, TypeArray array, uint64_t index, uint32_t src);
 static Operand load_offset_pointer(Block *block, Operand pointer, uint32_t src);
+static TypeId array_type_id(Sema *sema, TypeId child, uint64_t length, bool sentinel_zero);
 
 /* Immutable declaration loads resolve their initializer; mutable contents need runtime. */
 static Operand
@@ -3749,6 +3750,46 @@ load_pointer(Block *block, Operand pointer, uint32_t src)
 	return runtime_operand(child, emit_tir_un(block, pointer_type.is_volatile ? TIR_LOAD_VOLATILE : TIR_LOAD, child, src, materialize(block, pointer, src)));
 }
 
+/* Supported one-possible-value children follow Zig analyzeLoad's early fold. */
+static bool
+type_has_one_value(const Sema *sema, TypeId type)
+{
+	if (type == T_VOID || (is_int(sema, type) && sema->types[type].as.integer.bits == 0))
+		return true;
+	if (sema->types[type].kind != TYPE_ARRAY)
+		return false;
+	TypeArray array = sema->types[type].as.array;
+	return array.length == 0 || type_has_one_value(sema, array.child);
+}
+
+static Operand
+one_value_operand(Block *block, TypeId type, uint32_t src)
+{
+	Sema *sema = block->sema;
+	if (type == T_VOID)
+		return void_operand(sema);
+	if (is_int(sema, type))
+		return comptime_operand(type, value_int_u64(&sema->values, type, 0));
+	TypeArray array = sema->types[type].as.array;
+	uint64_t extra = array.sentinel_zero ? 1u : 0u;
+	if (array.length > UINT32_MAX - extra) {
+		sema_error(block, src, "not supported by szc yet: array constant with this many elements");
+		return operand_none;
+	}
+	uint32_t count = (uint32_t)(array.length + extra);
+	if (!reserve_array_elements(block, count, src))
+		return operand_none;
+	Operand child = array.length == 0 ? operand_none : one_value_operand(block, array.child, src);
+	if (array.length != 0 && child.kind == OPERAND_NONE)
+		return operand_none;
+	ValueId *items = ARENA_ARRAY(sema->arena, ValueId, count);
+	for (uint32_t i = 0; i < (uint32_t)array.length; i++)
+		items[i] = child.value;
+	if (array.sentinel_zero)
+		items[count - 1] = value_int_u64(&sema->values, array.child, 0);
+	return comptime_operand(type, value_array(&sema->values, type, items, count));
+}
+
 /* Validate even &p.*: cancelling the address must not hide an invalid dereference. */
 static Operand
 analyze_deref(Block *block, const IrInst *inst)
@@ -3762,6 +3803,49 @@ analyze_deref(Block *block, const IrInst *inst)
 		return operand_none;
 	}
 	TypePointer type = sema->types[pointer.type].as.pointer;
+	if (type.size == POINTER_SLICE) {
+		if (pointer.kind != OPERAND_COMPTIME) {
+			sema_error(block, inst->src, "index syntax required to access runtime-known slice");
+			return operand_none;
+		}
+		/* Zig analyzeLoad returns an element's one possible value before
+		 * converting a known slice to an array pointer. */
+		if (inst->op == IR_DEREF && type_has_one_value(sema, type.child))
+			return one_value_operand(block, type.child, inst->src);
+		if (operand_is_undefined(block, pointer)) {
+			sema_error(block, inst->src, "cannot dereference undefined value");
+			return operand_none;
+		}
+		Operand length = slice_field(block, pointer, true, inst->src);
+		if (operand_is_undefined(block, length)) {
+			sema_error(block, inst->src, "cannot dereference slice with undefined length");
+			return operand_none;
+		}
+		uint64_t count = bigint_to_u64_bits(&operand_value(block, length)->as.integer);
+		Operand data = slice_field(block, pointer, false, inst->src);
+		if (inst->op == IR_DEREF && operand_is_undefined(block, data)) {
+			sema_error(block, inst->src, "use of undefined value here causes illegal behavior");
+			return operand_none;
+		}
+		/* analyzeLoad's runtime fallback loads the slice element type, not
+		 * an array. A known descriptor need not have known backing contents. */
+		if (inst->op == IR_DEREF && mutable_global_pointer(block, data)) {
+			Type element_pointer = sema->types[data.type];
+			element_pointer.as.pointer.size = POINTER_ONE;
+			TypeId element_pointer_type = type_intern(sema, &element_pointer);
+			Operand address = comptime_operand(element_pointer_type,
+				value_pointer_cast(&sema->values, element_pointer_type, data.value));
+			return load_pointer(block, address, inst->src);
+		}
+		Type array_pointer = sema->types[pointer.type];
+		array_pointer.as.pointer.size = POINTER_ONE;
+		array_pointer.as.pointer.child = array_type_id(sema, type.child, count, false);
+		TypeId array_pointer_type = type_intern(sema, &array_pointer);
+		pointer = comptime_operand(array_pointer_type, operand_is_undefined(block, data)
+			? value_undefined(&sema->values, array_pointer_type)
+			: value_pointer_cast(&sema->values, array_pointer_type, data.value));
+		return inst->op == IR_REF_DEREF ? pointer : load_pointer(block, pointer, inst->src);
+	}
 	if (type.size != POINTER_ONE) {
 		sema_error(block, inst->src, "index syntax required for unknown-length pointer type '%s'", sema_type_name(sema, pointer.type));
 		return operand_none;

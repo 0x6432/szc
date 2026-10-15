@@ -1,0 +1,17 @@
+function w $szc.main.1() {
+@start
+	%t0 =l alloc4 2
+	call $memmove(l %t0, l $szc.g.1, l 2)
+	storeb 3, $szc.g.1
+	%e7_offset =l mul 0, 1
+	%t7 =l add %t0, %e7_offset
+	%t8 =w loadub %t7
+	ret %t8
+}
+
+data $szc.g.1 = align 1 { b 7, b 9 }
+export function w $main() {
+@start
+	%status =w call $szc.main.1()
+	ret %status
+}
