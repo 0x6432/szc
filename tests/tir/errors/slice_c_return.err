@@ -1,0 +1,3 @@
+tests/tir/errors/slice_c_return.zig:1:8: error: return type '[]const u8' not allowed in function with calling convention 'x86_64_sysv'
+export fn bad() []const u8 { return "hi"; } pub fn main() void {}
+       ^

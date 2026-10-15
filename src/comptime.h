@@ -37,6 +37,7 @@ typedef enum ValueKind {
 	VALUE_REF,	/* immutable address of an interned value */
 	VALUE_PTR_CAST,	/* pointer qualification preserving the original byte backing */
 	VALUE_ELEMENT_PTR,	/* subobject path into real backing, never a copied element */
+	VALUE_SLICE,	/* pointer/usize length, not the pointee contents */
 	VALUE_ARRAY,	/* immutable aggregate of interned element IDs */
 	VALUE_BYTES,	/* immutable bytes; length excludes the zero sentinel */
 	VALUE_UNDEFINED,	/* `undefined` of any type */
@@ -51,6 +52,11 @@ typedef struct ArrayValue {
 	const ValueId *items;
 	uint32_t count;
 } ArrayValue;
+
+typedef struct SliceValue {
+	ValueId pointer;
+	ValueId length;
+} SliceValue;
 
 typedef struct ElementPointer {
 	ValueId base;
@@ -76,6 +82,7 @@ typedef struct Value {
 		GlobalId global;
 		ByteString bytes;
 		ArrayValue array;
+		SliceValue slice;
 		ConstObjectId object;
 		ElementPointer element;
 		ValueId pointer;
@@ -113,6 +120,7 @@ ValueId value_ref(ValueTable *table, TypeId type, ValueId pointee, uint32_t iden
 ValueId value_element_pointer(ValueTable *table, TypeId type, ValueId base, uint64_t index, uint64_t offset, bool logical);
 ValueId value_pointer_cast(ValueTable *table, TypeId type, ValueId pointer);
 PointerAddress value_pointer_address(const ValueTable *table, ValueId id);
+ValueId value_slice(ValueTable *table, TypeId type, ValueId pointer, ValueId length);
 ValueId value_array(ValueTable *table, TypeId type, const ValueId *items, uint32_t count);
 ValueId value_bytes(ValueTable *table, TypeId type, const uint8_t *data, uint32_t length);
 ValueId value_void(ValueTable *table, TypeId void_type);

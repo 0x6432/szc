@@ -483,6 +483,28 @@ test_array_values(void)
 }
 
 static void
+test_slice_values(void)
+{
+	Arena arena;
+	arena_init(&arena);
+	ValueTable table;
+	value_table_init(&table, &arena);
+	ValueId pointer = value_undefined(&table, 10);
+	ValueId length = value_int_u64(&table, 11, 3);
+	ValueId slice = value_slice(&table, 12, pointer, length);
+	CHECK(value_get(&table, slice)->kind == VALUE_SLICE);
+	CHECK(value_get(&table, slice)->as.slice.pointer == pointer);
+	CHECK(value_get(&table, slice)->as.slice.length == length);
+	CHECK(value_slice(&table, 12, pointer, length) == slice);
+	CHECK(value_slice(&table, 13, pointer, length) != slice);
+	CHECK(value_slice(&table, 12, pointer, value_int_u64(&table, 11, 4)) != slice);
+	for (uint32_t i = 0; i < 2048; i++)
+		value_int_u64(&table, 11, i);
+	CHECK(value_slice(&table, 12, pointer, length) == slice);
+	arena_free(&arena);
+}
+
+static void
 test_array_layout(void)
 {
 	Arena arena;
@@ -610,6 +632,7 @@ main(void)
 	test_element_pointers();
 	test_array_values();
 	test_array_layout();
+	test_slice_values();
 	test_wide_integer_layout();
 	test_binary_diagnostics();
 

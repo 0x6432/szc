@@ -548,6 +548,10 @@ value_hash(const Value *value)
 		hash = hash_mix(hash, (uint32_t)(value->as.element.offset >> 32));
 		hash = hash_mix(hash, value->as.element.logical ? 1u : 0u);
 		break;
+	case VALUE_SLICE:
+		hash = hash_mix(hash, value->as.slice.pointer);
+		hash = hash_mix(hash, value->as.slice.length);
+		break;
 	case VALUE_ARRAY:
 		hash = hash_mix(hash, value->as.array.count);
 		for (uint32_t i = 0; i < value->as.array.count; i++)
@@ -591,6 +595,8 @@ value_equal(const Value *a, const Value *b)
 			&& a->as.element.index == b->as.element.index
 			&& a->as.element.offset == b->as.element.offset
 			&& a->as.element.logical == b->as.element.logical;
+	case VALUE_SLICE:
+		return a->as.slice.pointer == b->as.slice.pointer && a->as.slice.length == b->as.slice.length;
 	case VALUE_ARRAY:
 		return a->as.array.count == b->as.array.count && (a->as.array.count == 0
 			|| memcmp(a->as.array.items, b->as.array.items, (size_t)a->as.array.count * sizeof(ValueId)) == 0);
@@ -738,6 +744,15 @@ value_int_u64(ValueTable *table, TypeId type, uint64_t integer)
 	big.limb_count = limbs[1] != 0 ? 2 : limbs[0] != 0 ? 1 : 0;
 	big.limbs = limbs;
 	return value_int(table, type, &big);
+}
+
+ValueId
+value_slice(ValueTable *table, TypeId type, ValueId pointer, ValueId length)
+{
+	Value value = make_value(VALUE_SLICE, type);
+	value.as.slice.pointer = pointer;
+	value.as.slice.length = length;
+	return value_intern(table, &value);
 }
 
 ValueId

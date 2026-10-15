@@ -1,0 +1,3 @@
+tests/tir/errors/slice_bounds.zig:1:55: error: index 2 outside slice of length 2
+pub fn main() void { const s: []const u8 = "hi"; _ = s[2]; }
+                                                      ^

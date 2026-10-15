@@ -99,6 +99,7 @@ e2e-test: build/asan/szc $(GENERATED_RUN_TESTS)
 	python3 tests/run_many_pointer_storage.py build/asan/szc
 	python3 tests/run_pointer_addresses.py build/asan/szc
 	python3 tests/run_wide_pointer_layout.py build/asan/szc
+	python3 tests/run_slice_storage.py build/asan/szc
 	python3 tests/run_function_abi.py build/asan/szc
 	python3 tests/run_pointer_alignment.py build/asan/szc
 	python3 tests/run_local_alignment.py build/asan/szc

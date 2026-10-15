@@ -516,3 +516,15 @@ multiply child representation bits (u257 -> 257 bits, ABI size 48 bytes). Child
 representation eligibility is checked even for empty arrays: [0]type has byte
 size zero but no bit size. A zero array dimension suppresses multiplication
 overflow only after this eligibility check. Pointer representations remain 64 bits.
+
+## Slice descriptors
+
+`ptr_type` now carries IR_POINTER_SLICE independently of single/many pointer flags.
+VALUE_SLICE stores interned pointer/usize components. Runtime descriptor values
+are OPERAND_AGGREGATE snapshots with 16-byte backing: offset 0 is the many pointer,
+offset 8 the usize length, ABI alignment 8. ARRAY_COPY is an overlap-safe aggregate
+copy shared by arrays and slices. SLICE_LEN_PTR addresses the second word;
+INDEX_CHECK guards index < length before many-pointer address calculation. Slice
+values must never materialize as scalar pointer temporaries. Internal arguments
+use descriptor pointers and callee snapshots; results use the trailing destination
+parameter. Elements remain borrowed and mutable through mutable-element slices.

@@ -1,0 +1,57 @@
+function w $szc.main.1() {
+@start
+	%t1 =l alloc8 16
+	call $szc.create.3(l $szc.g.1, l %t1)
+	%t3 =l copy %t1
+	%t4 =l copy %t3
+	%t6 =w call $szc.read.2(l %t4, l 1)
+	%t6 =w and %t6, 255
+	ret %t6
+}
+
+function w $szc.read.2(l %t0, l %t3) {
+@start
+	%t1 =l alloc8 16
+	call $memmove(l %t1, l %t0, l 16)
+	%t4 =l add %t1, 8
+	%t5 =l loadl %t4
+	%t6 =l copy %t1
+	%t7 =l loadl %t6
+	%g8_index =w cugel %t3, %t5
+	jnz %g8_index, @g8_index_panic, @g8_index_ok
+@g8_index_panic
+	call $szc.panic.7()
+	hlt
+@g8_index_ok
+	%e9_offset =l mul %t3, 1
+	%t9 =l add %t7, %e9_offset
+	%t10 =w loadub %t9
+	ret %t10
+}
+
+function $szc.create.3(l %t0, l %t1) {
+@start
+	%t3 =l alloc8 16
+	%t2 =l copy %t0
+	%t4 =l copy %t3
+	%t5 =l add %t3, 8
+	storel %t2, %t4
+	storel 2, %t5
+	call $memmove(l %t1, l %t3, l 16)
+	ret
+}
+
+data $szc.g.1 = align 1 { b 7, b 9 }
+data $szc.panic.msg.7 = { b "index out of bounds\n", b 0 }
+function $szc.panic.7() {
+@start
+	call $write(w 2, l $szc.panic.msg.7, l 20)
+	call $abort()
+	hlt
+}
+
+export function w $main() {
+@start
+	%status =w call $szc.main.1()
+	ret %status
+}

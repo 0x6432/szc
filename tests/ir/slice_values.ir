@@ -1,0 +1,97 @@
+%65 = struct_decl (flags=0) {
+  decl var "a" type {
+    %0 = int 2
+    %1 = as @type_usize, %0
+    %2 = array_type %1, @type_u8
+    %3 = as @type_type, %2
+    %4 = break_inline result, %3
+  } value {
+    %5 = decl_type
+    %6 = array_elem_type %5
+    %7 = int 7
+    %8 = as %6, %7
+    %9 = int 9
+    %10 = as %6, %9
+    %11 = array_init %5, %8, %10
+    %12 = as %5, %11
+    %13 = break_inline result, %12
+  }
+  decl fn "create" value {
+    %28 = func "create" {
+      %21 = param "p" type {
+        %14 = int 2
+        %15 = as @type_usize, %14
+        %16 = array_type %15, @type_u8
+        %17 = as @type_type, %16
+        %18 = ptr_type %17, @false
+        %19 = as @type_type, %18
+        %20 = break_inline result, %19
+      }
+      ret type {
+        %22 = ptr_type @type_u8, @false slice
+        %23 = as @type_type, %22
+        %24 = break_inline result, %23
+      }
+      body insts {
+        %25 = ret_type
+        %26 = as_return %25, %21
+        %27 = ret %26
+      }
+    }
+    %29 = break_inline result, %28
+  }
+  decl fn "read" value {
+    %42 = func "read" {
+      %33 = param "s" type {
+        %30 = ptr_type @type_u8, @true slice
+        %31 = as @type_type, %30
+        %32 = break_inline result, %31
+      }
+      %35 = param "n" type {
+        %34 = break_inline result, @type_usize
+      }
+      ret type {
+        %36 = break_inline result, @type_u8
+      }
+      body insts {
+        %37 = ret_type
+        %38 = as @type_usize, %35
+        %39 = array_index %33, %38
+        %40 = as_return %37, %39
+        %41 = ret %40
+      }
+    }
+    %43 = break_inline result, %42
+  }
+  decl fn "main" pub value {
+    %63 = func "main" {
+      ret type {
+        %44 = break_inline result, @type_u8
+      }
+      body insts {
+        %45 = ret_type
+        %46 = decl_val "read"
+        %47 = call %46 arg0 {
+          %48 = arg_type %47, 0
+          %49 = decl_val "create"
+          %50 = call %49 arg0 {
+            %51 = arg_type %50, 0
+            %52 = decl_ref "a"
+            %53 = as %51, %52
+            %54 = break_inline result, %53
+          }
+          %55 = as %48, %50
+          %56 = break_inline result, %55
+        } arg1 {
+          %57 = arg_type %47, 1
+          %58 = int 1
+          %59 = as %57, %58
+          %60 = break_inline result, %59
+        }
+        %61 = as_return %45, %47
+        %62 = ret %61
+      }
+    }
+    %64 = break_inline result, %63
+  }
+}

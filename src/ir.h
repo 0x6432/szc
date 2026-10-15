@@ -273,6 +273,7 @@ typedef enum IrPointerFlags {
 	IR_POINTER_ALLOWZERO = 0x2,
 	IR_POINTER_VOLATILE = 0x4,
 	IR_POINTER_MANY = 0x8,
+	IR_POINTER_SLICE = 0x10,
 } IrPointerFlags;
 
 typedef struct IrPointerType {

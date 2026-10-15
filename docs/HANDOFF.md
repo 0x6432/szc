@@ -19,6 +19,21 @@ Read this first when resuming work (the sandbox resets often).
 
 ## Current state
 
+- Latest checkpoint: M5.3c1 slice descriptors, coercions, `.ptr`/`.len`, checked
+  indexing, nested storage, globals, internal ABI and joins. Final immutable
+  /data/slice-descriptor-final snapshots pass GCC/Clang Werror ASan/UBSan 632
+  units/877 goldens, 949 array/layout + 113 slice reference cases, full native/
+  reference 80 ordinary/generated + two scoped programs, 16 driver checks,
+  all C/alignment/volatile suites, 190 safety cases, optimized checks and four
+  60-second fuzzers plus 20000 mutations/stage. Logs share the snapshot prefix.
+- In progress: M5.3c2 array/slice `for`, including pointer captures. Isolated
+  /data/slice-for-work matches 164 reference semantic cases and targeted native
+  execution. Final immutable validation is underway in /data/slice-iteration-final.
+  Array-value operands snapshot; pointer-to-array operands borrow live elements;
+  slice operands snapshot only their descriptor. General slicing remains NYI.
+- CI update: e868458/run 38755100196 completed successfully, including differential.
+  efbe1f6 GCC/Clang/fuzz passed; differential was still running at the latest check. Earlier timeout evidence below
+  remains historical, not a claim that the latest CI is failing.
 - Latest local checkpoints: M5.5a @intFromPtr passed all 812 reference semantic
   cases and full local validation; M9.4a @sizeOf/@alignOf and exact wide-integer ABI
   sizes pass 897 reference cases, 625 units/853 goldens, native/C checks and fresh

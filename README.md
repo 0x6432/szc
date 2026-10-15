@@ -24,14 +24,17 @@ remain pending. Explicit `unreachable` aborts through the safety panic runtime;
 noreturn return/cast diagnostics are checked against Zig 0.17. `@panic` accepts
 first-class string-literal values, aliases, variables and runtime choices with
 statically known message lengths. Literal bytes, escapes, Unicode and multiline
-strings are supported; general runtime slices and string operations remain pending.
+strings are supported; general slicing and string operations remain pending.
 
 Fixed-size arrays support typed literals, checked indexing, mutable/immutable backing,
 owned snapshots, function arguments/returns and scalar-element mutation. Single/many
 pointers support qualifiers, array-to-many coercion, borrowed indexing, element offsets,
 differences and `@intFromPtr` addresses. `@sizeOf`/`@alignOf`/`@bitSizeOf` query supported layouts and representations;
-integer ABI sizes and pointer strides include widths beyond 64 bits, but runtime
-wide-integer values/arithmetic are still unsupported. Structs, slices, modules/imports,
+unsentinelled slices have pointer/length descriptors, `.ptr`/`.len`, indexing,
+array/string coercions, storage and internal calls/returns. Slicing syntax and
+sequence iteration remain pending. Integer ABI sizes and pointer strides include
+widths beyond 64 bits, but runtime
+wide-integer values/arithmetic are still unsupported. Structs, sentinel slices, modules/imports,
 generic functions and the full comptime interpreter remain pending; szc does not yet
 bootstrap Zig.
 

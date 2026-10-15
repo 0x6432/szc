@@ -23,6 +23,17 @@ def binary_case(name, integer_type, operator, lhs, rhs, message="integer overflo
 
 
 def cases():
+    for child, value in (("u8", "7"), ("u0", "0"), ("void", "{}")):
+        # Reads of one-possible-value children may fold upstream without a guard;
+        # address formation must retain the slice bounds check for every child.
+        source = (f"fn operation(s: []const {child}, n: usize) void {{ _ = &s[n]; }} "
+                  f"pub fn main() void {{ const a = [2]{child}{{{value},{value}}}; operation(&a,2); }}\n")
+        yield "slice_address_"+child, source, "index out of bounds"
+    for operation in ("_ = s[n];", "s[n] = 3;"):
+        source = ("fn operation(s: []u8, n: usize) void { "+operation+" } "
+                  "pub fn main() void { var a = [2]u8{7,9}; operation(&a,2); }\n")
+        yield "slice_"+("read" if operation.startswith("_") else "store"), source, "index out of bounds"
+
     for label, operation in (("read", "_ = a[n];"), ("store", "a[n] = 3;"),
                              ("address", "_ = &a[n];"), ("nested", "_ = a[0][n];")):
         ty = "[2][2]u8" if label == "nested" else "[2]u8"

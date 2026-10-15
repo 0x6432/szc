@@ -880,12 +880,12 @@ alignment_body(IrGen *gen, Scope *scope, AstNode *node)
 static IrRef
 pointer_type(GenBody *body, Scope *scope, AstPointerType *node)
 {
-	if ((node->size != AST_POINTER_ONE && node->size != AST_POINTER_MANY) || node->sentinel != NULL || node->bit_offset != NULL || node->host_size != NULL || node->addrspace != NULL) {
+	if ((node->size != AST_POINTER_ONE && node->size != AST_POINTER_MANY && node->size != AST_POINTER_SLICE) || node->sentinel != NULL || node->bit_offset != NULL || node->host_size != NULL || node->addrspace != NULL) {
 		unsupported(body, &node->base, "pointer sizes other than single pointers or pointer attributes");
 		return IR_REF_VOID_VALUE;
 	}
 	IrRef child = type_expr(body, scope, node->child);
-	IrPointerType payload = {child, node->size == AST_POINTER_MANY ? IR_POINTER_MANY : 0, 0, 0};
+	IrPointerType payload = {child, node->size == AST_POINTER_MANY ? IR_POINTER_MANY : node->size == AST_POINTER_SLICE ? IR_POINTER_SLICE : 0, 0, 0};
 	if (node->align != NULL) {
 		payload.alignment_body = alignment_body(body->gen, scope, node->align);
 		payload.alignment_src = node->align->offset;
@@ -2624,6 +2624,8 @@ dump_inst(const IrDumper *dumper, IrInstIndex index, uint32_t depth)
 		dump_ref(dumper, (payload.flags & IR_POINTER_CONST) != 0 ? IR_REF_TRUE : IR_REF_FALSE);
 		if ((payload.flags & IR_POINTER_MANY) != 0)
 			fputs(" many", out);
+		if ((payload.flags & IR_POINTER_SLICE) != 0)
+			fputs(" slice", out);
 		if ((payload.flags & IR_POINTER_ALLOWZERO) != 0)
 			fputs(" allowzero", out);
 		if ((payload.flags & IR_POINTER_VOLATILE) != 0)

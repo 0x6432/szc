@@ -30,7 +30,7 @@ typedef enum OperandKind {
 	OPERAND_NONE,	/* an error was reported; use as "poison" */
 	OPERAND_COMPTIME,	/* value is known */
 	OPERAND_RUNTIME,	/* inst is a typed-IR instruction */
-	OPERAND_AGGREGATE,	/* array value owned by a private snapshot; inst is its pointer */
+	OPERAND_AGGREGATE,	/* array/slice value owned by a private snapshot; inst is its pointer */
 	OPERAND_PENDING_CALL,	/* a call whose arguments are being analysed (type = callee's fn type) */
 	OPERAND_NO_RESULT_TYPE,	/* arg_type of a variadic argument: no coercion */
 } OperandKind;
@@ -623,6 +623,26 @@ sema_type_align(const Sema *sema, TypeId type_id)
 	return (uint32_t)size;
 }
 
+static bool
+is_slice(const Sema *sema, TypeId type)
+{
+	return sema->types[type].kind == TYPE_POINTER && sema->types[type].as.pointer.size == POINTER_SLICE;
+}
+
+bool
+sema_type_is_aggregate(const Sema *sema, TypeId type)
+{
+	return sema->types[type].kind == TYPE_ARRAY || is_slice(sema, type);
+}
+
+static TypeId
+slice_pointer_type(Sema *sema, TypeId type)
+{
+	Type pointer = sema->types[type];
+	pointer.as.pointer.size = POINTER_MANY;
+	return type_intern(sema, &pointer);
+}
+
 /* ---------- Values and operands ---------- */
 
 static Operand
@@ -876,6 +896,12 @@ queue_value_functions(Block *block, ValueId id, uint32_t src)
 			: value->kind == VALUE_ELEMENT_PTR ? value->as.element.base : value->as.pointer;
 		value = value_get(&sema->values, id);
 	}
+	if (value->kind == VALUE_SLICE) {
+		SliceValue slice = value->as.slice;
+		queue_value_functions(block, slice.pointer, src);
+		queue_value_functions(block, slice.length, src);
+		return;
+	}
 	if (value->kind == VALUE_ARRAY) {
 		ArrayValue array = value->as.array;
 		for (uint32_t i = 0; i < array.count; i++)
@@ -896,7 +922,7 @@ static TirRef
 materialize(Block *block, Operand operand, uint32_t src)
 {
 	if (operand.kind == OPERAND_AGGREGATE || operand.kind == OPERAND_NONE
-		|| block->sema->types[operand.type].kind == TYPE_ARRAY) {
+		|| sema_type_is_aggregate(block->sema, operand.type)) {
 		sema_error(block, src, "not supported by szc yet: array value in scalar runtime context");
 		return TIR_REF_NONE;
 	}
@@ -947,14 +973,14 @@ func_queue(Sema *sema, FuncId id)
 	if (fn.convention == FUNCTION_C) {
 		const IrInstIndex *params = &func->ir->extra[func->ir->insts[func->func_inst].data.payload + IR_WORDS(IrFuncHeader)];
 		for (uint32_t i = 0; i < fn.param_count; i++) {
-			if (sema->types[fn.params[i]].kind == TYPE_ARRAY) {
+			if (sema_type_is_aggregate(sema, fn.params[i])) {
 				diag_report(sema->diag, DIAG_ERROR, func->ir->file, func->ir->insts[params[i]].src,
 					"parameter of type '%s' not allowed in function with calling convention 'x86_64_sysv'", sema_type_name(sema, fn.params[i]));
 				func->state = FUNC_FAILED;
 				return;
 			}
 		}
-		if (sema->types[fn.ret].kind == TYPE_ARRAY) {
+		if (sema_type_is_aggregate(sema, fn.ret)) {
 			diag_report(sema->diag, DIAG_ERROR, func->ir->file, func->ir->insts[func->func_inst].src,
 				"return type '%s' not allowed in function with calling convention 'x86_64_sysv'", sema_type_name(sema, fn.ret));
 			func->state = FUNC_FAILED;
@@ -1467,6 +1493,74 @@ function_address(Block *block, Operand value, uint32_t src)
 	return comptime_operand(pointer, value_function(&sema->values, pointer, id));
 }
 
+static Operand coerce(Block *block, Operand operand, TypeId dest, uint32_t src);
+static Operand load_pointer(Block *block, Operand pointer, uint32_t src);
+
+/* Slice values borrow elements; only the two-word descriptor is privately owned. */
+static Operand
+make_slice(Block *block, TypeId type, Operand pointer, Operand length, uint32_t src)
+{
+	Sema *sema = block->sema;
+	if (pointer.kind == OPERAND_NONE || length.kind == OPERAND_NONE)
+		return operand_none;
+	if (pointer.kind == OPERAND_COMPTIME && length.kind == OPERAND_COMPTIME)
+		return comptime_operand(type, value_slice(&sema->values, type, pointer.value, length.value));
+	TypeId storage = type_pointer(sema, type, POINTER_ONE, true, false, 0);
+	TirRef slot = array_slot(block, storage, src);
+	if (slot == TIR_REF_NONE)
+		return operand_none;
+	TypeId pointer_field = type_pointer(sema, slice_pointer_type(sema, type), POINTER_ONE, false, false, 0);
+	TirRef data_address = emit_tir_un(block, TIR_PTR_CAST, pointer_field, src, slot);
+	TypeId length_field = type_pointer(sema, T_USIZE, POINTER_ONE, false, false, 0);
+	TirRef length_address = emit_tir_un(block, TIR_SLICE_LEN_PTR, length_field, src, slot);
+	emit_tir_bin(block, TIR_STORE, T_VOID, src, data_address, materialize(block, pointer, src));
+	emit_tir_bin(block, TIR_STORE, T_VOID, src, length_address, materialize(block, length, src));
+	Operand result = runtime_operand(type, slot);
+	result.kind = OPERAND_AGGREGATE;
+	return result;
+}
+
+static Operand
+slice_field(Block *block, Operand slice, bool length, uint32_t src)
+{
+	Sema *sema = block->sema;
+	TypeId type = length ? T_USIZE : slice_pointer_type(sema, slice.type);
+	if (operand_is_undefined(block, slice))
+		return comptime_operand(type, value_undefined(&sema->values, type));
+	if (slice.kind == OPERAND_COMPTIME) {
+		SliceValue pair = operand_value(block, slice)->as.slice;
+		return comptime_operand(type, length ? pair.length : pair.pointer);
+	}
+	Operand backing = analyze_ref(block, slice, src, 0, 0);
+	if (backing.kind == OPERAND_NONE)
+		return operand_none;
+	TypeId pointer = type_pointer(sema, type, POINTER_ONE, true, false, 0);
+	TirRef address = emit_tir_un(block, length ? TIR_SLICE_LEN_PTR : TIR_PTR_CAST,
+		pointer, src, materialize(block, backing, src));
+	return runtime_operand(type, emit_tir_un(block, TIR_LOAD, type, src, address));
+}
+
+/* This shape-changing coercion is not an in-memory pointer compatibility rule. */
+static bool
+array_slice_allowed(Sema *sema, TypeId dest, TypeId source)
+{
+	TypePointer to = sema->types[dest].as.pointer;
+	TypePointer from = sema->types[source].as.pointer;
+	if (to.size != POINTER_SLICE || from.size != POINTER_ONE || sema->types[from.child].kind != TYPE_ARRAY)
+		return false;
+	Type adjusted = sema->types[source];
+	/* Zig's array-pointer conversion checks const/volatile/alignment attributes,
+	 * but does not use the ordinary pointer allowzero compatibility rule. */
+	adjusted.as.pointer.is_allowzero = to.is_allowzero;
+	if (sema->types[from.child].as.array.length == 0) {
+		adjusted.as.pointer.is_const = to.is_const;
+		adjusted.as.pointer.alignment = pointer_alignment(sema, to);
+	}
+	TypeId source_type = type_intern(sema, &adjusted);
+	TypeId data_type = slice_pointer_type(sema, dest);
+	return memory_coercion_allowed(sema, data_type, source_type, false);
+}
+
 /* Coerces `operand` to type `dest` (Zig's implicit coercions that szc supports so far). */
 static Operand
 coerce(Block *block, Operand operand, TypeId dest, uint32_t src)
@@ -1492,6 +1586,35 @@ coerce(Block *block, Operand operand, TypeId dest, uint32_t src)
 			return operand_none;
 		if (operand.type == dest)
 			return operand;
+	}
+	if (dest_kind == TYPE_POINTER && sema->types[dest].as.pointer.size == POINTER_SLICE
+		&& sema->types[operand.type].kind == TYPE_POINTER) {
+		TypePointer source = sema->types[operand.type].as.pointer;
+		TypeId data_type = slice_pointer_type(sema, dest);
+		if (array_slice_allowed(sema, dest, operand.type)) {
+			uint64_t count = sema->types[source.child].as.array.length;
+			Operand data;
+			if (operand_is_undefined(block, operand))
+				data = comptime_operand(data_type, value_undefined(&sema->values, data_type));
+			else if (operand.kind == OPERAND_COMPTIME)
+				data = comptime_operand(data_type, value_pointer_cast(&sema->values, data_type, operand.value));
+			else
+				data = runtime_operand(data_type, emit_tir_un(block, TIR_PTR_CAST, data_type, src, operand.inst));
+			Operand length = comptime_operand(T_USIZE, value_int_u64(&sema->values, T_USIZE, count));
+			return make_slice(block, dest, data, length, src);
+		}
+		if (source.size == POINTER_SLICE && memory_coercion_allowed(sema, dest, operand.type, false)) {
+			if (operand_is_undefined(block, operand))
+				return comptime_operand(dest, value_undefined(&sema->values, dest));
+			if (operand.kind == OPERAND_COMPTIME) {
+				Operand data = coerce(block, slice_field(block, operand, false, src), data_type, src);
+				return make_slice(block, dest, data, slice_field(block, operand, true, src), src);
+			}
+			TypeId pointer = type_pointer(sema, dest, POINTER_ONE, true, false, 0);
+			operand.inst = emit_tir_un(block, TIR_PTR_CAST, pointer, src, operand.inst);
+			operand.type = dest;
+			return operand;
+		}
 	}
 	if (operand.kind == OPERAND_COMPTIME) {
 		const Value *value = operand_value(block, operand);
@@ -1837,12 +1960,14 @@ peer_type(Block *block, Operand lhs, Operand rhs, uint32_t src, TypeId *out)
 		TypePointer bp = sema->types[b].as.pointer;
 		bool many_array = (ap.size == POINTER_MANY && bp.size == POINTER_ONE && sema->types[bp.child].kind == TYPE_ARRAY)
 			|| (bp.size == POINTER_MANY && ap.size == POINTER_ONE && sema->types[ap.child].kind == TYPE_ARRAY);
-		if (ap.size == bp.size || many_array) {
+		bool slice_array = (ap.size == POINTER_SLICE && bp.size == POINTER_ONE && sema->types[bp.child].kind == TYPE_ARRAY)
+			|| (bp.size == POINTER_SLICE && ap.size == POINTER_ONE && sema->types[ap.child].kind == TYPE_ARRAY);
+		if (ap.size == bp.size || many_array || slice_array) {
 			Type candidate = make_type(TYPE_POINTER);
 			candidate.as.pointer = ap;
-			if (many_array) {
-				candidate.as.pointer.size = POINTER_MANY;
-				candidate.as.pointer.child = ap.size == POINTER_MANY ? ap.child : bp.child;
+			if (many_array || slice_array) {
+				candidate.as.pointer.size = slice_array ? POINTER_SLICE : POINTER_MANY;
+				candidate.as.pointer.child = ap.size != POINTER_ONE ? ap.child : bp.child;
 			}
 			candidate.as.pointer.is_const = ap.is_const || bp.is_const;
 			candidate.as.pointer.is_volatile = ap.is_volatile || bp.is_volatile;
@@ -1853,13 +1978,15 @@ peer_type(Block *block, Operand lhs, Operand rhs, uint32_t src, TypeId *out)
 				candidate.as.pointer.alignment = a_align < b_align ? a_align : b_align;
 			}
 			TypeId merged = type_intern(sema, &candidate);
-			if (memory_coercion_allowed(sema, merged, a, false) && memory_coercion_allowed(sema, merged, b, false)) {
+			if ((memory_coercion_allowed(sema, merged, a, false) || array_slice_allowed(sema, merged, a))
+				&& (memory_coercion_allowed(sema, merged, b, false) || array_slice_allowed(sema, merged, b))) {
 				*out = merged;
 				return true;
 			}
-			candidate.as.pointer.child = many_array ? candidate.as.pointer.child : bp.child;
+			candidate.as.pointer.child = (many_array || slice_array) ? candidate.as.pointer.child : bp.child;
 			merged = type_intern(sema, &candidate);
-			if (memory_coercion_allowed(sema, merged, a, false) && memory_coercion_allowed(sema, merged, b, false)) {
+			if ((memory_coercion_allowed(sema, merged, a, false) || array_slice_allowed(sema, merged, a))
+				&& (memory_coercion_allowed(sema, merged, b, false) || array_slice_allowed(sema, merged, b))) {
 				*out = merged;
 				return true;
 			}
@@ -2815,7 +2942,7 @@ analyze_if(Block *block, const IrInst *inst)
 	}
 	/* One surviving constant exit stays known, but its control effects remain. */
 	bool known = exit_count == 1 && value.kind == OPERAND_COMPTIME;
-	bool array = !known && sema->types[type].kind == TYPE_ARRAY;
+	bool array = !known && sema_type_is_aggregate(sema, type);
 	TirRef array_result = TIR_REF_NONE;
 	if (array) {
 		TypeId pointer = type_pointer(sema, type, POINTER_ONE, true, false, 0);
@@ -2927,7 +3054,7 @@ analyze_control_block(Block *block, IrInstIndex index)
 		return operand_none;
 	}
 	bool known = target.count == 1 && target.exits[0].value.kind == OPERAND_COMPTIME;
-	bool array = !known && block->sema->types[type].kind == TYPE_ARRAY;
+	bool array = !known && sema_type_is_aggregate(block->sema, type);
 	TirRef array_result = TIR_REF_NONE;
 	if (array) {
 		TypeId pointer = type_pointer(block->sema, type, POINTER_ONE, true, false, 0);
@@ -3181,7 +3308,7 @@ analyze_call(Block *block, IrInstIndex index, Operand *out)
 		args[i] = result.result;
 		if (result.end != BODY_BREAK_RESULT || args[i].kind == OPERAND_NONE)
 			failed = true;
-		if (!failed && i >= fn.param_count && sema->types[args[i].type].kind == TYPE_ARRAY) {
+		if (!failed && i >= fn.param_count && sema_type_is_aggregate(sema, args[i].type)) {
 			sema_error(block, src, "not supported by szc yet: variadic array arguments");
 			failed = true;
 		}
@@ -3204,13 +3331,13 @@ analyze_call(Block *block, IrInstIndex index, Operand *out)
 	TirRef *refs = arena_alloc(sema->arena, (header.arg_count + 1) * sizeof(TirRef), alignof(TirRef));
 	for (uint32_t i = 0; i < header.arg_count; i++) {
 		Operand argument = args[i];
-		if (sema->types[argument.type].kind == TYPE_ARRAY)
+		if (sema_type_is_aggregate(sema, argument.type))
 			argument = analyze_ref(block, argument, src, 0, 0);
 		if (argument.kind == OPERAND_NONE)
 			return INST_CONTINUE;
 		refs[i] = materialize(block, argument, src);
 	}
-	bool array_return = sema->types[fn.ret].kind == TYPE_ARRAY;
+	bool array_return = sema_type_is_aggregate(sema, fn.ret);
 	TirRef result_pointer = TIR_REF_NONE;
 	if (array_return) {
 		TypeId pointer = type_pointer(sema, fn.ret, POINTER_ONE, false, false, 0);
@@ -3416,7 +3543,7 @@ analyze_alloc(Block *block, const IrInst *inst)
 		}
 	}
 	TypeId pointer = type_pointer(sema, type, POINTER_ONE, (payload.flags & IR_ALLOC_CONST) != 0, false, alignment);
-	if (sema->types[type].kind == TYPE_ARRAY) {
+	if (sema_type_is_aggregate(sema, type)) {
 		TirRef slot = array_slot(block, pointer, src);
 		if (slot == TIR_REF_NONE)
 			return operand_none;
@@ -3550,7 +3677,7 @@ load_pointer(Block *block, Operand pointer, uint32_t src)
 		return operand_none;
 	}
 	TypeKind kind = sema->types[child].kind;
-	if (kind == TYPE_ARRAY) {
+	if (sema_type_is_aggregate(sema, child)) {
 		if (!pointer_operand(block, pointer, src))
 			return operand_none;
 		return array_snapshot(block, pointer, 0, src);
@@ -3741,7 +3868,7 @@ analyze_array_init(Block *block, const IrInst *inst)
 	for (uint32_t i = 0; i < total; i++) {
 		Operand index = comptime_operand(T_USIZE, value_int_u64(&sema->values, T_USIZE, i));
 		TirRef address = emit_tir_bin(block, TIR_ARRAY_ELEM_PTR, child_pointer, inst->src, slot, materialize(block, index, inst->src));
-		if (sema->types[array.child].kind == TYPE_ARRAY) {
+		if (sema_type_is_aggregate(sema, array.child)) {
 			if (!store_array(block, runtime_operand(child_pointer, address), elements[i], inst->src))
 				return operand_none;
 		} else if (!operand_is_undefined(block, elements[i])) {
@@ -3999,6 +4126,26 @@ analyze_array_index(Block *block, const IrInst *inst, bool address_only, bool bo
 	Operand index = coerce(block, resolve_ref(block, inst->data.bin.rhs), T_USIZE, inst->src);
 	if (base.kind == OPERAND_NONE || index.kind == OPERAND_NONE)
 		return operand_none;
+	if (sema->types[base.type].kind == TYPE_POINTER && sema->types[base.type].as.pointer.size == POINTER_SLICE) {
+		Operand length = slice_field(block, base, true, inst->src);
+		Operand data = slice_field(block, base, false, inst->src);
+		if (!check_defined(block, index, inst->src) || !check_defined(block, length, inst->src))
+			return operand_none;
+		if (index.kind == OPERAND_COMPTIME && length.kind == OPERAND_COMPTIME) {
+			uint64_t item = bigint_to_u64_bits(&operand_value(block, index)->as.integer);
+			uint64_t count = bigint_to_u64_bits(&operand_value(block, length)->as.integer);
+			if (item >= count) {
+				sema_error(block, inst->src, "index %" PRIu64 " outside slice of length %" PRIu64, item, count);
+				return operand_none;
+			}
+		} else {
+			if (!require_runtime(block, inst->src))
+				return operand_none;
+			emit_tir_bin(block, TIR_INDEX_CHECK, T_VOID, inst->src,
+				materialize(block, index, inst->src), materialize(block, length, inst->src));
+		}
+		return analyze_many_index(block, data, index, inst->src, address_only, borrow);
+	}
 	if (sema->types[base.type].kind == TYPE_POINTER && sema->types[base.type].as.pointer.size == POINTER_MANY)
 		return analyze_many_index(block, base, index, inst->src, address_only, borrow);
 	TypeId type = indexable_array_type(sema, base.type);
@@ -4171,7 +4318,8 @@ analyze_inst(Block *block, IrInstIndex index, Operand *break_value)
 		if (sema->types[child].kind == TYPE_POINTER)
 			pointer = load_pointer(block, pointer, src);
 		if (pointer.kind != OPERAND_NONE && (indexable_array_type(sema, pointer.type) != 0
-			|| (sema->types[pointer.type].kind == TYPE_POINTER && sema->types[pointer.type].as.pointer.size == POINTER_MANY)))
+			|| (sema->types[pointer.type].kind == TYPE_POINTER && (sema->types[pointer.type].as.pointer.size == POINTER_MANY
+				|| sema->types[pointer.type].as.pointer.size == POINTER_SLICE))))
 			result = pointer;
 		else if (pointer.kind != OPERAND_NONE)
 			sema_error(block, src, "expected array or pointer to array, found '%s'", sema_type_name(sema, child));
@@ -4221,6 +4369,27 @@ analyze_inst(Block *block, IrInstIndex index, Operand *break_value)
 			if (!pointer_type_operand(block, base, src))
 				break;
 			base_type = sema->types[base.type].as.pointer.child;
+		}
+		bool slice_pointer = sema->types[base_type].kind == TYPE_POINTER
+			&& sema->types[base_type].as.pointer.size == POINTER_ONE
+			&& is_slice(sema, sema->types[base_type].as.pointer.child);
+		if (inst->op == IR_FIELD_REF && (is_slice(sema, base_type) || slice_pointer)) {
+			base = load_pointer(block, base, src);
+			if (base.kind == OPERAND_NONE)
+				break;
+		}
+		if (slice_pointer) {
+			base = load_pointer(block, base, src);
+			if (base.kind == OPERAND_NONE)
+				break;
+		}
+		if (is_slice(sema, base.type)) {
+			bool length = inst->data.name.name == intern_cstr(sema->interner, "len");
+			if (length || inst->data.name.name == intern_cstr(sema->interner, "ptr"))
+				result = slice_field(block, base, length, src);
+			else
+				result = unsupported_inst(block, inst);
+			break;
 		}
 		TypeId type = indexable_array_type(sema, base_type);
 		if (type != 0 && inst->data.name.name == intern_cstr(sema->interner, "len"))
@@ -4314,7 +4483,8 @@ analyze_inst(Block *block, IrInstIndex index, Operand *break_value)
 		}
 		Type pointer = make_type(TYPE_POINTER);
 		pointer.as.pointer.child = type;
-		pointer.as.pointer.size = (payload.flags & IR_POINTER_MANY) != 0 ? POINTER_MANY : POINTER_ONE;
+		pointer.as.pointer.size = (payload.flags & IR_POINTER_SLICE) != 0 ? POINTER_SLICE
+			: (payload.flags & IR_POINTER_MANY) != 0 ? POINTER_MANY : POINTER_ONE;
 		pointer.as.pointer.is_const = (payload.flags & IR_POINTER_CONST) != 0;
 		pointer.as.pointer.is_allowzero = (payload.flags & IR_POINTER_ALLOWZERO) != 0;
 		pointer.as.pointer.is_volatile = (payload.flags & IR_POINTER_VOLATILE) != 0;
@@ -4375,7 +4545,7 @@ analyze_inst(Block *block, IrInstIndex index, Operand *break_value)
 		}
 		TypePointer pointer = sema->types[type].as.pointer;
 		TypeId child = pointer.child;
-		if (inst->op == IR_REF_ARRAY_TYPE && pointer.size == POINTER_MANY) {
+		if (inst->op == IR_REF_ARRAY_TYPE && (pointer.size == POINTER_MANY || pointer.size == POINTER_SLICE)) {
 			Operand length = resolve_ref(block, inst->data.bin.rhs);
 			if (length.kind != OPERAND_COMPTIME)
 				break;
@@ -4559,7 +4729,7 @@ analyze_inst(Block *block, IrInstIndex index, Operand *break_value)
 		}
 		TypeId child = sema->types[pointer.type].as.pointer.child;
 		value = coerce(block, value, child, src);
-		if (value.kind != OPERAND_NONE && sema->types[child].kind == TYPE_ARRAY) {
+		if (value.kind != OPERAND_NONE && sema_type_is_aggregate(sema, child)) {
 			if (pointer_operand(block, pointer, src) && store_array(block, pointer, value, src))
 				result = void_operand(sema);
 			break;
@@ -4629,7 +4799,7 @@ analyze_inst(Block *block, IrInstIndex index, Operand *break_value)
 		value = coerce_return(block, value, ret, src);
 		if (value.kind == OPERAND_NONE)
 			return INST_NORETURN;
-		if (sema->types[ret].kind == TYPE_ARRAY) {
+		if (sema_type_is_aggregate(sema, ret)) {
 			TirRef pointer = block->func->return_pointer;
 			Operand destination = runtime_operand(block->tir->insts[pointer].type, pointer);
 			if (!store_array(block, destination, value, src))
@@ -4722,7 +4892,7 @@ analyze_func_body(Sema *sema, FuncId id)
 	const IrInstIndex *params = &func->ir->extra[func->ir->insts[func->func_inst].data.payload + IR_WORDS(IrFuncHeader)];
 	for (uint32_t i = 0; i < fn.param_count; i++) {
 		uint32_t src = func->ir->insts[params[i]].src;
-		bool array = sema->types[fn.params[i]].kind == TYPE_ARRAY;
+		bool array = sema_type_is_aggregate(sema, fn.params[i]);
 		/* Transport pointers promise only byte alignment; the private parameter
 		 * snapshot restores ABI alignment independently of the caller's storage. */
 		TypeId type = array ? type_pointer(sema, fn.params[i], POINTER_ONE, true, false, 1) : fn.params[i];
@@ -4733,7 +4903,7 @@ analyze_func_body(Sema *sema, FuncId id)
 			value = array_snapshot(&block, value, 0, src);
 		inst_map_put(&map, sema->arena, params[i], value);
 	}
-	if (sema->types[fn.ret].kind == TYPE_ARRAY) {
+	if (sema_type_is_aggregate(sema, fn.ret)) {
 		TypeId pointer = type_pointer(sema, fn.ret, POINTER_ONE, false, false, 0);
 		TirRef arg = emit_tir(&block, TIR_ARG, pointer, func->ir->insts[func->func_inst].src);
 		func->tir.insts[arg].data.index = fn.param_count;
@@ -4931,6 +5101,8 @@ value_text(Sema *sema, ValueId id)
 		return arena_sprintf(sema->arena, "elem(base.%u, index.%" PRIu64 ", %s.%" PRIu64 ")",
 			(unsigned)value->as.element.base, value->as.element.index,
 			value->as.element.logical ? "leaf" : "offset", value->as.element.offset);
+	case VALUE_SLICE:
+		return arena_sprintf(sema->arena, "slice(ptr.%u, len.%s)", (unsigned)value->as.slice.pointer, value_text(sema, value->as.slice.length));
 	case VALUE_ARRAY:
 		return arena_sprintf(sema->arena, "array(%u elements)", (unsigned)value->as.array.count);
 	case VALUE_BYTES: {
@@ -4979,6 +5151,7 @@ dump_tir_inst(FILE *out, Sema *sema, const TirFunc *tir, TirRef ref, uint32_t de
 	case TIR_NOT:
 	case TIR_NEGATE:
 	case TIR_NEGATE_WRAP:
+	case TIR_SLICE_LEN_PTR:
 	case TIR_PTR_TO_INT:
 	case TIR_PTR_CAST:
 	case TIR_INT_CAST:

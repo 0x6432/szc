@@ -1,0 +1,3 @@
+tests/tir/errors/slice_c_parameter.zig:1:15: error: parameter of type '[]u8' not allowed in function with calling convention 'x86_64_sysv'
+export fn bad(s: []u8) void { _ = s; } pub fn main() void {}
+              ^

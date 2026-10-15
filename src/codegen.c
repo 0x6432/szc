@@ -88,6 +88,10 @@ type_class(Codegen *cg, TypeId type_id, uint32_t src)
 		codegen_error(cg, src, "not supported by szc yet: integers wider than 64 bits");
 		return QBE_L;
 	case TYPE_POINTER:
+		if (type->as.pointer.size == POINTER_SLICE) {
+			codegen_error(cg, src, "slice value cannot enter a scalar QBE temporary");
+			return QBE_NONE;
+		}
 		return QBE_L;
 	case TYPE_VOID:
 	case TYPE_NORETURN:
@@ -808,6 +812,20 @@ emit_inst(Codegen *cg, TirRef ref)
 		fprintf(out, ", %%e%u_offset\n", (unsigned)ref);
 		return;
 	}
+	case TIR_SLICE_LEN_PTR:
+		print_dest(cg, ref, QBE_L);
+		fputs("add ", out);
+		print_operand(cg, inst->data.un.operand);
+		fputs(", 8\n", out);
+		return;
+	case TIR_INDEX_CHECK:
+		fprintf(out, "\t%%g%u_index =w cugel ", (unsigned)ref);
+		print_operand(cg, inst->data.bin.lhs);
+		fputs(", ", out);
+		print_operand(cg, inst->data.bin.rhs);
+		fputc('\n', out);
+		emit_guard(cg, ref, "index", PANIC_INDEX);
+		return;
 	case TIR_ARRAY_ELEM_PTR: {
 		TypePointer pointer = sema_type(cg->sema, inst_at(cg, inst->data.bin.lhs)->type)->as.pointer;
 		TypeArray array = sema_type(cg->sema, pointer.child)->as.array;
@@ -1008,7 +1026,7 @@ emit_function(Codegen *cg, const SemaFunc *func, FuncId id)
 	const TypeFn *fn = &sema_type(cg->sema, func->type)->as.fn;
 	uint32_t src = func->ir->insts[func->func_inst].src;
 	/* Internal array results use a trailing destination pointer and void return. */
-	QbeClass ret_class = sema_type(cg->sema, fn->ret)->kind == TYPE_ARRAY ? QBE_NONE : type_class(cg, fn->ret, src);
+	QbeClass ret_class = sema_type_is_aggregate(cg->sema, fn->ret) ? QBE_NONE : type_class(cg, fn->ret, src);
 	if (func->alignment > 16) {
 		if (cg->assembly == NULL) {
 			codegen_error(cg, src, "function alignment above 16 requires assembly output; use build-exe");
@@ -1096,6 +1114,10 @@ mark_value_dependencies(Codegen *cg, ValueId id)
 		cg->constants_used[value->as.object] = true;
 	else if (value->kind == VALUE_BYTES)
 		cg->bytes_used[id] = true;
+	else if (value->kind == VALUE_SLICE) {
+		mark_value_dependencies(cg, value->as.slice.pointer);
+		mark_value_dependencies(cg, value->as.slice.length);
+	}
 	else if (value->kind == VALUE_ARRAY) {
 		ArrayValue array = value->as.array;
 		for (uint32_t i = 0; i < array.count; i++)
@@ -1159,6 +1181,11 @@ emit_data_value(Codegen *cg, FILE *out, ValueId stored, bool outlined, bool *fir
 		}
 		for (uint32_t i = 0; i < array.count; i++)
 			emit_data_value(cg, out, array.items[i], outlined, first, src);
+		return;
+	}
+	if (value->kind == VALUE_SLICE) {
+		emit_data_value(cg, out, value->as.slice.pointer, outlined, first, src);
+		emit_data_value(cg, out, value->as.slice.length, outlined, first, src);
 		return;
 	}
 	if (!outlined && !*first)

@@ -98,6 +98,7 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
 - [~] **M5.3 Slices, many-pointers, slicing, `.len`, `.ptr`, for over slices.**
   - [x] **M5.3a Many-pointer types, array coercions and borrowed indexing.**
   - [x] **M5.3b Pointer arithmetic and differences.**
+  - [x] **M5.3c1 Slice descriptor values, array coercions, indexing, storage and internal ABI.**
 - [~] **M5.4 String literals, sentinels, `[*:0]const u8`.** Literal byte values landed in M4.5b; general string/memory operations and sentinel pointer syntax remain pending.
 - [~] **M5.5 Casting builtins**: `@intCast`, `@truncate`, `@ptrCast`, `@intFromPtr`, `@ptrFromInt`, `@bitCast`, `@as`.
   - [x] **M5.5a Pointer address conversion (`@intFromPtr`).**
@@ -153,6 +154,47 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
 
 (newest first; each entry: what, limitations, interactions)
 
+### M5.3c1 Owned slice descriptors and borrowed elements
+- **What**: unsentinelled slice types and qualifiers, array-pointer/string-to-slice
+  coercions, `.ptr`/`.len`, scalar/nested indexing and element addresses/mutation.
+  Descriptor copies preserve the pointer/length pair without copying elements.
+  Support local variables/constants, mutable/immutable globals, arrays of slices,
+  pointer-to-descriptor field reads, internal parameters/returns and value joins.
+- **Representation**: VALUE_SLICE interns separate pointer/usize values. Runtime
+  slices use the existing owned aggregate-snapshot discipline, never scalar QBE
+  temporaries. Storage is 16 bytes, alignment 8, with real relocations/dependencies;
+  internal calls use transport pointers and a trailing return destination just like
+  arrays. C ABI slice parameters/results reject; pointers to descriptors are normal
+  C pointer arguments. New TIR operations address the length field and guard dynamic
+  indices; existing many-pointer indexing preserves actual backing/qualifiers.
+- **Grounding**: actual Sema.zig coerceArrayPtrToSlice/checkPtrAttributes,
+  coerceInMemoryAllowedPtrs and slice indexing paths, Type slice layout and official
+  execution/semantic probes. Empty array conversions may discard const/strengthen
+  alignment; array-pointer conversion follows Zig's distinct allowzero path rather
+  than incorrectly reusing the ordinary in-memory pointer rule. Undefined array
+  pointers still give a known descriptor length. Slice qualification changes reuse
+  pair storage without losing either word. Mutable descriptors remain runtime loads.
+- **Coverage**: a native integration program exercises copies, functions, joins,
+  globals, arrays of descriptors and mutable pointer-to-slice field reads. Add three
+  stage goldens, eight invalid-input plus two explicit NYI diagnostics, seven value
+  interning checks, 113 actual-reference semantic cases, five runtime safety cases
+  and seeds. Four C/PIE variants inspect/update 16-byte descriptors via memcpy at
+  alignments 1/2/8/256 and verify parameter snapshots survive foreign writes.
+- **Validation**: immutable GCC/Clang Werror ASan/UBSan snapshots pass 632 unit
+  checks and 877 goldens each. All 949 existing array/layout cases plus 113 slice
+  cases match actual Zig 0.17.0. Full native/reference suite passes 80 ordinary/
+  generated programs, two scoped szc-only cases, 16 driver checks, all storage/
+  alignment/ABI/volatile tests and 190 safety cases. Clang and optimized GCC also
+  pass three targeted programs and four C descriptor variants. Fresh four-stage
+  60-second fuzz runs execute 691770/14954/14604/16711 inputs; standalone replay
+  passes 20000 mutations/stage (irgen 47/sema 103 seed files).
+- **Limits/next**: `s[start..end]` syntax, sequence iteration, sentinel slices, direct
+  descriptor-field assignments and volatile whole-descriptor copies remain NYI.
+  Runtime addresses of comptime-only backing/wide values retain existing limits.
+  Index/address checks apply to zero-bit children; the reference may fold some
+  one-possible-value reads before runtime safety, so reference panic comparisons
+  use address formation for those children. M5.3 stays partial; Q6 stays M10.2.
+
 ### M9.4b Representation bit-size queries
 - **What**: `@bitSizeOf(T)` folds to a comptime integer for integers, bool, void,
   f32/f64, single/many pointers and arrays of representable children. Arrays
@@ -179,8 +221,8 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
   native checks. All 949 semantic cases match official Zig 0.17.0. Four fresh
   60-second fuzz runs execute 1131133/28941/28049/32071 inputs; each stage also
   passes 20000 mutations (irgen 46/sema 102 seed files).
-- **Limits/next**: bit sizes for error sets, packed aggregates, vectors and slices
-  depend on their future implementations. f16/f80/f128 remain hard errors; array
+- **Limits/next**: bit sizes for error sets, packed aggregates and vectors
+  depend on their future implementations; slices have no bit representation and reject. f16/f80/f128 remain hard errors; array
   bit sizes exceeding uint64 are explicit NYI. M9.4 remains partial. General runtime
   slice pairs/slicing are the next larger representation milestone; Q6 stays M10.2.
 
@@ -211,7 +253,7 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
   four C variants against the actual reference. All 897 semantic comparisons match
   Zig 0.17.0. Four 60-second fuzz runs execute 1374096/33330/34340/38554 inputs,
   plus 20000 mutations per stage (irgen 45/sema 101 seed files).
-- **Limits/next**: aggregate/error-set layouts, vector/slice representations and
+- **Limits/next**: aggregate/error-set layouts, vector representations and
   overflowing array sizes stay explicit NYI. f16/f80/f128 remain hard errors.
   M9.4 remains partial; general runtime slices and other builtins remain future work.
 
@@ -243,11 +285,11 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
   allowzero addresses; Clang and optimized builds pass targeted native/C checks.
   All 812 semantic cases match actual Zig 0.17.0. Four fresh 60-second fuzz runs
   execute 1301767/32659/30619/36404 inputs, plus 20000 mutations per stage.
-- **Limits/next**: vectors/optionals/slices and runtime addresses of comptime-only
+- **Limits/next**: vectors/optionals and runtime addresses of comptime-only
   backing remain explicit NYI with the rest of those representations; known undefined
   values still propagate before that backing limitation. Raw integer pointer creation
   and other casting builtins remain future work. M5.5 and M5.3 remain partial; general
-  runtime slice pairs/slicing are next. Q6 stays at M10.2.
+  runtime slice pairs subsequently land in M5.3c1; slicing remains next. Q6 stays at M10.2.
 
 ### M5.3b Pointer arithmetic, differences and compound assignments
 - **What**: many-pointer plus/minus usize offsets, `+=`/`-=`, runtime/known pointer
