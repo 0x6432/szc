@@ -1,0 +1,6 @@
+tests/tir/errors/const_dependency_inferred_cycle.zig:1:16: error: dependency loop detected
+const a = if (&a == &a) @as(u8, 7) else 0;
+               ^
+tests/tir/errors/const_dependency_inferred_cycle.zig:1:22: error: dependency loop detected
+const a = if (&a == &a) @as(u8, 7) else 0;
+                     ^

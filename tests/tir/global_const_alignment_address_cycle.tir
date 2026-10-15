@@ -1,0 +1,4 @@
+constant szc.g.1: u8 align(64) = 7
+fn szc.main.1: fn () void {
+  %0: noreturn = ret
+}

@@ -1,184 +1,187 @@
-%150 = struct_decl (flags=0) {
-  decl const "alignment" value {
-    %0 = int 32
-    %1 = int 2
-    %2 = mul %0, %1
-    %3 = as @type_u29, %2
-    %4 = break_inline result, %3
+%152 = struct_decl (flags=0) {
+  decl const "alignment" type {
+    %0 = break_inline result, @type_u29
+  } value {
+    %1 = decl_type
+    %2 = int 32
+    %3 = int 2
+    %4 = mul %2, %3
+    %5 = as %1, %4
+    %6 = break_inline result, %5
   }
   decl fn "add" value {
-    %38 = func "add" {
-      %11 = param "p" type {
-        %8 = ptr_type @type_u32, @false align {
-          %5 = int 64
-          %6 = as @type_u29, %5
-          %7 = break_inline result, %6
+    %40 = func "add" {
+      %13 = param "p" type {
+        %10 = ptr_type @type_u32, @false align {
+          %7 = int 64
+          %8 = as @type_u29, %7
+          %9 = break_inline result, %8
         }
-        %9 = as @type_type, %8
-        %10 = break_inline result, %9
+        %11 = as @type_type, %10
+        %12 = break_inline result, %11
       }
       ret type {
-        %12 = break_inline result, @type_u32
+        %14 = break_inline result, @type_u32
       }
       body insts {
-        %24 = ref_deref %11
-        %25 = load %24
-        %26 = int 2
-        %27 = elem_type %24
-        %28 = as %27, %26
-        %29 = add %25, %28
-        %30 = elem_type %24
-        %31 = as %30, %29
-        %32 = store %24, %31
-        %33 = ret_type
-        %34 = deref %11
-        %35 = as_return %33, %34
-        %36 = defer  {
-          %13 = ref_deref %11
-          %14 = load %13
-          %15 = int 1
-          %16 = elem_type %13
-          %17 = as %16, %15
-          %18 = add %14, %17
-          %19 = elem_type %13
-          %20 = as %19, %18
-          %21 = store %13, %20
-          %22 = ensure_result @void_value
-          %23 = break_inline result, @void_value
+        %26 = ref_deref %13
+        %27 = load %26
+        %28 = int 2
+        %29 = elem_type %26
+        %30 = as %29, %28
+        %31 = add %27, %30
+        %32 = elem_type %26
+        %33 = as %32, %31
+        %34 = store %26, %33
+        %35 = ret_type
+        %36 = deref %13
+        %37 = as_return %35, %36
+        %38 = defer  {
+          %15 = ref_deref %13
+          %16 = load %15
+          %17 = int 1
+          %18 = elem_type %15
+          %19 = as %18, %17
+          %20 = add %16, %19
+          %21 = elem_type %15
+          %22 = as %21, %20
+          %23 = store %15, %22
+          %24 = ensure_result @void_value
+          %25 = break_inline result, @void_value
         }
-        %37 = ret %35
+        %39 = ret %37
       }
     }
-    %39 = break_inline result, %38
+    %41 = break_inline result, %40
   }
   decl fn "main" pub value {
-    %148 = func "main" {
+    %150 = func "main" {
       ret type {
-        %40 = break_inline result, @type_u8
+        %42 = break_inline result, @type_u8
       }
       body insts {
-        %44 = align value {
-          %41 = decl_val "alignment"
-          %42 = as @type_u29, %41
-          %43 = break_inline result, %42
+        %46 = align value {
+          %43 = decl_val "alignment"
+          %44 = as @type_u29, %43
+          %45 = break_inline result, %44
         }
-        %45 = int 5
-        %46 = as @type_u32, %45
-        %47 = alloc type=@type_u32 init=%46 align=%44
-        %48 = load %47
-        %49 = int 1
-        %50 = elem_type %47
-        %51 = as %50, %49
-        %52 = add %48, %51
-        %53 = elem_type %47
-        %54 = as %53, %52
-        %55 = store %47, %54
-        %59 = align value {
-          %56 = int 1
-          %57 = as @type_u29, %56
-          %58 = break_inline result, %57
+        %47 = int 5
+        %48 = as @type_u32, %47
+        %49 = alloc type=@type_u32 init=%48 align=%46
+        %50 = load %49
+        %51 = int 1
+        %52 = elem_type %49
+        %53 = as %52, %51
+        %54 = add %50, %53
+        %55 = elem_type %49
+        %56 = as %55, %54
+        %57 = store %49, %56
+        %61 = align value {
+          %58 = int 1
+          %59 = as @type_u29, %58
+          %60 = break_inline result, %59
         }
-        %60 = int 9
-        %61 = as @type_u64, %60
-        %62 = alloc type=@type_u64 init=%61 align=%59
-        %63 = load %62
-        %64 = int 1
-        %65 = elem_type %62
-        %66 = as %65, %64
-        %67 = add %63, %66
-        %68 = elem_type %62
-        %69 = as %68, %67
-        %70 = store %62, %69
-        %74 = align value {
-          %71 = int 4
-          %72 = as @type_u29, %71
-          %73 = break_inline result, %72
+        %62 = int 9
+        %63 = as @type_u64, %62
+        %64 = alloc type=@type_u64 init=%63 align=%61
+        %65 = load %64
+        %66 = int 1
+        %67 = elem_type %64
+        %68 = as %67, %66
+        %69 = add %65, %68
+        %70 = elem_type %64
+        %71 = as %70, %69
+        %72 = store %64, %71
+        %76 = align value {
+          %73 = int 4
+          %74 = as @type_u29, %73
+          %75 = break_inline result, %74
         }
-        %75 = int 2
-        %76 = as @type_u32, %75
-        %77 = alloc type=@type_u32 init=%76 align=%74
-        %78 = load %77
-        %79 = int 1
-        %80 = elem_type %77
-        %81 = as %80, %79
-        %82 = add %78, %81
-        %83 = elem_type %77
-        %84 = as %83, %82
-        %85 = store %77, %84
-        %89 = align value {
-          %86 = int 128
-          %87 = as @type_u29, %86
-          %88 = break_inline result, %87
+        %77 = int 2
+        %78 = as @type_u32, %77
+        %79 = alloc type=@type_u32 init=%78 align=%76
+        %80 = load %79
+        %81 = int 1
+        %82 = elem_type %79
+        %83 = as %82, %81
+        %84 = add %80, %83
+        %85 = elem_type %79
+        %86 = as %85, %84
+        %87 = store %79, %86
+        %91 = align value {
+          %88 = int 128
+          %89 = as @type_u29, %88
+          %90 = break_inline result, %89
         }
-        %90 = int 7
-        %91 = as @type_u16, %90
-        %92 = alloc type=inferred init=%91 align=%89
-        %93 = load %92
-        %94 = int 1
-        %95 = elem_type %92
-        %96 = as %95, %94
-        %97 = add %93, %96
-        %98 = elem_type %92
-        %99 = as %98, %97
-        %100 = store %92, %99
-        %104 = ptr_type @type_u32, @false align {
-          %101 = int 64
-          %102 = as @type_u29, %101
-          %103 = break_inline result, %102
+        %92 = int 7
+        %93 = as @type_u16, %92
+        %94 = alloc type=inferred init=%93 align=%91
+        %95 = load %94
+        %96 = int 1
+        %97 = elem_type %94
+        %98 = as %97, %96
+        %99 = add %95, %98
+        %100 = elem_type %94
+        %101 = as %100, %99
+        %102 = store %94, %101
+        %106 = ptr_type @type_u32, @false align {
+          %103 = int 64
+          %104 = as @type_u29, %103
+          %105 = break_inline result, %104
         }
-        %105 = as @type_type, %104
-        %106 = as %105, %47
-        %107 = decl_val "add"
-        %108 = call %107 arg0 {
-          %109 = arg_type %108, 0
-          %110 = as %109, %106
-          %111 = break_inline result, %110
+        %107 = as @type_type, %106
+        %108 = as %107, %49
+        %109 = decl_val "add"
+        %110 = call %109 arg0 {
+          %111 = arg_type %110, 0
+          %112 = as %111, %108
+          %113 = break_inline result, %112
         }
-        %112 = int 8
-        %113 = cmp_neq %108, %112
-        %118 = bool_or %113 rhs {
-          %114 = load %47
-          %115 = int 9
-          %116 = cmp_neq %114, %115
-          %117 = break_inline result, %116
+        %114 = int 8
+        %115 = cmp_neq %110, %114
+        %120 = bool_or %115 rhs {
+          %116 = load %49
+          %117 = int 9
+          %118 = cmp_neq %116, %117
+          %119 = break_inline result, %118
         }
-        %124 = if %118 then {
-          %119 = ret_type
-          %120 = int 1
-          %121 = as_return %119, %120
-          %122 = ret %121
+        %126 = if %120 then {
+          %121 = ret_type
+          %122 = int 1
+          %123 = as_return %121, %122
+          %124 = ret %123
         } else {
-          %123 = break_inline result, @void_value
+          %125 = break_inline result, @void_value
         }
-        %125 = load %62
-        %126 = int 10
-        %127 = cmp_neq %125, %126
-        %132 = bool_or %127 rhs {
-          %128 = load %77
-          %129 = int 3
-          %130 = cmp_neq %128, %129
-          %131 = break_inline result, %130
+        %127 = load %64
+        %128 = int 10
+        %129 = cmp_neq %127, %128
+        %134 = bool_or %129 rhs {
+          %130 = load %79
+          %131 = int 3
+          %132 = cmp_neq %130, %131
+          %133 = break_inline result, %132
         }
-        %137 = bool_or %132 rhs {
-          %133 = load %92
-          %134 = int 8
-          %135 = cmp_neq %133, %134
-          %136 = break_inline result, %135
+        %139 = bool_or %134 rhs {
+          %135 = load %94
+          %136 = int 8
+          %137 = cmp_neq %135, %136
+          %138 = break_inline result, %137
         }
-        %143 = if %137 then {
-          %138 = ret_type
-          %139 = int 2
-          %140 = as_return %138, %139
-          %141 = ret %140
+        %145 = if %139 then {
+          %140 = ret_type
+          %141 = int 2
+          %142 = as_return %140, %141
+          %143 = ret %142
         } else {
-          %142 = break_inline result, @void_value
+          %144 = break_inline result, @void_value
         }
-        %144 = ret_type
-        %145 = int 0
-        %146 = as_return %144, %145
-        %147 = ret %146
+        %146 = ret_type
+        %147 = int 0
+        %148 = as_return %146, %147
+        %149 = ret %148
       }
     }
-    %149 = break_inline result, %148
+    %151 = break_inline result, %150
   }
 }

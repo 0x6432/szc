@@ -1,6 +1,6 @@
 function w $szc.main.1() {
 @start
-	%t1 =w call $szc.read.2(l $szc.const.3)
+	%t1 =w call $szc.read.2(l $szc.g.2)
 	%t3 =w cnew %t1, 42
 	jnz %t3, @c9_then, @c9_else
 @c9_then
@@ -35,9 +35,9 @@ function w $szc.read.2(l %t0) {
 }
 
 section ".rodata"
-data $szc.const.2 = align 64 { w 42 }
+data $szc.g.1 = align 64 { w 42 }
 section ".data.rel.ro"
-data $szc.const.3 = align 32 { l $szc.const.2 }
+data $szc.g.2 = align 32 { l $szc.g.1 }
 export function w $main() {
 @start
 	%status =w call $szc.main.1()

@@ -1,3 +1,4 @@
+constant szc.g.1: u8 = 23
 fn szc.main.1: fn () u8 {
   %0: *const *const u8 = const ref(object.2)
   %1: u8 = call szc.load.3(%0)

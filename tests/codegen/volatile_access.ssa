@@ -1,7 +1,7 @@
 function w $szc.main.1() {
 @start
 	%t18 =l alloc4 1
-	%t1 =w call $szc.adjust.2(l $szc.g.1)
+	%t1 =w call $szc.adjust.2(l $szc.g.2)
 	%t1 =w and %t1, 255
 	%t3 =w cnew %t1, 8
 	jnz %t3, @c12_then, @c12_else
@@ -9,7 +9,7 @@ function w $szc.main.1() {
 	%t4 =w copy 1
 	jmp @b4
 @c12_else
-	%t6 =w loadub $szc.g.1
+	%t6 =w loadub $szc.g.2
 	%t8 =w cnew %t6, 9
 	%t4 =w copy %t8
 	jmp @b4
@@ -22,7 +22,7 @@ function w $szc.main.1() {
 @b13
 	storeb 4, %t18
 	%t21 =l copy %t18
-	%t24 =l call $szc.choose.3(w 0, l $szc.g.1, l %t21)
+	%t24 =l call $szc.choose.3(w 0, l $szc.g.2, l %t21)
 	call $szc.volatile.store.8(l %t24, w 5)
 	%t27 =w call $szc.volatile.load.u8(l %t24)
 	%t27 =w and %t27, 255
@@ -42,7 +42,7 @@ function w $szc.main.1() {
 	%t38 =w copy 1
 	jmp @b38
 @c46_else
-	%t40 =w call $szc.swap.4(l $szc.g.2)
+	%t40 =w call $szc.swap.4(l $szc.g.3)
 	%t40 =w and %t40, 255
 	%t42 =w cnew %t40, 9
 	%t38 =w copy %t42
@@ -54,7 +54,7 @@ function w $szc.main.1() {
 @c51_else
 	jmp @b47
 @b47
-	%t53 =w call $szc.volatile.load.u8(l $szc.g.1)
+	%t53 =w call $szc.volatile.load.u8(l $szc.g.2)
 	%t53 =w and %t53, 255
 	%t55 =w cnew %t53, 9
 	jnz %t55, @c61_then, @c61_else
@@ -172,8 +172,10 @@ function w $szc.seven.6() {
 	ret 7
 }
 
-data $szc.g.1 = align 16 { b 3 }
-data $szc.g.2 = align 8 { l $szc.seven.6 }
+section ".rodata"
+data $szc.g.1 = align 4 { w 16 }
+data $szc.g.2 = align 16 { b 3 }
+data $szc.g.3 = align 8 { l $szc.seven.6 }
 function w $szc.volatile.load.u8(l %ptr) {
 @start
 	%value =w loadub %ptr

@@ -1,0 +1,6 @@
+tests/tir/errors/const_dependency_type_cycle.zig:2:16: error: dependency loop detected
+const T = if (&a == &a) u8 else u8;
+               ^
+tests/tir/errors/const_dependency_type_cycle.zig:2:22: error: dependency loop detected
+const T = if (&a == &a) u8 else u8;
+                     ^

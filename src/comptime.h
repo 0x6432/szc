@@ -33,7 +33,7 @@ typedef enum ValueKind {
 	VALUE_INT,	/* integer of any integer type, including comptime_int */
 	VALUE_TYPE,
 	VALUE_FUNCTION,
-	VALUE_GLOBAL,	/* known address of mutable global storage, never its contents */
+	VALUE_GLOBAL,	/* stable declaration address; contents resolve separately */
 	VALUE_REF,	/* immutable address of an interned value */
 	VALUE_BYTES,	/* immutable bytes; length excludes the zero sentinel */
 	VALUE_UNDEFINED,	/* `undefined` of any type */

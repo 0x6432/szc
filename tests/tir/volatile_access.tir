@@ -1,7 +1,8 @@
-global szc.g.1: u8 align(16) = 3
-global szc.g.2: *const fn () u8 = szc.seven.6
+constant szc.g.1: u29 = 16
+global szc.g.2: u8 align(16) = 3
+global szc.g.3: *const fn () u8 = szc.seven.6
 fn szc.main.1: fn () u8 {
-  %0: *volatile u8 = const szc.g.1
+  %0: *volatile u8 = const szc.g.2
   %1: u8 = call szc.adjust.2(%0)
   %2: u8 = const 8
   %3: bool = cmp_neq %1, %2
@@ -10,7 +11,7 @@ fn szc.main.1: fn () u8 {
       %10: bool = const true
       %11: noreturn = br %4, %10
     } else {
-      %5: *align(16) u8 = const szc.g.1
+      %5: *align(16) u8 = const szc.g.2
       %6: u8 = load %5
       %7: u8 = const 9
       %8: bool = cmp_neq %6, %7
@@ -30,7 +31,7 @@ fn szc.main.1: fn () u8 {
   %20: void = store %18, %19
   %21: *u8 = ptr_cast %18
   %22: bool = const false
-  %23: *volatile u8 = const szc.g.1
+  %23: *volatile u8 = const szc.g.2
   %24: *volatile u8 = call szc.choose.3(%22, %23, %21)
   %25: u8 = const 5
   %26: void = store_volatile %24, %25
@@ -53,7 +54,7 @@ fn szc.main.1: fn () u8 {
       %44: bool = const true
       %45: noreturn = br %38, %44
     } else {
-      %39: *volatile *const fn () u8 = const szc.g.2
+      %39: *volatile *const fn () u8 = const szc.g.3
       %40: u8 = call szc.swap.4(%39)
       %41: u8 = const 9
       %42: bool = cmp_neq %40, %41
@@ -68,7 +69,7 @@ fn szc.main.1: fn () u8 {
       %50: noreturn = br %47
     }
   }
-  %52: *const volatile u8 = const szc.g.1
+  %52: *const volatile u8 = const szc.g.2
   %53: u8 = load_volatile %52
   %54: u8 = const 9
   %55: bool = cmp_neq %53, %54

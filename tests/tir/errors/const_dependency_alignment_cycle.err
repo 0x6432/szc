@@ -1,0 +1,6 @@
+tests/tir/errors/const_dependency_alignment_cycle.zig:1:24: error: dependency loop detected
+const a: u8 align(if (&a == &a) 64 else 1) = 7;
+                       ^
+tests/tir/errors/const_dependency_alignment_cycle.zig:1:30: error: dependency loop detected
+const a: u8 align(if (&a == &a) 64 else 1) = 7;
+                             ^

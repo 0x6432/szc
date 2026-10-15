@@ -54,6 +54,8 @@ function $szc.target.5(l %t0) {
 }
 
 data $szc.g.1 = align 64 { b 7 }
+section ".data.rel.ro"
+data $szc.g.2 = align 8 { l $szc.g.1 }
 export function w $main() {
 @start
 	%status =w call $szc.main.1()

@@ -1,5 +1,7 @@
+constant szc.g.1: u32 align(64) = 42
+constant szc.g.2: *align(64) const u32 align(32) = szc.g.1
 fn szc.main.1: fn () u8 {
-  %0: *align(32) const *align(64) const u32 = const ref(object.3)
+  %0: *align(32) const *align(64) const u32 = const szc.g.2
   %1: u32 = call szc.read.2(%0)
   %2: u32 = const 42
   %3: bool = cmp_neq %1, %2

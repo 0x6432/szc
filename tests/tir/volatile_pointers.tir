@@ -1,4 +1,5 @@
 global szc.g.1: u8 align(64) = 7
+constant szc.g.2: *align(64) volatile u8 = szc.g.1
 fn szc.main.1: fn () u8 {
   %0: *u8 = const szc.g.1
   %1: *const volatile u8 = call szc.qualify.2(%0)

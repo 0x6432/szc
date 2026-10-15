@@ -137,6 +137,7 @@ typedef struct SemaFunc {
 
 typedef struct SemaGlobal {
 	TypeId type;
+	bool is_const;
 	uint32_t alignment;	/* 0: implicit ABI alignment; otherwise byte units */
 	ValueId initializer;
 	const char *symbol;

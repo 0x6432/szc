@@ -34,6 +34,41 @@ def cases():
         yield "fn target() u8 { return 7; }\n" + declaration + "\npub fn main() void { _ = value; }\n"
 
 
+    # Type/alignment resolution may publish an address without resolving contents.
+    for ty, seed in (("u8", "7"), ("i40", "-7"), ("bool", "true"),
+                     ("u0", "0"), ("void", "{}"), ("*const u8", "&byte"),
+                     ("*const fn () u8", "target")):
+        for alignment, first in itertools.product((0, 1, 64, 256), ("value", "address")):
+            aligned = f" align({alignment})" if alignment else ""
+            entry = "_ = a; _ = b;" if first == "value" else "_ = &a; _ = &b;"
+            prefix = "const byte: u8 = 3; fn target() u8 { return 7; }\n"
+            for dependency in ("&a == &a", "&b == &b"):
+                yield (prefix + f"const a: {ty}{aligned} = if ({dependency}) {seed} else {seed};\n"
+                       + f"const b: {ty}{aligned} = if (&a == &a) {seed} else {seed};\n"
+                       + f"pub fn main() void {{ {entry} }}\n")
+            # A dereference needs contents, even if the pointer itself was published.
+            yield (f"const a: {ty}{aligned} = (&b).*; const b: {ty}{aligned} = (&a).*;\n"
+                   + f"pub fn main() void {{ {entry} }}\n")
+    for alignment in ("", " align(64)"):
+        for declaration in (f"const a: u8{alignment} = 256;",
+                            f"const a: u8{alignment} = if (&a == &a) 256 else 0;",
+                            f"const a{alignment} = if (&a == &a) @as(u8, 7) else 0;",
+                            f"const a: u8{alignment} = (&a).*;",
+                            f"const a: u8{alignment} = 7; const b: u8 = a;"):
+            yield declaration + "\npub fn main() void { _ = &a; }\n"
+    for source in (
+            "const a: u8 align(if (&a == &a) 64 else 1) = 7;",
+            "const a: u8 align(b) = 7; const b: u29 = if (&a == &a) 64 else 1;",
+            "const a: T = 7; const T = if (&a == &a) u8 else u8;",
+            "const a: u8 = (&b).*; const b: u8 = 7;",
+            "const a: u8 = if (&a == &a) 7 else 0; const p: *const u8 = &a; const b: u8 = p.*;",
+            "var a: u8 = if (&b == &b) 7 else 0; const b: u8 = if (&a == &a) 9 else 0;",
+            "const a: u8 = 7; const p: *const volatile u8 = &a; const b: u8 = p.*;",
+            "const a: u8 = 7; const p: *const u8 = &a; const b: u8 = 7; const c: bool = p == &b;",
+            "const unused: u8 = 256; const a: u8 = 7;"
+    ):
+        yield source + "\npub fn main() void { _ = &a; }\n"
+
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)

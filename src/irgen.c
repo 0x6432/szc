@@ -1870,16 +1870,12 @@ global_var_body(IrGen *gen, Scope *scope, AstVarDecl *decl, IrDecl *out)
 	body_init(&body, gen, scope, true);
 	IrRef type = IR_REF_NONE;
 	if (decl->type != NULL) {
-		if (decl->is_const && decl->align == NULL) {
-			type = type_expr(&body, &body.base, decl->type);
-		} else {
-			GenBody type_body;
-			body_init(&type_body, gen, scope, true);
-			IrRef declared = type_expr(&type_body, &type_body.base, decl->type);
-			emit_break(&type_body, IR_BREAK_INLINE, decl->type->offset, IR_BODY_RESULT, declared);
-			out->type_body = body_finish(&type_body);
-			type = emit_none(&body, IR_DECL_TYPE, decl->type->offset);
-		}
+		GenBody type_body;
+		body_init(&type_body, gen, scope, true);
+		IrRef declared = type_expr(&type_body, &type_body.base, decl->type);
+		emit_break(&type_body, IR_BREAK_INLINE, decl->type->offset, IR_BODY_RESULT, declared);
+		out->type_body = body_finish(&type_body);
+		type = emit_none(&body, IR_DECL_TYPE, decl->type->offset);
 	}
 	if (decl->addrspace != NULL || decl->linksection != NULL)
 		unsupported(&body, &decl->base, "align/addrspace/linksection on globals");

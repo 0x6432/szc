@@ -1,0 +1,166 @@
+function w $szc.main.1() {
+@start
+	%t1 =w call $szc.read_u16.2(l $szc.g.1)
+	%t1 =w and %t1, 65535
+	%t3 =w cnew %t1, 31
+	jnz %t3, @c8_then, @c8_else
+@c8_then
+	ret 1
+@c8_else
+	jmp @b4
+@b4
+	%t10 =w call $szc.read.3(l $szc.g.2)
+	%t10 =w and %t10, 255
+	%t12 =w cnew %t10, 7
+	jnz %t12, @c21_then, @c21_else
+@c21_then
+	%t13 =w copy 1
+	jmp @b13
+@c21_else
+	%t15 =l call $szc.signed_read.4(l $szc.g.3)
+	%t15 =l shl %t15, 24
+	%t15 =l sar %t15, 24
+	%t17 =w cnel %t15, -9
+	%t13 =w copy %t17
+	jmp @b13
+@b13
+	jnz %t13, @c26_then, @c26_else
+@c26_then
+	ret 2
+@c26_else
+	jmp @b22
+@b22
+	%t28 =w call $szc.chain.5(l $szc.g.4)
+	%t28 =w and %t28, 255
+	%t30 =w cnew %t28, 7
+	jnz %t30, @c36_then, @c36_else
+@c36_then
+	%t31 =w copy 1
+	jmp @b31
+@c36_else
+	%t31 =w copy 0
+	jmp @b31
+@b31
+	jnz %t31, @c42_then, @c42_else
+@c42_then
+	%t37 =w copy 1
+	jmp @b37
+@c42_else
+	%t37 =w copy 0
+	jmp @b37
+@b37
+	jnz %t37, @c47_then, @c47_else
+@c47_then
+	ret 3
+@c47_else
+	jmp @b43
+@b43
+	%t49 =w call $szc.invoke.6(l $szc.g.5)
+	%t49 =w and %t49, 255
+	%t51 =w cnew %t49, 42
+	jnz %t51, @c59_then, @c59_else
+@c59_then
+	%t52 =w copy 1
+	jmp @b52
+@c59_else
+	%t54 =w call $szc.read_bool.7(l $szc.g.6)
+	%t54 =w and %t54, 1
+	%t55 =w xor %t54, 1
+	%t55 =w and %t55, 1
+	%t52 =w copy %t55
+	jmp @b52
+@b52
+	jnz %t52, @c64_then, @c64_else
+@c64_then
+	ret 4
+@c64_else
+	jmp @b60
+@b60
+	%t66 =w loadub $szc.g.7
+	%t68 =w cnew %t66, 11
+	jnz %t68, @c77_then, @c77_else
+@c77_then
+	%t69 =w copy 1
+	jmp @b69
+@c77_else
+	%t71 =w call $szc.read.3(l $szc.g.7)
+	%t71 =w and %t71, 255
+	%t73 =w cnew %t71, 11
+	%t69 =w copy %t73
+	jmp @b69
+@b69
+	jnz %t69, @c82_then, @c82_else
+@c82_then
+	ret 5
+@c82_else
+	jmp @b78
+@b78
+	ret 0
+}
+
+function w $szc.read_u16.2(l %t0) {
+@start
+	%t1 =w loaduh %t0
+	ret %t1
+}
+
+function w $szc.read.3(l %t0) {
+@start
+	%t1 =w loadub %t0
+	ret %t1
+}
+
+function l $szc.signed_read.4(l %t0) {
+@start
+	%t1 =l loadl %t0
+	ret %t1
+}
+
+function w $szc.chain.5(l %t0) {
+@start
+	%t1 =l loadl %t0
+	%t2 =w loadub %t1
+	ret %t2
+}
+
+function w $szc.invoke.6(l %t0) {
+@start
+	%t1 =l loadl %t0
+	%t2 =w call %t1()
+	%t2 =w and %t2, 255
+	ret %t2
+}
+
+function w $szc.read_bool.7(l %t0) {
+@start
+	%t1 =w loadub %t0
+	ret %t1
+}
+
+function w $szc.target.8() {
+@start
+	ret 42
+}
+
+section ".rodata"
+data $szc.g.1 = align 2 { h 31 }
+section ".rodata"
+data $szc.g.2 = align 64 { b 7 }
+section ".rodata"
+data $szc.g.3 = align 1 { l -9 }
+section ".data.rel.ro"
+data $szc.g.4 = align 64 { l $szc.g.2 }
+section ".data.rel.ro"
+data $szc.g.5 = align 64 { l $szc.target.8 }
+section ".rodata"
+data $szc.g.6 = align 1 { b 1 }
+data $szc.g.7 = align 1 { b 11 }
+section ".rodata"
+data $szc.g.8 = align 64 { b 0 }
+section ".rodata"
+data $szc.g.9 = align 64 { b 0 }
+export function w $main() {
+@start
+	%status =w call $szc.main.1()
+	ret %status
+}

@@ -1,0 +1,575 @@
+%408 = struct_decl (flags=0) {
+  decl const "left" type {
+    %0 = break_inline result, @type_u8
+  } align {
+    %2 = int 256
+    %3 = as @type_u29, %2
+    %4 = break_inline result, %3
+  } value {
+    %1 = decl_type
+    %5 = decl_ref "left"
+    %6 = decl_ref "left"
+    %7 = cmp_eq %5, %6
+    %12 = bool_and %7 rhs {
+      %8 = decl_ref "right"
+      %9 = decl_ref "right"
+      %10 = cmp_eq %8, %9
+      %11 = break_inline result, %10
+    }
+    %19 = if %12 then {
+      %13 = int 7
+      %14 = as %1, %13
+      %15 = break_inline result, %14
+    } else {
+      %16 = int 0
+      %17 = as %1, %16
+      %18 = break_inline result, %17
+    }
+    %20 = break_inline result, %19
+  }
+  decl const "right" type {
+    %21 = int_type i40
+    %22 = break_inline result, %21
+  } align {
+    %24 = int 1
+    %25 = as @type_u29, %24
+    %26 = break_inline result, %25
+  } value {
+    %23 = decl_type
+    %27 = decl_ref "left"
+    %28 = decl_ref "left"
+    %29 = cmp_eq %27, %28
+    %37 = if %29 then {
+      %30 = int 9
+      %31 = negate %30
+      %32 = as %23, %31
+      %33 = break_inline result, %32
+    } else {
+      %34 = int 0
+      %35 = as %23, %34
+      %36 = break_inline result, %35
+    }
+    %38 = break_inline result, %37
+  }
+  decl const "callback" type {
+    %40 = fn_type "" {
+      ret type {
+        %39 = break_inline result, @type_u8
+      }
+    }
+    %41 = as @type_type, %40
+    %42 = ptr_type %41, @true
+    %43 = as @type_type, %42
+    %44 = break_inline result, %43
+  } align {
+    %46 = int 256
+    %47 = as @type_u29, %46
+    %48 = break_inline result, %47
+  } value {
+    %45 = decl_type
+    %49 = decl_ref "callback"
+    %50 = decl_ref "callback"
+    %51 = cmp_eq %49, %50
+    %58 = if %51 then {
+      %52 = decl_val "target"
+      %53 = as %45, %52
+      %54 = break_inline result, %53
+    } else {
+      %55 = decl_val "other"
+      %56 = as %45, %55
+      %57 = break_inline result, %56
+    }
+    %59 = break_inline result, %58
+  }
+  decl const "link" type {
+    %63 = ptr_type @type_u8, @true align {
+      %60 = int 256
+      %61 = as @type_u29, %60
+      %62 = break_inline result, %61
+    }
+    %64 = as @type_type, %63
+    %65 = break_inline result, %64
+  } align {
+    %67 = int 256
+    %68 = as @type_u29, %67
+    %69 = break_inline result, %68
+  } value {
+    %66 = decl_type
+    %70 = decl_ref "left"
+    %71 = as %66, %70
+    %72 = break_inline result, %71
+  }
+  decl const "inferred" value {
+    %73 = decl_ref "link"
+    %74 = break_inline result, %73
+  }
+  decl const "folded" type {
+    %75 = break_inline result, @type_u8
+  } value {
+    %76 = decl_type
+    %77 = decl_val "inferred"
+    %78 = deref %77
+    %79 = deref %78
+    %80 = as %76, %79
+    %81 = break_inline result, %80
+  }
+  decl const "yes" type {
+    %82 = break_inline result, @type_bool
+  } value {
+    %83 = decl_type
+    %84 = decl_ref "yes"
+    %85 = decl_ref "yes"
+    %86 = cmp_eq %84, %85
+    %91 = if %86 then {
+      %87 = as %83, @true
+      %88 = break_inline result, %87
+    } else {
+      %89 = as %83, @false
+      %90 = break_inline result, %89
+    }
+    %92 = break_inline result, %91
+  }
+  decl const "zero" type {
+    %93 = int_type u0
+    %94 = break_inline result, %93
+  } align {
+    %96 = int 64
+    %97 = as @type_u29, %96
+    %98 = break_inline result, %97
+  } value {
+    %95 = decl_type
+    %99 = decl_ref "zero"
+    %100 = deref %99
+    %101 = as %95, %100
+    %102 = break_inline result, %101
+  }
+  decl const "empty" type {
+    %103 = break_inline result, @type_void
+  } align {
+    %105 = int 64
+    %106 = as @type_u29, %105
+    %107 = break_inline result, %106
+  } value {
+    %104 = decl_type
+    %108 = decl_ref "empty"
+    %109 = deref %108
+    %110 = as %104, %109
+    %111 = break_inline result, %110
+  }
+  decl var "mutable" type {
+    %112 = break_inline result, @type_u8
+  } value {
+    %113 = decl_type
+    %114 = decl_ref "left"
+    %115 = decl_ref "left"
+    %116 = cmp_eq %114, %115
+    %123 = if %116 then {
+      %117 = int 11
+      %118 = as %113, %117
+      %119 = break_inline result, %118
+    } else {
+      %120 = int 0
+      %121 = as %113, %120
+      %122 = break_inline result, %121
+    }
+    %124 = break_inline result, %123
+  }
+  decl const "value_first" type {
+    %125 = break_inline result, @type_u16
+  } value {
+    %126 = decl_type
+    %127 = decl_ref "value_first"
+    %128 = decl_ref "value_first"
+    %129 = cmp_eq %127, %128
+    %136 = if %129 then {
+      %130 = int 31
+      %131 = as %126, %130
+      %132 = break_inline result, %131
+    } else {
+      %133 = int 0
+      %134 = as %126, %133
+      %135 = break_inline result, %134
+    }
+    %137 = break_inline result, %136
+  }
+  decl const "unused_bad" type {
+    %138 = break_inline result, @type_u8
+  } value {
+    %139 = decl_type
+    %140 = int 256
+    %141 = as %139, %140
+    %142 = break_inline result, %141
+  }
+  decl fn "target" value {
+    %148 = func "target" {
+      ret type {
+        %143 = break_inline result, @type_u8
+      }
+      body insts {
+        %144 = ret_type
+        %145 = int 42
+        %146 = as_return %144, %145
+        %147 = ret %146
+      }
+    }
+    %149 = break_inline result, %148
+  }
+  decl fn "other" value {
+    %155 = func "other" {
+      ret type {
+        %150 = break_inline result, @type_u8
+      }
+      body insts {
+        %151 = ret_type
+        %152 = int 1
+        %153 = as_return %151, %152
+        %154 = ret %153
+      }
+    }
+    %156 = break_inline result, %155
+  }
+  decl fn "read" value {
+    %169 = func "read" {
+      %163 = param "p" type {
+        %160 = ptr_type @type_u8, @true align {
+          %157 = int 1
+          %158 = as @type_u29, %157
+          %159 = break_inline result, %158
+        }
+        %161 = as @type_type, %160
+        %162 = break_inline result, %161
+      }
+      ret type {
+        %164 = break_inline result, @type_u8
+      }
+      body insts {
+        %165 = ret_type
+        %166 = deref %163
+        %167 = as_return %165, %166
+        %168 = ret %167
+      }
+    }
+    %170 = break_inline result, %169
+  }
+  decl fn "signed_read" value {
+    %185 = func "signed_read" {
+      %178 = param "p" type {
+        %171 = int_type i40
+        %175 = ptr_type %171, @true align {
+          %172 = int 1
+          %173 = as @type_u29, %172
+          %174 = break_inline result, %173
+        }
+        %176 = as @type_type, %175
+        %177 = break_inline result, %176
+      }
+      ret type {
+        %179 = int_type i40
+        %180 = break_inline result, %179
+      }
+      body insts {
+        %181 = ret_type
+        %182 = deref %178
+        %183 = as_return %181, %182
+        %184 = ret %183
+      }
+    }
+    %186 = break_inline result, %185
+  }
+  decl fn "invoke" value {
+    %205 = func "invoke" {
+      %198 = param "p" type {
+        %188 = fn_type "" {
+          ret type {
+            %187 = break_inline result, @type_u8
+          }
+        }
+        %189 = as @type_type, %188
+        %190 = ptr_type %189, @true
+        %191 = as @type_type, %190
+        %195 = ptr_type %191, @true align {
+          %192 = int 256
+          %193 = as @type_u29, %192
+          %194 = break_inline result, %193
+        }
+        %196 = as @type_type, %195
+        %197 = break_inline result, %196
+      }
+      ret type {
+        %199 = break_inline result, @type_u8
+      }
+      body insts {
+        %200 = ret_type
+        %201 = deref %198
+        %202 = call %201
+        %203 = as_return %200, %202
+        %204 = ret %203
+      }
+    }
+    %206 = break_inline result, %205
+  }
+  decl fn "chain" value {
+    %225 = func "chain" {
+      %218 = param "p" type {
+        %210 = ptr_type @type_u8, @true align {
+          %207 = int 256
+          %208 = as @type_u29, %207
+          %209 = break_inline result, %208
+        }
+        %211 = as @type_type, %210
+        %215 = ptr_type %211, @true align {
+          %212 = int 256
+          %213 = as @type_u29, %212
+          %214 = break_inline result, %213
+        }
+        %216 = as @type_type, %215
+        %217 = break_inline result, %216
+      }
+      ret type {
+        %219 = break_inline result, @type_u8
+      }
+      body insts {
+        %220 = ret_type
+        %221 = deref %218
+        %222 = deref %221
+        %223 = as_return %220, %222
+        %224 = ret %223
+      }
+    }
+    %226 = break_inline result, %225
+  }
+  decl fn "read_bool" value {
+    %236 = func "read_bool" {
+      %230 = param "p" type {
+        %227 = ptr_type @type_bool, @true
+        %228 = as @type_type, %227
+        %229 = break_inline result, %228
+      }
+      ret type {
+        %231 = break_inline result, @type_bool
+      }
+      body insts {
+        %232 = ret_type
+        %233 = deref %230
+        %234 = as_return %232, %233
+        %235 = ret %234
+      }
+    }
+    %237 = break_inline result, %236
+  }
+  decl fn "read_u16" value {
+    %247 = func "read_u16" {
+      %241 = param "p" type {
+        %238 = ptr_type @type_u16, @true
+        %239 = as @type_type, %238
+        %240 = break_inline result, %239
+      }
+      ret type {
+        %242 = break_inline result, @type_u16
+      }
+      body insts {
+        %243 = ret_type
+        %244 = deref %241
+        %245 = as_return %243, %244
+        %246 = ret %245
+      }
+    }
+    %248 = break_inline result, %247
+  }
+  decl fn "main" pub value {
+    %406 = func "main" {
+      ret type {
+        %249 = break_inline result, @type_u8
+      }
+      body insts {
+        %250 = decl_val "value_first"
+        %251 = int 31
+        %252 = cmp_neq %250, %251
+        %262 = bool_or %252 rhs {
+          %253 = decl_val "read_u16"
+          %254 = call %253 arg0 {
+            %255 = arg_type %254, 0
+            %256 = decl_ref "value_first"
+            %257 = as %255, %256
+            %258 = break_inline result, %257
+          }
+          %259 = int 31
+          %260 = cmp_neq %254, %259
+          %261 = break_inline result, %260
+        }
+        %268 = if %262 then {
+          %263 = ret_type
+          %264 = int 1
+          %265 = as_return %263, %264
+          %266 = ret %265
+        } else {
+          %267 = break_inline result, @void_value
+        }
+        %269 = decl_val "read"
+        %270 = call %269 arg0 {
+          %271 = arg_type %270, 0
+          %272 = decl_ref "left"
+          %273 = as %271, %272
+          %274 = break_inline result, %273
+        }
+        %275 = int 7
+        %276 = cmp_neq %270, %275
+        %287 = bool_or %276 rhs {
+          %277 = decl_val "signed_read"
+          %278 = call %277 arg0 {
+            %279 = arg_type %278, 0
+            %280 = decl_ref "right"
+            %281 = as %279, %280
+            %282 = break_inline result, %281
+          }
+          %283 = int 9
+          %284 = negate %283
+          %285 = cmp_neq %278, %284
+          %286 = break_inline result, %285
+        }
+        %293 = if %287 then {
+          %288 = ret_type
+          %289 = int 2
+          %290 = as_return %288, %289
+          %291 = ret %290
+        } else {
+          %292 = break_inline result, @void_value
+        }
+        %294 = decl_val "chain"
+        %295 = call %294 arg0 {
+          %296 = arg_type %295, 0
+          %297 = decl_ref "link"
+          %298 = as %296, %297
+          %299 = break_inline result, %298
+        }
+        %300 = int 7
+        %301 = cmp_neq %295, %300
+        %306 = bool_or %301 rhs {
+          %302 = decl_val "folded"
+          %303 = int 7
+          %304 = cmp_neq %302, %303
+          %305 = break_inline result, %304
+        }
+        %312 = bool_or %306 rhs {
+          %307 = decl_val "inferred"
+          %308 = deref %307
+          %309 = decl_ref "left"
+          %310 = cmp_neq %308, %309
+          %311 = break_inline result, %310
+        }
+        %318 = if %312 then {
+          %313 = ret_type
+          %314 = int 3
+          %315 = as_return %313, %314
+          %316 = ret %315
+        } else {
+          %317 = break_inline result, @void_value
+        }
+        %319 = decl_val "invoke"
+        %320 = call %319 arg0 {
+          %321 = arg_type %320, 0
+          %322 = decl_ref "callback"
+          %323 = as %321, %322
+          %324 = break_inline result, %323
+        }
+        %325 = int 42
+        %326 = cmp_neq %320, %325
+        %336 = bool_or %326 rhs {
+          %327 = decl_val "read_bool"
+          %328 = call %327 arg0 {
+            %329 = arg_type %328, 0
+            %330 = decl_ref "yes"
+            %331 = as %329, %330
+            %332 = break_inline result, %331
+          }
+          %333 = as @type_bool, %328
+          %334 = bool_not %333
+          %335 = break_inline result, %334
+        }
+        %342 = if %336 then {
+          %337 = ret_type
+          %338 = int 4
+          %339 = as_return %337, %338
+          %340 = ret %339
+        } else {
+          %341 = break_inline result, @void_value
+        }
+        %343 = decl_val "mutable"
+        %344 = int 11
+        %345 = cmp_neq %343, %344
+        %355 = bool_or %345 rhs {
+          %346 = decl_val "read"
+          %347 = call %346 arg0 {
+            %348 = arg_type %347, 0
+            %349 = decl_ref "mutable"
+            %350 = as %348, %349
+            %351 = break_inline result, %350
+          }
+          %352 = int 11
+          %353 = cmp_neq %347, %352
+          %354 = break_inline result, %353
+        }
+        %361 = if %355 then {
+          %356 = ret_type
+          %357 = int 5
+          %358 = as_return %356, %357
+          %359 = ret %358
+        } else {
+          %360 = break_inline result, @void_value
+        }
+        %365 = ptr_type @type_u8, @true align {
+          %362 = int 1
+          %363 = as @type_u29, %362
+          %364 = break_inline result, %363
+        }
+        %366 = as @type_type, %365
+        %367 = decl_ref "left"
+        %368 = as %366, %367
+        %369 = decl_ref "left"
+        %370 = cmp_neq %368, %369
+        %376 = bool_or %370 rhs {
+          %371 = decl_ref "left"
+          %372 = deref %371
+          %373 = int 7
+          %374 = cmp_neq %372, %373
+          %375 = break_inline result, %374
+        }
+        %383 = bool_or %376 rhs {
+          %377 = decl_ref "right"
+          %378 = deref %377
+          %379 = int 9
+          %380 = negate %379
+          %381 = cmp_neq %378, %380
+          %382 = break_inline result, %381
+        }
+        %389 = if %383 then {
+          %384 = ret_type
+          %385 = int 6
+          %386 = as_return %384, %385
+          %387 = ret %386
+        } else {
+          %388 = break_inline result, @void_value
+        }
+        %390 = decl_val "zero"
+        %391 = int 0
+        %392 = cmp_neq %390, %391
+        %398 = if %392 then {
+          %393 = ret_type
+          %394 = int 7
+          %395 = as_return %393, %394
+          %396 = ret %395
+        } else {
+          %397 = break_inline result, @void_value
+        }
+        %399 = decl_val "empty"
+        %400 = decl_ref "zero"
+        %401 = decl_ref "empty"
+        %402 = ret_type
+        %403 = int 0
+        %404 = as_return %402, %403
+        %405 = ret %404
+      }
+    }
+    %407 = break_inline result, %406
+  }
+}

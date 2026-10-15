@@ -93,7 +93,54 @@ def main():
                 base, length = int(fields[2], 16), int(fields[5], 16)
                 protected |= base <= address and address + size <= base + length
         assert protected, "constant function-pointer object is not protected by GNU_RELRO"
-    print("reference storage: 11 passed, 0 failed")
+        # Typed immutable declaration addresses can be published before their values.
+        # Check physical storage, not just the known-pointer metadata or folded reads.
+        source = root / "const_dependencies.zig"
+        source.write_text(Path("tests/run/const_dependencies.zig").read_text().replace("align(64)", "align(256)"))
+        source = str(source)
+        run([compiler, "build-exe", source, "-o", str(executable)], env)
+        result = run([str(executable)])
+        assert not result.stdout and not result.stderr
+        zig = os.environ.get("ZIG")
+        if zig:
+            reference = root / "const-dependencies-reference"
+            result = subprocess.run([zig, "build-exe", source, "-j2", f"-femit-bin={reference}"],
+                                    capture_output=True, timeout=120)
+            assert result.returncode == 0, result.stderr.decode(errors="replace")
+            result = run([str(reference)])
+            assert not result.stdout and not result.stderr
+        assert b"TEXTREL" not in run(["readelf", "-d", str(executable)]).stdout
+        declarations = run([compiler, "tir", source]).stdout.decode()
+        constants = re.findall(r"^constant (\S+): (.+?)(?: align\((\d+)\))? = ", declarations, re.M)
+        assert len(constants) == 8, "expected all eight named immutable objects"
+        sections = run(["readelf", "-SW", str(executable)]).stdout.decode()
+        section_names = dict(re.findall(r"\[\s*(\d+)\]\s+(\S+)\s+", sections))
+        symbols = run(["readelf", "-sW", str(executable)]).stdout.decode()
+        parsed_symbols = {}
+        for line in symbols.splitlines():
+            fields = line.split()
+            if len(fields) == 8:
+                parsed_symbols[fields[7]] = fields
+        for symbol, ty, alignment in constants:
+            fields = parsed_symbols[symbol]
+            assert fields[4] == "LOCAL", (symbol, "internal constant exported")
+            section = section_names[fields[6]]
+            assert section == (".data.rel.ro" if ty.startswith("*") else ".rodata"), (symbol, section)
+            if alignment:
+                assert int(fields[1], 16) % int(alignment) == 0, (symbol, alignment)
+        assert any(name.startswith("szc.target.") for name in parsed_symbols), "callback body not queued"
+        # Above-64 pointer objects emitted by the assembly companion need real RELRO too.
+        match = re.search(r"\]\s+\.data.rel.ro\s+\S+\s+([0-9a-f]+)\s+[0-9a-f]+\s+([0-9a-f]+)", sections)
+        assert match
+        address, size = (int(value, 16) for value in match.groups())
+        protected = False
+        for line in run(["readelf", "-lW", str(executable)]).stdout.decode().splitlines():
+            fields = line.split()
+            if fields and fields[0] == "GNU_RELRO":
+                base, length = int(fields[2], 16), int(fields[5], 16)
+                protected |= base <= address and address + size <= base + length
+        assert protected, "typed immutable pointer objects lack full RELRO coverage"
+    print("reference storage: 15 passed, 0 failed")
 
 
 if __name__ == "__main__":

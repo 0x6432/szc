@@ -1102,7 +1102,7 @@ codegen_qbe(FILE *out, FILE *assembly, Sema *sema, Diag *diag)
 	for (GlobalId id = 1; id < sema_global_count(sema); id++) {
 		const SemaGlobal *global = sema_global(sema, id);
 		cg.file = global->file;
-		emit_data_object(&cg, global->initializer, global->symbol, false, global->src, global->alignment);
+		emit_data_object(&cg, global->initializer, global->symbol, global->is_const, global->src, global->alignment);
 	}
 	for (ValueId id = 1; id < values->count; id++) {
 		if (!cg.bytes_used[id])

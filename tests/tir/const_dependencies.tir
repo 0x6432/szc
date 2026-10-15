@@ -1,0 +1,162 @@
+constant szc.g.1: u16 = 31
+constant szc.g.2: u8 align(256) = 7
+constant szc.g.3: i40 align(1) = -9
+constant szc.g.4: *align(256) const u8 align(256) = szc.g.2
+constant szc.g.5: *const fn () u8 align(256) = szc.target.8
+constant szc.g.6: bool = true
+global szc.g.7: u8 = 11
+constant szc.g.8: u0 align(64) = 0
+constant szc.g.9: void align(64) = {}
+fn szc.main.1: fn () u8 {
+  %0: *const u16 = const szc.g.1
+  %1: u16 = call szc.read_u16.2(%0)
+  %2: u16 = const 31
+  %3: bool = cmp_neq %1, %2
+  %4: void = block {
+    %8: noreturn = condbr %3 then {
+      %5: u8 = const 1
+      %6: noreturn = ret %5
+    } else {
+      %7: noreturn = br %4
+    }
+  }
+  %9: *align(1) const u8 = const szc.g.2
+  %10: u8 = call szc.read.3(%9)
+  %11: u8 = const 7
+  %12: bool = cmp_neq %10, %11
+  %13: bool = block {
+    %21: noreturn = condbr %12 then {
+      %19: bool = const true
+      %20: noreturn = br %13, %19
+    } else {
+      %14: *align(1) const i40 = const szc.g.3
+      %15: i40 = call szc.signed_read.4(%14)
+      %16: i40 = const -9
+      %17: bool = cmp_neq %15, %16
+      %18: noreturn = br %13, %17
+    }
+  }
+  %22: void = block {
+    %26: noreturn = condbr %13 then {
+      %23: u8 = const 2
+      %24: noreturn = ret %23
+    } else {
+      %25: noreturn = br %22
+    }
+  }
+  %27: *align(256) const *align(256) const u8 = const szc.g.4
+  %28: u8 = call szc.chain.5(%27)
+  %29: u8 = const 7
+  %30: bool = cmp_neq %28, %29
+  %31: bool = block {
+    %36: noreturn = condbr %30 then {
+      %34: bool = const true
+      %35: noreturn = br %31, %34
+    } else {
+      %32: bool = const false
+      %33: noreturn = br %31, %32
+    }
+  }
+  %37: bool = block {
+    %42: noreturn = condbr %31 then {
+      %40: bool = const true
+      %41: noreturn = br %37, %40
+    } else {
+      %38: bool = const false
+      %39: noreturn = br %37, %38
+    }
+  }
+  %43: void = block {
+    %47: noreturn = condbr %37 then {
+      %44: u8 = const 3
+      %45: noreturn = ret %44
+    } else {
+      %46: noreturn = br %43
+    }
+  }
+  %48: *align(256) const *const fn () u8 = const szc.g.5
+  %49: u8 = call szc.invoke.6(%48)
+  %50: u8 = const 42
+  %51: bool = cmp_neq %49, %50
+  %52: bool = block {
+    %59: noreturn = condbr %51 then {
+      %57: bool = const true
+      %58: noreturn = br %52, %57
+    } else {
+      %53: *const bool = const szc.g.6
+      %54: bool = call szc.read_bool.7(%53)
+      %55: bool = not %54
+      %56: noreturn = br %52, %55
+    }
+  }
+  %60: void = block {
+    %64: noreturn = condbr %52 then {
+      %61: u8 = const 4
+      %62: noreturn = ret %61
+    } else {
+      %63: noreturn = br %60
+    }
+  }
+  %65: *u8 = const szc.g.7
+  %66: u8 = load %65
+  %67: u8 = const 11
+  %68: bool = cmp_neq %66, %67
+  %69: bool = block {
+    %77: noreturn = condbr %68 then {
+      %75: bool = const true
+      %76: noreturn = br %69, %75
+    } else {
+      %70: *align(1) const u8 = const szc.g.7
+      %71: u8 = call szc.read.3(%70)
+      %72: u8 = const 11
+      %73: bool = cmp_neq %71, %72
+      %74: noreturn = br %69, %73
+    }
+  }
+  %78: void = block {
+    %82: noreturn = condbr %69 then {
+      %79: u8 = const 5
+      %80: noreturn = ret %79
+    } else {
+      %81: noreturn = br %78
+    }
+  }
+  %83: u8 = const 0
+  %84: noreturn = ret %83
+}
+fn szc.read_u16.2: fn (*const u16) u16 {
+  %0: *const u16 = arg 0
+  %1: u16 = load %0
+  %2: noreturn = ret %1
+}
+fn szc.read.3: fn (*align(1) const u8) u8 {
+  %0: *align(1) const u8 = arg 0
+  %1: u8 = load %0
+  %2: noreturn = ret %1
+}
+fn szc.signed_read.4: fn (*align(1) const i40) i40 {
+  %0: *align(1) const i40 = arg 0
+  %1: i40 = load %0
+  %2: noreturn = ret %1
+}
+fn szc.chain.5: fn (*align(256) const *align(256) const u8) u8 {
+  %0: *align(256) const *align(256) const u8 = arg 0
+  %1: *align(256) const u8 = load %0
+  %2: u8 = load %1
+  %3: noreturn = ret %2
+}
+fn szc.invoke.6: fn (*align(256) const *const fn () u8) u8 {
+  %0: *align(256) const *const fn () u8 = arg 0
+  %1: *const fn () u8 = load %0
+  %2: u8 = call %1()
+  %3: noreturn = ret %2
+}
+fn szc.read_bool.7: fn (*const bool) bool {
+  %0: *const bool = arg 0
+  %1: bool = load %0
+  %2: noreturn = ret %1
+}
+fn szc.target.8: fn () u8 {
+  %0: u8 = const 42
+  %1: noreturn = ret %0
+}

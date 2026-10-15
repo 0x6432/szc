@@ -1,94 +1,97 @@
-%61 = struct_decl (flags=0) {
-  decl const "global" value {
-    %0 = int 23
-    %1 = as @type_u8, %0
-    %2 = break_inline result, %1
+%63 = struct_decl (flags=0) {
+  decl const "global" type {
+    %0 = break_inline result, @type_u8
+  } value {
+    %1 = decl_type
+    %2 = int 23
+    %3 = as %1, %2
+    %4 = break_inline result, %3
   }
   decl fn "select" value {
-    %19 = func "select" {
-      %4 = param "n" type {
-        %3 = break_inline result, @type_u8
+    %21 = func "select" {
+      %6 = param "n" type {
+        %5 = break_inline result, @type_u8
       }
-      %6 = param "c" type {
-        %5 = break_inline result, @type_bool
+      %8 = param "c" type {
+        %7 = break_inline result, @type_bool
       }
       ret type {
-        %7 = break_inline result, @type_u8
+        %9 = break_inline result, @type_u8
       }
       body insts {
-        %8 = int 1
-        %9 = add %4, %8
-        %11 = ref %9
-        %10 = as @type_bool, %6
-        %14 = if %10 then {
-          %12 = break_inline result, %11
+        %10 = int 1
+        %11 = add %6, %10
+        %13 = ref %11
+        %12 = as @type_bool, %8
+        %16 = if %12 then {
+          %14 = break_inline result, %13
         } else {
-          %13 = break_inline result, %11
+          %15 = break_inline result, %13
         }
-        %15 = ret_type
-        %16 = deref %14
-        %17 = as_return %15, %16
-        %18 = ret %17
+        %17 = ret_type
+        %18 = deref %16
+        %19 = as_return %17, %18
+        %20 = ret %19
       }
     }
-    %20 = break_inline result, %19
+    %22 = break_inline result, %21
   }
   decl fn "load" value {
-    %33 = func "load" {
-      %26 = param "p" type {
-        %21 = ptr_type @type_u8, @true
-        %22 = as @type_type, %21
-        %23 = ptr_type %22, @true
+    %35 = func "load" {
+      %28 = param "p" type {
+        %23 = ptr_type @type_u8, @true
         %24 = as @type_type, %23
-        %25 = break_inline result, %24
+        %25 = ptr_type %24, @true
+        %26 = as @type_type, %25
+        %27 = break_inline result, %26
       }
       ret type {
-        %27 = break_inline result, @type_u8
+        %29 = break_inline result, @type_u8
       }
       body insts {
-        %28 = ret_type
-        %29 = deref %26
-        %30 = deref %29
-        %31 = as_return %28, %30
-        %32 = ret %31
+        %30 = ret_type
+        %31 = deref %28
+        %32 = deref %31
+        %33 = as_return %30, %32
+        %34 = ret %33
       }
     }
-    %34 = break_inline result, %33
+    %36 = break_inline result, %35
   }
   decl fn "main" pub value {
-    %59 = func "main" {
+    %61 = func "main" {
       ret type {
-        %35 = break_inline result, @type_u8
+        %37 = break_inline result, @type_u8
       }
       body insts {
-        %36 = int 19
-        %37 = as @type_u8, %36
-        %38 = ref %37
-        %46 = ref %38
-        %39 = ret_type
-        %40 = decl_val "select"
-        %41 = call %40 arg0 {
-          %42 = arg_type %41, 0
-          %43 = decl_val "load"
-          %44 = call %43 arg0 {
-            %45 = arg_type %44, 0
-            %47 = as %45, %46
-            %48 = break_inline result, %47
+        %38 = int 19
+        %39 = as @type_u8, %38
+        %40 = ref %39
+        %48 = ref %40
+        %41 = ret_type
+        %42 = decl_val "select"
+        %43 = call %42 arg0 {
+          %44 = arg_type %43, 0
+          %45 = decl_val "load"
+          %46 = call %45 arg0 {
+            %47 = arg_type %46, 0
+            %49 = as %47, %48
+            %50 = break_inline result, %49
           }
-          %49 = as %42, %44
-          %50 = break_inline result, %49
+          %51 = as %44, %46
+          %52 = break_inline result, %51
         } arg1 {
-          %51 = arg_type %41, 1
-          %52 = as %51, @false
-          %53 = break_inline result, %52
+          %53 = arg_type %43, 1
+          %54 = as %53, @false
+          %55 = break_inline result, %54
         }
-        %54 = decl_ref "global"
-        %55 = deref %54
-        %56 = add %41, %55
-        %57 = as_return %39, %56
-        %58 = ret %57
+        %56 = decl_ref "global"
+        %57 = deref %56
+        %58 = add %43, %57
+        %59 = as_return %41, %58
+        %60 = ret %59
       }
     }
-    %60 = break_inline result, %59
+    %62 = break_inline result, %61
   }
 }

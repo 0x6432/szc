@@ -50,6 +50,8 @@ section ".rodata"
 data $szc.const.1 = align 1 { b 19 }
 section ".data.rel.ro"
 data $szc.const.2 = align 8 { l $szc.const.1 }
+section ".rodata"
+data $szc.g.1 = align 1 { b 23 }
 data $szc.panic.msg.0 = { b "integer overflow\n", b 0 }
 function $szc.panic.0() {
 @start

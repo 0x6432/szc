@@ -1,0 +1,3 @@
+tests/tir/errors/const_dependency_value_cycle.zig:2:19: error: dependency loop detected
+const b: u8 = (&a).*;
+                  ^

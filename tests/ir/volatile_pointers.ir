@@ -1,4 +1,4 @@
-%161 = struct_decl (flags=0) {
+%163 = struct_decl (flags=0) {
   decl var "value" type {
     %0 = break_inline result, @type_u8
   } align {
@@ -11,223 +11,226 @@
     %6 = as %1, %5
     %7 = break_inline result, %6
   }
-  decl const "saved" value {
+  decl const "saved" type {
     %11 = ptr_type @type_u8, @false volatile align {
       %8 = int 64
       %9 = as @type_u29, %8
       %10 = break_inline result, %9
     }
     %12 = as @type_type, %11
-    %13 = decl_ref "value"
-    %14 = as %12, %13
-    %15 = break_inline result, %14
+    %13 = break_inline result, %12
+  } value {
+    %14 = decl_type
+    %15 = decl_ref "value"
+    %16 = as %14, %15
+    %17 = break_inline result, %16
   }
   decl fn "qualify" value {
-    %26 = func "qualify" {
-      %19 = param "p" type {
-        %16 = ptr_type @type_u8, @false
-        %17 = as @type_type, %16
-        %18 = break_inline result, %17
+    %28 = func "qualify" {
+      %21 = param "p" type {
+        %18 = ptr_type @type_u8, @false
+        %19 = as @type_type, %18
+        %20 = break_inline result, %19
       }
       ret type {
-        %20 = ptr_type @type_u8, @true volatile
-        %21 = as @type_type, %20
-        %22 = break_inline result, %21
+        %22 = ptr_type @type_u8, @true volatile
+        %23 = as @type_type, %22
+        %24 = break_inline result, %23
       }
       body insts {
-        %23 = ret_type
-        %24 = as_return %23, %19
-        %25 = ret %24
+        %25 = ret_type
+        %26 = as_return %25, %21
+        %27 = ret %26
       }
     }
-    %27 = break_inline result, %26
+    %29 = break_inline result, %28
   }
   decl fn "choose" value {
-    %49 = func "choose" {
-      %29 = param "flag" type {
-        %28 = break_inline result, @type_bool
+    %51 = func "choose" {
+      %31 = param "flag" type {
+        %30 = break_inline result, @type_bool
       }
-      %33 = param "p" type {
-        %30 = ptr_type @type_u8, @false
-        %31 = as @type_type, %30
-        %32 = break_inline result, %31
+      %35 = param "p" type {
+        %32 = ptr_type @type_u8, @false
+        %33 = as @type_type, %32
+        %34 = break_inline result, %33
       }
-      %37 = param "q" type {
-        %34 = ptr_type @type_u8, @true volatile
-        %35 = as @type_type, %34
-        %36 = break_inline result, %35
+      %39 = param "q" type {
+        %36 = ptr_type @type_u8, @true volatile
+        %37 = as @type_type, %36
+        %38 = break_inline result, %37
       }
       ret type {
-        %38 = ptr_type @type_u8, @true volatile
-        %39 = as @type_type, %38
-        %40 = break_inline result, %39
+        %40 = ptr_type @type_u8, @true volatile
+        %41 = as @type_type, %40
+        %42 = break_inline result, %41
       }
       body insts {
-        %41 = ret_type
-        %42 = as @type_bool, %29
-        %47 = if %42 then {
-          %43 = as %41, %33
-          %44 = break_inline result, %43
-        } else {
-          %45 = as %41, %37
+        %43 = ret_type
+        %44 = as @type_bool, %31
+        %49 = if %44 then {
+          %45 = as %43, %35
           %46 = break_inline result, %45
+        } else {
+          %47 = as %43, %39
+          %48 = break_inline result, %47
         }
-        %48 = ret %47
+        %50 = ret %49
       }
     }
-    %50 = break_inline result, %49
+    %52 = break_inline result, %51
   }
   decl fn "target" value {
-    %57 = func "target" {
-      %54 = param "p" type {
-        %51 = ptr_type @type_u8, @true volatile
-        %52 = as @type_type, %51
-        %53 = break_inline result, %52
+    %59 = func "target" {
+      %56 = param "p" type {
+        %53 = ptr_type @type_u8, @true volatile
+        %54 = as @type_type, %53
+        %55 = break_inline result, %54
       }
       ret type {
-        %55 = break_inline result, @type_void
+        %57 = break_inline result, @type_void
       }
       body insts {
-        %56 = ret_implicit
+        %58 = ret_implicit
       }
     }
-    %58 = break_inline result, %57
+    %60 = break_inline result, %59
   }
   decl fn "invoke" value {
-    %80 = func "invoke" {
-      %69 = param "f" type {
-        %64 = fn_type "" {
-          %62 = param "" type {
-            %59 = ptr_type @type_u8, @true
-            %60 = as @type_type, %59
-            %61 = break_inline result, %60
+    %82 = func "invoke" {
+      %71 = param "f" type {
+        %66 = fn_type "" {
+          %64 = param "" type {
+            %61 = ptr_type @type_u8, @true
+            %62 = as @type_type, %61
+            %63 = break_inline result, %62
           }
           ret type {
-            %63 = break_inline result, @type_void
+            %65 = break_inline result, @type_void
           }
         }
-        %65 = as @type_type, %64
-        %66 = ptr_type %65, @true
         %67 = as @type_type, %66
-        %68 = break_inline result, %67
+        %68 = ptr_type %67, @true
+        %69 = as @type_type, %68
+        %70 = break_inline result, %69
       }
-      %73 = param "p" type {
-        %70 = ptr_type @type_u8, @true
-        %71 = as @type_type, %70
-        %72 = break_inline result, %71
+      %75 = param "p" type {
+        %72 = ptr_type @type_u8, @true
+        %73 = as @type_type, %72
+        %74 = break_inline result, %73
       }
       ret type {
-        %74 = break_inline result, @type_void
+        %76 = break_inline result, @type_void
       }
       body insts {
-        %75 = call %69 arg0 {
-          %76 = arg_type %75, 0
-          %77 = as %76, %73
-          %78 = break_inline result, %77
+        %77 = call %71 arg0 {
+          %78 = arg_type %77, 0
+          %79 = as %78, %75
+          %80 = break_inline result, %79
         }
-        %79 = ret_implicit
+        %81 = ret_implicit
       }
     }
-    %81 = break_inline result, %80
+    %83 = break_inline result, %82
   }
   decl fn "main" pub value {
-    %159 = func "main" {
+    %161 = func "main" {
       ret type {
-        %82 = break_inline result, @type_u8
+        %84 = break_inline result, @type_u8
       }
       body insts {
-        %83 = ptr_type @type_u8, @true allowzero volatile
-        %84 = as @type_type, %83
-        %85 = decl_val "saved"
-        %86 = as %84, %85
-        %87 = ptr_type @type_u8, @true volatile
-        %88 = as @type_type, %87
-        %89 = decl_ref "value"
-        %90 = as %88, %89
-        %94 = ptr_type @type_u8, @false volatile align {
-          %91 = int 64
-          %92 = as @type_u29, %91
-          %93 = break_inline result, %92
+        %85 = ptr_type @type_u8, @true allowzero volatile
+        %86 = as @type_type, %85
+        %87 = decl_val "saved"
+        %88 = as %86, %87
+        %89 = ptr_type @type_u8, @true volatile
+        %90 = as @type_type, %89
+        %91 = decl_ref "value"
+        %92 = as %90, %91
+        %96 = ptr_type @type_u8, @false volatile align {
+          %93 = int 64
+          %94 = as @type_u29, %93
+          %95 = break_inline result, %94
         }
-        %95 = as @type_type, %94
-        %96 = ptr_type %95, @true
         %97 = as @type_type, %96
-        %98 = decl_ref "saved"
-        %99 = as %97, %98
-        %100 = deref %99
-        %101 = decl_val "saved"
-        %102 = cmp_neq %100, %101
-        %111 = bool_or %102 rhs {
-          %103 = decl_val "qualify"
-          %104 = call %103 arg0 {
-            %105 = arg_type %104, 0
-            %106 = decl_ref "value"
-            %107 = as %105, %106
-            %108 = break_inline result, %107
+        %98 = ptr_type %97, @true
+        %99 = as @type_type, %98
+        %100 = decl_ref "saved"
+        %101 = as %99, %100
+        %102 = deref %101
+        %103 = decl_val "saved"
+        %104 = cmp_neq %102, %103
+        %113 = bool_or %104 rhs {
+          %105 = decl_val "qualify"
+          %106 = call %105 arg0 {
+            %107 = arg_type %106, 0
+            %108 = decl_ref "value"
+            %109 = as %107, %108
+            %110 = break_inline result, %109
           }
-          %109 = cmp_neq %104, %90
-          %110 = break_inline result, %109
+          %111 = cmp_neq %106, %92
+          %112 = break_inline result, %111
         }
-        %126 = bool_or %111 rhs {
-          %112 = decl_val "choose"
-          %113 = call %112 arg0 {
-            %114 = arg_type %113, 0
-            %115 = as %114, @true
-            %116 = break_inline result, %115
+        %128 = bool_or %113 rhs {
+          %114 = decl_val "choose"
+          %115 = call %114 arg0 {
+            %116 = arg_type %115, 0
+            %117 = as %116, @true
+            %118 = break_inline result, %117
           } arg1 {
-            %117 = arg_type %113, 1
-            %118 = decl_ref "value"
-            %119 = as %117, %118
-            %120 = break_inline result, %119
+            %119 = arg_type %115, 1
+            %120 = decl_ref "value"
+            %121 = as %119, %120
+            %122 = break_inline result, %121
           } arg2 {
-            %121 = arg_type %113, 2
-            %122 = as %121, %90
-            %123 = break_inline result, %122
+            %123 = arg_type %115, 2
+            %124 = as %123, %92
+            %125 = break_inline result, %124
           }
-          %124 = cmp_neq %113, %90
-          %125 = break_inline result, %124
+          %126 = cmp_neq %115, %92
+          %127 = break_inline result, %126
         }
-        %132 = if %126 then {
-          %127 = ret_type
-          %128 = int 1
-          %129 = as_return %127, %128
-          %130 = ret %129
+        %134 = if %128 then {
+          %129 = ret_type
+          %130 = int 1
+          %131 = as_return %129, %130
+          %132 = ret %131
         } else {
-          %131 = break_inline result, @void_value
+          %133 = break_inline result, @void_value
         }
-        %133 = decl_ref "value"
-        %134 = cmp_neq %86, %133
-        %138 = bool_or %134 rhs {
-          %135 = ref_deref %90
-          %136 = cmp_neq %135, %90
-          %137 = break_inline result, %136
+        %135 = decl_ref "value"
+        %136 = cmp_neq %88, %135
+        %140 = bool_or %136 rhs {
+          %137 = ref_deref %92
+          %138 = cmp_neq %137, %92
+          %139 = break_inline result, %138
         }
-        %144 = if %138 then {
-          %139 = ret_type
-          %140 = int 2
-          %141 = as_return %139, %140
-          %142 = ret %141
+        %146 = if %140 then {
+          %141 = ret_type
+          %142 = int 2
+          %143 = as_return %141, %142
+          %144 = ret %143
         } else {
-          %143 = break_inline result, @void_value
+          %145 = break_inline result, @void_value
         }
-        %145 = decl_val "invoke"
-        %146 = call %145 arg0 {
-          %147 = arg_type %146, 0
-          %148 = decl_val "target"
-          %149 = as %147, %148
-          %150 = break_inline result, %149
+        %147 = decl_val "invoke"
+        %148 = call %147 arg0 {
+          %149 = arg_type %148, 0
+          %150 = decl_val "target"
+          %151 = as %149, %150
+          %152 = break_inline result, %151
         } arg1 {
-          %151 = arg_type %146, 1
-          %152 = decl_ref "value"
-          %153 = as %151, %152
-          %154 = break_inline result, %153
+          %153 = arg_type %148, 1
+          %154 = decl_ref "value"
+          %155 = as %153, %154
+          %156 = break_inline result, %155
         }
-        %155 = ret_type
-        %156 = int 0
-        %157 = as_return %155, %156
-        %158 = ret %157
+        %157 = ret_type
+        %158 = int 0
+        %159 = as_return %157, %158
+        %160 = ret %159
       }
     }
-    %160 = break_inline result, %159
+    %162 = break_inline result, %161
   }
 }

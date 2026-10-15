@@ -46,12 +46,14 @@ Read this first when resuming work (the sandbox resets often).
   definitions and supplier-guaranteed extern declarations).
 - Done: M5.1c2b3a volatile single-pointer qualification/coercion.
 - Done: M5.1c2b3b observable volatile scalar/bool/single-pointer loads/stores.
-  This completes the user-requested three-checkpoint batch; return to small
-  checkpoints next. Remaining alignment gaps: local bare-function alias alignment
-  and typed immutable address-dependency cycles. Ground the latter next;
-  do not claim all M5.1 integration complete. Aligned local function aliases now
-  have a confirmed Zig 0.17 emission crash (details below); keep the explicit NYI.
-  M5.1/M5.1c/M5.1c2/M5.1c2b/M5.1c2b2/M5.1c2b2b remain partial.
+- Done: M5.1c2b2b3c typed immutable declaration address dependencies, including
+  self/mutual address-only cycles, separate known initializer loads and real read-only
+  storage. Local explicitly aligned bare-function aliases retain the verified upstream
+  emission-crash NYI. All enclosing M5.1 alignment/integration milestones stay partial.
+- Current batching preference: group related straightforward milestones when practical;
+  keep complex semantic changes independently tested/documented/committed. Do not return
+  to an unconditional one-checkpoint policy. Select the next independently implementable
+  memory item without pretending the blocked function-alias case is complete.
 - Run `PATH=/data/tools/bin:$PATH ZIG=/data/zig/zig-x86_64-linux-0.17.0/zig make e2e-test`
   locally. `tools/build_qbe.sh` builds the pinned QBE into `build/qbe-src` on CI.
 - Tools: `SZC_QBE`/`qbe`, `SZC_CC`/`cc`; pinned QBE revision
@@ -139,9 +141,66 @@ pub fn main() u8 { const alias align(64) = target; return invoke(&alias); }
 - Probe commands: zig build-exe probe.zig -j2 -fno-emit-bin (0), then the same
   source with -femit-bin=probe (-11). Reference version command reports 0.17.0.
   Existing szc aligned-local-function-address NYI stays explicit; the test is not
-  reclassified as reference-rejected Zig. Next language checkpoint: scoped typed
-  immutable address-dependency resolution, while keeping enclosing M5.1 partial.
-  Q6 remains deferred until M10.2.
+  reclassified as reference-rejected Zig. Typed immutable address dependencies are now
+  implemented in M5.1c2b2b3c below. Q6 remains deferred until M10.2.
+
+## Validation at M5.1c2b2b3c: typed immutable address dependencies
+
+- Zig 0.17 Sema.zig zirDeclRef/analyzeNavRefInner resolves a declaration's type for
+  an address, and its complete value for a load. Actual emitted probes accept explicit
+  typed self/mutual address dependencies and void/u0 self-loads, but reject true scalar
+  value cycles, inferred-type cycles and dependencies through type/alignment resolution.
+  Address-only use still validates initializers and reachable callback bodies.
+- irgen now isolates every explicit global const type into IrDecl.type_body, using
+  IR_DECL_TYPE in its initializer, as for mutable/aligned declarations. SemaDecl publishes
+  declared_type only after type AND alignment succeed. A typed scalar/bool/single-pointer/
+  void const address can then receive a stable GlobalId without evaluating its contents.
+  SemaGlobal.is_const distinguishes immutable backing from mutable storage; VALUE_GLOBAL
+  is a declaration address, not an initializer. No interned Value/ConstObject is mutated,
+  no undefined placeholder is used, and const decl.value remains its known Operand.
+- Global records are allocated only when an immutable address is requested. Their
+  initializers drain even for address-only use, using the existing function/global queue.
+  Reading a known immutable declaration pointer resolves/folds its contents, including
+  through volatile-qualified aliases; a pointer to mutable storage still cannot fold.
+  Runtime pointer parameters retain real loads. Pending initializer function references
+  queue callback bodies, and codegen emits immutable globals in .rodata/.data.rel.ro.
+  Anonymous/local/inferred value references retain the existing immutable-object DAG;
+  named backedges use stable declaration IDs, so no cyclic interner traversal is needed.
+- Coverage: old reference-accepted self-address NYI fixture becomes a positive TIR test.
+  New IR/TIR/QBE and executable coverage exercises self/mutual dependencies, value-first/
+  address-first resolution, known pointer chains, callback slots, signed/bool/void/u0
+  storage, mutable interaction and lazy unused invalid declarations. Six new error
+  goldens are all rejected by reference Zig, including an invalid address-only callback.
+  Physical ELF checks inspect all eight named immutable symbols, real 256-byte alignment,
+  local binding, section selection, full RELRO and no TEXTREL under PIE; the over-aligned
+  variant is also compiled/executed by Zig when ZIG is set. Reference storage suite: 15.
+- Validation: 519 global-constant comparisons (187 new, 332 retained), 558 unit checks
+  and 735 goldens pass. Fresh GCC/Clang -Werror ASan/UBSan pass 58 ordinary/generated
+  executables, 16 driver, 15 storage, 166 safety and 44 physical volatile sequences.
+  GCC's full e2e has Zig comparisons enabled, also passing two szc-only cases, four ABI,
+  seven unaligned, 135 mutable-local, 270 local-constant, 153 mutable-global, 153 global-
+  constant and 27 function-alignment checks. Eight lifecycle and 17 adapter regressions
+  pass. All four 60-second libFuzzer targets and 20,000 standalone mutations per stage
+  pass. All ten actual differential matrices pass 4,615 comparisons: 168 nested const,
+  864 allowzero, 1,035 pointer alignment, 300 local alignment, 626 local constants,
+  300 mutable globals, 519 global constants, 77 function alignment, 240 volatile and
+  486 function signatures. An initial local orchestration typo named a nonexistent
+  allowzero tool (exit 2); the correct diff_pointer_allowzero.py completed all 864.
+  No comparison was skipped or failure ignored. GCC -O2 -Werror also passes the new
+  executable and all 15 storage checks. New retained corpus inputs: irgen 34/sema 81. The restored sandbox again needed
+  libasan/libubsan/Clang/compiler-rt.
+- Scope: only explicitly typed supported runtime storage gets early immutable addresses;
+  inferred type cycles and genuine value/type/alignment loops remain errors, not guessed
+  values. Other aggregates/floats, exported/extern/threadlocal aligned constants and
+  aligned local bare-function aliases retain prior limitations. Dependency diagnostics
+  retain the existing primary-only message, not Zig's complete dependency trace.
+  Enclosing M5.1/M5.1c/M5.1c2/M5.1c2b/M5.1c2b2/M5.1c2b2b remain partial.
+- Next: ground small M5.2 array-type/literal/indexing checkpoints in the 0.17 sources;
+  batch related straightforward parts when practical. Do not block independent array
+  work on the upstream aligned-local-function-alias crash, or mark M5.1 complete.
+- CI before this push: 1e0dfde/run 38705005917 has successful GCC/Clang/fuzz jobs,
+  but differential still reports in_progress at nested pointer comparisons, so it is
+  not a green run. Check this checkpoint's new push separately.
 
 ## Validation at M5.1c2b3b
 
@@ -272,9 +331,9 @@ pub fn main() u8 { const alias align(64) = target; return invoke(&alias); }
   above-64 limitation. No new backend workaround or mutable const backing was added.
 - Forward acyclic constants, nested pointers, mutable pointees, callable pointer
   slots, void/u0, lazy invalid declarations and copied binding guarantees are tested.
-  Typed global-constant address dependency cycles still report the existing
-  dependency loop even where Zig accepts them. The address-cycle diagnostic is an
-  szc-only limitation fixture, not a reference-rejected conformance example.
+  At that checkpoint typed global-constant address dependency cycles reported the existing
+  dependency loop even where Zig accepts them. That szc-only diagnostic fixture
+  is now promoted to a positive regression in M5.1c2b2b3c above.
   Exported/extern/threadlocal aligned global constants remain NYI; functions,
   aggregates and other pre-existing type/backend limitations are not completed.
 - New coverage: 153 physical global-constant address/readback checks (15 types at

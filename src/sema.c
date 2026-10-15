@@ -45,6 +45,7 @@ typedef struct SemaDecl {
 	IrDecl    ir;
 	DeclState state;
 	Operand   value;
+	TypeId declared_type;	/* published only after both type and alignment resolve */
 	uint32_t address_identity;
 	uint32_t alignment;	/* immutable declaration storage; 0 means implicit ABI */
 	GlobalId global;
@@ -60,7 +61,7 @@ struct SemaNamespace {
 	uint32_t      decl_count;
 };
 
-/* Stable output and private initializer ownership for each mutable global. */
+/* Stable output and private initializer ownership for each addressable global declaration. */
 typedef struct Global {
 	SemaGlobal result;
 	SemaNamespace *namespace_scope;
@@ -992,9 +993,8 @@ global_type_allowed(Block *block, TypeId type, uint32_t src)
 
 /* Publish a stable address after its type and alignment have resolved. */
 static void
-create_global(Block *block, SemaDecl *decl, TypeId type, uint32_t alignment)
+create_global(Sema *sema, SemaNamespace *ns, SemaDecl *decl, TypeId type, uint32_t alignment)
 {
-	Sema *sema = block->sema;
 	if (sema->global_count == sema->global_capacity) {
 		uint32_t capacity = sema->global_capacity * 2;
 		sema->globals = arena_grow_array(sema->arena, sema->globals, sema->global_count, capacity, sizeof(Global *), alignof(Global *));
@@ -1003,17 +1003,44 @@ create_global(Block *block, SemaDecl *decl, TypeId type, uint32_t alignment)
 	GlobalId id = sema->global_count++;
 	Global *entry = ARENA_NEW(sema->arena, Global);
 	entry->decl = decl;
-	entry->namespace_scope = block->namespace_scope;
+	entry->namespace_scope = ns;
 	sema->globals[id] = entry;
 	SemaGlobal *global = &entry->result;
 	global->type = type;
+	global->is_const = decl->ir.kind == IR_DECL_CONST;
 	global->alignment = alignment;
 	global->symbol = arena_sprintf(sema->arena, "szc.g.%u", (unsigned)id);
 	global->src = decl->ir.src;
-	global->file = block->ir->file;
+	global->file = ns->file;
 	decl->global = id;
-	TypeId pointer = type_pointer(sema, type, POINTER_ONE, false, false, alignment);
-	decl->value = comptime_operand(pointer, value_global(&sema->values, pointer, id));
+	if (!global->is_const) {
+		TypeId pointer = type_pointer(sema, type, POINTER_ONE, false, false, alignment);
+		decl->value = comptime_operand(pointer, value_global(&sema->values, pointer, id));
+	}
+}
+
+/* Only these runtime storage types currently have scalar codegen. */
+static bool
+constant_storage_type(Sema *sema, TypeId type)
+{
+	TypeKind kind = sema->types[type].kind;
+	return kind == TYPE_INT || kind == TYPE_BOOL || kind == TYPE_POINTER || kind == TYPE_VOID;
+}
+
+/* A declaration address is independent of its initializer, unlike an anonymous value ref. */
+static Operand
+constant_decl_address(Block *user, SemaNamespace *ns, SemaDecl *decl)
+{
+	Sema *sema = user->sema;
+	if (decl->global == 0)
+		create_global(sema, ns, decl, decl->declared_type, decl->alignment);
+	SemaGlobal *global = &sema->globals[decl->global]->result;
+	if (decl->state == DECL_RESOLVED) {
+		global->initializer = decl->value.value;
+		queue_value_functions(user, decl->value.value, decl->ir.src);
+	}
+	TypeId pointer = type_pointer(sema, global->type, POINTER_ONE, true, false, global->alignment);
+	return comptime_operand(pointer, value_global(&sema->values, pointer, decl->global));
 }
 
 /* Analyses the value of a container-level declaration (once). */
@@ -1021,6 +1048,9 @@ static Operand
 resolve_decl(Block *user, uint32_t src, SemaNamespace *ns, SemaDecl *decl, bool as_reference)
 {
 	Sema *sema = user->sema;
+	if (as_reference && decl->state != DECL_FAILED && decl->ir.kind == IR_DECL_CONST
+		&& decl->declared_type != 0 && constant_storage_type(sema, decl->declared_type))
+		return constant_decl_address(user, ns, decl);
 	switch (decl->state) {
 	case DECL_RESOLVED:
 		return decl->value;
@@ -1060,7 +1090,7 @@ resolve_decl(Block *user, uint32_t src, SemaNamespace *ns, SemaDecl *decl, bool 
 	Block block;
 	block_init_comptime(&block, sema, ns, &map, decl->ir.name);
 	uint32_t alignment = 0;
-	if (aligned_const && decl->ir.type_body != 0) {
+	if (decl->ir.kind == IR_DECL_CONST && decl->ir.type_body != 0 && decl->declared_type == 0) {
 		BodyResult declared = analyze_body(&block, decl->ir.type_body);
 		TypeId type;
 		if (declared.end != BODY_BREAK_RESULT || !operand_to_type(&block, declared.result, decl->ir.src, &type)
@@ -1068,7 +1098,16 @@ resolve_decl(Block *user, uint32_t src, SemaNamespace *ns, SemaDecl *decl, bool 
 			decl->state = DECL_FAILED;
 			return operand_none;
 		}
-		block.declaration_type = type;
+		decl->declared_type = type;
+		decl->alignment = alignment;
+	}
+	if (decl->ir.kind == IR_DECL_CONST && decl->declared_type != 0) {
+		block.declaration_type = decl->declared_type;
+		alignment = decl->alignment;
+		if (as_reference && constant_storage_type(sema, decl->declared_type)) {
+			decl->state = DECL_TYPED;
+			return constant_decl_address(&block, ns, decl);
+		}
 	}
 	if (mutable && decl->global == 0) {
 		TypeId type = 0;
@@ -1084,7 +1123,7 @@ resolve_decl(Block *user, uint32_t src, SemaNamespace *ns, SemaDecl *decl, bool 
 				decl->state = DECL_FAILED;
 				return operand_none;
 			}
-			create_global(&block, decl, type, alignment);
+			create_global(sema, ns, decl, type, alignment);
 		}
 	}
 	if (mutable && decl->global != 0) {
@@ -1111,7 +1150,7 @@ resolve_decl(Block *user, uint32_t src, SemaNamespace *ns, SemaDecl *decl, bool 
 				decl->state = DECL_FAILED;
 				return operand_none;
 			}
-			create_global(&block, decl, result.result.type, alignment);
+			create_global(sema, ns, decl, result.result.type, alignment);
 		}
 		sema->globals[decl->global]->result.initializer = result.result.value;
 		queue_value_functions(&block, result.result.value, decl->ir.src);
@@ -1130,8 +1169,15 @@ resolve_decl(Block *user, uint32_t src, SemaNamespace *ns, SemaDecl *decl, bool 
 			decl->alignment = alignment;
 		}
 		decl->value = result.result;
+		if (decl->global != 0) {
+			sema->globals[decl->global]->result.initializer = result.result.value;
+			queue_value_functions(&block, result.result.value, decl->ir.src);
+		}
 	}
 	decl->state = DECL_RESOLVED;
+	if (as_reference && decl->ir.kind == IR_DECL_CONST && decl->declared_type != 0
+		&& constant_storage_type(sema, decl->declared_type))
+		return constant_decl_address(user, ns, decl);
 	return decl->value;
 }
 
@@ -2807,7 +2853,7 @@ pointer_operand(Block *block, Operand operand, uint32_t src)
 	return true;
 }
 
-/* The address of a runtime global is known, but reading its contents needs runtime. */
+/* Immutable declaration loads resolve their initializer; mutable contents need runtime. */
 static Operand
 load_pointer(Block *block, Operand pointer, uint32_t src)
 {
@@ -2828,9 +2874,11 @@ load_pointer(Block *block, Operand pointer, uint32_t src)
 			ValueId stored = sema->values.objects[value->as.object].value;
 			return coerce(block, comptime_operand(value_get(&sema->values, stored)->type, stored), child, src);
 		}
-		if (value->kind == VALUE_GLOBAL && block->is_comptime) {
+		if (value->kind == VALUE_GLOBAL && (block->is_comptime || sema->globals[value->as.global]->result.is_const)) {
 			Global *global = sema->globals[value->as.global];
 			Operand resolved = resolve_decl(block, src, global->namespace_scope, global->decl, false);
+			if (global->result.is_const)
+				return coerce(block, resolved, child, src);
 			if (resolved.kind != OPERAND_NONE)
 				sema_error(block, src, "unable to resolve comptime value");
 			return operand_none;
@@ -2977,7 +3025,7 @@ analyze_inst(Block *block, IrInstIndex index, Operand *break_value)
 		if (decl->ir.kind == IR_DECL_VAR) {
 			if (inst->op == IR_DECL_VAL)
 				result = load_pointer(block, result, src);
-		} else if (inst->op == IR_DECL_REF) {
+		} else if (inst->op == IR_DECL_REF && decl->global == 0) {
 			if (decl->address_identity == 0)
 				decl->address_identity = ++sema->next_address_identity;
 			result = analyze_ref(block, result, src, decl->address_identity, decl->alignment);
@@ -3688,7 +3736,7 @@ sema_dump(FILE *out, Sema *sema)
 	for (GlobalId id = 1; id < sema->global_count; id++) {
 		const SemaGlobal *global = &sema->globals[id]->result;
 		if (global->initializer != VALUE_NONE) {
-			fprintf(out, "global %s: %s", global->symbol, sema_type_name(sema, global->type));
+			fprintf(out, "%s %s: %s", global->is_const ? "constant" : "global", global->symbol, sema_type_name(sema, global->type));
 			if (global->alignment != 0)
 				fprintf(out, " align(%u)", (unsigned)global->alignment);
 			fprintf(out, " = %s\n", value_text(sema, global->initializer));

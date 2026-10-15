@@ -1,0 +1,3 @@
+tests/tir/errors/const_dependency_address_only_callback.zig:2:25: error: type 'u8' cannot represent integer value '256'
+fn target() u8 { return 256; }
+                        ^

@@ -1,122 +1,125 @@
-%72 = struct_decl (flags=0) {
-  decl const "A" value {
-    %0 = int 16
-    %1 = as @type_u29, %0
-    %2 = break_inline result, %1
+%74 = struct_decl (flags=0) {
+  decl const "A" type {
+    %0 = break_inline result, @type_u29
+  } value {
+    %1 = decl_type
+    %2 = int 16
+    %3 = as %1, %2
+    %4 = break_inline result, %3
   }
   decl fn "target" value {
-    %11 = func "target" {
+    %13 = func "target" {
       ret type {
-        %6 = break_inline result, @type_u8
+        %8 = break_inline result, @type_u8
       }
       align value {
-        %3 = decl_val "A"
-        %4 = as @type_u29, %3
-        %5 = break_inline result, %4
+        %5 = decl_val "A"
+        %6 = as @type_u29, %5
+        %7 = break_inline result, %6
       }
       body insts {
-        %7 = ret_type
-        %8 = int 7
-        %9 = as_return %7, %8
-        %10 = ret %9
+        %9 = ret_type
+        %10 = int 7
+        %11 = as_return %9, %10
+        %12 = ret %11
       }
     }
-    %12 = break_inline result, %11
-  }
-  decl const "alias" value {
-    %13 = decl_val "target"
     %14 = break_inline result, %13
   }
+  decl const "alias" value {
+    %15 = decl_val "target"
+    %16 = break_inline result, %15
+  }
   decl fn "choose" value {
-    %36 = func "choose" {
-      %16 = param "flag" type {
-        %15 = break_inline result, @type_bool
+    %38 = func "choose" {
+      %18 = param "flag" type {
+        %17 = break_inline result, @type_bool
       }
       ret type {
-        %18 = fn_type "" {
+        %20 = fn_type "" {
           ret type {
-            %17 = break_inline result, @type_u8
+            %19 = break_inline result, @type_u8
           }
         }
-        %19 = as @type_type, %18
-        %23 = ptr_type %19, @true align {
-          %20 = int 1
-          %21 = as @type_u29, %20
-          %22 = break_inline result, %21
+        %21 = as @type_type, %20
+        %25 = ptr_type %21, @true align {
+          %22 = int 1
+          %23 = as @type_u29, %22
+          %24 = break_inline result, %23
         }
-        %24 = as @type_type, %23
-        %25 = break_inline result, %24
+        %26 = as @type_type, %25
+        %27 = break_inline result, %26
       }
       body insts {
-        %26 = ret_type
-        %27 = as @type_bool, %16
-        %34 = if %27 then {
-          %28 = decl_ref "target"
-          %29 = as %26, %28
-          %30 = break_inline result, %29
+        %28 = ret_type
+        %29 = as @type_bool, %18
+        %36 = if %29 then {
+          %30 = decl_ref "target"
+          %31 = as %28, %30
+          %32 = break_inline result, %31
         } else {
-          %31 = decl_ref "other"
-          %32 = as %26, %31
-          %33 = break_inline result, %32
+          %33 = decl_ref "other"
+          %34 = as %28, %33
+          %35 = break_inline result, %34
         }
-        %35 = ret %34
+        %37 = ret %36
       }
     }
-    %37 = break_inline result, %36
+    %39 = break_inline result, %38
   }
   decl fn "other" value {
-    %46 = func "other" {
+    %48 = func "other" {
       ret type {
-        %41 = break_inline result, @type_u8
+        %43 = break_inline result, @type_u8
       }
       align value {
-        %38 = int 1
-        %39 = as @type_u29, %38
-        %40 = break_inline result, %39
+        %40 = int 1
+        %41 = as @type_u29, %40
+        %42 = break_inline result, %41
       }
       body insts {
-        %42 = ret_type
-        %43 = int 9
-        %44 = as_return %42, %43
-        %45 = ret %44
+        %44 = ret_type
+        %45 = int 9
+        %46 = as_return %44, %45
+        %47 = ret %46
       }
     }
-    %47 = break_inline result, %46
+    %49 = break_inline result, %48
   }
   decl fn "main" pub value {
-    %70 = func "main" {
+    %72 = func "main" {
       ret type {
-        %48 = break_inline result, @type_u8
+        %50 = break_inline result, @type_u8
       }
       body insts {
-        %50 = fn_type "" {
+        %52 = fn_type "" {
           ret type {
-            %49 = break_inline result, @type_u8
+            %51 = break_inline result, @type_u8
           }
         }
-        %51 = as @type_type, %50
-        %55 = ptr_type %51, @true align {
-          %52 = int 16
-          %53 = as @type_u29, %52
-          %54 = break_inline result, %53
+        %53 = as @type_type, %52
+        %57 = ptr_type %53, @true align {
+          %54 = int 16
+          %55 = as @type_u29, %54
+          %56 = break_inline result, %55
         }
-        %56 = as @type_type, %55
-        %57 = decl_ref "alias"
-        %58 = as %56, %57
-        %59 = ret_type
-        %60 = call %58
-        %61 = decl_val "choose"
-        %62 = call %61 arg0 {
-          %63 = arg_type %62, 0
-          %64 = as %63, @false
-          %65 = break_inline result, %64
+        %58 = as @type_type, %57
+        %59 = decl_ref "alias"
+        %60 = as %58, %59
+        %61 = ret_type
+        %62 = call %60
+        %63 = decl_val "choose"
+        %64 = call %63 arg0 {
+          %65 = arg_type %64, 0
+          %66 = as %65, @false
+          %67 = break_inline result, %66
         }
-        %66 = call %62
-        %67 = add %60, %66
-        %68 = as_return %59, %67
-        %69 = ret %68
+        %68 = call %64
+        %69 = add %62, %68
+        %70 = as_return %61, %69
+        %71 = ret %70
       }
     }
-    %71 = break_inline result, %70
+    %73 = break_inline result, %72
   }
 }

@@ -80,6 +80,7 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
             - [x] **M5.1c2b2b2 Aligned local constants** (known values and runtime initializers).
             - [x] **M5.1c2b2b3a Internal mutable global alignment**.
             - [x] **M5.1c2b2b3b Aligned global constants** (internal, supported runtime-representable types).
+            - [x] **M5.1c2b2b3c Typed immutable address dependencies** (separate address/value resolution and read-only storage).
             - [x] **M5.1c2b2b4 Aligned function declarations/addresses** (local explicitly aligned bare-function aliases remain NYI).
         - [x] **M5.1c2b3 Volatile pointer accesses** (supported scalar/bool/single-pointer values).
           - [x] **M5.1c2b3a Volatile pointer qualification/coercion**.
@@ -138,6 +139,40 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
 
 (newest first; each entry: what, limitations, interactions)
 
+### M5.1c2b2b3c Typed immutable declaration address dependencies
+- **What**: separate explicit const type bodies from initializers. Publish an immutable
+  declaration address after its type/alignment resolve, without forcing its value.
+  Self/mutual address-only dependencies work; actual value loads resolve the initializer
+  and still reject dependency loops. Known values, pointer identity and lazy unused
+  declarations are preserved; address-only uses still validate initializers/callbacks.
+- **Representation/interactions**: SemaDecl caches the resolved declared type, GlobalId
+  supplies a stable named address, and SemaGlobal.is_const selects immutable ownership.
+  VALUE_GLOBAL now represents either kind of declaration address. Const values remain
+  known Operands, never mutable-global loads or fake undefined placeholders. Interned
+  values/objects stay immutable. Existing queue draining finishes initializers/reachable
+  functions; known immutable pointer loads fold while runtime arguments still load.
+  Named objects use .rodata/.data.rel.ro, including the above-64 assembly path; existing
+  anonymous/local/inferred constant refs keep their acyclic interned-object representation.
+- **Grounding/tests**: actual 0.17 Sema.zig zirDeclRef/analyzeNavRefInner and emitted probes
+  confirm type-only addresses, fully resolved value loads, OPV behavior and rejected
+  inferred/value/type/alignment cycles. Promote the prior self-address NYI into a positive
+  TIR fixture. Add three stage goldens, runtime pointer readbacks, six reference-rejected
+  errors and 187 differential cases (519 global-constant comparisons total). ELF storage
+  checks verify all eight named immutable objects, real 256-byte alignment, local symbols,
+  sections, full RELRO and no TEXTREL under PIE. The physical variant also runs with Zig.
+  All ten actual differential matrices pass 4,615 cases. Fresh GCC/Clang -Werror
+  ASan/UBSan pass 558 unit checks, 735 goldens, 58 executable inputs, driver/storage/
+  safety/volatile suites. GCC full e2e is reference-enabled; detailed scope is in
+  HANDOFF.md. Four 60-second fuzz targets and 20,000 standalone mutations per stage
+  pass (irgen 34/sema 81 retained inputs). Optimized GCC also passes the new executable
+  and physical storage checks. CI runs existing harnesses with the new coverage.
+- **Limitations/next**: explicitly typed supported scalar/bool/single-pointer/void storage
+  only. Inferred cycles and real value/type/alignment dependencies remain errors with
+  primary-only diagnostics. No aggregate/float/comptime-interpreter expansion or change
+  to exported/extern/threadlocal restrictions. Aligned local function aliases retain the
+  documented upstream-emission-crash NYI. All enclosing M5.1 integration/alignment items
+  remain partial. Batch related easy next steps where practical; Q6 stays at M10.2.
+
 ### CI follow-up: differential compiler process lifecycle
 - **Evidence**: 72914b5 push CI passed; scheduled run 38675456100 later passed
   GCC/Clang/fuzz and all reference safety cases, then timed out after 30 seconds
@@ -163,7 +198,8 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
   aligned local bare-function alias, but emitted compilation SIGSEGVs; a function-
   declaration-aligned control succeeds. Keep the explicit alias-address NYI rather
   than fabricating backend guarantees. No language checkbox advanced here; next
-  scoped language work is typed immutable address dependencies. Q6 stays at M10.2.
+  scoped language work was typed immutable address dependencies (now implemented above).
+  Q6 stays at M10.2.
 
 ### M5.1c2b3b Observable volatile loads/stores
 - **What**: TIR_LOAD_VOLATILE/TIR_STORE_VOLATILE distinguish runtime observable
@@ -286,8 +322,8 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
   standalone mutations per stage pass. Corpus grows to irgen 30/sema 65 inputs.
 - **Limitations/next**: internal constants of supported runtime-representable types
   only; exported/extern/threadlocal aligned constants remain explicit NYI. Typed
-  constant address-dependency cycles remain unsupported, not silently resolved with
-  placeholder values. Function declaration/address alignment is next; existing
+  constant address-dependency cycles were unsupported at this checkpoint;
+  M5.1c2b2b3c above implements them without placeholder values. Function declaration/address alignment is next; existing
   aggregate/float/backend restrictions remain. All enclosing alignment and memory
   milestones stay partial. Q6 remains deferred until M10.2.
 
