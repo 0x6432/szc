@@ -59,10 +59,13 @@ Read this first when resuming work (the sandbox resets often).
   rules first: known bounds may produce array pointers, not slices. Preserve
   root/subobject provenance rather than loading a copied view. Do not silently
   erase inferred sentinels. Inline/comptime iteration remains NYI. Q6 is M10.2.
-- Push blocked: all four follow-on checkpoints after efbe1f6 are committed
-  locally, not on GitHub. The environment rejected the authenticated push. User approval has been requested; do not retry
-  any push/authentication workaround until the user gives the go-ahead. Keep all
-  tokens out of repository files and persistent Git configuration.
+- Upload authorization: the user explicitly authorizes using the provided GitHub
+  token for future uploads without asking again. Keep it transient; never put it
+  in repository files or persistent Git configuration. Only request help if the
+  credential is unavailable/invalid or a genuinely new access decision is needed.
+- All four checkpoints e29dcf2, 93eb316, 1a3f41e and f97e200 have been pushed to
+  GitHub main. Check the f97e200 Actions run for this implementation batch; the
+  earlier upload blocker was resolved by the user's explicit go-ahead.
 - CI update: e868458/run 38755100196 completed successfully, including differential.
   efbe1f6 GCC/Clang/fuzz passed; differential failed because its hosted runner
   lost communication with GitHub (job 116493912238), with no failing test step
