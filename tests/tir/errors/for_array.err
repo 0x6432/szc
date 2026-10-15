@@ -1,3 +1,0 @@
-tests/tir/errors/for_array.zig:1:32: error: not supported by szc yet: for over non-range inputs
-pub fn main() void { for ([_]u8{1, 2}) |i| { _ = i; } }
-                               ^

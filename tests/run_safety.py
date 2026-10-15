@@ -23,6 +23,15 @@ def binary_case(name, integer_type, operator, lhs, rhs, message="integer overflo
 
 
 def cases():
+    for n, m in ((1, 2), (0, 1)):
+        source = ("fn operation(a: []const u8, b: []const u8) void { for (a,b) |_,_| {} } "
+                  f"pub fn main() void {{ operation(&[{n}]u8{{" + ','.join(['7']*n)
+                  + f"}}, &[{m}]u8{{" + ','.join(['9']*m) + "}); }\n")
+        yield f"for_slice_mismatch_{n}_{m}", source, "for loop over objects with non-equal lengths"
+    source = ("fn operation(a: []const u8, n: usize) void { for (a,0..n) |_,_| {} } "
+              'pub fn main() void { operation("hi",1); }\n')
+    yield "for_slice_range_mismatch", source, "for loop over objects with non-equal lengths"
+
     for child, value in (("u8", "7"), ("u0", "0"), ("void", "{}")):
         # Reads of one-possible-value children may fold upstream without a guard;
         # address formation must retain the slice bounds check for every child.

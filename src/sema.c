@@ -4602,6 +4602,18 @@ analyze_inst(Block *block, IrInstIndex index, Operand *break_value)
 		result = void_operand(sema);
 		break;
 	}
+	case IR_FOR_PTR_CHECK: {
+		Operand value = resolve_ref(block, inst->data.un.operand);
+		if (value.kind == OPERAND_NONE)
+			break;
+		if (sema->types[value.type].kind == TYPE_ARRAY)
+			sema_error(block, src, "pointer capture of non pointer type '%s'", sema_type_name(sema, value.type));
+		else if (sema->types[value.type].kind != TYPE_POINTER)
+			sema_error(block, src, "expected pointer for reference capture, found '%s'", sema_type_name(sema, value.type));
+		else
+			result = void_operand(sema);
+		break;
+	}
 	case IR_FOR_LEN:
 		result = analyze_for_len(block, inst);
 		break;

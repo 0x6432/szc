@@ -163,6 +163,7 @@ typedef enum IrDataKind {
 	X(PANIC, "panic", IR_DATA_PAYLOAD)	/* normal message expression operand */ \
 	X(DEFER, "defer", IR_DATA_PAYLOAD)	/* reusable cleanup body, ending in break_inline */ \
 	X(ENSURE_RESULT, "ensure_result", IR_DATA_UN)	/* discarded expression must be void or noreturn */ \
+	X(FOR_PTR_CHECK, "for_ptr_check", IR_DATA_UN)	/* reject pointer captures of array values */ \
 	X(FOR_LEN, "for_len", IR_DATA_PAYLOAD)	/* count, then bounded input length refs */ \
 	X(RET_TYPE, "ret_type", IR_DATA_NONE)	/* return type of the function being analysed */ \
 	X(ARG_TYPE, "arg_type", IR_DATA_BIN)	/* type of parameter rhs (index) of the call instruction lhs */ \

@@ -1382,7 +1382,7 @@ capture_is_discard(const IrGen *gen, AstCapture capture)
 	return capture.name.end - capture.name.start == 1 && gen->source[capture.name.start] == '_';
 }
 
-/* Range bounds are evaluated once; a shared zero-based index drives all inputs. */
+/* Bounds and sequence values are evaluated once; one index drives all inputs. */
 static IrRef
 for_expr(GenBody *body, Scope *scope, ResultInfo info, AstNode *node)
 {
@@ -1405,18 +1405,18 @@ for_expr(GenBody *body, Scope *scope, ResultInfo info, AstNode *node)
 	for (uint32_t i = 0; i < loop->input_count; i++) {
 		AstForInput input = loop->inputs[i];
 		AstCapture capture = loop->captures.items[i];
-		if (!input.is_range) {
-			unsupported(body, input.expr, "for over non-range inputs");
+		bool discard = capture_is_discard(gen, capture);
+		if (capture.by_pointer && !input.is_range && discard) {
+			error_at(gen, capture.name.start, "%s", "pointer modifier invalid on discard");
 			return IR_REF_VOID_VALUE;
 		}
-		bool discard = capture_is_discard(gen, capture);
-		if (capture.by_pointer) {
+		if (capture.by_pointer && input.is_range) {
 			error_at(gen, capture.name.start, "%s", discard ? "pointer modifier invalid on discard" : "cannot capture reference to range");
 			return IR_REF_VOID_VALUE;
 		}
-		if (input.range_end == NULL && discard)
+		if (input.is_range && input.range_end == NULL && discard)
 			error_at(gen, capture.name.start, "%s", "discard of unbounded counter");
-		if (input.range_end != NULL)
+		if (!input.is_range || input.range_end != NULL)
 			bounded_count++;
 	}
 	if (bounded_count == 0) {
@@ -1429,14 +1429,22 @@ for_expr(GenBody *body, Scope *scope, ResultInfo info, AstNode *node)
 	IrRef *ends = ARENA_ARRAY(gen->arena, IrRef, loop->input_count);
 	for (uint32_t i = 0; i < loop->input_count; i++) {
 		AstForInput input = loop->inputs[i];
-		starts[i] = expr(body, scope, result_type(IR_REF_TYPE_USIZE), input.expr);
-		ends[i] = input.range_end == NULL ? IR_REF_NONE : expr(body, scope, result_type(IR_REF_TYPE_USIZE), input.range_end);
+		if (input.is_range) {
+			starts[i] = expr(body, scope, result_type(IR_REF_TYPE_USIZE), input.expr);
+			ends[i] = input.range_end == NULL ? IR_REF_NONE : expr(body, scope, result_type(IR_REF_TYPE_USIZE), input.range_end);
+		} else {
+			starts[i] = expr(body, scope, result_none, input.expr);
+			if (loop->captures.items[i].by_pointer)
+				emit_un(body, IR_FOR_PTR_CHECK, input.expr->offset, starts[i]);
+			ends[i] = emit_name(body, IR_FIELD_VAL, input.expr->offset, intern_cstr(gen->interner, "len"), starts[i]);
+		}
 	}
 	IrRef *lengths = ARENA_ARRAY(gen->arena, IrRef, bounded_count);
 	uint32_t length_index = 0;
 	for (uint32_t i = 0; i < loop->input_count; i++) {
 		if (ends[i] != IR_REF_NONE)
-			lengths[length_index++] = emit_bin(body, IR_SUB, loop->inputs[i].expr->offset, ends[i], starts[i]);
+			lengths[length_index++] = loop->inputs[i].is_range
+				? emit_bin(body, IR_SUB, loop->inputs[i].expr->offset, ends[i], starts[i]) : ends[i];
 	}
 	uint32_t payload = reserve_extra(gen, 1 + bounded_count);
 	gen->ir->extra[payload] = bounded_count;
@@ -1473,7 +1481,8 @@ for_expr(GenBody *body, Scope *scope, ResultInfo info, AstNode *node)
 			continue;
 		StringId name = intern_span(gen, capture.name);
 		check_shadowing(gen, capture_scope, name, capture.name.start);
-		IrRef value = emit_bin(&iteration, IR_ADD, capture.name.start, starts[i], index);
+		IrRef value = emit_bin(&iteration, loop->inputs[i].is_range ? IR_ADD : capture.by_pointer ? IR_ARRAY_INDEX_PTR : IR_ARRAY_INDEX,
+			capture.name.start, starts[i], index);
 		LocalScope *local = ARENA_NEW(gen->arena, LocalScope);
 		local_init(local, capture_scope, name, LOCAL_CONST, value, capture.name.start);
 		capture_scope = &local->base;

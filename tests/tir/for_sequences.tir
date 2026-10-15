@@ -1,0 +1,87 @@
+fn szc.main.1: fn () u8 {
+  %0: *[2]u8 = alloc
+  %1: *const [2]u8 = const ref(object.1)
+  %2: void = array_copy %0, %1
+  %3: [*]u8 = ptr_cast %0
+  %4: *const []u8 = alloc
+  %5: *[*]u8 = ptr_cast %4
+  %6: *usize = slice_len_ptr %4
+  %7: void = store %5, %3
+  %8: usize = const 2
+  %9: void = store %6, %8
+  %10: *usize = alloc
+  %11: usize = const 0
+  %12: void = store %10, %11
+  %13: *const usize = slice_len_ptr %4
+  %14: usize = load %13
+  %15: void = block {
+    %16: noreturn = loop {
+      %17: usize = load %10
+      %18: bool = cmp_lt %17, %14
+      %39: noreturn = condbr %18 then {
+        %19: void = block {
+          %20: *const usize = slice_len_ptr %4
+          %21: usize = load %20
+          %22: *const [*]u8 = ptr_cast %4
+          %23: [*]u8 = load %22
+          %24: void = index_check %17, %21
+          %25: *u8 = ptr_elem_ptr %23, %17
+          %26: usize = const 0
+          %27: usize = add %26, %17
+          %28: u8 = load %25
+          %29: u8 = int_cast %27
+          %30: u8 = add %28, %29
+          %31: void = store %25, %30
+          %32: noreturn = block {
+            %33: noreturn = br %19
+          }
+        }
+        %34: usize = const 1
+        %35: usize = add %17, %34
+        %36: void = store %10, %35
+        %37: noreturn = repeat %16
+      } else {
+        %38: noreturn = block {
+          %40: noreturn = br %15
+        }
+      }
+    }
+  }
+  %41: *u8 = alloc
+  %42: u8 = const 0
+  %43: void = store %41, %42
+  %44: *usize = alloc
+  %45: usize = const 0
+  %46: void = store %44, %45
+  %47: *const [2]u8 = alloc
+  %48: void = array_copy %47, %0
+  %49: void = block {
+    %50: noreturn = loop {
+      %51: usize = load %44
+      %52: usize = const 2
+      %53: bool = cmp_lt %51, %52
+      %67: noreturn = condbr %53 then {
+        %54: void = block {
+          %55: *const u8 = array_elem_ptr %47, %51
+          %56: u8 = load %55
+          %57: u8 = load %41
+          %58: u8 = add %57, %56
+          %59: void = store %41, %58
+          %60: noreturn = block {
+            %61: noreturn = br %54
+          }
+        }
+        %62: usize = const 1
+        %63: usize = add %51, %62
+        %64: void = store %44, %63
+        %65: noreturn = repeat %50
+      } else {
+        %66: noreturn = block {
+          %68: noreturn = br %49
+        }
+      }
+    }
+  }
+  %69: u8 = load %41
+  %70: noreturn = ret %69
+}

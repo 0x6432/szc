@@ -1,0 +1,31 @@
+fn szc.main.1: fn () void {
+  %0: *usize = alloc
+  %1: usize = const 0
+  %2: void = store %0, %1
+  %3: void = block {
+    %4: noreturn = loop {
+      %5: usize = load %0
+      %6: usize = const 2
+      %7: bool = cmp_lt %5, %6
+      %19: noreturn = condbr %7 then {
+        %8: void = block {
+          %9: *const [2]u8 = const ref(object.1)
+          %10: *const u8 = array_elem_ptr %9, %5
+          %11: u8 = load %10
+          %12: noreturn = block {
+            %13: noreturn = br %8
+          }
+        }
+        %14: usize = const 1
+        %15: usize = add %5, %14
+        %16: void = store %0, %15
+        %17: noreturn = repeat %4
+      } else {
+        %18: noreturn = block {
+          %20: noreturn = br %3
+        }
+      }
+    }
+  }
+  %21: noreturn = ret
+}

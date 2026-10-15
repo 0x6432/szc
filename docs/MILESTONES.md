@@ -99,6 +99,7 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
   - [x] **M5.3a Many-pointer types, array coercions and borrowed indexing.**
   - [x] **M5.3b Pointer arithmetic and differences.**
   - [x] **M5.3c1 Slice descriptor values, array coercions, indexing, storage and internal ABI.**
+  - [x] **M5.3c2 Array/slice for iteration with value and pointer captures.**
 - [~] **M5.4 String literals, sentinels, `[*:0]const u8`.** Literal byte values landed in M4.5b; general string/memory operations and sentinel pointer syntax remain pending.
 - [~] **M5.5 Casting builtins**: `@intCast`, `@truncate`, `@ptrCast`, `@intFromPtr`, `@ptrFromInt`, `@bitCast`, `@as`.
   - [x] **M5.5a Pointer address conversion (`@intFromPtr`).**
@@ -153,6 +154,40 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
 ## Completed milestone log
 
 (newest first; each entry: what, limitations, interactions)
+
+### M5.3c2 Array and slice for iteration
+- **What**: runtime `for` accepts array values, pointers to arrays and slices;
+  supports value/discard/pointer captures, multiple sequence/range inputs,
+  unbounded counters, labeled exits, break values, continue, else and scope cleanup.
+  Sequence expressions are evaluated once. Reassigning a slice variable in the
+  body does not change the captured descriptor or iteration length.
+- **Grounding**: actual Zig AstGen.forExpr evaluates sequence inputs as values.
+  An array-value operand is therefore an owned snapshot, while a pointer to an
+  array borrows its live storage. A slice snapshots only its descriptor and keeps
+  borrowing its elements. Pointer captures of array values reject, as do mutation
+  through const element pointers and pointer-modified discards.
+- **Interactions**: sequence `.len` enters the existing FOR_LEN checked-length
+  path; mixed bounded inputs must have equal lengths before the first iteration,
+  including empty inputs. A semantic-only FOR_PTR_CHECK rejects array-value
+  reference captures. Captures reuse qualified checked indexing and aggregate
+  snapshots; loop/defer/labels reuse existing control targets, not a second engine.
+- **Coverage**: native tests distinguish array snapshots from live pointer reads,
+  descriptor reassignment, one-time function operands, nested arrays/slices,
+  mutable pointer captures, labeled cleanup and empty else. 51 new reference cases
+  extend the slice matrix from 113 to 164; six invalid-input diagnostics,
+  three stage goldens, the formerly NYI array-loop fixture now positive, three
+  runtime mismatch cases and two fuzz seeds cover the lowering boundary.
+- **Validation**: frozen GCC/Clang Werror ASan/UBSan pass 632 units and 886
+  goldens each; integrated compiler sources match those snapshots exactly. Fresh
+  actual-Zig comparisons pass all 949 array/layout and 164 slice/iteration cases.
+  The full native/reference suite passes 81 ordinary/generated + two scoped
+  programs, 16 driver checks, all C/alignment/ABI/volatile suites and 193 safety
+  cases. Clang and optimized GCC pass three targeted programs and four C slice
+  variants. Fresh four-stage 60-second fuzz runs execute 613035/12984/12499/15214
+  inputs; 20000 standalone mutations/stage also pass (irgen 48/sema 104 seeds).
+- **Limits/next**: general slicing syntax, sentinels and inline/comptime iteration
+  remain NYI. Unbounded many-pointers have no length and cannot be loop inputs.
+  M5.3 stays partial; Q6 remains deferred to M10.2.
 
 ### M5.3c1 Owned slice descriptors and borrowed elements
 - **What**: unsentinelled slice types and qualifiers, array-pointer/string-to-slice

@@ -84,7 +84,7 @@ return type is a body too, so it may depend on comptime parameters.
   its condition body ends with condbr. The true arm has a body-exit block (the
   continue target), followed by the continue expression and repeat; the false
   arm yields the else result to the outer result block. Break skips else.
-- Source range `for` evaluates starts/ends once in source order as usize. Bounded
+- Source `for` evaluates range starts/ends once in source order as usize. Bounded
   inputs produce checked `sub end, start` lengths. `for_len` has an extra-data
   payload of count followed by bounded length refs; unbounded companions do not
   contribute lengths. Sema selects a known bound when available, rejects known
@@ -92,7 +92,11 @@ return type is a body too, so it may depend on comptime parameters.
   QBE guards length equality before iteration with the dedicated mismatch panic.
   An anonymous usize index allocation starts at zero. The loop compares it to the
   common length, binds immutable captures as checked start+index, and increments
-  after the body-exit block before repeat. For reuses while's outer result block
+  after the body-exit block before repeat. Sequence operands evaluate once as
+  values: arrays snapshot, array pointers borrow and slices snapshot descriptors.
+  Their `.len` refs enter the same for_len list; captures use array_index or
+  array_index_ptr instead of start+index. Semantic-only for_ptr_check rejects
+  pointer captures of array values. For reuses while's outer result block
   and separate continue target; break skips increment/else. Else cannot see captures.
 - Source `defer` registers a reusable cleanup body without executing it. Lexical
   scopes after registration retain its body and source position. Scope exits

@@ -1,0 +1,96 @@
+%77 = struct_decl (flags=0) {
+  decl fn "main" pub value {
+    %75 = func "main" {
+      ret type {
+        %0 = break_inline result, @type_u8
+      }
+      body insts {
+        %1 = int 2
+        %2 = as @type_usize, %1
+        %3 = array_type %2, @type_u8
+        %4 = as @type_type, %3
+        %5 = array_elem_type %4
+        %6 = int 1
+        %7 = as %5, %6
+        %8 = int 2
+        %9 = as %5, %8
+        %10 = array_init %4, %7, %9
+        %11 = as %4, %10
+        %12 = alloc type=%4 init=%11
+        %13 = ptr_type @type_u8, @false slice
+        %14 = as @type_type, %13
+        %15 = as %14, %12
+        %16 = alloc type=@type_usize init=@zero_usize
+        %17 = for_ptr_check %15
+        %18 = field_val "len", %15
+        %19 = int 0
+        %20 = as @type_usize, %19
+        %21 = for_len %18
+        %22 = block  {
+          %23 = loop  {
+            %24 = load %16
+            %25 = cmp_lt %24, %21
+            %43 = condbr %25 then {
+              %26 = block  {
+                %27 = array_index_ptr %15, %24
+                %28 = add %20, %24
+                %29 = ref_deref %27
+                %30 = load %29
+                %31 = add_sub_rhs_type %30
+                %32 = int_cast %31, %28
+                %33 = add %30, %32
+                %34 = elem_type %29
+                %35 = as %34, %33
+                %36 = store %29, %35
+                %37 = as @type_void, @void_value
+                %38 = break %26, @void_value
+              }
+              %39 = add %24, @one_usize
+              %40 = store %16, %39
+              %41 = repeat %23
+            } else {
+              %42 = break %22, @void_value
+            }
+          }
+        }
+        %44 = int 0
+        %45 = as @type_u8, %44
+        %46 = alloc type=@type_u8 init=%45
+        %47 = alloc type=@type_usize init=@zero_usize
+        %48 = load %12
+        %49 = field_val "len", %48
+        %50 = for_len %49
+        %51 = block  {
+          %52 = loop  {
+            %53 = load %47
+            %54 = cmp_lt %53, %50
+            %70 = condbr %54 then {
+              %55 = block  {
+                %56 = array_index %48, %53
+                %57 = load %46
+                %58 = add_sub_rhs_type %57
+                %59 = as %58, %56
+                %60 = add %57, %59
+                %61 = elem_type %46
+                %62 = as %61, %60
+                %63 = store %46, %62
+                %64 = as @type_void, @void_value
+                %65 = break %55, @void_value
+              }
+              %66 = add %53, @one_usize
+              %67 = store %47, %66
+              %68 = repeat %52
+            } else {
+              %69 = break %51, @void_value
+            }
+          }
+        }
+        %71 = ret_type
+        %72 = load %46
+        %73 = as_return %71, %72
+        %74 = ret %73
+      }
+    }
+    %76 = break_inline result, %75
+  }
+}

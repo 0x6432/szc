@@ -16,10 +16,10 @@ Source-level `if`/`else`, comparisons and boolean short-circuiting work, includi
 value-producing branches and early returns. Runtime `while`, labeled break/continue,
 continue expressions, loop else/values and compound assignments also work.
 Labeled blocks support named value breaks, nested exits, typed joins and
-constant-only comptime evaluation. Runtime range-based `for` supports multiple
+constant-only comptime evaluation. Runtime range/array/slice `for` supports multiple
 inputs, unbounded companion counters, captures, labels and loop else/values.
 `defer` runs in reverse registration order across scope fallthrough, return,
-break and continue. Array/slice iteration, inline/comptime loops and `errdefer`
+break and continue. Inline/comptime loops and `errdefer`
 remain pending. Explicit `unreachable` aborts through the safety panic runtime;
 noreturn return/cast diagnostics are checked against Zig 0.17. `@panic` accepts
 first-class string-literal values, aliases, variables and runtime choices with
@@ -31,8 +31,8 @@ owned snapshots, function arguments/returns and scalar-element mutation. Single/
 pointers support qualifiers, array-to-many coercion, borrowed indexing, element offsets,
 differences and `@intFromPtr` addresses. `@sizeOf`/`@alignOf`/`@bitSizeOf` query supported layouts and representations;
 unsentinelled slices have pointer/length descriptors, `.ptr`/`.len`, indexing,
-array/string coercions, storage and internal calls/returns. Slicing syntax and
-sequence iteration remain pending. Integer ABI sizes and pointer strides include
+array/string coercions, storage and internal calls/returns. Array/slice loops support values and pointer
+captures; slicing syntax remains pending. Integer ABI sizes and pointer strides include
 widths beyond 64 bits, but runtime
 wide-integer values/arithmetic are still unsupported. Structs, sentinel slices, modules/imports,
 generic functions and the full comptime interpreter remain pending; szc does not yet

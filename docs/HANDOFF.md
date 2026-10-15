@@ -26,13 +26,28 @@ Read this first when resuming work (the sandbox resets often).
   reference 80 ordinary/generated + two scoped programs, 16 driver checks,
   all C/alignment/volatile suites, 190 safety cases, optimized checks and four
   60-second fuzzers plus 20000 mutations/stage. Logs share the snapshot prefix.
-- In progress: M5.3c2 array/slice `for`, including pointer captures. Isolated
-  /data/slice-for-work matches 164 reference semantic cases and targeted native
-  execution. Final immutable validation is underway in /data/slice-iteration-final.
-  Array-value operands snapshot; pointer-to-array operands borrow live elements;
-  slice operands snapshot only their descriptor. General slicing remains NYI.
+- Latest follow-on: M5.3c2 array/slice `for`, including pointer captures,
+  once-only operand evaluation, nested captures and mixed range/sequence bounds.
+  Frozen /data/slice-iteration-final validation passes GCC/Clang Werror ASan/UBSan
+  632 units/886 goldens, 949 + 164 actual-reference semantic cases, full native/
+  reference 81 ordinary/generated + two scoped programs, 16 driver checks,
+  all C/alignment/volatile suites, 193 safety cases, optimized checks and four
+  60-second fuzzers + 20000 mutations/stage. Array operands snapshot, array
+  pointers borrow; slices snapshot descriptors only. General slicing stays NYI.
+- Next integrations already tested in isolation: /data/slice-panic-work adds
+  dynamic byte-slice panic messages and contextual different-length branches;
+  /data/slice-join-work adds unsentinelled inferred array-pointer joins and a
+  necessary rejection of slice equality. The latter fixes a scalar-pointer
+  boundary bug found during audit. Final post-fix validation is under
+  /data/slice-join-guard-final; older /data/slice-join-final runs are superseded.
+- Push blocked: e29dcf2 is committed locally but not on GitHub. The environment
+  rejected the authenticated push. User approval has been requested; do not retry
+  any push/authentication workaround until the user gives the go-ahead. Keep all
+  tokens out of repository files and persistent Git configuration.
 - CI update: e868458/run 38755100196 completed successfully, including differential.
-  efbe1f6 GCC/Clang/fuzz passed; differential was still running at the latest check. Earlier timeout evidence below
+  efbe1f6 GCC/Clang/fuzz passed; differential failed because its hosted runner
+  lost communication with GitHub (job 116493912238), with no failing test step
+  reported. This is infrastructure evidence, not a semantic disagreement. Earlier timeout evidence below
   remains historical, not a claim that the latest CI is failing.
 - Latest local checkpoints: M5.5a @intFromPtr passed all 812 reference semantic
   cases and full local validation; M9.4a @sizeOf/@alignOf and exact wide-integer ABI

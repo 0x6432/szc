@@ -7,7 +7,39 @@ import tempfile
 from compiler_process import run_compiler
 
 
+def sequence_cases():
+    for child, value in (("u8","7"),("u33","4294967297"),("i7","-7"),("u0","0"),("void","{}")):
+        for operand in ("a", "&a", "s"):
+            for capture, body in (("item", "_ = item;"), ("_", "")):
+                yield (f'fn f(s: []const {child}) void {{ const a = [2]{child}{{{value},{value}}}; '
+                       + ('_ = s; ' if operand != 's' else '_ = a; ')
+                       + f'for ({operand}) |{capture}| {{ {body} }} }} '
+                       + f'pub fn main() void {{ const a = [2]{child}{{{value},{value}}}; f(&a); }}\n')
+    for expression in ('for (s,0..) |x,i| { _ = x; _ = i; }',
+                       'for (s,s) |x,y| { _ = x; _ = y; }',
+                       'for (s) |x| { _ = x; break; }',
+                       'for (s) |_| {} else {}',
+                       'for (s) {}', 'for (s) |a,b| { _ = a; _ = b; }',
+                       'for (s) |*a| { _ = a; }', 'for (s) |*_| {}'):
+        yield 'fn f(s: []const u8) void { '+expression+' } pub fn main() void { f("hi"); }\n'
+    for operand in ('a','&a','s'):
+        yield ('pub fn main() void { var a = [2]u8{7,9}; const s: []u8 = &a; '
+               + ('_ = s; ' if operand != 's' else '')
+               + f'for ({operand}) |*item| {{ item.* += 1; }} }}\n')
+    for child, value in (("[2]u8", ".{7,9}"), ("[]const u8", '"hi"')):
+        for operand in ("a", "&a", "s"):
+            yield (f'pub fn main() void {{ const a = [2]{child}{{{value},{value}}}; '
+                   f'const s: []const {child} = &a; '
+                   + ('_ = s; ' if operand != 's' else '')
+                   + f'for ({operand}) |row| {{ for (row) |item| {{ _ = item; }} }} }}\n')
+    yield 'pub fn main() void { const a = [2]u8{1,2}; for (&a) |*item| { item.* = 3; } }\n'
+    yield 'pub fn main() void { for (42) |_| {} }\n'
+    yield 'pub fn main() void { for (true) |_| {} }\n'
+    yield 'fn f(p: [*]u8) void { for (p) |_| {} } pub fn main() void { f(undefined); }\n'
+
+
 def cases():
+    yield from sequence_cases()
     for child, value in (("u8","7"),("u16","257"),("u0","0"),("void","{}"),("type","u8")):
         for length in (0, 1, 3):
             items = ','.join([value]*length)
