@@ -1898,7 +1898,7 @@ analyze_bit_size(Block *block, const IrInst *inst)
 	return comptime_operand(T_COMPTIME_INT, value_int_u64(&sema->values, T_COMPTIME_INT, bits));
 }
 
-/* Peer type of two integer operands (Zig's peer type resolution, integer part). */
+/* Common type for arithmetic operands and runtime control-flow exits. */
 static bool
 peer_type(Block *block, Operand lhs, Operand rhs, uint32_t src, TypeId *out)
 {
@@ -1962,10 +1962,20 @@ peer_type(Block *block, Operand lhs, Operand rhs, uint32_t src, TypeId *out)
 			|| (bp.size == POINTER_MANY && ap.size == POINTER_ONE && sema->types[ap.child].kind == TYPE_ARRAY);
 		bool slice_array = (ap.size == POINTER_SLICE && bp.size == POINTER_ONE && sema->types[bp.child].kind == TYPE_ARRAY)
 			|| (bp.size == POINTER_SLICE && ap.size == POINTER_ONE && sema->types[ap.child].kind == TYPE_ARRAY);
+		bool array_slice = ap.size == POINTER_ONE && bp.size == POINTER_ONE
+			&& sema->types[ap.child].kind == TYPE_ARRAY && sema->types[bp.child].kind == TYPE_ARRAY
+			&& sema->types[ap.child].as.array.length != sema->types[bp.child].as.array.length;
+		if (array_slice && sema->types[ap.child].as.array.sentinel_zero && sema->types[bp.child].as.array.sentinel_zero) {
+			sema_error(block, src, "not supported by szc yet: inferred sentinel slices");
+			return false;
+		}
 		if (ap.size == bp.size || many_array || slice_array) {
 			Type candidate = make_type(TYPE_POINTER);
 			candidate.as.pointer = ap;
-			if (many_array || slice_array) {
+			if (array_slice) {
+				candidate.as.pointer.size = POINTER_SLICE;
+				candidate.as.pointer.child = sema->types[ap.child].as.array.child;
+			} else if (many_array || slice_array) {
 				candidate.as.pointer.size = slice_array ? POINTER_SLICE : POINTER_MANY;
 				candidate.as.pointer.child = ap.size != POINTER_ONE ? ap.child : bp.child;
 			}
@@ -1983,17 +1993,14 @@ peer_type(Block *block, Operand lhs, Operand rhs, uint32_t src, TypeId *out)
 				*out = merged;
 				return true;
 			}
-			candidate.as.pointer.child = (many_array || slice_array) ? candidate.as.pointer.child : bp.child;
+			candidate.as.pointer.child = array_slice ? sema->types[bp.child].as.array.child
+				: (many_array || slice_array) ? candidate.as.pointer.child : bp.child;
 			merged = type_intern(sema, &candidate);
 			if ((memory_coercion_allowed(sema, merged, a, false) || array_slice_allowed(sema, merged, a))
 				&& (memory_coercion_allowed(sema, merged, b, false) || array_slice_allowed(sema, merged, b))) {
 				*out = merged;
 				return true;
 			}
-		}
-		if (ap.size == POINTER_ONE && bp.size == POINTER_ONE && sema->types[ap.child].kind == TYPE_ARRAY && sema->types[bp.child].kind == TYPE_ARRAY) {
-			sema_error(block, src, "not supported by szc yet: runtime slice joins");
-			return false;
 		}
 	}
 	sema_error(block, src, "incompatible types: '%s' and '%s'", sema_type_name(sema, a), sema_type_name(sema, b));
@@ -2622,6 +2629,10 @@ analyze_compare(Block *block, const IrInst *inst)
 		TypeId type;
 		if (!peer_type(block, lhs, rhs, src, &type))
 			return operand_none;
+		if (is_slice(sema, type)) {
+			sema_error(block, src, "operator %s not allowed for type '%s'", op == IR_CMP_EQ ? "==" : "!=", sema_type_name(sema, type));
+			return operand_none;
+		}
 		lhs = coerce(block, lhs, type, src);
 		rhs = coerce(block, rhs, type, src);
 		if (operand_is_undefined(block, lhs) || operand_is_undefined(block, rhs))

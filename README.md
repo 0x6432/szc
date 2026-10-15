@@ -31,8 +31,9 @@ owned snapshots, function arguments/returns and scalar-element mutation. Single/
 pointers support qualifiers, array-to-many coercion, borrowed indexing, element offsets,
 differences and `@intFromPtr` addresses. `@sizeOf`/`@alignOf`/`@bitSizeOf` query supported layouts and representations;
 unsentinelled slices have pointer/length descriptors, `.ptr`/`.len`, indexing,
-array/string coercions, storage and internal calls/returns. Array/slice loops support values and pointer
-captures; slicing syntax remains pending. Integer ABI sizes and pointer strides include
+array/string coercions, storage and internal calls/returns. Differently sized
+unsentinelled array pointers can infer a slice at runtime joins. Array/slice loops
+support values and pointer captures; slicing syntax remains pending. Integer ABI sizes and pointer strides include
 widths beyond 64 bits, but runtime
 wide-integer values/arithmetic are still unsupported. Structs, sentinel slices, modules/imports,
 generic functions and the full comptime interpreter remain pending; szc does not yet

@@ -1,0 +1,3 @@
+tests/tir/errors/inferred_slice_child.zig:1:55: error: incompatible types: '*[2]u8' and '*[3]u16'
+fn f(c: bool, a: *[2]u8, b: *[3]u16) void { const s = if (c) a else b; _ = s; } pub fn main() void { f(true,undefined,undefined); }
+                                                      ^

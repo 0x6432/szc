@@ -50,7 +50,41 @@ def panic_cases():
     yield 'pub fn main() void { @panic(&.{65,66}); }\n'
 
 
+def inferred_cases():
+    for child in ('u8', 'u16', '*u8', '*const u8', 'u0', 'void'):
+        for left, right in ((0,1), (1,0), (2,3), (3,2)):
+            for const in ('', 'const '):
+                yield (f'fn f(c: bool, a: *[{left}]{child}, b: *{const}[{right}]{child}) void {{ '
+                       'const s = if (c) a else b; _ = s.len; _ = s.ptr; } '
+                       'pub fn main() void { f(false,undefined,undefined); }\n')
+    for left, right in (('*align(1) [2]u16','*align(8) [3]u16'),
+                        ('*volatile [2]u16','*[3]u16'),
+                        ('*allowzero [2]u16','*[3]u16'),
+                        ('*[2]u8','*[3]u16'),
+                        ('*[2]*u8','*[3]*const u8')):
+        yield (f'fn f(c: bool, a: {left}, b: {right}) void {{ const s = if (c) a else b; _ = s.len; }} '
+               'pub fn main() void { f(false,undefined,undefined); }\n')
+    for body in ('const p: []u8 = s; _ = p;', 's[0] = 1;',
+                 'const p: []const u8 = s; _ = p;'):
+        yield ('fn f(c: bool, a: *[2]u8, b: *const [3]u8) void { const s = if (c) a else b; '
+               + body + ' } pub fn main() void { f(false,undefined,undefined); }\n')
+
+
+def comparison_cases():
+    for op in ('==', '!=', '<', '>', '<=', '>='):
+        yield f'const s: []const u8 = "hi"; pub fn main() void {{ _ = s {op} s; }}\n'
+        yield (f'fn f(s: []const u8) bool {{ return s {op} s; }} '
+               'pub fn main() void { _ = f("hi"); }\n')
+    for expr in ('s == "hi"', 's != "bye"', 's == t'):
+        yield ('fn f(s: []u8, t: []const u8) void { '
+               + ('_ = t; ' if 't' not in expr else '')
+               + f'_ = {expr}; }} pub fn main() void {{ f(undefined,"hi"); }}\n')
+    yield 'fn f(c: bool, a: *[2]u8, b: *[3]u8) bool { _ = c; return a == b; } pub fn main() void { _ = f(false,undefined,undefined); }\n'
+
+
 def cases():
+    yield from comparison_cases()
+    yield from inferred_cases()
     yield from panic_cases()
     yield from sequence_cases()
     for child, value in (("u8","7"),("u16","257"),("u0","0"),("void","{}"),("type","u8")):

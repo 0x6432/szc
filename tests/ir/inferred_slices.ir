@@ -1,0 +1,94 @@
+%70 = struct_decl (flags=0) {
+  decl fn "f" value {
+    %29 = func "f" {
+      %1 = param "c" type {
+        %0 = break_inline result, @type_bool
+      }
+      %9 = param "a" type {
+        %2 = int 2
+        %3 = as @type_usize, %2
+        %4 = array_type %3, @type_u8
+        %5 = as @type_type, %4
+        %6 = ptr_type %5, @false
+        %7 = as @type_type, %6
+        %8 = break_inline result, %7
+      }
+      %17 = param "b" type {
+        %10 = int 3
+        %11 = as @type_usize, %10
+        %12 = array_type %11, @type_u8
+        %13 = as @type_type, %12
+        %14 = ptr_type %13, @false
+        %15 = as @type_type, %14
+        %16 = break_inline result, %15
+      }
+      ret type {
+        %18 = break_inline result, @type_u8
+      }
+      body insts {
+        %19 = as @type_bool, %1
+        %22 = if %19 then {
+          %20 = break_inline result, %9
+        } else {
+          %21 = break_inline result, %17
+        }
+        %23 = ret_type
+        %24 = int 0
+        %25 = as @type_usize, %24
+        %26 = array_index %22, %25
+        %27 = as_return %23, %26
+        %28 = ret %27
+      }
+    }
+    %30 = break_inline result, %29
+  }
+  decl fn "main" pub value {
+    %68 = func "main" {
+      ret type {
+        %31 = break_inline result, @type_u8
+      }
+      body insts {
+        %32 = int 2
+        %33 = as @type_usize, %32
+        %34 = array_type %33, @type_u8
+        %35 = array_elem_type %34
+        %36 = int 3
+        %37 = as %35, %36
+        %38 = int 5
+        %39 = as %35, %38
+        %40 = array_init %34, %37, %39
+        %41 = alloc type=inferred init=%40
+        %42 = int 3
+        %43 = as @type_usize, %42
+        %44 = array_type %43, @type_u8
+        %45 = array_elem_type %44
+        %46 = int 7
+        %47 = as %45, %46
+        %48 = int 9
+        %49 = as %45, %48
+        %50 = int 11
+        %51 = as %45, %50
+        %52 = array_init %44, %47, %49, %51
+        %53 = alloc type=inferred init=%52
+        %54 = ret_type
+        %55 = decl_val "f"
+        %56 = call %55 arg0 {
+          %57 = arg_type %56, 0
+          %58 = as %57, @true
+          %59 = break_inline result, %58
+        } arg1 {
+          %60 = arg_type %56, 1
+          %61 = as %60, %41
+          %62 = break_inline result, %61
+        } arg2 {
+          %63 = arg_type %56, 2
+          %64 = as %63, %53
+          %65 = break_inline result, %64
+        }
+        %66 = as_return %54, %56
+        %67 = ret %66
+      }
+    }
+    %69 = break_inline result, %68
+  }
+}

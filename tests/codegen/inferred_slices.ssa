@@ -1,0 +1,67 @@
+function w $szc.main.1() {
+@start
+	%t0 =l alloc4 2
+	%t3 =l alloc4 3
+	call $memmove(l %t0, l $szc.const.1, l 2)
+	call $memmove(l %t3, l $szc.const.2, l 3)
+	%t7 =w call $szc.f.2(w 1, l %t0, l %t3)
+	%t7 =w and %t7, 255
+	ret %t7
+}
+
+function w $szc.f.2(w %t0, l %t1, l %t2) {
+@start
+	%t4 =l alloc8 16
+	%t6 =l alloc8 16
+	%t15 =l alloc8 16
+	jnz %t0, @c23_then, @c23_else
+@c23_then
+	%t5 =l copy %t1
+	%t7 =l copy %t6
+	%t8 =l add %t6, 8
+	storel %t5, %t7
+	storel 2, %t8
+	call $memmove(l %t4, l %t6, l 16)
+	jmp @b3
+@c23_else
+	%t14 =l copy %t2
+	%t16 =l copy %t15
+	%t17 =l add %t15, 8
+	storel %t14, %t16
+	storel 3, %t17
+	call $memmove(l %t4, l %t15, l 16)
+	jmp @b3
+@b3
+	%t24 =l add %t4, 8
+	%t25 =l loadl %t24
+	%t26 =l copy %t4
+	%t27 =l loadl %t26
+	%g29_index =w cugel 0, %t25
+	jnz %g29_index, @g29_index_panic, @g29_index_ok
+@g29_index_panic
+	call $szc.panic.7()
+	hlt
+@g29_index_ok
+	%e31_offset =l mul 0, 1
+	%t31 =l add %t27, %e31_offset
+	%t32 =w loadub %t31
+	ret %t32
+}
+
+section ".rodata"
+data $szc.const.1 = align 1 { b 3, b 5 }
+section ".rodata"
+data $szc.const.2 = align 1 { b 7, b 9, b 11 }
+data $szc.panic.msg.7 = { b "index out of bounds\n", b 0 }
+function $szc.panic.7() {
+@start
+	call $write(w 2, l $szc.panic.msg.7, l 20)
+	call $abort()
+	hlt
+}
+
+export function w $main() {
+@start
+	%status =w call $szc.main.1()
+	ret %status
+}

@@ -42,12 +42,25 @@ Read this first when resuming work (the sandbox resets often).
   Fresh four-stage fuzzing and 20000 mutations/stage pass. Unchanged 949 array/
   layout cases replay against the source-hash-verified reference-validated baseline;
   see /data/replay_validated_arrays.py and /data/reference-validated-array-oracle.json.
-- Final follow-on /data/slice-join-work adds unsentinelled inferred array-pointer
-  joins and rejects slice equality (a scalar-pointer boundary bug found in audit).
-  Post-fix source-identical validation lives in /data/slice-join-guard-final;
-  older /data/slice-join-final runs are superseded, not final evidence.
-- Push blocked: e29dcf2 is committed locally but not on GitHub. The environment
-  rejected the authenticated push. User approval has been requested; do not retry
+- M5.3c3 inferred unsentinelled array-pointer joins and slice-comparison guards
+  is complete. Post-fix /data/slice-join-guard-final source matches the integrated
+  compiler exactly: GCC/Clang Werror ASan/UBSan 632 units/901 goldens, 252 actual
+  Zig semantic cases, full native 82 ordinary/generated + two scoped programs,
+  16 driver checks, all C/alignment/volatile suites and 201 safety cases. Three
+  targeted programs run against Zig; Clang native/C and optimized native/safety
+  checks pass. Replay of 949 unchanged array/layout cases matches the previously
+  actual-reference-validated baseline with exact source hashes. Four fresh
+  60-second fuzzers + 20000 mutations/stage pass (irgen 51/sema 107 seeds).
+  Logs use the same prefix; /data/slice-join-guard-diff.log is the source-identical
+  252-case matrix. Older /data/slice-join-final runs were superseded by the equality
+  guard correction and must not be presented as final validation.
+- Next implementation: general slicing syntax, then sentinel slices/strings and
+  remaining descriptor-field/volatile integration. Read actual Zig Sema slicing
+  rules first: known bounds may produce array pointers, not slices. Preserve
+  root/subobject provenance rather than loading a copied view. Do not silently
+  erase inferred sentinels. Inline/comptime iteration remains NYI. Q6 is M10.2.
+- Push blocked: all four follow-on checkpoints after efbe1f6 are committed
+  locally, not on GitHub. The environment rejected the authenticated push. User approval has been requested; do not retry
   any push/authentication workaround until the user gives the go-ahead. Keep all
   tokens out of repository files and persistent Git configuration.
 - CI update: e868458/run 38755100196 completed successfully, including differential.
@@ -62,8 +75,8 @@ Read this first when resuming work (the sandbox resets often).
   GCC/Clang sanitizer 625 units/864 goldens, full native AND reference-enabled
   executable/storage/185 safety suites, optimized checks and fresh four-stage
   fuzzing. Final snapshots/logs: /data/bits-final and /data/bits-final-*.log.
-  Runtime wide values remain unsupported. Next: runtime slice pointer/length
-  pairs and slicing, with owned aggregate ABI and qualifier/bounds invariants;
+  Runtime wide values remain unsupported. Slice descriptors/iteration have
+  since landed above; general slicing is next, with qualifier/bounds invariants;
   read actual Zig sources first. Q6 remains deferred to M10.2.
 - CI triage: d986dc5/run 38753436518 passed GCC/Clang/fuzz; differential
   failed on a 120-second official Zig compilation timeout for divExact_zero_i8

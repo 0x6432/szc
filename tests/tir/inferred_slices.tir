@@ -1,0 +1,50 @@
+fn szc.main.1: fn () u8 {
+  %0: *[2]u8 = alloc
+  %1: *const [2]u8 = const ref(object.1)
+  %2: void = array_copy %0, %1
+  %3: *[3]u8 = alloc
+  %4: *const [3]u8 = const ref(object.2)
+  %5: void = array_copy %3, %4
+  %6: bool = const true
+  %7: u8 = call szc.f.2(%6, %0, %3)
+  %8: noreturn = ret %7
+}
+fn szc.f.2: fn (bool, *[2]u8, *[3]u8) u8 {
+  %0: bool = arg 0
+  %1: *[2]u8 = arg 1
+  %2: *[3]u8 = arg 2
+  %3: void = block {
+    %23: noreturn = condbr %0 then {
+      %5: [*]u8 = ptr_cast %1
+      %6: *const []u8 = alloc
+      %7: *[*]u8 = ptr_cast %6
+      %8: *usize = slice_len_ptr %6
+      %9: void = store %7, %5
+      %10: usize = const 2
+      %11: void = store %8, %10
+      %12: void = array_copy %4, %6
+      %13: noreturn = br %3
+    } else {
+      %14: [*]u8 = ptr_cast %2
+      %15: *const []u8 = alloc
+      %16: *[*]u8 = ptr_cast %15
+      %17: *usize = slice_len_ptr %15
+      %18: void = store %16, %14
+      %19: usize = const 3
+      %20: void = store %17, %19
+      %21: void = array_copy %4, %15
+      %22: noreturn = br %3
+    }
+  }
+  %4: *const []u8 = alloc
+  %24: *const usize = slice_len_ptr %4
+  %25: usize = load %24
+  %26: *const [*]u8 = ptr_cast %4
+  %27: [*]u8 = load %26
+  %28: usize = const 0
+  %29: void = index_check %28, %25
+  %30: usize = const 0
+  %31: *u8 = ptr_elem_ptr %27, %30
+  %32: u8 = load %31
+  %33: noreturn = ret %32
+}

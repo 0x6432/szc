@@ -534,3 +534,13 @@ INDEX_CHECK guards index < length before many-pointer address calculation. Slice
 values must never materialize as scalar pointer temporaries. Internal arguments
 use descriptor pointers and callee snapshots; results use the trailing destination
 parameter. Elements remain borrowed and mutable through mutable-element slices.
+
+### Inferred slice joins and comparison boundaries
+
+Peer resolution of different-sized unsentinelled array pointers can choose a slice
+with compatible element representation and merged pointer qualifiers/alignment.
+Existing aggregate join storage copies both descriptor words; it never copies
+borrowed elements or materializes a slice as a scalar pointer. Common sentinel
+slices remain NYI unless an explicit unsentinelled result type coerces the arms.
+After peer resolution, slice equality is rejected before pointer-root comparison,
+including when two array-pointer operands infer a slice as their common type.

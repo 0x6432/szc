@@ -101,6 +101,7 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
   - [x] **M5.3b Pointer arithmetic and differences.**
   - [x] **M5.3c1 Slice descriptor values, array coercions, indexing, storage and internal ABI.**
   - [x] **M5.3c2 Array/slice for iteration with value and pointer captures.**
+  - [x] **M5.3c3 Inferred unsentinelled array-pointer/slice joins and comparison guards.**
 - [~] **M5.4 String literals, sentinels, `[*:0]const u8`.** Literal byte values landed in M4.5b; general string/memory operations and sentinel pointer syntax remain pending.
 - [~] **M5.5 Casting builtins**: `@intCast`, `@truncate`, `@ptrCast`, `@intFromPtr`, `@ptrFromInt`, `@bitCast`, `@as`.
   - [x] **M5.5a Pointer address conversion (`@intFromPtr`).**
@@ -155,6 +156,43 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
 ## Completed milestone log
 
 (newest first; each entry: what, limitations, interactions)
+
+### M5.3c3 Inferred unsentinelled slice joins and aggregate boundaries
+- **What**: differently sized single-pointer arrays infer a slice in an untyped
+  runtime branch/block join when their element representations are compatible.
+  Merge const/volatile/allowzero qualifiers and minimum alignment, preserve both
+  lengths and original borrowed backing, and support empty/nested-pointer cases.
+  Typed contexts continue to coerce before joining rather than infer a new type.
+- **Grounding**: actual Sema.zig resolvePeerTypesInner `.ptr` path combines
+  attributes, first attempts in-memory array compatibility, then produces a slice
+  when array lengths differ and children are compatible. Common sentinel slices
+  are intentionally NYI, not silently changed into unsentinelled types; an
+  explicit []const u8 context (including panic) can still discard a sentinel.
+- **Correctness audit**: reject equality of slices after peer resolution, including
+  a slice inferred from two different array-pointer operands. Prior constant slice
+  equality could incorrectly enter the scalar pointer-root comparison path. Actual
+  Sema.cmp and Type.isSelfComparable reject slice comparisons even when known.
+- **Coverage**: a native program checks both branch lengths, borrowed mutation,
+  value-producing blocks, empty input and sentinel/non-sentinel mixed inputs.
+  Add three stage goldens, two invalid-input and one explicit sentinel-NYI
+  diagnostic, plus constant/runtime equality diagnostics and fuzz seeds. Fifty-six
+  inferred-join and sixteen comparison cases extend actual-reference slice tests
+  from 180 to 252. Generic pointer equality remains supported.
+- **Validation**: post-fix immutable GCC/Clang Werror ASan/UBSan snapshots
+  pass 632 unit checks and 901 goldens each. Integrated source and the complete
+  252-case actual-Zig semantic matrix match the tested source byte-for-byte.
+  Full native suite passes 82 ordinary/generated + two scoped programs, 16 driver
+  checks, all C/alignment/ABI/volatile suites and 201 safety cases. Three targeted
+  programs also execute against Zig; Clang passes those native programs plus four
+  C descriptor variants, and optimized GCC passes three programs and 201 safety
+  cases. The unchanged 949 array/layout cases pass source-hash-verified replay
+  against the actual-reference-validated baseline (not a fresh Zig run).
+  Fresh four-stage 60-second fuzz runs execute 726928/15857/15392/17505 inputs;
+  standalone replay passes 20000 mutations/stage (irgen 51/sema 107 seeds).
+  Pre-fix /data/slice-join-final runs were superseded and are not final evidence.
+- **Limits/next**: slicing syntax, sentinel slices, descriptor-field assignment,
+  volatile whole-descriptor copies and inline/comptime sequence iteration remain
+  NYI. M5.3 stays partial. Q6 remains deferred to M10.2.
 
 ### M4.5c Dynamic byte-slice panic messages
 - **What**: `@panic` accepts byte-slice values with runtime lengths, including
