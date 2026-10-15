@@ -197,7 +197,7 @@ type_hash(const Type *type)
 		hash = hash_word(hash, type->as.array.child);
 		hash = hash_word(hash, (uint32_t)type->as.array.length);
 		hash = hash_word(hash, (uint32_t)(type->as.array.length >> 32));
-		hash = hash_word(hash, type->as.array.sentinel_zero ? 1u : 0u);
+		hash = hash_word(hash, type->as.array.sentinel);
 		break;
 	case TYPE_POINTER:
 		hash = hash_word(hash, type->as.pointer.child);
@@ -235,7 +235,7 @@ type_equal(const Type *a, const Type *b)
 	case TYPE_FLOAT:
 		return a->as.floating.bits == b->as.floating.bits;
 	case TYPE_ARRAY:
-		return a->as.array.child == b->as.array.child && a->as.array.length == b->as.array.length && a->as.array.sentinel_zero == b->as.array.sentinel_zero;
+		return a->as.array.child == b->as.array.child && a->as.array.length == b->as.array.length && a->as.array.sentinel == b->as.array.sentinel;
 	case TYPE_POINTER:
 		return a->as.pointer.child == b->as.pointer.child && a->as.pointer.size == b->as.pointer.size && a->as.pointer.sentinel == b->as.pointer.sentinel && a->as.pointer.alignment == b->as.pointer.alignment && a->as.pointer.is_const == b->as.pointer.is_const && a->as.pointer.is_volatile == b->as.pointer.is_volatile && a->as.pointer.is_allowzero == b->as.pointer.is_allowzero;
 	case TYPE_FN:
@@ -498,6 +498,8 @@ is_comptime_only_type(const Sema *sema, TypeId type)
 	}
 }
 
+static const char *value_text(Sema *sema, ValueId id);
+
 const char *
 sema_type_name(Sema *sema, TypeId type_id)
 {
@@ -526,7 +528,7 @@ sema_type_name(Sema *sema, TypeId type_id)
 	case TYPE_FLOAT:
 		return arena_sprintf(sema->arena, "f%u", (unsigned)type->as.floating.bits);
 	case TYPE_ARRAY:
-		return arena_sprintf(sema->arena, "[%" PRIu64 "%s]%s", type->as.array.length, type->as.array.sentinel_zero ? ":0" : "", sema_type_name(sema, type->as.array.child));
+		return arena_sprintf(sema->arena, "[%" PRIu64 "%s]%s", type->as.array.length, type->as.array.sentinel == VALUE_NONE ? "" : arena_sprintf(sema->arena, ":%s", value_text(sema, type->as.array.sentinel)), sema_type_name(sema, type->as.array.child));
 	case TYPE_POINTER: {
 		const char *prefix = type->as.pointer.size == POINTER_ONE ? "*" : type->as.pointer.size == POINTER_MANY ? "[*]" : type->as.pointer.size == POINTER_SLICE ? "[]" : "[*c]";
 		if (type->as.pointer.sentinel != VALUE_NONE) {
@@ -590,7 +592,7 @@ sema_type_size(const Sema *sema, TypeId type_id, uint64_t *out)
 		/* Even maximal zero-bit array types occupy zero bytes. */
 		if (child == 0)
 			break;
-		if (type->as.array.sentinel_zero) {
+		if (type->as.array.sentinel != VALUE_NONE) {
 			if (count == UINT64_MAX)
 				return false;
 			count++;
@@ -1439,8 +1441,7 @@ memory_coercion_allowed(const Sema *sema, TypeId dest, TypeId source, bool dest_
 	if (sema->types[dest].kind == TYPE_ARRAY && sema->types[source].kind == TYPE_ARRAY) {
 		TypeArray to = sema->types[dest].as.array;
 		TypeArray from = sema->types[source].as.array;
-		return to.length == from.length && (!to.sentinel_zero || from.sentinel_zero)
-			&& (!dest_is_mut || to.sentinel_zero == from.sentinel_zero)
+		return to.length == from.length && to.sentinel == from.sentinel
 			&& memory_coercion_allowed(sema, to.child, from.child, dest_is_mut);
 	}
 	if (sema->types[dest].kind == TYPE_FN && sema->types[source].kind == TYPE_FN) {
@@ -1466,7 +1467,7 @@ memory_coercion_allowed(const Sema *sema, TypeId dest, TypeId source, bool dest_
 			return false;
 		TypeArray array = sema->types[from.child].as.array;
 		if (to.sentinel != VALUE_NONE) {
-			if (!array.sentinel_zero || !sentinel_is_zero(sema, to.sentinel))
+			if (array.sentinel != to.sentinel)
 				return false;
 			from.sentinel = to.sentinel;
 		}
@@ -1484,7 +1485,17 @@ memory_coercion_allowed(const Sema *sema, TypeId dest, TypeId source, bool dest_
 	uint32_t from_align = pointer_alignment(sema, from);
 	if (dest_is_mut ? to_align != from_align : to_align > from_align)
 		return false;
-	return memory_coercion_allowed(sema, to.child, from.child, dest_is_mut || !to.is_const);
+	if (memory_coercion_allowed(sema, to.child, from.child, dest_is_mut || !to.is_const))
+		return true;
+	/* Zig's pointer-value exception drops a trailing array sentinel, but not
+	 * through a writable pointer slot. Nested array layouts still must match. */
+	if (!dest_is_mut && sema->types[to.child].kind == TYPE_ARRAY && sema->types[from.child].kind == TYPE_ARRAY) {
+		TypeArray target = sema->types[to.child].as.array;
+		TypeArray source_array = sema->types[from.child].as.array;
+		if (target.length == source_array.length && target.sentinel == VALUE_NONE && source_array.sentinel != VALUE_NONE)
+			return memory_coercion_allowed(sema, target.child, source_array.child, !to.is_const);
+	}
+	return false;
 }
 
 static TypeId
@@ -1598,7 +1609,7 @@ coerce(Block *block, Operand operand, TypeId dest, uint32_t src)
 		TypeArray target = sema->types[dest].as.array;
 		TypeArray source = sema->types[operand.type].as.array;
 		if (target.child == source.child && target.length == source.length
-			&& (!target.sentinel_zero || source.sentinel_zero)) {
+			&& (target.sentinel == VALUE_NONE || target.sentinel == source.sentinel)) {
 			TypeId pointer = type_pointer(sema, dest, POINTER_ONE, true, false, 0);
 			operand.inst = emit_tir_un(block, TIR_PTR_CAST, pointer, src, operand.inst);
 			operand.type = dest;
@@ -1647,12 +1658,12 @@ coerce(Block *block, Operand operand, TypeId dest, uint32_t src)
 			TypeArray target = sema->types[dest].as.array;
 			TypeArray source = sema->types[operand.type].as.array;
 			if (target.child == source.child && target.length == source.length
-				&& (!target.sentinel_zero || source.sentinel_zero)) {
+				&& (target.sentinel == VALUE_NONE || target.sentinel == source.sentinel)) {
 				if (value->kind == VALUE_UNDEFINED)
 					return comptime_operand(dest, value_undefined(&sema->values, dest));
 				if (value->kind == VALUE_ARRAY) {
 					ArrayValue array = value->as.array;
-					uint32_t count = array.count - (source.sentinel_zero && !target.sentinel_zero ? 1u : 0u);
+					uint32_t count = array.count - (source.sentinel != VALUE_NONE && target.sentinel == VALUE_NONE ? 1u : 0u);
 					if (!reserve_array_elements(block, count, src))
 						return operand_none;
 					return comptime_operand(dest, value_array(&sema->values, dest, array.items, count));
@@ -1787,6 +1798,30 @@ analyze_int_from_bool(Block *block, const IrInst *inst)
 	return runtime_operand(type, emit_tir_un(block, TIR_INT_FROM_BOOL, type, inst->src, operand.inst));
 }
 
+static bool check_defined(Block *block, Operand operand, uint32_t src);
+
+/* Sentinels are type data: coerce, resolve and validate before interning. */
+static bool
+analyze_scalar_sentinel(Block *block, Operand operand, TypeId child, uint32_t src, ValueId *out)
+{
+	Operand sentinel = coerce(block, operand, child, src);
+	if (sentinel.kind == OPERAND_NONE)
+		return false;
+	if (sentinel.kind != OPERAND_COMPTIME) {
+		sema_error(block, src, "unable to resolve comptime value");
+		return false;
+	}
+	if (!check_defined(block, sentinel, src))
+		return false;
+	const Value *value = operand_value(block, sentinel);
+	if (value->kind != VALUE_INT && value->kind != VALUE_BOOL) {
+		sema_error(block, src, "not supported by szc yet: sentinel type '%s'", sema_type_name(block->sema, child));
+		return false;
+	}
+	*out = sentinel.value;
+	return true;
+}
+
 /* Symbolic pointers have runtime addresses; undefined pointers retain undefined. */
 static Operand
 analyze_int_from_ptr(Block *block, const IrInst *inst)
@@ -1820,7 +1855,7 @@ layout_is_comptime_only(const Sema *sema, TypeId type)
 {
 	while (sema->types[type].kind == TYPE_ARRAY) {
 		TypeArray array = sema->types[type].as.array;
-		if (array.length == 0 && !array.sentinel_zero)
+		if (array.length == 0 && array.sentinel == VALUE_NONE)
 			return false;
 		type = array.child;
 	}
@@ -1873,7 +1908,7 @@ analyze_bit_size(Block *block, const IrInst *inst)
 	bool empty = false;
 	while (sema->types[leaf].kind == TYPE_ARRAY) {
 		TypeArray array = sema->types[leaf].as.array;
-		empty |= array.length == 0 && !array.sentinel_zero;
+		empty |= array.length == 0 && array.sentinel == VALUE_NONE;
 		leaf = array.child;
 	}
 	bool has_representation = true;
@@ -1913,12 +1948,12 @@ analyze_bit_size(Block *block, const IrInst *inst)
 		TypeArray array = sema->types[current].as.array;
 		if (bits == 0)
 			break;
-		if ((array.sentinel_zero && array.length == UINT64_MAX) ||
-			array.length + array.sentinel_zero > UINT64_MAX / bits) {
+		if ((array.sentinel != VALUE_NONE && array.length == UINT64_MAX) ||
+			array.length + (array.sentinel != VALUE_NONE ? 1u : 0u) > UINT64_MAX / bits) {
 			sema_error(block, inst->src, "not supported by szc yet: array bit size exceeds 64-bit range");
 			return operand_none;
 		}
-		bits *= array.length + array.sentinel_zero;
+		bits *= array.length + (array.sentinel != VALUE_NONE ? 1u : 0u);
 	}
 	return comptime_operand(T_COMPTIME_INT, value_int_u64(&sema->values, T_COMPTIME_INT, bits));
 }
@@ -1990,7 +2025,8 @@ peer_type(Block *block, Operand lhs, Operand rhs, uint32_t src, TypeId *out)
 		bool array_slice = ap.size == POINTER_ONE && bp.size == POINTER_ONE
 			&& sema->types[ap.child].kind == TYPE_ARRAY && sema->types[bp.child].kind == TYPE_ARRAY
 			&& sema->types[ap.child].as.array.length != sema->types[bp.child].as.array.length;
-		if (array_slice && sema->types[ap.child].as.array.sentinel_zero && sema->types[bp.child].as.array.sentinel_zero) {
+		if (array_slice && sema->types[ap.child].as.array.sentinel != VALUE_NONE
+			&& sema->types[ap.child].as.array.sentinel == sema->types[bp.child].as.array.sentinel) {
 			sema_error(block, src, "not supported by szc yet: inferred sentinel slices");
 			return false;
 		}
@@ -2004,12 +2040,19 @@ peer_type(Block *block, Operand lhs, Operand rhs, uint32_t src, TypeId *out)
 				candidate.as.pointer.size = slice_array ? POINTER_SLICE : POINTER_MANY;
 				candidate.as.pointer.child = ap.size != POINTER_ONE ? ap.child : bp.child;
 			}
+			if (!array_slice && ap.size == POINTER_ONE && bp.size == POINTER_ONE
+				&& sema->types[ap.child].kind == TYPE_ARRAY && sema->types[bp.child].kind == TYPE_ARRAY
+				&& sema->types[ap.child].as.array.length == sema->types[bp.child].as.array.length
+				&& sema->types[ap.child].as.array.sentinel != sema->types[bp.child].as.array.sentinel) {
+				Type array = sema->types[ap.child];
+				array.as.array.sentinel = VALUE_NONE;
+				candidate.as.pointer.child = type_intern(sema, &array);
+			}
 			candidate.as.pointer.sentinel = ap.sentinel == bp.sentinel ? ap.sentinel : VALUE_NONE;
 			if (many_array) {
 				TypePointer many = ap.size == POINTER_MANY ? ap : bp;
 				TypeArray array = sema->types[ap.size == POINTER_ONE ? ap.child : bp.child].as.array;
-				candidate.as.pointer.sentinel = array.sentinel_zero && sentinel_is_zero(sema, many.sentinel)
-					? many.sentinel : VALUE_NONE;
+				candidate.as.pointer.sentinel = array.sentinel == many.sentinel ? many.sentinel : VALUE_NONE;
 			}
 			candidate.as.pointer.is_const = ap.is_const || bp.is_const;
 			candidate.as.pointer.is_volatile = ap.is_volatile || bp.is_volatile;
@@ -2072,7 +2115,6 @@ pointer_same_root(const Sema *sema, PointerAddress left, PointerAddress right)
 	}
 }
 
-static bool check_defined(Block *block, Operand operand, uint32_t src);
 static bool array_element_stride(Sema *sema, TypeId child, uint64_t *stride, bool *logical);
 static TypeId array_element_pointer_type(Sema *sema, TypePointer pointer, TypeArray array, Operand index, uint64_t stride, bool logical);
 
@@ -2150,7 +2192,7 @@ analyze_pointer_offset(Block *block, IrOp op, Operand base, Operand offset, uint
 	}
 	if (stride == 0)
 		return base;
-	TypeArray element = {shape.child, 0, false};
+	TypeArray element = {shape.child, 0, VALUE_NONE};
 	TypeId single = array_element_pointer_type(sema, shape, element, offset, stride, logical);
 	Type result_type = sema->types[single];
 	result_type.as.pointer.size = POINTER_MANY;
@@ -2782,7 +2824,7 @@ analyze_string(Block *block, const IrInst *inst)
 	Type array = make_type(TYPE_ARRAY);
 	array.as.array.child = type_id_of_well_known(IR_REF_TYPE_U8);
 	array.as.array.length = length;
-	array.as.array.sentinel_zero = true;
+	array.as.array.sentinel = value_int_u64(&sema->values, type_id_of_well_known(IR_REF_TYPE_U8), 0);
 	TypeId child = type_intern(sema, &array);
 	TypeId pointer = type_pointer(sema, child, POINTER_ONE, true, false, 0);
 	return comptime_operand(pointer, value_bytes(&sema->values, pointer, (const uint8_t *)intern_text(sema->interner, id), length));
@@ -3659,7 +3701,7 @@ pointer_operand(Block *block, Operand operand, uint32_t src)
 static Operand constant_array_element(Block *block, Operand base, TypeArray array, uint64_t index, uint32_t src);
 static Operand load_offset_pointer(Block *block, Operand pointer, uint32_t src);
 static TypeId indexable_array_type(Sema *sema, TypeId type);
-static TypeId array_type_id(Sema *sema, TypeId child, uint64_t length, bool sentinel_zero);
+static TypeId array_type_id(Sema *sema, TypeId child, uint64_t length, ValueId sentinel);
 
 /* Immutable declaration loads resolve their initializer; mutable contents need runtime. */
 static Operand
@@ -3692,7 +3734,7 @@ load_pointer(Block *block, Operand pointer, uint32_t src)
 		if (root->kind == VALUE_BYTES && sema->types[child].kind == TYPE_ARRAY) {
 			ByteString bytes = root->as.bytes;
 			TypeArray array = sema->types[child].as.array;
-			uint64_t extra = array.sentinel_zero ? 1u : 0u;
+			uint64_t extra = array.sentinel != VALUE_NONE ? 1u : 0u;
 			if (array.length > UINT32_MAX - extra) {
 				sema_error(block, src, "not supported by szc yet: array constant with this many elements");
 				return operand_none;
@@ -3716,7 +3758,7 @@ load_pointer(Block *block, Operand pointer, uint32_t src)
 			TypeId parent_type = value_get(&sema->values, parent)->type;
 			if (sema->types[child].kind == TYPE_ARRAY && sema->types[parent_type].as.pointer.size == POINTER_MANY) {
 				TypeArray array = sema->types[child].as.array;
-				uint64_t extra = array.sentinel_zero ? 1u : 0u;
+				uint64_t extra = array.sentinel != VALUE_NONE ? 1u : 0u;
 				if (array.length > UINT32_MAX - extra) {
 					sema_error(block, src, "not supported by szc yet: array constant with this many elements");
 					return operand_none;
@@ -3862,7 +3904,7 @@ type_has_one_value(const Sema *sema, TypeId type)
 	if (sema->types[type].kind != TYPE_ARRAY)
 		return false;
 	TypeArray array = sema->types[type].as.array;
-	return array.length == 0 || type_has_one_value(sema, array.child);
+	return (array.length == 0 && array.sentinel == VALUE_NONE) || type_has_one_value(sema, array.child);
 }
 
 static Operand
@@ -3874,7 +3916,7 @@ one_value_operand(Block *block, TypeId type, uint32_t src)
 	if (is_int(sema, type))
 		return comptime_operand(type, value_int_u64(&sema->values, type, 0));
 	TypeArray array = sema->types[type].as.array;
-	uint64_t extra = array.sentinel_zero ? 1u : 0u;
+	uint64_t extra = array.sentinel != VALUE_NONE ? 1u : 0u;
 	if (array.length > UINT32_MAX - extra) {
 		sema_error(block, src, "not supported by szc yet: array constant with this many elements");
 		return operand_none;
@@ -3888,8 +3930,8 @@ one_value_operand(Block *block, TypeId type, uint32_t src)
 	ValueId *items = ARENA_ARRAY(sema->arena, ValueId, count);
 	for (uint32_t i = 0; i < (uint32_t)array.length; i++)
 		items[i] = child.value;
-	if (array.sentinel_zero)
-		items[count - 1] = value_int_u64(&sema->values, array.child, 0);
+	if (array.sentinel != VALUE_NONE)
+		items[count - 1] = array.sentinel;
 	return comptime_operand(type, value_array(&sema->values, type, items, count));
 }
 
@@ -3942,7 +3984,7 @@ analyze_deref(Block *block, const IrInst *inst)
 		}
 		Type array_pointer = sema->types[pointer.type];
 		array_pointer.as.pointer.size = POINTER_ONE;
-		array_pointer.as.pointer.child = array_type_id(sema, type.child, count, false);
+		array_pointer.as.pointer.child = array_type_id(sema, type.child, count, VALUE_NONE);
 		TypeId array_pointer_type = type_intern(sema, &array_pointer);
 		pointer = comptime_operand(array_pointer_type, operand_is_undefined(block, data)
 			? value_undefined(&sema->values, array_pointer_type)
@@ -4012,12 +4054,12 @@ analyze_alignment(Block *block, IrBody body, uint32_t src, uint32_t *out)
 /* ---------- Analysis: constant arrays ---------- */
 
 static TypeId
-array_type_id(Sema *sema, TypeId child, uint64_t length, bool sentinel_zero)
+array_type_id(Sema *sema, TypeId child, uint64_t length, ValueId sentinel)
 {
 	Type type = make_type(TYPE_ARRAY);
 	type.as.array.child = child;
 	type.as.array.length = length;
-	type.as.array.sentinel_zero = sentinel_zero;
+	type.as.array.sentinel = sentinel;
 	return type_intern(sema, &type);
 }
 
@@ -4038,9 +4080,14 @@ static Operand
 analyze_array_type(Block *block, const IrInst *inst)
 {
 	Sema *sema = block->sema;
-	Operand length = coerce(block, resolve_ref(block, inst->data.bin.lhs), T_USIZE, inst->src);
+	IrArrayType payload;
+	if (inst->op == IR_ARRAY_TYPE)
+		payload = (IrArrayType){inst->data.bin.lhs, inst->data.bin.rhs, IR_REF_NONE, inst->src};
+	else
+		IR_READ(block->ir, inst->data.payload, &payload);
+	Operand length = coerce(block, resolve_ref(block, payload.length), T_USIZE, inst->src);
 	TypeId child;
-	if (length.kind == OPERAND_NONE || !operand_to_type(block, resolve_ref(block, inst->data.bin.rhs), inst->src, &child))
+	if (length.kind == OPERAND_NONE || !operand_to_type(block, resolve_ref(block, payload.child), inst->src, &child))
 		return operand_none;
 	if (length.kind != OPERAND_COMPTIME) {
 		sema_error(block, inst->src, "unable to resolve comptime value");
@@ -4053,7 +4100,11 @@ analyze_array_type(Block *block, const IrInst *inst)
 		return operand_none;
 	}
 	uint64_t count = bigint_to_u64_bits(&operand_value(block, length)->as.integer);
-	return type_operand(sema, array_type_id(sema, child, count, false));
+	ValueId sentinel = VALUE_NONE;
+	if (payload.sentinel != IR_REF_NONE && !analyze_scalar_sentinel(block,
+		resolve_ref(block, payload.sentinel), child, payload.sentinel_src, &sentinel))
+		return operand_none;
+	return type_operand(sema, array_type_id(sema, child, count, sentinel));
 }
 
 static Operand
@@ -4074,11 +4125,11 @@ analyze_array_init(Block *block, const IrInst *inst)
 		sema_error(block, inst->src, "expected %" PRIu64 " array elements; found %u", array.length, (unsigned)count);
 		return operand_none;
 	}
-	if (array.sentinel_zero && count == UINT32_MAX) {
+	if (array.sentinel != VALUE_NONE && count == UINT32_MAX) {
 		sema_error(block, inst->src, "not supported by szc yet: array constant with this many elements");
 		return operand_none;
 	}
-	uint32_t total = count + (array.sentinel_zero ? 1u : 0u);
+	uint32_t total = count + (array.sentinel != VALUE_NONE ? 1u : 0u);
 	if (!reserve_array_elements(block, total, inst->src))
 		return operand_none;
 	ValueId *items = ARENA_ARRAY(sema->arena, ValueId, total);
@@ -4099,8 +4150,8 @@ analyze_array_init(Block *block, const IrInst *inst)
 	}
 	if (failed)
 		return operand_none;
-	if (array.sentinel_zero) {
-		items[count] = value_int_u64(&sema->values, array.child, 0);
+	if (array.sentinel != VALUE_NONE) {
+		items[count] = array.sentinel;
 		elements[count] = comptime_operand(array.child, items[count]);
 	}
 	if (all_known)
@@ -4250,7 +4301,7 @@ load_offset_pointer(Block *block, Operand pointer, uint32_t src)
 			if (!array_element_stride(sema, array.child, &stride, &logical))
 				break;
 			uint64_t index = stride == 0 ? 0 : offset / stride;
-			if (index > array.length || (index == array.length && !array.sentinel_zero))
+			if (index > array.length || (index == array.length && array.sentinel == VALUE_NONE))
 				break;
 			stored = constant_array_element(block, stored, array, index, src);
 			if (stride != 0)
@@ -4344,7 +4395,7 @@ analyze_many_index(Block *block, Operand base, Operand index, uint32_t src, bool
 	if (!check_defined(block, base, src) || !check_defined(block, index, src))
 		return operand_none;
 	TypePointer shape = sema->types[base.type].as.pointer;
-	TypeArray element_shape = {shape.child, 0, false};
+	TypeArray element_shape = {shape.child, 0, VALUE_NONE};
 	uint64_t stride;
 	bool logical;
 	if (!array_element_stride(sema, shape.child, &stride, &logical)) {
@@ -4403,7 +4454,7 @@ analyze_slice(Block *block, const IrInst *inst)
 	TypePointer shape = sema->types[base.type].as.pointer;
 	Operand data = base;
 	Operand available = operand_none;
-	bool inherited_sentinel = false;
+	ValueId inherited_sentinel = VALUE_NONE;
 	bool single_item = false;
 	if (shape.size == POINTER_SLICE) {
 		if (!check_defined(block, base, inst->src))
@@ -4415,13 +4466,13 @@ analyze_slice(Block *block, const IrInst *inst)
 		if (sema->types[shape.child].kind == TYPE_ARRAY) {
 			array = sema->types[shape.child].as.array;
 			shape.child = array.child;
-			inherited_sentinel = array.sentinel_zero;
+			inherited_sentinel = array.sentinel;
 		} else {
 			if (slice.end == IR_REF_NONE) {
 				sema_error(block, inst->src, "slice of single-item pointer must be bounded");
 				return operand_none;
 			}
-			array = (TypeArray){shape.child, 1, false};
+			array = (TypeArray){shape.child, 1, VALUE_NONE};
 			single_item = true;
 		}
 		available = comptime_operand(T_USIZE, value_int_u64(&sema->values, T_USIZE, array.length));
@@ -4453,17 +4504,22 @@ analyze_slice(Block *block, const IrInst *inst)
 		sema_error(block, inst->src, "unable to resolve comptime value");
 		return operand_none;
 	}
-	bool sentinel = inherited_sentinel && (slice.end == IR_REF_NONE
-		|| (known_end && last == bigint_to_u64_bits(&operand_value(block, available)->as.integer)));
+	ValueId sentinel = slice.end == IR_REF_NONE
+		|| (known_end && available.kind == OPERAND_COMPTIME && last == bigint_to_u64_bits(&operand_value(block, available)->as.integer))
+		? inherited_sentinel : VALUE_NONE;
 	Operand bound = available;
-	if (inherited_sentinel)
-		bound = comptime_operand(T_USIZE, value_int_u64(&sema->values, T_USIZE,
-			bigint_to_u64_bits(&operand_value(block, available)->as.integer) + 1));
-	if (known_end && bound.kind == OPERAND_COMPTIME) {
+	if (inherited_sentinel != VALUE_NONE) {
+		uint64_t length = bigint_to_u64_bits(&operand_value(block, available)->as.integer);
+		/* Match Zig's usize physical-length wrap for maximal zero-bit arrays.
+		 * An omitted end uses the logical length without this explicit-end check. */
+		bound = comptime_operand(T_USIZE,
+			value_int_u64(&sema->values, T_USIZE, length + 1));
+	}
+	if (slice.end != IR_REF_NONE && known_end && bound.kind == OPERAND_COMPTIME) {
 		uint64_t limit = bigint_to_u64_bits(&operand_value(block, bound)->as.integer);
 		if (last > limit) {
 			sema_error(block, slice.end_src, "end index %" PRIu64 " out of bounds for %s of length %" PRIu64 "%s", last,
-				is_slice(sema, base.type) ? "slice" : "array", limit - (inherited_sentinel ? 1u : 0u), inherited_sentinel ? " +1 (sentinel)" : "");
+				is_slice(sema, base.type) ? "slice" : "array", limit - (inherited_sentinel != VALUE_NONE ? 1u : 0u), inherited_sentinel != VALUE_NONE ? " +1 (sentinel)" : "");
 			return operand_none;
 		}
 	}
@@ -4478,7 +4534,7 @@ analyze_slice(Block *block, const IrInst *inst)
 		emit_tir_bin(block, TIR_SLICE_START_CHECK, T_VOID, inst->src,
 			materialize(block, start, inst->src), materialize(block, end, inst->src));
 	}
-	if (bound.kind != OPERAND_NONE && !(known_end && bound.kind == OPERAND_COMPTIME)) {
+	if (slice.end != IR_REF_NONE && bound.kind != OPERAND_NONE && !(known_end && bound.kind == OPERAND_COMPTIME)) {
 		if (!require_runtime(block, inst->src))
 			return operand_none;
 		emit_tir_bin(block, TIR_SLICE_END_CHECK, T_VOID, inst->src,
@@ -4505,7 +4561,7 @@ analyze_slice(Block *block, const IrInst *inst)
 			return comptime_operand(type, value_pointer_cast(&sema->values, type, pointer.value));
 		return runtime_operand(type, emit_tir_un(block, TIR_PTR_CAST, type, inst->src, pointer.inst));
 	}
-	if (sentinel) {
+	if (sentinel != VALUE_NONE) {
 		sema_error(block, inst->src, "not supported by szc yet: runtime sentinel slices");
 		return operand_none;
 	}
@@ -4552,12 +4608,17 @@ analyze_array_index(Block *block, const IrInst *inst, bool address_only, bool bo
 		return operand_none;
 	}
 	TypeArray array = sema->types[type].as.array;
+	if (array.length == UINT64_MAX && array.sentinel != VALUE_NONE) {
+		sema_error(block, inst->src, sema->types[base.type].kind == TYPE_POINTER
+			? "cannot index into empty array" : "indexing into empty array is not allowed");
+		return operand_none;
+	}
 	if (!check_defined(block, index, inst->src))
 		return operand_none;
 	if (index.kind == OPERAND_COMPTIME) {
 		uint64_t item = bigint_to_u64_bits(&operand_value(block, index)->as.integer);
-		if (item > array.length || (item == array.length && !array.sentinel_zero)) {
-			sema_error(block, inst->src, "index %" PRIu64 " outside array of length %" PRIu64 "%s", item, array.length, array.sentinel_zero ? " +1 (sentinel)" : "");
+		if (item > array.length || (item == array.length && array.sentinel == VALUE_NONE)) {
+			sema_error(block, inst->src, "index %" PRIu64 " outside array of length %" PRIu64 "%s", item, array.length, array.sentinel != VALUE_NONE ? " +1 (sentinel)" : "");
 			return operand_none;
 		}
 		if (base.kind == OPERAND_COMPTIME) {
@@ -4569,7 +4630,7 @@ analyze_array_index(Block *block, const IrInst *inst, bool address_only, bool bo
 			}
 			return constant_array_element(block, base, array, item, inst->src);
 		}
-	} else if (array.length == 0 && !array.sentinel_zero) {
+	} else if (array.length == 0 && array.sentinel == VALUE_NONE) {
 		sema_error(block, inst->src, sema->types[base.type].kind == TYPE_POINTER
 			? "cannot index into empty array" : "indexing into empty array is not allowed");
 		return operand_none;
@@ -4626,17 +4687,31 @@ analyze_array_cat(Block *block, const IrInst *inst)
 	/* Like Zig's type-only bitcasts, peer operands carry no known element value. */
 	if (!peer_type(block, runtime_operand(left.child, TIR_REF_NONE), runtime_operand(right.child, TIR_REF_NONE), inst->src, &child))
 		return operand_none;
-	bool sentinel = left.sentinel_zero || right.sentinel_zero;
+	ValueId sentinel = VALUE_NONE;
+	if (left.sentinel != VALUE_NONE || right.sentinel != VALUE_NONE) {
+		ValueId first = left.sentinel != VALUE_NONE ? left.sentinel : right.sentinel;
+		Operand value = coerce(block, comptime_operand(value_get(&sema->values, first)->type, first), child, inst->src);
+		if (value.kind == OPERAND_NONE)
+			return operand_none;
+		sentinel = value.value;
+		if (left.sentinel != VALUE_NONE && right.sentinel != VALUE_NONE) {
+			Operand other = coerce(block, comptime_operand(value_get(&sema->values, right.sentinel)->type, right.sentinel), child, inst->src);
+			if (other.kind == OPERAND_NONE)
+				return operand_none;
+			if (other.value != sentinel)
+				sentinel = VALUE_NONE;
+		}
+	}
 	if (right.length > UINT64_MAX - left.length) {
 		sema_error(block, inst->src, "concatenating arrays of length %" PRIu64 " and %" PRIu64 " produces an array too large for this compiler implementation to handle", left.length, right.length);
 		return operand_none;
 	}
 	uint64_t count = left.length + right.length;
-	if (count > UINT32_MAX - (sentinel ? 1u : 0u)) {
+	if (count > UINT32_MAX - (sentinel != VALUE_NONE ? 1u : 0u)) {
 		sema_error(block, inst->src, "not supported by szc yet: array constant with this many elements");
 		return operand_none;
 	}
-	uint32_t total = (uint32_t)count + (sentinel ? 1u : 0u);
+	uint32_t total = (uint32_t)count + (sentinel != VALUE_NONE ? 1u : 0u);
 	if (!reserve_array_elements(block, total, inst->src))
 		return operand_none;
 	ValueId *items = ARENA_ARRAY(sema->arena, ValueId, total);
@@ -4649,15 +4724,15 @@ analyze_array_cat(Block *block, const IrInst *inst)
 			return operand_none;
 		items[i] = element.value;
 	}
-	if (sentinel)
-		items[count] = value_int_u64(&sema->values, child, 0);
+	if (sentinel != VALUE_NONE)
+		items[count] = sentinel;
 	TypeId type = array_type_id(sema, child, count, sentinel);
 	bool reference = sema->types[lhs.type].kind == TYPE_POINTER || sema->types[rhs.type].kind == TYPE_POINTER;
 	if (!reference)
 		return comptime_operand(type, value_array(&sema->values, type, items, total));
 	TypeId pointer = type_pointer(sema, type, POINTER_ONE, true, false, 0);
 	/* Byte arrays use the existing compact backing, including panic messages. */
-	if (child == type_id_of_well_known(IR_REF_TYPE_U8)) {
+	if (child == type_id_of_well_known(IR_REF_TYPE_U8) && (sentinel == VALUE_NONE || sentinel_is_zero(sema, sentinel))) {
 		uint8_t *bytes = ARENA_ARRAY(sema->arena, uint8_t, (uint32_t)count);
 		bool defined = true;
 		for (uint32_t i = 0; i < count; i++) {
@@ -4693,6 +4768,7 @@ analyze_inst(Block *block, IrInstIndex index, Operand *break_value)
 	Operand result = operand_none;
 	switch (inst->op) {
 	case IR_ARRAY_TYPE:
+	case IR_ARRAY_TYPE_SENTINEL:
 		result = analyze_array_type(block, inst);
 		break;
 	case IR_ARRAY_ELEM_TYPE: {
@@ -4739,10 +4815,26 @@ analyze_inst(Block *block, IrInstIndex index, Operand *break_value)
 			sema_error(block, src, "expected %" PRIu64 " array elements; found %" PRIu64, array.length, length);
 		else if (shape.is_const)
 			sema_error(block, src, "cannot assign to constant");
-		else if (shape.is_volatile || array.sentinel_zero)
-			sema_error(block, src, "not supported by szc yet: volatile or sentinel in-place array initialization");
+		else if (shape.is_volatile)
+			sema_error(block, src, "not supported by szc yet: volatile in-place array initialization");
 		else
 			result = pointer;
+		break;
+	}
+	case IR_ARRAY_INIT_SENTINEL: {
+		Operand pointer = resolve_ref(block, inst->data.un.operand);
+		if (!pointer_type_operand(block, pointer, src))
+			break;
+		TypeArray array = sema->types[sema->types[pointer.type].as.pointer.child].as.array;
+		if (array.sentinel != VALUE_NONE) {
+			Operand item_index = comptime_operand(T_USIZE, value_int_u64(&sema->values, T_USIZE, array.length));
+			Operand address = runtime_array_element(block, pointer, item_index, array, src, true);
+			if (address.kind == OPERAND_NONE)
+				break;
+			Operand value = comptime_operand(array.child, array.sentinel);
+			emit_tir_bin(block, TIR_STORE, T_VOID, src, materialize(block, address, src), materialize(block, value, src));
+		}
+		result = void_operand(sema);
 		break;
 	}
 	case IR_SLICE:
@@ -4893,23 +4985,9 @@ analyze_inst(Block *block, IrInstIndex index, Operand *break_value)
 		pointer.as.pointer.child = type;
 		pointer.as.pointer.size = (payload.flags & IR_POINTER_SLICE) != 0 ? POINTER_SLICE
 			: (payload.flags & IR_POINTER_MANY) != 0 ? POINTER_MANY : POINTER_ONE;
-		if (payload.sentinel != IR_REF_NONE) {
-			Operand sentinel = coerce(block, resolve_ref(block, payload.sentinel), type, payload.sentinel_src);
-			if (sentinel.kind == OPERAND_NONE)
-				break;
-			if (sentinel.kind != OPERAND_COMPTIME) {
-				sema_error(block, payload.sentinel_src, "unable to resolve comptime value");
-				break;
-			}
-			if (!check_defined(block, sentinel, payload.sentinel_src))
-				break;
-			const Value *value = operand_value(block, sentinel);
-			if (value->kind != VALUE_INT && value->kind != VALUE_BOOL) {
-				sema_error(block, payload.sentinel_src, "not supported by szc yet: pointer sentinel type '%s'", sema_type_name(sema, type));
-				break;
-			}
-			pointer.as.pointer.sentinel = sentinel.value;
-		}
+		if (payload.sentinel != IR_REF_NONE && !analyze_scalar_sentinel(block,
+			resolve_ref(block, payload.sentinel), type, payload.sentinel_src, &pointer.as.pointer.sentinel))
+			break;
 		pointer.as.pointer.is_const = (payload.flags & IR_POINTER_CONST) != 0;
 		pointer.as.pointer.is_allowzero = (payload.flags & IR_POINTER_ALLOWZERO) != 0;
 		pointer.as.pointer.is_volatile = (payload.flags & IR_POINTER_VOLATILE) != 0;
@@ -4974,7 +5052,7 @@ analyze_inst(Block *block, IrInstIndex index, Operand *break_value)
 			Operand length = resolve_ref(block, inst->data.bin.rhs);
 			if (length.kind != OPERAND_COMPTIME)
 				break;
-			child = array_type_id(sema, child, bigint_to_u64_bits(&operand_value(block, length)->as.integer), false);
+			child = array_type_id(sema, child, bigint_to_u64_bits(&operand_value(block, length)->as.integer), pointer.sentinel);
 		}
 		result = type_operand(sema, child);
 		break;

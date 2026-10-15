@@ -60,7 +60,7 @@ typedef struct TypePointer {
 typedef struct TypeArray {
 	TypeId child;
 	uint64_t length;
-	bool sentinel_zero;
+	ValueId sentinel;	/* VALUE_NONE, or a defined scalar element value */
 } TypeArray;
 
 typedef enum FunctionConvention {

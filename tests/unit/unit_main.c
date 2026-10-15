@@ -638,6 +638,47 @@ test_sentinel_pointer_types(void)
 }
 
 static void
+test_sentinel_array_types(void)
+{
+	Arena arena;
+	arena_init(&arena);
+	SourceTable sources;
+	source_table_init(&sources, &arena);
+	Diag diag;
+	diag_init(&diag, &arena, &sources);
+	Interner interner;
+	intern_init(&interner, &arena);
+	static const char source[] =
+		"fn consume(a: *const [2:0]u8, b: *const [2:(1 - 1)]u8, c: *const [2:1]u8, "
+		"d: *const [2]u8, e: *const [0:false]bool, f: *const [0:true]bool) void { "
+		"_ = a; _ = b; _ = c; _ = d; _ = e; _ = f; } "
+		"pub fn main() void { consume(undefined,undefined,undefined,undefined,undefined,undefined); }";
+	FileId file = source_add_memory(&sources, "sentinel_array_types.zig", source, sizeof(source) - 1);
+	AstContainerDecl *root = parse_file(&arena, &diag, &sources, file);
+	CHECK(!diag_has_errors(&diag));
+	IrFile *ir = irgen_file(&arena, &diag, &interner, source_get(&sources, file), file, root);
+	CHECK(!diag_has_errors(&diag));
+	Sema *sema = sema_create(&arena, &diag, &interner, &sources);
+	CHECK(sema_analyze_executable(sema, file, ir));
+	CHECK(sema_func_count(sema) == 3);
+	TypeFn fn = sema_type(sema, sema_func(sema, 2)->type)->as.fn;
+	CHECK(fn.param_count == 6);
+	CHECK(fn.params[0] == fn.params[1]);
+	CHECK(fn.params[0] != fn.params[2] && fn.params[0] != fn.params[3]);
+	CHECK(fn.params[4] != fn.params[5]);
+	for (uint32_t i = 0; i < 6; i++) {
+		uint64_t size;
+		TypeId type = sema_type(sema, fn.params[i])->as.pointer.child;
+		uint64_t expected = i < 3 ? 3 : i == 3 ? 2 : 1;
+		CHECK(sema_type_size(sema, type, &size) && size == expected);
+		CHECK(sema_type_align(sema, type) == 1);
+		ValueId sentinel = sema_type(sema, type)->as.array.sentinel;
+		CHECK((sentinel == VALUE_NONE) == (i == 3));
+	}
+	arena_free(&arena);
+}
+
+static void
 test_binary_diagnostics(void)
 {
 	Arena arena;
@@ -688,6 +729,7 @@ main(void)
 	test_slice_values();
 	test_wide_integer_layout();
 	test_sentinel_pointer_types();
+	test_sentinel_array_types();
 	test_binary_diagnostics();
 
 	printf("unit: %u checks, %u failed\n", checks, failures);

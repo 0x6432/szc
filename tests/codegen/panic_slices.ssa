@@ -26,13 +26,13 @@ function $szc.crash.2(w %t0, l %t1) {
 }
 
 section ".data.rel.ro"
-data $szc.const.1 = align 8 { l $szc.bytes.10, l 2 }
+data $szc.const.1 = align 8 { l $szc.bytes.11, l 2 }
 section ".data.rel.ro"
-data $szc.const.2 = align 8 { l $szc.bytes.15, l 6 }
+data $szc.const.2 = align 8 { l $szc.bytes.16, l 6 }
 section ".rodata"
-data $szc.bytes.10 = { b 104, b 105, b 0 }
+data $szc.bytes.11 = { b 104, b 105, b 0 }
 section ".rodata"
-data $szc.bytes.15 = { b 108, b 111, b 110, b 103, b 101, b 114, b 0 }
+data $szc.bytes.16 = { b 108, b 111, b 110, b 103, b 101, b 114, b 0 }
 section ".rodata"
 data $szc.panic.newline = { b 10 }
 function $szc.panic.bytes(l %ptr, l %len) {

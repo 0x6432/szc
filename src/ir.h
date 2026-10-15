@@ -142,12 +142,14 @@ typedef enum IrDataKind {
 	X(ALIGN, "align", IR_DATA_PAYLOAD)	/* comptime u29 byte alignment body */ \
 	X(CONST_BIND, "const_bind", IR_DATA_BIN)	/* immutable value, declaration alignment ref */ \
 	X(ARRAY_TYPE, "array_type", IR_DATA_BIN)	/* length (usize), child type */ \
+	X(ARRAY_TYPE_SENTINEL, "array_type_sentinel", IR_DATA_PAYLOAD) /* IrArrayType */ \
 	X(ARRAY_ELEM_TYPE, "array_elem_type", IR_DATA_UN)	/* array type -> child type */ \
 	X(ARRAY_INIT, "array_init", IR_DATA_PAYLOAD)	/* type ref, count, element refs */ \
 	X(ARRAY_BASE_PTR, "array_base_ptr", IR_DATA_UN)	/* normalize array slot or pointer slot */ \
 	X(ARRAY_INDEX_PTR, "array_index_ptr", IR_DATA_BIN)	/* checked element address */ \
 	X(ARRAY_INDEX_BASE, "array_index_base", IR_DATA_BIN)	/* borrow nested array storage for indexing */ \
 	X(ARRAY_INIT_PTR, "array_init_ptr", IR_DATA_BIN)	/* validate anonymous initializer destination and count */ \
+	X(ARRAY_INIT_SENTINEL, "array_init_sentinel", IR_DATA_UN) /* finalize in-place literal */ \
 	X(ARRAY_INDEX, "array_index", IR_DATA_BIN)	/* array/pointer value, usize index */ \
 	X(SLICE, "slice", IR_DATA_PAYLOAD)	/* IrSlice: borrowed view with optional end */ \
 	X(ARRAY_CAT, "array_cat", IR_DATA_BIN)	/* concatenate indexable constants */ \
@@ -287,6 +289,13 @@ typedef struct IrPointerType {
 	IrRef			sentinel;	/* IR_REF_NONE = no sentinel */
 	uint32_t	sentinel_src;
 } IrPointerType;
+
+typedef struct IrArrayType {
+	IrRef			length;
+	IrRef			child;
+	IrRef			sentinel;
+	uint32_t	sentinel_src;
+} IrArrayType;
 
 /* STRUCT_DECL: header, then field_count IrField, then decl_count IrDecl. */
 typedef enum IrContainerFlags {

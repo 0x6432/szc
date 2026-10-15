@@ -844,7 +844,7 @@ emit_inst(Codegen *cg, TirRef ref)
 		uint64_t stride = storage_size(cg, array.child, inst->src);
 		if (inst_at(cg, inst->data.bin.rhs)->op != TIR_CONST)
 			emit_bound_check(cg, ref, inst->data.bin.rhs, "index",
-				array.sentinel_zero ? "cugt" : "cuge", array.length, PANIC_INDEX);
+				array.sentinel != VALUE_NONE ? "cugt" : "cuge", array.length, PANIC_INDEX);
 		fprintf(out, "\t%%e%u_offset =l mul ", (unsigned)ref);
 		print_operand(cg, inst->data.bin.rhs);
 		fprintf(out, ", %" PRIu64 "\n", stride);
@@ -1186,7 +1186,7 @@ emit_data_value(Codegen *cg, FILE *out, ValueId stored, bool outlined, bool *fir
 		return;
 	if (type->kind == TYPE_ARRAY && value->kind == VALUE_ARRAY) {
 		ArrayValue array = value->as.array;
-		uint64_t count = type->as.array.length + (type->as.array.sentinel_zero ? 1u : 0u);
+		uint64_t count = type->as.array.length + (type->as.array.sentinel != VALUE_NONE ? 1u : 0u);
 		if (array.count != count) {
 			codegen_error(cg, src, "invalid constant array backing for runtime storage");
 			return;

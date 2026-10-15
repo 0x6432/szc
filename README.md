@@ -27,7 +27,9 @@ choices with dynamic message lengths. Literal bytes, escapes, Unicode and multil
 strings and borrowed slicing are supported; further string operations remain pending.
 
 Fixed-size arrays support typed literals, checked indexing, mutable/immutable backing,
-owned snapshots, function arguments/returns and scalar-element mutation. Single/many
+owned snapshots, function arguments/returns and scalar-element mutation. Integer/bool
+sentinel arrays support explicit types/literals, physical sentinel storage and
+compatible coercions/concatenation. Single/many
 pointers support qualifiers, array-to-many coercion, borrowed indexing, element offsets,
 differences and `@intFromPtr` addresses. `@sizeOf`/`@alignOf`/`@bitSizeOf` query supported layouts and representations;
 integer/boolean-sentinel many-pointers preserve promises through arithmetic;

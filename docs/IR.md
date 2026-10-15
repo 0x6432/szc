@@ -637,5 +637,39 @@ nested pointees require matching promises. Literal zero-sentinel backing can
 supply the zero promise. Peer inference retains a promise only when compatible.
 Pointer arithmetic/open tails preserve it, while element addresses and bounded
 unsentinelled slicing clear it. Existing root/offset values and codegen need no
-new representation. Sentinel slices, explicit sentinel arrays/slicing, and
+new representation. Sentinel slices, explicit sentinel slicing, and
 non-integer/bool pointer sentinel values remain separate work.
+
+## Scalar-sentinel arrays (M5.4b)
+
+IR_ARRAY_TYPE_SENTINEL carries length, child, sentinel and sentinel source refs;
+IR_ARRAY_TYPE remains the compact unsentinelled form. TypeArray.sentinel is a
+ValueId, not a boolean or element count. VALUE_NONE means no sentinel. Type
+identity includes the coerced value; names, layout, bounds, constant elements,
+aggregate snapshots and codegen all use that same value. Integer/bool sentinels
+may be nonzero or negative. u8 nonzero-sentinel arrays are not VALUE_BYTES:
+that representation always implies zero-terminated backing.
+
+Explicit `[n:s]T` and `[_:s]T` literals initialize logical elements followed by
+the physical sentinel. IR_ARRAY_INIT_SENTINEL similarly finalizes anonymous
+in-place initialization after evaluating/storing every ordinary element; this
+preserves self-observation and initializer side-effect order. Copies/returns
+include the extra physical element; `.len` excludes it. Concatenation coerces
+sentinels to the peer child type, retaining a lone/equal sentinel and dropping
+incompatible promises. Empty sentinel arrays still have their physical slot and are not treated as
+empty one-possible-value arrays unless their child itself has one possible value.
+
+In-memory array compatibility requires equal length and identical sentinels.
+Pointer coercion may discard an array sentinel after that check only when the
+containing slot is not writable. This permits direct `*[n:s]T -> *[n]T` and
+immutable nested slots without making writable `**[n:s]T` slots covariant.
+Different sentinel array-pointer arms can infer an unsentinelled array pointer
+of the same extent, or an unsentinelled slice when their lengths differ.
+
+Maximal zero-bit array types are representable. Zig 0.17.0 wraps their physical
+usize length when checking indexing and explicit slice ends: `[max:0]u0`
+indexing is rejected and only explicit end zero fits the wrapped bound. Omitted
+slice ends use the logical length instead. Keep these upstream boundary rules
+rather than treating the mathematical 2^64 physical elements as addressable.
+Sentinel slice descriptors, explicit `[a..b:s]` checks and non-integer/bool
+sentinel values remain separate milestones.

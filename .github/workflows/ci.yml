@@ -82,6 +82,7 @@ jobs:
           - diff_slicing
           - diff_slices
           - diff_arrays
+          - diff_array_sentinels
     steps:
       - uses: actions/checkout@v4
       - name: Download Zig 0.17.0

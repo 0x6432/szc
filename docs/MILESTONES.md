@@ -109,6 +109,7 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
   - [x] **M5.3e Writable/addressable slice descriptor fields and volatile word access.**
 - [~] **M5.4 String literals, sentinels, `[*:0]const u8`.** Literal byte values landed in M4.5b; general string/memory operations and sentinel slices remain pending.
   - [x] **M5.4a Scalar-sentinel many-pointers**: integer/bool promises, coercions and arithmetic.
+  - [x] **M5.4b Scalar-sentinel arrays**: explicit syntax, storage, initialization and coercions.
 - [~] **M5.5 Casting builtins**: `@intCast`, `@truncate`, `@ptrCast`, `@intFromPtr`, `@ptrFromInt`, `@bitCast`, `@as`.
   - [x] **M5.5a Pointer address conversion (`@intFromPtr`).**
 
@@ -162,6 +163,38 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
 ## Completed milestone log
 
 (newest first; each entry: what, limitations, interactions)
+
+### M5.4b Scalar-sentinel arrays
+- **What**: defined comptime integer/bool sentinel array types/literals, canonical
+  ValueId identity, physical storage/stride, constants, locals/globals, snapshots,
+  internal calls/returns and compatible concatenation. Anonymous in-place
+  initialization stores its sentinel only after ordinary initializer effects.
+  Contextual anonymous literals inherit their pointer destination's sentinel;
+  physically nonempty sentinel arrays cannot be mistaken for empty OPV values.
+- **Grounding**: actual Zig 0.17.0 array literal/type analysis, array/pointer
+  in-memory coercion, concatenation and element/slicing bounds. Reference probes
+  distinguish immutable nested slots from writable pointer-slot invariance and
+  preserve upstream maximal zero-bit physical-length wrapping semantics.
+- **Coverage**: unit checks, three-stage goldens, seven invalid inputs, native
+  integer/bool/empty/zero-bit/initializer-order checks, four aligned C PIE/RELRO
+  storage variants, four new safety cases, irgen/sema seeds and a dedicated
+  reference CI suite. All previous tests and deadlines are retained.
+- **Validation**: /data/sentinel-arrays-final3 GCC/Clang Werror ASan/UBSan
+  snapshots match the integrated source/test/config files. Both pass 692 units,
+  950 goldens, 87 ordinary/generated + three scoped native programs, 16 driver
+  checks, all C/ABI/alignment suites, 48 volatile sequences and 220 safety cases.
+  GCC full e2e also runs Zig; both builds separately reference-check the new
+  native program, four C sentinel-array variants and volatile Debug/ReleaseFast.
+  Actual semantic matrices pass 313 array-sentinel + 209 sentinel-pointer + 168
+  fields + 87 dereference + 204 slicing + 252 previous slice cases. Optimized GCC
+  passes 87 native/220 safety cases. The 949 unchanged array/layout checks replay
+  a source-hash-verified prior actual-reference oracle, not fresh Zig runs.
+  Four 60-second fuzzers execute 949201/24630/26297/41516 inputs; both builds
+  replay 20000 mutations/stage (56 irgen/112 sema seeds). Every final process
+  exits zero; /data/sentinel-arrays-final and final2 are superseded snapshots.
+- **Interactions/limits**: TypeArray now stores the actual sentinel, not a flag;
+  existing aggregate lowering carries its physical element. Sentinel slices,
+  explicit slice sentinel assertions and other sentinel child types remain NYI.
 
 ### M5.4a Scalar-sentinel many-pointers
 - **What**: `[*:value]T` for defined comptime integer/bool values; type interning,

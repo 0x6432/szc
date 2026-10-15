@@ -1557,10 +1557,6 @@ if_expr(GenBody *body, Scope *scope, ResultInfo info, AstNode *node)
 static IrRef
 array_type(GenBody *body, Scope *scope, AstArrayType *node, bool infer, uint32_t count)
 {
-	if (node->sentinel != NULL) {
-		unsupported(body, &node->base, "explicit array sentinels");
-		return IR_REF_VOID_VALUE;
-	}
 	bool underscore = node->length->kind == AST_IDENTIFIER
 		&& intern_span(body->gen, AST_CAST(AstIdentifier, node->length, AST_IDENTIFIER)->name) == intern_cstr(body->gen->interner, "_");
 	IrRef length;
@@ -1577,6 +1573,11 @@ array_type(GenBody *body, Scope *scope, AstArrayType *node, bool infer, uint32_t
 		length = expr(body, scope, result_type(IR_REF_TYPE_USIZE), node->length);
 	}
 	IrRef child = type_expr(body, scope, node->child);
+	if (node->sentinel != NULL) {
+		IrRef sentinel = expr(body, scope, result_type(child), node->sentinel);
+		IrArrayType payload = {length, child, sentinel, node->sentinel->offset};
+		return emit_payload(body, IR_ARRAY_TYPE_SENTINEL, node->child->offset, APPEND_EXTRA(body->gen, payload));
+	}
 	return emit_bin(body, IR_ARRAY_TYPE, node->child->offset, length, child);
 }
 
@@ -1647,6 +1648,7 @@ array_init(GenBody *body, Scope *scope, ResultInfo info, AstInitList *node)
 			IrRef value = expr(body, scope, element_info, node->elements.items[i]);
 			emit_bin(body, IR_STORE, node->base.offset, pointer, value);
 		}
+		emit_un(body, IR_ARRAY_INIT_SENTINEL, node->base.offset, destination);
 		return emit_un(body, IR_LOAD, node->base.offset, destination);
 	}
 	IrRef *items = ARENA_ARRAY(body->gen->arena, IrRef, count);
@@ -2662,6 +2664,17 @@ dump_inst(const IrDumper *dumper, IrInstIndex index, uint32_t depth)
 	case IR_ALIGN:
 		dump_labeled_body(dumper, "value", inst->data.payload, depth);
 		break;
+	case IR_ARRAY_TYPE_SENTINEL: {
+		IrArrayType payload;
+		IR_READ(ir, inst->data.payload, &payload);
+		fputc(' ', out);
+		dump_ref(dumper, payload.length);
+		fputs(", ", out);
+		dump_ref(dumper, payload.child);
+		fputs(", ", out);
+		dump_ref(dumper, payload.sentinel);
+		break;
+	}
 	case IR_PTR_TYPE: {
 		IrPointerType payload;
 		IR_READ(ir, inst->data.payload, &payload);

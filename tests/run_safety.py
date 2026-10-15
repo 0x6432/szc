@@ -35,6 +35,17 @@ def cases():
     ):
         yield "panic_slice_" + label, source + "\n", message
 
+    for label, child, sentinel, count, values, index in (
+        ('integer', 'u16', '17', 3, '7,9,11', 4),
+        ('boolean', 'bool', 'true', 2, 'false,true', 3),
+        ('empty', 'u16', '99', 0, '', 1),
+    ):
+        source = (f'fn operation(p: *const [{count}:{sentinel}]{child}, n: usize) void {{ _ = p[n]; }} '
+                  f'pub fn main() void {{ const a = [{count}:{sentinel}]{child}{{{values}}}; operation(&a,{index}); }}\n')
+        yield 'sentinel_array_'+label, source, 'index out of bounds'
+    yield 'sentinel_array_window', ('fn operation(p: *const [3:17]u16, n: usize) void { _ = p[0..n]; } '
+                                   'pub fn main() void { const a = [3:17]u16{7,9,11}; operation(&a,5); }\n'), 'index out of bounds'
+
     for label, operation in (
         ('shrink_index', 's.len = 0; _ = s[0];'),
         ('advance_index', 's.ptr += 2; s.len = 1; _ = s[1];'),

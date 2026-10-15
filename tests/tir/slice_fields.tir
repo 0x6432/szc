@@ -1,4 +1,4 @@
-global szc.g.1: []const u8 = slice(ptr.16, len.5)
+global szc.g.1: []const u8 = slice(ptr.17, len.5)
 fn szc.main.1: fn () u8 {
   %0: *[]const u8 = const szc.g.1
   %1: void = call szc.trim.2(%0)

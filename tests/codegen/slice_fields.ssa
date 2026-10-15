@@ -38,9 +38,9 @@ function $szc.trim.2(l %t0) {
 	ret
 }
 
-data $szc.g.1 = align 8 { l $szc.bytes.15, l 5 }
+data $szc.g.1 = align 8 { l $szc.bytes.16, l 5 }
 section ".rodata"
-data $szc.bytes.15 = { b 104, b 101, b 108, b 108, b 111, b 0 }
+data $szc.bytes.16 = { b 104, b 101, b 108, b 108, b 111, b 0 }
 data $szc.panic.msg.0 = { b "integer overflow\n", b 0 }
 function $szc.panic.0() {
 @start

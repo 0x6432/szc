@@ -38,16 +38,42 @@ Read this first when resuming work (the sandbox resets often).
   fuzzers execute 1487814/47977/51638/67325 inputs, both builds replay 20000
   mutations/stage (55 irgen/111 sema seeds). All scripts exit zero; 1673 source/
   test files match both frozen builds. Evidence uses /data/sentinel-many-final-*.
-- Next work is already isolated in /data/sentinel-array-next, not yet integrated:
-  general integer/bool ValueId array sentinels, explicit literal/type syntax,
-  end-of-in-place-init sentinel store, concat/memory rules. Native probe passed.
-  Initial actual-reference matrix found mutable top-level *[n:s]T -> *[n]T
-  coercion must be allowed (Sema.zig ~29735) without making nested writable
-  pointer slots covariant. Current correction is under comparison in
-  /data/sentinel-arrays-diff2.log. Do not claim that next milestone is complete.
-- CI dbe17c3/run 38786103135: 22 jobs passed, only safety reference running at
-  latest check; 7aeb3e5 has 19 passed/native reference running. New checks retain
-  all deadlines; no aggregate success is claimed until actually completed.
+- Latest language checkpoint: M5.4b scalar-sentinel arrays is complete.
+  General integer/bool ValueIds replace the zero-only flag. Explicit type/literal
+  syntax, contextual anonymous literals, physical layout/initialization, copies,
+  concat and exact nested pointer-slot rules are covered. Empty logical arrays
+  with physical sentinels are not incorrectly folded as empty one-value objects.
+- /data/sentinel-arrays-final3 GCC/Clang Werror ASan/UBSan sources match the
+  integrated source/test/config tree: 692 units/950 goldens; 87 ordinary/generated
+  + three scoped native programs; 16 driver checks; all C/ABI/alignment suites;
+  48 volatile sequences; 220 safety cases. GCC full e2e runs Zig; both compilers
+  additionally reference-check sentinel_arrays.zig, four C storage variants and
+  all volatile sequences in Debug/ReleaseFast. Fresh actual matrices pass
+  313 array sentinels + 209 sentinel pointers + 168 fields + 87 dereference +
+  204 slicing + 252 slices. Optimized GCC passes 87 native/220 safety cases;
+  949 unchanged array/layout checks replay the source-hash-verified prior actual
+  reference oracle (not 949 new Zig runs). Four 60s fuzzers execute
+  949201/24630/26297/41516 inputs; both builds replay 20000 mutations/stage
+  (56 irgen/112 sema seeds). All final processes exit zero. Older final/final2
+  array snapshots are superseded. Logs use /data/sentinel-arrays-final3-*.
+- Active next work is isolated in /data/sentinel-slices-next: scalar sentinel
+  descriptors, inference, inherited slicing and zero-bit view loads. Initial
+  256 actual semantic comparisons, native, six panic cases, four C layouts and
+  52 volatile sequences pass. Frozen validation found GCC/Clang golden ordering
+  differs for two materialize calls used as C function arguments; sequence those
+  explicitly and rerun before claiming M5.4c complete. No slice changes are yet
+  integrated into the repository. /data/sentinel-slices-final is provisional.
+- CI 7aeb3e5/run 38786030355 failed with runner shutdown/exit143 after native
+  run/build timeouts; both reported cases pass with the original frozen compiler
+  and unchanged deadlines (/data/ci-slice-fields-native-reproduction.log).
+  b3f0dc3/run 38786459559 failed safety: 210 passed/six build timeouts across both
+  Zig and szc. All six pass locally (/data/ci-b3-safety-reproduction.log).
+  dbe17c3/run 38786103135 also failed with eight reported safety case names timing
+  out before runner shutdown; nine variants of those names pass locally using
+  the original compiler/deadlines (/data/ci-dbe-safety-reproduction.log).
+  768cdb9/run 38790363308 is still in progress at the latest check. None of these
+  failed/pending runs is counted as green. Exact-coverage four-way safety CI
+  partition work is isolated in /data/ci-safety-next and being reference-tested.
 
 - Latest language checkpoint: M5.3e writable/addressable slice descriptor fields
   is complete. /data/slice-fields-final immutable GCC/Clang snapshots match all

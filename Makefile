@@ -98,6 +98,7 @@ e2e-native-test: build/asan/szc $(GENERATED_RUN_TESTS)
 e2e-storage-test: build/asan/szc
 	python3 tests/run_reference_storage.py build/asan/szc
 	python3 tests/run_array_storage.py build/asan/szc
+	python3 tests/run_sentinel_array_storage.py build/asan/szc
 	python3 tests/run_array_mutable_storage.py build/asan/szc
 	python3 tests/run_global_array_storage.py build/asan/szc
 	python3 tests/run_many_pointer_storage.py build/asan/szc

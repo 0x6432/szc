@@ -1,0 +1,426 @@
+function w $szc.main.1() {
+@start
+	%t0 =l alloc4 8
+	%t52 =l alloc4 8
+	%t107 =l alloc4 6
+	%t140 =l alloc4 2
+	%t168 =l alloc4 2
+	%t189 =l alloc4 1
+	%t200 =l alloc4 1
+	%t205 =l alloc4 1
+	%t226 =l alloc4 1
+	%t239 =l alloc4 6
+	%t258 =l alloc4 6
+	%t301 =l alloc8 8
+	call $memmove(l %t0, l $szc.const.5, l 8)
+	%e4_offset =l mul 3, 2
+	%t4 =l add %t0, %e4_offset
+	%t5 =w loaduh %t4
+	%t7 =w cnew %t5, 17
+	jnz %t7, @c16_then, @c16_else
+@c16_then
+	%t8 =w copy 1
+	jmp @b8
+@c16_else
+	%t9 =l add $szc.g.1, 6
+	%t10 =w loaduh %t9
+	%t12 =w cnew %t10, 17
+	%t8 =w copy %t12
+	jmp @b8
+@b8
+	jnz %t8, @c21_then, @c21_else
+@c21_then
+	ret 1
+@c21_else
+	jmp @b17
+@b17
+	%e23_offset =l mul 3, 2
+	%t23 =l add %t0, %e23_offset
+	storeh 29, %t23
+	%e27_offset =l mul 0, 2
+	%t27 =l add %t0, %e27_offset
+	%e29_offset =l mul 0, 2
+	%t29 =l add %t0, %e29_offset
+	%t30 =w loaduh %t29
+	%t32 =w add %t30, 1
+	%t32 =w and %t32, 65535
+	%g32_overflow =w cultw %t32, %t30
+	jnz %g32_overflow, @g32_overflow_panic, @g32_overflow_ok
+@g32_overflow_panic
+	call $szc.panic.0()
+	hlt
+@g32_overflow_ok
+	storeh %t32, %t27
+	%e35_offset =l mul 1, 2
+	%t35 =l add %t0, %e35_offset
+	%e37_offset =l mul 1, 2
+	%t37 =l add %t0, %e37_offset
+	%t38 =w loaduh %t37
+	%t40 =w add %t38, 1
+	%t40 =w and %t40, 65535
+	%g40_overflow =w cultw %t40, %t38
+	jnz %g40_overflow, @g40_overflow_panic, @g40_overflow_ok
+@g40_overflow_panic
+	call $szc.panic.0()
+	hlt
+@g40_overflow_ok
+	storeh %t40, %t35
+	%e43_offset =l mul 2, 2
+	%t43 =l add %t0, %e43_offset
+	%e45_offset =l mul 3, 2
+	%t45 =l add %t0, %e45_offset
+	%t46 =w loaduh %t45
+	storeh %t46, %t43
+	%e49_offset =l mul 3, 2
+	%t49 =l add %t0, %e49_offset
+	storeh 17, %t49
+	call $memmove(l %t52, l %t0, l 8)
+	call $memmove(l %t0, l %t52, l 8)
+	%e56_offset =l mul 0, 2
+	%t56 =l add %t0, %e56_offset
+	%t57 =w loaduh %t56
+	%t59 =w cnew %t57, 8
+	jnz %t59, @c69_then, @c69_else
+@c69_then
+	%t60 =w copy 1
+	jmp @b60
+@c69_else
+	%e62_offset =l mul 1, 2
+	%t62 =l add %t0, %e62_offset
+	%t63 =w loaduh %t62
+	%t65 =w cnew %t63, 12
+	%t60 =w copy %t65
+	jmp @b60
+@b60
+	jnz %t60, @c79_then, @c79_else
+@c79_then
+	%t70 =w copy 1
+	jmp @b70
+@c79_else
+	%e72_offset =l mul 2, 2
+	%t72 =l add %t0, %e72_offset
+	%t73 =w loaduh %t72
+	%t75 =w cnew %t73, 29
+	%t70 =w copy %t75
+	jmp @b70
+@b70
+	jnz %t70, @c89_then, @c89_else
+@c89_then
+	%t80 =w copy 1
+	jmp @b80
+@c89_else
+	%e82_offset =l mul 3, 2
+	%t82 =l add %t0, %e82_offset
+	%t83 =w loaduh %t82
+	%t85 =w cnew %t83, 17
+	%t80 =w copy %t85
+	jmp @b80
+@b80
+	jnz %t80, @c94_then, @c94_else
+@c94_then
+	ret 2
+@c94_else
+	jmp @b90
+@b90
+	%t95 =l copy %t0
+	%e97_offset =l mul 3, 2
+	%t97 =l add %t95, %e97_offset
+	%t98 =w loaduh %t97
+	%t100 =w cnew %t98, 17
+	jnz %t100, @c105_then, @c105_else
+@c105_then
+	ret 3
+@c105_else
+	jmp @b101
+@b101
+	call $szc.make.2(w 41, l %t107)
+	%t109 =l copy %t107
+	%e111_offset =l mul 0, 2
+	%t111 =l add %t109, %e111_offset
+	%t112 =w loaduh %t111
+	%t114 =w cnew %t112, 41
+	jnz %t114, @c124_then, @c124_else
+@c124_then
+	%t115 =w copy 1
+	jmp @b115
+@c124_else
+	%e117_offset =l mul 1, 2
+	%t117 =l add %t109, %e117_offset
+	%t118 =w loaduh %t117
+	%t120 =w cnew %t118, 42
+	%t115 =w copy %t120
+	jmp @b115
+@b115
+	jnz %t115, @c134_then, @c134_else
+@c134_then
+	%t125 =w copy 1
+	jmp @b125
+@c134_else
+	%e127_offset =l mul 2, 2
+	%t127 =l add %t109, %e127_offset
+	%t128 =w loaduh %t127
+	%t130 =w cnew %t128, 99
+	%t125 =w copy %t130
+	jmp @b125
+@b125
+	jnz %t125, @c139_then, @c139_else
+@c139_then
+	ret 4
+@c139_else
+	jmp @b135
+@b135
+	call $memmove(l %t140, l $szc.const.6, l 2)
+	%e144_offset =l mul 0, 1
+	%t144 =l add %t140, %e144_offset
+	%t145 =w loadub %t144
+	%t145 =w and %t145, 1
+	jnz %t145, @c154_then, @c154_else
+@c154_then
+	%t146 =w copy 1
+	jmp @b146
+@c154_else
+	%e148_offset =l mul 1, 1
+	%t148 =l add %t140, %e148_offset
+	%t149 =w loadub %t148
+	%t149 =w and %t149, 1
+	%t150 =w xor %t149, 1
+	%t150 =w and %t150, 1
+	%t146 =w copy %t150
+	jmp @b146
+@b146
+	jnz %t146, @c159_then, @c159_else
+@c159_then
+	ret 5
+@c159_else
+	jmp @b155
+@b155
+	%e161_offset =l mul 0, 1
+	%t161 =l add %t140, %e161_offset
+	storeb 1, %t161
+	%e165_offset =l mul 1, 1
+	%t165 =l add %t140, %e165_offset
+	storeb 1, %t165
+	call $memmove(l %t168, l %t140, l 2)
+	call $memmove(l %t140, l %t168, l 2)
+	%e172_offset =l mul 0, 1
+	%t172 =l add %t140, %e172_offset
+	%t173 =w loadub %t172
+	%t173 =w and %t173, 1
+	%t174 =w xor %t173, 1
+	%t174 =w and %t174, 1
+	jnz %t174, @c183_then, @c183_else
+@c183_then
+	%t175 =w copy 1
+	jmp @b175
+@c183_else
+	%e177_offset =l mul 1, 1
+	%t177 =l add %t140, %e177_offset
+	%t178 =w loadub %t177
+	%t178 =w and %t178, 1
+	%t179 =w xor %t178, 1
+	%t179 =w and %t179, 1
+	%t175 =w copy %t179
+	jmp @b175
+@b175
+	jnz %t175, @c188_then, @c188_else
+@c188_then
+	ret 6
+@c188_else
+	jmp @b184
+@b184
+	%e193_offset =l mul 0, 0
+	%t193 =l add %t189, %e193_offset
+	%e195_offset =l mul 1, 0
+	%t195 =l add %t189, %e195_offset
+	%e197_offset =l mul 2, 0
+	%t197 =l add %t189, %e197_offset
+	%e204_offset =l mul 2, 0
+	%t204 =l add %t189, %e204_offset
+	call $memmove(l %t205, l $szc.const.8, l 1)
+	%e209_offset =l mul 0, 1
+	%t209 =l add %t205, %e209_offset
+	%t210 =w loadub %t209
+	%t212 =w cnew %t210, 255
+	jnz %t212, @c217_then, @c217_else
+@c217_then
+	ret 8
+@c217_else
+	jmp @b213
+@b213
+	%e219_offset =l mul 0, 1
+	%t219 =l add %t205, %e219_offset
+	storeb 17, %t219
+	%e223_offset =l mul 0, 1
+	%t223 =l add %t205, %e223_offset
+	storeb 255, %t223
+	call $memmove(l %t226, l %t205, l 1)
+	call $memmove(l %t205, l %t226, l 1)
+	%e230_offset =l mul 0, 1
+	%t230 =l add %t205, %e230_offset
+	%t231 =w loadub %t230
+	%t233 =w cnew %t231, 255
+	jnz %t233, @c238_then, @c238_else
+@c238_then
+	ret 9
+@c238_else
+	jmp @b234
+@b234
+	call $memmove(l %t239, l $szc.const.9, l 6)
+	%e243_offset =l mul 2, 2
+	%t243 =l add %t239, %e243_offset
+	storeh 41, %t243
+	%e247_offset =l mul 0, 2
+	%t247 =l add %t239, %e247_offset
+	%t248 =w call $szc.observe.3(l %t239)
+	%t248 =w and %t248, 65535
+	storeh %t248, %t247
+	%e251_offset =l mul 1, 2
+	%t251 =l add %t239, %e251_offset
+	%t252 =w call $szc.observe.3(l %t239)
+	%t252 =w and %t252, 65535
+	storeh %t252, %t251
+	%e255_offset =l mul 2, 2
+	%t255 =l add %t239, %e255_offset
+	storeh 17, %t255
+	call $memmove(l %t258, l %t239, l 6)
+	call $memmove(l %t239, l %t258, l 6)
+	%t262 =w loadub $szc.g.2
+	%t264 =w cnew %t262, 2
+	jnz %t264, @c274_then, @c274_else
+@c274_then
+	%t265 =w copy 1
+	jmp @b265
+@c274_else
+	%e267_offset =l mul 0, 2
+	%t267 =l add %t239, %e267_offset
+	%t268 =w loaduh %t267
+	%t270 =w cnew %t268, 41
+	%t265 =w copy %t270
+	jmp @b265
+@b265
+	jnz %t265, @c284_then, @c284_else
+@c284_then
+	%t275 =w copy 1
+	jmp @b275
+@c284_else
+	%e277_offset =l mul 1, 2
+	%t277 =l add %t239, %e277_offset
+	%t278 =w loaduh %t277
+	%t280 =w cnew %t278, 41
+	%t275 =w copy %t280
+	jmp @b275
+@b275
+	jnz %t275, @c294_then, @c294_else
+@c294_then
+	%t285 =w copy 1
+	jmp @b285
+@c294_else
+	%e287_offset =l mul 2, 2
+	%t287 =l add %t239, %e287_offset
+	%t288 =w loaduh %t287
+	%t290 =w cnew %t288, 17
+	%t285 =w copy %t290
+	jmp @b285
+@b285
+	jnz %t285, @c299_then, @c299_else
+@c299_then
+	ret 10
+@c299_else
+	jmp @b295
+@b295
+	%t300 =l copy %t239
+	storel %t300, %t301
+	%t303 =l loadl %t301
+	%e305_offset =l mul 1, 2
+	%t305 =l add %t303, %e305_offset
+	storeh 43, %t305
+	%e309_offset =l mul 1, 2
+	%t309 =l add %t239, %e309_offset
+	%t310 =w loaduh %t309
+	%t312 =w cnew %t310, 43
+	jnz %t312, @c322_then, @c322_else
+@c322_then
+	%t313 =w copy 1
+	jmp @b313
+@c322_else
+	%e315_offset =l mul 2, 2
+	%t315 =l add %t239, %e315_offset
+	%t316 =w loaduh %t315
+	%t318 =w cnew %t316, 17
+	%t313 =w copy %t318
+	jmp @b313
+@b313
+	jnz %t313, @c327_then, @c327_else
+@c327_then
+	ret 11
+@c327_else
+	jmp @b323
+@b323
+	ret 0
+}
+
+function $szc.make.2(w %t0, l %t1) {
+@start
+	%t4 =l alloc4 6
+	%t3 =w add %t0, 1
+	%t3 =w and %t3, 65535
+	%g3_overflow =w cultw %t3, %t0
+	jnz %g3_overflow, @g3_overflow_panic, @g3_overflow_ok
+@g3_overflow_panic
+	call $szc.panic.0()
+	hlt
+@g3_overflow_ok
+	%e6_offset =l mul 0, 2
+	%t6 =l add %t4, %e6_offset
+	storeh %t0, %t6
+	%e9_offset =l mul 1, 2
+	%t9 =l add %t4, %e9_offset
+	storeh %t3, %t9
+	%e12_offset =l mul 2, 2
+	%t12 =l add %t4, %e12_offset
+	storeh 99, %t12
+	call $memmove(l %t1, l %t4, l 6)
+	ret
+}
+
+function w $szc.observe.3(l %t0) {
+@start
+	%t2 =w loadub $szc.g.2
+	%t4 =w add %t2, 1
+	%t4 =w and %t4, 255
+	%g4_overflow =w cultw %t4, %t2
+	jnz %g4_overflow, @g4_overflow_panic, @g4_overflow_ok
+@g4_overflow_panic
+	call $szc.panic.0()
+	hlt
+@g4_overflow_ok
+	storeb %t4, $szc.g.2
+	%e8_offset =l mul 2, 2
+	%t8 =l add %t0, %e8_offset
+	%t9 =w loaduh %t8
+	ret %t9
+}
+
+section ".rodata"
+data $szc.const.5 = align 2 { h 7, h 11, h 13, h 17 }
+section ".rodata"
+data $szc.const.6 = align 1 { b 0, b 1 }
+section ".rodata"
+data $szc.const.8 = align 1 { b 255 }
+section ".rodata"
+data $szc.const.9 = align 2 { h 1, h 2, h 17 }
+data $szc.g.1 = align 2 { h 2, h 3, h 5, h 17 }
+data $szc.g.2 = align 1 { z 1 }
+data $szc.panic.msg.0 = { b "integer overflow\n", b 0 }
+function $szc.panic.0() {
+@start
+	call $write(w 2, l $szc.panic.msg.0, l 17)
+	call $abort()
+	hlt
+}
+
+export function w $main() {
+@start
+	%status =w call $szc.main.1()
+	ret %status
+}

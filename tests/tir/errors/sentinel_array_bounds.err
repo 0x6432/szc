@@ -1,0 +1,3 @@
+tests/tir/errors/sentinel_array_bounds.zig:1:53: error: index 3 outside array of length 2 +1 (sentinel)
+pub fn main() void { const a = [_:17]u16{1,2}; _ = a[3]; }
+                                                    ^
