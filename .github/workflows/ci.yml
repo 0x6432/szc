@@ -62,6 +62,9 @@ jobs:
       matrix:
         suite:
           - native
+          - storage
+          - alignment
+          - safety
           - parser
           - diff_pointer_coercions
           - diff_pointer_allowzero
@@ -87,15 +90,15 @@ jobs:
       - name: Build szc with warnings as errors
         run: make EXTRA_CFLAGS=-Werror all asan
       - name: Build pinned QBE for native comparisons
-        if: matrix.suite == 'native'
+        if: contains(fromJSON('["native", "storage", "alignment", "safety"]'), matrix.suite)
         run: |
           tools/build_qbe.sh
           echo "PATH=$PWD/build/qbe-src:$PATH" >> "$GITHUB_ENV"
       - name: Compare native programs with Zig 0.17.0
-        if: matrix.suite == 'native'
-        run: make EXTRA_CFLAGS=-Werror e2e-test
+        if: contains(fromJSON('["native", "storage", "alignment", "safety"]'), matrix.suite)
+        run: make EXTRA_CFLAGS=-Werror "e2e-${{ matrix.suite }}-test"
       - name: Compare semantic acceptance and types
-        if: matrix.suite != 'native' && matrix.suite != 'parser'
+        if: startsWith(matrix.suite, 'diff_')
         run: python3 "tools/${{ matrix.suite }}.py" build/asan/szc "$ZIG"
       - name: Build the reference span dumper
         if: matrix.suite == 'parser'

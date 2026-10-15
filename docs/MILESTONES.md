@@ -14,6 +14,7 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
 - [x] **M0.4 Source loading**: read file, NUL-terminate, file table for diagnostics.
 - [x] **M0.5 CI**: GitHub Actions: gcc + clang builds with `-Werror`, ASan/UBSan tests, short libFuzzer run, nightly long fuzz.
   - [x] **M0.5a Bounded parallel reference CI**: independent semantic/native/parser suites and aggregate status.
+  - [x] **M0.5b Independent native reference suites**: native/storage/alignment/safety partitions with exact coverage.
 
 ## Phase 1: Lexer (`src/lexer.c`)
 
@@ -202,6 +203,24 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
 - **Limits/next**: whole-descriptor volatile copies and sentinel descriptors/
   slicing remain NYI; writable fields do not make arbitrary pointer/length pairs
   safe to dereference. M5.3 remains partial. Q6 stays deferred to M10.2.
+
+### M0.5b Independent native reference suites
+- **What**: split the remaining monolithic native reference job into native
+  programs/harness/driver, C storage/ABI, alignment/volatile, and safety suites.
+  `make e2e-test` remains the complete local entry point; four explicit targets
+  expose the same commands to CI. The differential matrix now has twenty suites
+  (15 semantic tools, parser and four execution suites), max concurrency four.
+- **Validation**: Make dry-run comparison retains all 24 original e2e commands
+  exactly once in both the umbrella and the union of partitions. All four
+  partitioned Clang ASan/UBSan suites run successfully on the final M5.3e sources;
+  GCC's complete original reference suite also passed those same commands.
+  YAML and routing checks verify all twenty suites, QBE in each execution suite,
+  unchanged GCC/Clang/fuzz and aggregate jobs, tool pins, parser corpus/1000
+  mutants/run seed, all deadlines and test budgets. Evidence:
+  /data/ci-native-coverage.log and /data/ci-native-{native,storage,alignment,safety}.log.
+- **Interactions/limits**: no compiler changes and no failed test is bypassed.
+  The aggregate `differential` still requires every suite to succeed; runner
+  shutdown/timeouts remain failures. Remote results remain asynchronous.
 
 ### M0.5a Bounded parallel reference CI
 - **What**: replace the long serial differential job with sixteen independent

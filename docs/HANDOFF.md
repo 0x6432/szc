@@ -42,11 +42,13 @@ Read this first when resuming work (the sandbox resets often).
   Volatile field loads/stores are observable; address formation does no access.
   Whole-descriptor volatile copies and sentinel descriptors/slicing remain NYI.
 - CI run 38778400121 (8dfaab9): 18 jobs successful, native reference suite still
-  running at last check; no aggregate success claimed. Follow-on prepared in
-  /data/ci-native-final splits native/storage/alignment/safety into independently
-  bounded suites, preserving all 24 original e2e commands exactly once and max
-  concurrency four. All four partitioned local suites passed; commit separately
-  after the language checkpoint. Coverage proof: /data/ci-native-coverage.log.
+  running at last check; no aggregate success claimed. M5.3e pushed as 7aeb3e5.
+  M0.5b splits native/storage/alignment/safety into independent reference suites,
+  preserving all 24 original e2e commands exactly once and max concurrency four.
+  The matrix now has twenty suites; make e2e-test retains the complete local
+  entry point. All four partitioned local suites passed; unchanged original GCC
+  reference coverage also passed. Proof: /data/ci-native-coverage.log and
+  /data/ci-native-{native,storage,alignment,safety}.log. Check new remote runs.
   Next language work: sentinel descriptors/slicing, remaining memory integration;
   no build-Zig question before M10.2.
 

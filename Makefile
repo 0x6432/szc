@@ -21,7 +21,7 @@ HEADERS     = $(wildcard src/*.h)
 FUZZERS     = lexer parser irgen sema
 GENERATED_RUN_TESTS = build/integer-widths.zig build/conditional-widths.zig build/loop-widths.zig build/block-widths.zig build/for-widths.zig build/defer-widths.zig build/noreturn-widths.zig build/pointer-widths.zig build/global-widths.zig build/function-pointer-widths.zig build/array-widths.zig
 
-.PHONY: all release asan test unit-test golden-test e2e-test safety-test fuzz fuzz-run fuzz-standalone clean
+.PHONY: all release asan test unit-test golden-test e2e-test e2e-native-test e2e-storage-test e2e-alignment-test e2e-safety-test safety-test fuzz fuzz-run fuzz-standalone clean
 
 all: build/szc
 
@@ -84,7 +84,9 @@ build/array-widths.zig: tools/generate_array_tests.py
 	python3 $< $@
 
 # QBE must be on PATH (or SZC_QBE). ZIG enables reference-compiler checks.
-e2e-test: build/asan/szc $(GENERATED_RUN_TESTS)
+e2e-test: e2e-native-test e2e-storage-test e2e-alignment-test e2e-safety-test
+
+e2e-native-test: build/asan/szc $(GENERATED_RUN_TESTS)
 	python3 tests/run_process_timeout.py
 	python3 tests/run_compiler_process.py
 	python3 tests/run_compiler_cli.py
@@ -92,6 +94,8 @@ e2e-test: build/asan/szc $(GENERATED_RUN_TESTS)
 	./tests/run_e2e.sh build/asan/szc tests/run/*.zig $(GENERATED_RUN_TESTS)
 	env -u ZIG ./tests/run_e2e.sh build/asan/szc tests/run_szc/*.zig
 	./tests/run_driver.sh build/asan/szc
+
+e2e-storage-test: build/asan/szc
 	python3 tests/run_reference_storage.py build/asan/szc
 	python3 tests/run_array_storage.py build/asan/szc
 	python3 tests/run_array_mutable_storage.py build/asan/szc
@@ -101,6 +105,8 @@ e2e-test: build/asan/szc $(GENERATED_RUN_TESTS)
 	python3 tests/run_wide_pointer_layout.py build/asan/szc
 	python3 tests/run_slice_storage.py build/asan/szc
 	python3 tests/run_function_abi.py build/asan/szc
+
+e2e-alignment-test: build/asan/szc
 	python3 tests/run_pointer_alignment.py build/asan/szc
 	python3 tests/run_local_alignment.py build/asan/szc
 	python3 tests/run_const_alignment.py build/asan/szc
@@ -108,6 +114,8 @@ e2e-test: build/asan/szc $(GENERATED_RUN_TESTS)
 	python3 tests/run_global_const_alignment.py build/asan/szc
 	python3 tests/run_function_alignment.py build/asan/szc
 	python3 tests/run_volatile_access.py build/asan/szc
+
+e2e-safety-test: build/asan/szc
 	python3 tests/run_safety.py build/asan/szc
 
 safety-test: build/asan/szc
