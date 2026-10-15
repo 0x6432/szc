@@ -19,6 +19,12 @@ Read this first when resuming work (the sandbox resets often).
 
 ## Current state
 
+- Latest local checkpoint: M5.5a @intFromPtr passes 812 reference semantic cases,
+  GCC/Clang sanitizer units/goldens, full native regression, targeted reference/C
+  execution and fresh four-stage fuzzing. Next isolated work: @sizeOf/@alignOf
+  and correcting non-power-of-two wide-integer ABI sizes; runtime wide values
+  remain unsupported.
+
 - Latest CI triage: a1d2e66/run 38744651213 passed GCC/Clang/fuzz, but reference
   safety compilation timed out on cast_unsigned_narrow/cast_signed_low/cast_signed_high
   (120 seconds each), then the runner received a shutdown signal and exited 143.
@@ -83,8 +89,10 @@ Read this first when resuming work (the sandbox resets often).
   memory item without pretending the blocked function-alias case is complete.
   M5.3a/b are implemented: many-pointer types, array coercions/joins, runtime borrowed
   indexing and actual-root comptime loads/relocations, pointer arithmetic/differences
-  and compound assignments. Next take the small @intFromPtr milestone using the
-  existing PTR_TO_INT, then coherent runtime slice pairs/slicing. Pointer arithmetic
+  and compound assignments. M5.5a exposes @intFromPtr using PTR_TO_INT, with runtime
+  symbolic addresses/undefined propagation and physical C address tests. Next is
+  coherent runtime slice pairs/slicing; do not represent a fat slice as one QBE l.
+  Pointer arithmetic
   follows Sema.zig analyzeArithmetic/analyzePtrArithmetic; compound offsets use usize
   through ADD_SUB_RHS_TYPE, not a pointer-typed RHS result context.
   Many-pointer indices carry no language-level length guard; known dereferences must

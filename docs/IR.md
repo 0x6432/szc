@@ -489,3 +489,15 @@ prints a file's IR.
   subsequent known loads. Zero-bit runtime children preserve the base pointer;
   comptime-only additions use logical slots, while known subtraction follows
   upstream ABI-byte (zero) subtraction. Unsupported layout/offset overflow rejects.
+
+## Pointer-to-integer builtin
+
+- IR_INT_FROM_PTR takes a pointer expression and produces usize. Single/many pointer
+  types are accepted independently of const/volatile/allowzero/alignment qualifiers.
+  Nonpointer and slice operands reject, following Type.isPtrAtRuntime's scalar rule.
+- Undefined known pointers yield undefined usize. Other symbolic pointers require a
+  runtime context and materialize through existing constant/root/function dependency
+  paths, then PTR_TO_INT copies the actual address bits. No linker address is guessed
+  at comptime. Runtime addresses of comptime-only backing remain explicitly NYI.
+- The builtin does not introduce numeric pointers, integer-to-pointer conversion,
+  vector/optional pointer handling or slice extraction. Those need separate semantics.

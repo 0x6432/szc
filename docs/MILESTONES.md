@@ -99,7 +99,8 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
   - [x] **M5.3a Many-pointer types, array coercions and borrowed indexing.**
   - [x] **M5.3b Pointer arithmetic and differences.**
 - [~] **M5.4 String literals, sentinels, `[*:0]const u8`.** Literal byte values landed in M4.5b; general string/memory operations and sentinel pointer syntax remain pending.
-- [ ] **M5.5 Casting builtins**: `@intCast`, `@truncate`, `@ptrCast`, `@intFromPtr`, `@ptrFromInt`, `@bitCast`, `@as`.
+- [~] **M5.5 Casting builtins**: `@intCast`, `@truncate`, `@ptrCast`, `@intFromPtr`, `@ptrFromInt`, `@bitCast`, `@as`.
+  - [x] **M5.5a Pointer address conversion (`@intFromPtr`).**
 
 ## Phase 6: Aggregates and errors
 
@@ -149,6 +150,40 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
 ## Completed milestone log
 
 (newest first; each entry: what, limitations, interactions)
+
+### M5.5a Pointer address conversion (`@intFromPtr`)
+- **What**: expose usize addresses of supported single/many pointers, including
+  variables, global/constant/byte backing, elements/offsets, zero-bit storage and
+  function symbols. Defined symbolic addresses require runtime; namespace/comptime
+  attempts reject instead of inventing integer addresses. Known undefined pointers
+  propagate undefined usize, including normal result coercion. Nonpointer/bare
+  function operands, wrong arity and implicit runtime narrowing reject.
+- **Representation/interactions**: a direct IR_INT_FROM_PTR builtin lowers to the
+  PTR_TO_INT operation already used by differences. Codegen copies the real address;
+  existing constant/root dependency emission and function reachability remain in
+  charge of backing and symbols. No numeric-pointer representation or fake address
+  interning is added, and pointer qualifiers do not change address bits.
+- **Grounding/coverage**: actual Sema.zig zirIntFromPtr/Type.isPtrAtRuntime plus real
+  source/emission probes. Add a native address/alias/offset/alignment/zero-bit/function
+  program; IR/TIR/QBE goldens, five reference-rejected errors and an explicit
+  comptime-only-backing NYI fixture; one seed per semantic stage. Four C/PIE variants
+  compare numeric data/element/function addresses against uintptr_t, invoke the real
+  exported callback and check absence of TEXTREL at storage alignments 1/2/16/256.
+  Use supported export/extern conventions rather than depending on unimplemented
+  explicit callconv syntax. The small standalone-IL program uses function align(16);
+  full-assembly C variants additionally verify function align(64).
+- **Validation**: GCC/Clang Werror ASan/UBSan: 612 unit checks and 841 goldens each.
+  GCC full native suite: 77 ordinary/generated programs plus two scoped cases,
+  16 driver checks and all storage/alignment/ABI/volatile/185 safety checks.
+  Targeted reference execution and four C/PIE variants pass, including foreign null
+  allowzero addresses; Clang and optimized builds pass targeted native/C checks.
+  All 812 semantic cases match actual Zig 0.17.0. Four fresh 60-second fuzz runs
+  execute 1301767/32659/30619/36404 inputs, plus 20000 mutations per stage.
+- **Limits/next**: vectors/optionals/slices and runtime addresses of comptime-only
+  backing remain explicit NYI with the rest of those representations; known undefined
+  values still propagate before that backing limitation. Raw integer pointer creation
+  and other casting builtins remain future work. M5.5 and M5.3 remain partial; general
+  runtime slice pairs/slicing are next. Q6 stays at M10.2.
 
 ### M5.3b Pointer arithmetic, differences and compound assignments
 - **What**: many-pointer plus/minus usize offsets, `+=`/`-=`, runtime/known pointer

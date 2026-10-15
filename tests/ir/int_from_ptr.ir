@@ -1,0 +1,61 @@
+%41 = struct_decl (flags=0) {
+  decl fn "address" value {
+    %9 = func "address" {
+      %3 = param "p" type {
+        %0 = ptr_type @type_u8, @true many
+        %1 = as @type_type, %0
+        %2 = break_inline result, %1
+      }
+      ret type {
+        %4 = break_inline result, @type_usize
+      }
+      body insts {
+        %5 = ret_type
+        %6 = int_from_ptr %3
+        %7 = as_return %5, %6
+        %8 = ret %7
+      }
+    }
+    %10 = break_inline result, %9
+  }
+  decl fn "main" pub value {
+    %39 = func "main" {
+      ret type {
+        %11 = break_inline result, @type_u8
+      }
+      body insts {
+        %12 = int 2
+        %13 = as @type_usize, %12
+        %14 = array_type %13, @type_u8
+        %15 = array_elem_type %14
+        %16 = int 7
+        %17 = as %15, %16
+        %18 = int 9
+        %19 = as %15, %18
+        %20 = array_init %14, %17, %19
+        %24 = ref %20
+        %21 = decl_val "address"
+        %22 = call %21 arg0 {
+          %23 = arg_type %22, 0
+          %25 = as %23, %24
+          %26 = break_inline result, %25
+        }
+        %27 = int 0
+        %28 = cmp_eq %22, %27
+        %34 = if %28 then {
+          %29 = ret_type
+          %30 = int 1
+          %31 = as_return %29, %30
+          %32 = ret %31
+        } else {
+          %33 = break_inline result, @void_value
+        }
+        %35 = ret_type
+        %36 = int 0
+        %37 = as_return %35, %36
+        %38 = ret %37
+      }
+    }
+    %40 = break_inline result, %39
+  }
+}

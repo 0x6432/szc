@@ -1637,6 +1637,33 @@ analyze_int_from_bool(Block *block, const IrInst *inst)
 	return runtime_operand(type, emit_tir_un(block, TIR_INT_FROM_BOOL, type, inst->src, operand.inst));
 }
 
+/* Symbolic pointers have runtime addresses; undefined pointers retain undefined. */
+static Operand
+analyze_int_from_ptr(Block *block, const IrInst *inst)
+{
+	Sema *sema = block->sema;
+	Operand pointer = resolve_ref(block, inst->data.un.operand);
+	if (pointer.kind == OPERAND_NONE)
+		return operand_none;
+	if (sema->types[pointer.type].kind != TYPE_POINTER || sema->types[pointer.type].as.pointer.size == POINTER_SLICE) {
+		sema_error(block, inst->src, "expected pointer, found '%s'", sema_type_name(sema, pointer.type));
+		return operand_none;
+	}
+	if (operand_is_undefined(block, pointer))
+		return comptime_operand(T_USIZE, value_undefined(&sema->values, T_USIZE));
+	TypeId leaf = sema->types[pointer.type].as.pointer.child;
+	while (sema->types[leaf].kind == TYPE_ARRAY)
+		leaf = sema->types[leaf].as.array.child;
+	if (is_comptime_only_type(sema, leaf) && sema->types[leaf].kind != TYPE_FN) {
+		sema_error(block, inst->src, "not supported by szc yet: runtime address of comptime-only backing");
+		return operand_none;
+	}
+	if (!require_runtime(block, inst->src))
+		return operand_none;
+	TirRef address = materialize(block, pointer, inst->src);
+	return runtime_operand(T_USIZE, emit_tir_un(block, TIR_PTR_TO_INT, T_USIZE, inst->src, address));
+}
+
 /* Peer type of two integer operands (Zig's peer type resolution, integer part). */
 static bool
 peer_type(Block *block, Operand lhs, Operand rhs, uint32_t src, TypeId *out)
@@ -4300,6 +4327,9 @@ analyze_inst(Block *block, IrInstIndex index, Operand *break_value)
 	case IR_INT_CAST:
 	case IR_TRUNCATE:
 		result = analyze_cast(block, inst);
+		break;
+	case IR_INT_FROM_PTR:
+		result = analyze_int_from_ptr(block, inst);
 		break;
 	case IR_INT_FROM_BOOL:
 		result = analyze_int_from_bool(block, inst);

@@ -1054,6 +1054,7 @@ typedef enum Builtin {
 	BUILTIN_INT_CAST,
 	BUILTIN_TRUNCATE,
 	BUILTIN_INT_FROM_BOOL,
+	BUILTIN_INT_FROM_PTR,
 	BUILTIN_ARITH,
 	BUILTIN_PANIC,
 } Builtin;
@@ -1071,6 +1072,7 @@ static const BuiltinInfo builtin_table[] = {
 	{"intCast", BUILTIN_INT_CAST, 1, IR_OP_COUNT},
 	{"truncate", BUILTIN_TRUNCATE, 1, IR_OP_COUNT},
 	{"intFromBool", BUILTIN_INT_FROM_BOOL, 1, IR_OP_COUNT},
+	{"intFromPtr", BUILTIN_INT_FROM_PTR, 1, IR_OP_COUNT},
 	{"divTrunc", BUILTIN_ARITH, 2, IR_DIV_TRUNC},
 	{"divFloor", BUILTIN_ARITH, 2, IR_DIV_FLOOR},
 	{"divCeil", BUILTIN_ARITH, 2, IR_DIV_CEIL},
@@ -1153,9 +1155,10 @@ builtin_call(GenBody *body, Scope *scope, ResultInfo info, AstNode *node)
 		IrRef rhs = expr(body, scope, result_none, args[1]);
 		return rvalue(body, info, emit_bin(body, builtin->arith_op, node->offset, lhs, rhs), node->offset);
 	}
+	case BUILTIN_INT_FROM_PTR:
 	case BUILTIN_INT_FROM_BOOL: {
 		IrRef operand = expr(body, scope, result_none, args[0]);
-		return rvalue(body, info, emit_un(body, IR_INT_FROM_BOOL, node->offset, operand), node->offset);
+		return rvalue(body, info, emit_un(body, builtin->builtin == BUILTIN_INT_FROM_PTR ? IR_INT_FROM_PTR : IR_INT_FROM_BOOL, node->offset, operand), node->offset);
 	}
 	}
 	return IR_REF_VOID_VALUE;

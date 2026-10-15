@@ -8,6 +8,23 @@ import tempfile
 from compiler_process import run_compiler
 
 
+def int_from_ptr_cases():
+    for target in ("*u8", "[*]const u8", "*u0", "*void", "*u128", "*anyopaque",
+                   "*const fn () void", "[*]align(1) volatile allowzero u16"):
+        for result in ("usize", "u8", "u128"):
+            yield (f'fn f(p: {target}) {result} {{ return @intFromPtr(p); }} '
+                   'pub fn main() void { _ = f(undefined); }\n')
+    for source in (
+        'const p: *u8 = undefined; const n = @intFromPtr(p); _ = n;',
+        'const p: [*]u8 = undefined; const n: u8 = @intFromPtr(p); _ = n;',
+        '_ = @intFromPtr(7);', '_ = @intFromPtr(true);', '_ = @intFromPtr();',
+        'const a = [2]u8{7,9}; const p: [*]const u8 = &a; _ = @intFromPtr(p+1);',
+        'const a: u8 = 7; _ = @intFromPtr(&a);',
+    ):
+        yield 'pub fn main() void { ' + source + ' }\n'
+    yield 'const a: u8 = 7; const n = @intFromPtr(&a); pub fn main() void { _ = n; }\n'
+
+
 def arithmetic_qualifier_cases():
     for operator, offset, alignment, qualifier in itertools.product(
             ("+", "-"), ("0", "1", "n"), (1, 2, 8), ("", "allowzero ")):
@@ -18,6 +35,7 @@ def arithmetic_qualifier_cases():
 
 
 def cases():
+    yield from int_from_ptr_cases()
     yield from arithmetic_qualifier_cases()
     for target, statement in (("[*]u8", "q += 1;"), ("[*]u8", "q -= 1;"),
                               ("[*]u16", "q += @intCast(@as(u8,1));"), ("*u8", "q += 1;")):

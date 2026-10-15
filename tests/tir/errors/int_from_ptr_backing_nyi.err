@@ -1,0 +1,3 @@
+tests/tir/errors/int_from_ptr_backing_nyi.zig:1:40: error: not supported by szc yet: runtime address of comptime-only backing
+pub fn main() void { const T = u8; _ = @intFromPtr(&T); }
+                                       ^

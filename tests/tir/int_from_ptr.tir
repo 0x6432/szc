@@ -1,0 +1,21 @@
+fn szc.main.1: fn () u8 {
+  %0: [*]const u8 = const ptr_cast(value.12)
+  %1: usize = call szc.address.2(%0)
+  %2: usize = const 0
+  %3: bool = cmp_eq %1, %2
+  %4: void = block {
+    %8: noreturn = condbr %3 then {
+      %5: u8 = const 1
+      %6: noreturn = ret %5
+    } else {
+      %7: noreturn = br %4
+    }
+  }
+  %9: u8 = const 0
+  %10: noreturn = ret %9
+}
+fn szc.address.2: fn ([*]const u8) usize {
+  %0: [*]const u8 = arg 0
+  %1: usize = ptr_to_int %0
+  %2: noreturn = ret %1
+}

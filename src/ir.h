@@ -169,6 +169,7 @@ typedef enum IrDataKind {
 	/* Casts (builtins) */ \
 	X(INT_CAST, "int_cast", IR_DATA_BIN)	/* @intCast: integer rhs to type lhs, value must fit */ \
 	X(TRUNCATE, "truncate", IR_DATA_BIN)	/* @truncate: integer rhs to type lhs, dropping high bits */ \
+	X(INT_FROM_PTR, "int_from_ptr", IR_DATA_UN)	/* @intFromPtr: usize address */ \
 	X(INT_FROM_BOOL, "int_from_bool", IR_DATA_UN)	/* @intFromBool: u1 */ \
 	/* Arithmetic and logic */ \
 	X(ADD, "add", IR_DATA_BIN) \

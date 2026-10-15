@@ -1,0 +1,26 @@
+function w $szc.main.1() {
+@start
+	%t1 =l call $szc.address.2(l $szc.const.1)
+	%t3 =w ceql %t1, 0
+	jnz %t3, @c8_then, @c8_else
+@c8_then
+	ret 1
+@c8_else
+	jmp @b4
+@b4
+	ret 0
+}
+
+function l $szc.address.2(l %t0) {
+@start
+	%t1 =l copy %t0
+	ret %t1
+}
+
+section ".rodata"
+data $szc.const.1 = align 1 { b 7, b 9 }
+export function w $main() {
+@start
+	%status =w call $szc.main.1()
+	ret %status
+}
