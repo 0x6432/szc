@@ -1,0 +1,3 @@
+tests/tir/errors/array_extern_return.zig:1:8: error: return type '[2]u8' not allowed in function with calling convention 'x86_64_sysv'
+extern fn make() [2]u8;
+       ^

@@ -1,0 +1,3 @@
+tests/tir/errors/array_extern_param.zig:1:18: error: parameter of type '[2]u8' not allowed in function with calling convention 'x86_64_sysv'
+extern fn accept(a: [2]u8) void;
+                 ^

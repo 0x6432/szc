@@ -942,7 +942,8 @@ emit_function(Codegen *cg, const SemaFunc *func, FuncId id)
 	FILE *out = cg->out;
 	const TypeFn *fn = &sema_type(cg->sema, func->type)->as.fn;
 	uint32_t src = func->ir->insts[func->func_inst].src;
-	QbeClass ret_class = type_class(cg, fn->ret, src);
+	/* Internal array results use a trailing destination pointer and void return. */
+	QbeClass ret_class = sema_type(cg->sema, fn->ret)->kind == TYPE_ARRAY ? QBE_NONE : type_class(cg, fn->ret, src);
 	if (func->alignment > 16) {
 		if (cg->assembly == NULL) {
 			codegen_error(cg, src, "function alignment above 16 requires assembly output; use build-exe");

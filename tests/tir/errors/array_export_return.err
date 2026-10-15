@@ -1,0 +1,3 @@
+tests/tir/errors/array_export_return.zig:1:8: error: return type '[2]u8' not allowed in function with calling convention 'x86_64_sysv'
+export fn make() [2]u8 { return .{1, 2}; }
+       ^

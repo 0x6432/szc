@@ -1,0 +1,53 @@
+function w $szc.main.1() {
+@start
+	%t2 =l alloc4 4
+	call $szc.choose.2(l $szc.const.1, w 1, l %t2)
+	%t4 =l copy %t2
+	%e6_offset =l mul 0, 2
+	%t6 =l add %t4, %e6_offset
+	%t7 =w loaduh %t6
+	%g8_high =w cugtw %t7, 255
+	jnz %g8_high, @g8_high_panic, @g8_high_ok
+@g8_high_panic
+	call $szc.panic.1()
+	hlt
+@g8_high_ok
+	%t8 =w copy %t7
+	%t8 =w and %t8, 255
+	ret %t8
+}
+
+function $szc.choose.2(l %t0, w %t3, l %t4) {
+@start
+	%t1 =l alloc4 4
+	%t6 =l alloc4 4
+	call $memmove(l %t1, l %t0, l 4)
+	jnz %t3, @c12_then, @c12_else
+@c12_then
+	call $memmove(l %t6, l %t1, l 4)
+	jmp @b5
+@c12_else
+	call $memmove(l %t6, l $szc.const.2, l 4)
+	jmp @b5
+@b5
+	call $memmove(l %t4, l %t6, l 4)
+	ret
+}
+
+section ".rodata"
+data $szc.const.1 = align 2 { h 1, h 2 }
+section ".rodata"
+data $szc.const.2 = align 2 { h 3, h 4 }
+data $szc.panic.msg.1 = { b "integer does not fit in destination type\n", b 0 }
+function $szc.panic.1() {
+@start
+	call $write(w 2, l $szc.panic.msg.1, l 41)
+	call $abort()
+	hlt
+}
+
+export function w $main() {
+@start
+	%status =w call $szc.main.1()
+	ret %status
+}

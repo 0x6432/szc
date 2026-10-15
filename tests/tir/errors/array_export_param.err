@@ -1,0 +1,3 @@
+tests/tir/errors/array_export_param.zig:1:18: error: parameter of type '[2]u8' not allowed in function with calling convention 'x86_64_sysv'
+export fn accept(a: [2]u8) void { _ = a; }
+                 ^

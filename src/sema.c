@@ -938,6 +938,26 @@ func_queue(Sema *sema, FuncId id)
 	if (func->state != FUNC_DECLARED)
 		return;
 	func->state = FUNC_QUEUED;
+	/* Like Zig, only validate the machine ABI when a declaration is exported or
+	 * used at runtime. A discarded known address need not make an extern live. */
+	TypeFn fn = sema->types[func->type].as.fn;
+	if (fn.convention == FUNCTION_C) {
+		const IrInstIndex *params = &func->ir->extra[func->ir->insts[func->func_inst].data.payload + IR_WORDS(IrFuncHeader)];
+		for (uint32_t i = 0; i < fn.param_count; i++) {
+			if (sema->types[fn.params[i]].kind == TYPE_ARRAY) {
+				diag_report(sema->diag, DIAG_ERROR, func->ir->file, func->ir->insts[params[i]].src,
+					"parameter of type '%s' not allowed in function with calling convention 'x86_64_sysv'", sema_type_name(sema, fn.params[i]));
+				func->state = FUNC_FAILED;
+				return;
+			}
+		}
+		if (sema->types[fn.ret].kind == TYPE_ARRAY) {
+			diag_report(sema->diag, DIAG_ERROR, func->ir->file, func->ir->insts[func->func_inst].src,
+				"return type '%s' not allowed in function with calling convention 'x86_64_sysv'", sema_type_name(sema, fn.ret));
+			func->state = FUNC_FAILED;
+			return;
+		}
+	}
 	if (func->is_extern)
 		return;
 	if (sema->queue_count == sema->queue_capacity) {
@@ -1026,6 +1046,11 @@ block_init_comptime(Block *block, Sema *sema, SemaNamespace *ns, InstMap *map, S
 static bool operand_to_type(Block *block, Operand operand, uint32_t src, TypeId *out);
 static bool require_runtime(Block *block, uint32_t src);
 static bool analyze_alignment(Block *block, IrBody body, uint32_t src, uint32_t *out);
+
+static TirRef array_slot(Block *block, TypeId pointer, uint32_t src);
+static Operand array_snapshot(Block *block, Operand source, uint32_t alignment, uint32_t src);
+static Operand analyze_ref(Block *block, Operand value, uint32_t src, uint32_t identity, uint32_t alignment);
+static bool store_array(Block *block, Operand pointer, Operand value, uint32_t src);
 
 /* Until repeated/lazy aggregate values land, bound dense compile-time array work. */
 static bool
@@ -2485,7 +2510,15 @@ analyze_if(Block *block, const IrInst *inst)
 	}
 	/* One surviving constant exit stays known, but its control effects remain. */
 	bool known = exit_count == 1 && value.kind == OPERAND_COMPTIME;
-	TypeId merge_type = known ? T_VOID : type;
+	bool array = !known && sema->types[type].kind == TYPE_ARRAY;
+	TirRef array_result = TIR_REF_NONE;
+	if (array) {
+		TypeId pointer = type_pointer(sema, type, POINTER_ONE, true, false, 0);
+		array_result = array_slot(block, pointer, src);
+		if (array_result == TIR_REF_NONE)
+			return operand_none;
+	}
+	TypeId merge_type = known || array ? T_VOID : type;
 	block->tir->insts[merge].type = merge_type;
 	for (uint32_t i = 0; i < 2; i++) {
 		if (exits[i].end != BODY_BREAK_RESULT)
@@ -2493,6 +2526,11 @@ analyze_if(Block *block, const IrInst *inst)
 		Operand operand = coerce(&arms[i], exits[i].result, type, src);
 		if (operand.kind == OPERAND_NONE)
 			return operand_none;
+		if (array) {
+			Operand destination = runtime_operand(block->tir->insts[array_result].type, array_result);
+			if (!store_array(&arms[i], destination, operand, src))
+				return operand_none;
+		}
 		TirRef ref = merge_type == T_VOID ? TIR_REF_NONE : materialize(&arms[i], operand, src);
 		emit_tir_bin(&arms[i], TIR_BR, T_NORETURN, src, merge, ref);
 	}
@@ -2507,6 +2545,11 @@ analyze_if(Block *block, const IrInst *inst)
 	block->tir->insts[merge].data.payload = block_finish(&inner);
 	if (known)
 		return value;
+	if (array) {
+		Operand result = runtime_operand(type, array_result);
+		result.kind = OPERAND_AGGREGATE;
+		return result;
+	}
 	if (type == T_VOID)
 		return void_operand(sema);
 	return runtime_operand(type, merge);
@@ -2579,7 +2622,15 @@ analyze_control_block(Block *block, IrInstIndex index)
 		return operand_none;
 	}
 	bool known = target.count == 1 && target.exits[0].value.kind == OPERAND_COMPTIME;
-	TypeId merge_type = known ? T_VOID : type;
+	bool array = !known && block->sema->types[type].kind == TYPE_ARRAY;
+	TirRef array_result = TIR_REF_NONE;
+	if (array) {
+		TypeId pointer = type_pointer(block->sema, type, POINTER_ONE, true, false, 0);
+		array_result = array_slot(block, pointer, inst->src);
+		if (array_result == TIR_REF_NONE)
+			return operand_none;
+	}
+	TypeId merge_type = known || array ? T_VOID : type;
 	block->tir->insts[target.tir_ref].type = merge_type;
 	for (uint32_t i = 0; i < target.count; i++) {
 		BreakExit exit = target.exits[i];
@@ -2588,6 +2639,11 @@ analyze_control_block(Block *block, IrInstIndex index)
 		Operand value = coerce(&branch, exit.value, type, exit.src);
 		if (value.kind == OPERAND_NONE)
 			continue;
+		if (array) {
+			Operand destination = runtime_operand(block->tir->insts[array_result].type, array_result);
+			if (!store_array(&branch, destination, value, exit.src))
+				return operand_none;
+		}
 		TirRef operand = merge_type == T_VOID ? TIR_REF_NONE : materialize(&branch, value, exit.src);
 		emit_tir_bin(&branch, TIR_BR, T_NORETURN, exit.src, target.tir_ref, operand);
 		block->tir->insts[exit.wrapper].data.payload = block_finish(&branch);
@@ -2595,6 +2651,11 @@ analyze_control_block(Block *block, IrInstIndex index)
 	block->tir->insts[target.tir_ref].data.payload = block_finish(&inner);
 	if (known)
 		return target.exits[0].value;
+	if (array) {
+		Operand result = runtime_operand(type, array_result);
+		result.kind = OPERAND_AGGREGATE;
+		return result;
+	}
 	if (type == T_VOID)
 		return void_operand(block->sema);
 	return runtime_operand(type, target.tir_ref);
@@ -2815,6 +2876,10 @@ analyze_call(Block *block, IrInstIndex index, Operand *out)
 		args[i] = result.result;
 		if (result.end != BODY_BREAK_RESULT || args[i].kind == OPERAND_NONE)
 			failed = true;
+		if (!failed && i >= fn.param_count && sema->types[args[i].type].kind == TYPE_ARRAY) {
+			sema_error(block, src, "not supported by szc yet: variadic array arguments");
+			failed = true;
+		}
 		if (!failed && is_comptime_only_type(sema, args[i].type)) {
 			sema_error(block, src, "not supported by szc yet: variadic argument of type '%s'", sema_type_name(sema, args[i].type));
 			failed = true;
@@ -2826,24 +2891,50 @@ analyze_call(Block *block, IrInstIndex index, Operand *out)
 		sema_error(block, src, "not supported by szc yet: comptime function calls");
 		return INST_CONTINUE;
 	}
-	if (id != 0)
+	if (id != 0) {
 		func_queue(sema, id);
+		if (sema->funcs[id]->state == FUNC_FAILED)
+			return INST_CONTINUE;
+	}
 	TirRef *refs = arena_alloc(sema->arena, (header.arg_count + 1) * sizeof(TirRef), alignof(TirRef));
-	for (uint32_t i = 0; i < header.arg_count; i++)
-		refs[i] = materialize(block, args[i], src);
+	for (uint32_t i = 0; i < header.arg_count; i++) {
+		Operand argument = args[i];
+		if (sema->types[argument.type].kind == TYPE_ARRAY)
+			argument = analyze_ref(block, argument, src, 0, 0);
+		if (argument.kind == OPERAND_NONE)
+			return INST_CONTINUE;
+		refs[i] = materialize(block, argument, src);
+	}
+	bool array_return = sema->types[fn.ret].kind == TYPE_ARRAY;
+	TirRef result_pointer = TIR_REF_NONE;
+	if (array_return) {
+		TypeId pointer = type_pointer(sema, fn.ret, POINTER_ONE, false, false, 0);
+		result_pointer = array_slot(block, pointer, src);
+		if (result_pointer == TIR_REF_NONE)
+			return INST_CONTINUE;
+		refs[header.arg_count] = result_pointer;
+	}
 	TirCall call;
 	call.callee = id;
 	call.indirect = id == 0 ? materialize(block, callee, src) : TIR_REF_NONE;
-	call.arg_count = header.arg_count;
+	call.arg_count = header.arg_count + (array_return ? 1u : 0u);
 	uint32_t payload = tir_extra(block->tir, sema->arena, &call, TIR_WORDS(TirCall));
-	tir_extra(block->tir, sema->arena, refs, header.arg_count);
-	TirRef ref = emit_tir(block, TIR_CALL, fn.ret, src);
+	tir_extra(block->tir, sema->arena, refs, call.arg_count);
+	TirRef ref = emit_tir(block, TIR_CALL, array_return ? T_VOID : fn.ret, src);
 	block->tir->insts[ref].data.payload = payload;
 	if (fn.ret == T_NORETURN) {
 		emit_tir(block, TIR_TRAP, T_NORETURN, src);
 		return INST_NORETURN;
 	}
-	*out = runtime_operand(fn.ret, ref);
+	if (array_return) {
+		/* Publish only immutable access to the caller-owned result object. */
+		TypeId pointer = type_pointer(sema, fn.ret, POINTER_ONE, true, false, 0);
+		TirRef immutable = emit_tir_un(block, TIR_PTR_CAST, pointer, src, result_pointer);
+		*out = runtime_operand(fn.ret, immutable);
+		out->kind = OPERAND_AGGREGATE;
+	} else {
+		*out = runtime_operand(fn.ret, ref);
+	}
 	return INST_CONTINUE;
 }
 
@@ -2887,8 +2978,6 @@ array_slot(Block *block, TypeId pointer, uint32_t src)
 	block->func->array_stack_bytes += size + padding;
 	return emit_tir(block, TIR_ALLOC, pointer, src);
 }
-
-static Operand analyze_ref(Block *block, Operand value, uint32_t src, uint32_t identity, uint32_t alignment);
 
 static bool
 store_array(Block *block, Operand pointer, Operand value, uint32_t src)
@@ -3988,8 +4077,16 @@ analyze_inst(Block *block, IrInstIndex index, Operand *break_value)
 		value = coerce_return(block, value, ret, src);
 		if (value.kind == OPERAND_NONE)
 			return INST_NORETURN;
-		TirRef operand = ret == T_VOID ? TIR_REF_NONE : materialize(block, value, src);
-		emit_tir_un(block, TIR_RET, T_NORETURN, src, operand);
+		if (sema->types[ret].kind == TYPE_ARRAY) {
+			TirRef pointer = block->func->return_pointer;
+			Operand destination = runtime_operand(block->tir->insts[pointer].type, pointer);
+			if (!store_array(block, destination, value, src))
+				return INST_NORETURN;
+			emit_tir_un(block, TIR_RET, T_NORETURN, src, TIR_REF_NONE);
+		} else {
+			TirRef operand = ret == T_VOID ? TIR_REF_NONE : materialize(block, value, src);
+			emit_tir_un(block, TIR_RET, T_NORETURN, src, operand);
+		}
 		return INST_NORETURN;
 	}
 	case IR_RET_IMPLICIT: {
@@ -4069,11 +4166,26 @@ analyze_func_body(Sema *sema, FuncId id)
 	block.func = func;
 	block.tir = &func->tir;
 	TypeFn fn = sema->types[func->type].as.fn;
+	func->return_pointer = TIR_REF_NONE;
 	const IrInstIndex *params = &func->ir->extra[func->ir->insts[func->func_inst].data.payload + IR_WORDS(IrFuncHeader)];
 	for (uint32_t i = 0; i < fn.param_count; i++) {
-		TirRef arg = emit_tir(&block, TIR_ARG, fn.params[i], func->ir->insts[params[i]].src);
+		uint32_t src = func->ir->insts[params[i]].src;
+		bool array = sema->types[fn.params[i]].kind == TYPE_ARRAY;
+		/* Transport pointers promise only byte alignment; the private parameter
+		 * snapshot restores ABI alignment independently of the caller's storage. */
+		TypeId type = array ? type_pointer(sema, fn.params[i], POINTER_ONE, true, false, 1) : fn.params[i];
+		TirRef arg = emit_tir(&block, TIR_ARG, type, src);
 		func->tir.insts[arg].data.index = i;
-		inst_map_put(&map, sema->arena, params[i], runtime_operand(fn.params[i], arg));
+		Operand value = runtime_operand(type, arg);
+		if (array)
+			value = array_snapshot(&block, value, 0, src);
+		inst_map_put(&map, sema->arena, params[i], value);
+	}
+	if (sema->types[fn.ret].kind == TYPE_ARRAY) {
+		TypeId pointer = type_pointer(sema, fn.ret, POINTER_ONE, false, false, 0);
+		TirRef arg = emit_tir(&block, TIR_ARG, pointer, func->ir->insts[func->func_inst].src);
+		func->tir.insts[arg].data.index = fn.param_count;
+		func->return_pointer = arg;
 	}
 	BodyResult result = analyze_body(&block, func->header.body);
 	if (result.end != BODY_NORETURN)

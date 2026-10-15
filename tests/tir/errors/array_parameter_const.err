@@ -1,0 +1,3 @@
+tests/tir/errors/array_parameter_const.zig:1:33: error: cannot assign to constant
+fn change(a: [2]u8) void { a[0] = 3; }
+                                ^

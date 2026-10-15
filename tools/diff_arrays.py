@@ -11,6 +11,27 @@ from compiler_process import run_compiler
 def cases():
     for child, value in (("u8", "7"), ("i33", "-7"), ("bool", "true"), ("u0", "0"), ("void", "{}")):
         for body in (
+            f"return if (c) a else .{{{value}, {value}}};",
+            f"return result: {{ if (c) break :result a; break :result .{{{value}, {value}}}; }};",
+            f"return while (c) {{ break a; }} else .{{{value}, {value}}};",
+            f"_ = c; a[0] = {value}; return a;",
+            f"_ = a; _ = c; return [_]{child}{{{value}}};",
+        ):
+            yield (f"fn f(a: [2]{child}, c: bool) [2]{child} {{ {body} }}\n"
+                   f"pub fn main() void {{ _ = f(.{{{value}, {value}}}, true); }}\n")
+        yield (f"fn f(a: [2]{child}) [2]{child} {{ return a; }} "
+               f"fn invoke(p: *const fn ([2]{child}) [2]{child}, a: [2]{child}) [2]{child} {{ return p(a); }}\n"
+               f"pub fn main() void {{ _ = invoke(&f, .{{{value}, {value}}}); }}\n")
+    for child, length in itertools.product(("u8", "u0"), (0, 2)):
+        ty = f"[{length}]{child}"
+        yield f"export fn f(a: {ty}) void {{ _ = a; }} pub fn main() void {{}}\n"
+        yield f"export fn f() {ty} {{ return undefined; }} pub fn main() void {{}}\n"
+        yield f"extern fn f(a: {ty}) void; pub fn main() void {{ f(undefined); }}\n"
+        yield f"extern fn f() {ty}; pub fn main() void {{ _ = f(); }}\n"
+        yield f"extern fn f(a: {ty}) void; pub fn main() void {{ _ = &f; }}\n"
+        yield f"extern fn f() {ty}; pub fn main() void {{ _ = &f; }}\n"
+    for child, value in (("u8", "7"), ("i33", "-7"), ("bool", "true"), ("u0", "0"), ("void", "{}")):
+        for body in (
             "const b = a; a[0] = n; _ = b[1];",
             "const b = a; a = b;",
             "const p = &a[0]; p.* = n;",

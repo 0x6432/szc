@@ -1,0 +1,3 @@
+tests/tir/errors/array_argument_type.zig:2:34: error: expected type '[2]u16', found '[2]u8'
+pub fn main() void { accept([_]u8{1, 2}); }
+                                 ^

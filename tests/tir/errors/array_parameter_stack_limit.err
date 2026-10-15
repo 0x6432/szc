@@ -1,0 +1,3 @@
+tests/tir/errors/array_parameter_stack_limit.zig:1:11: error: not supported by szc yet: aggregate stack storage exceeds 16777216 bytes
+fn accept(a: [16777217]u8) void { _ = a; }
+          ^

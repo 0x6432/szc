@@ -55,13 +55,16 @@ Read this first when resuming work (the sandbox resets often).
   pointer/callback relocations, volatile/zero-bit reads, checked layout and total
   static-emission budget.
 - Done: M5.2c2 mutable array slots, runtime/nested literals and snapshot copies, plus
-  runtime element lvalues/addresses and borrowed indexing. M5.2c3 remains partial:
-  comptime element-pointer provenance, aggregate joins and by-value ABI are pending.
+  runtime element lvalues/addresses and borrowed indexing.
+- Done: M5.2c3a internal by-value array arguments/returns and array-valued if/block/
+  while results, with caller-owned return storage and callee parameter snapshots.
+  M5.2c3 remains partial: general comptime element-pointer provenance is pending.
 - Current batching preference: group related straightforward milestones when practical;
   keep complex semantic changes independently tested/documented/committed. Do not return
   to an unconditional one-checkpoint policy. Select the next independently implementable
   memory item without pretending the blocked function-alias case is complete. Next is
-  M5.2c3: comptime element-pointer provenance and aggregate value/ABI integration.
+  M5.2c3b: general comptime element-pointer provenance (real root/subobject identity,
+  checked offsets and pointer comparisons/loads, not copied element constants).
   Keep coherent work batched, targeted checks during development and a single full
   validation pass per stable batch; independent checks can run on immutable binaries.
   Preserve owned snapshot versus borrowed pointer semantics, and scope by-value ABI
@@ -87,6 +90,65 @@ Read this first when resuming work (the sandbox resets often).
   GCC/Clang/fuzz/differential jobs, restoring green CI. M5.1c2b2a 8b1d3cf
   also passed all jobs (run 38590520673), as did M5.1c2b2b1 ecfb6ab
   (run 38593742928). Check each new push's run.
+
+## M5.2c3a internal array calls and control-flow values
+
+- Source TypeFn params/return retain semantic array types. The private QBE convention
+  passes array arguments as pointers; TIR_ARG transport pointers promise only align(1).
+  Each callee copies into a private ABI-aligned slot before using/binding parameters.
+  Arguments evaluated from mutable sources already own c2 snapshots, preserving later
+  argument evaluation order and isolation from mutation through other pointers.
+- Array returns use a caller-owned checked slot and a trailing mutable destination
+  parameter. SemaFunc.return_pointer names that TIR_ARG (NONE for other returns).
+  Physical TIR_CALL returns void and appends that pointer; the caller publishes only
+  an immutable aggregate view after the call. Callees copy the captured return value
+  into the destination and emit void ret. Do not claim this private convention is the
+  official Zig compiler's binary ABI, or expose it through extern/export functions.
+- The hidden pointer is deliberately trailing: noreturn-to-array-return callback
+  coercions must not shift the original scalar/array arguments. The safety regression
+  covers eight source arguments crossing the x86_64 register/stack boundary; both
+  compilers panic with the intended message, not an argument-corruption message.
+- Array-valued runtime ifs, labeled blocks and while break/else exits share an owned
+  result slot and void control-flow merge. Only surviving value paths initialize it;
+  terminating paths stay terminating. Branch copies occur at the actual exit wrappers,
+  never after an unconditional jump. Single known exits retain known-value behavior.
+  Existing pre-defer snapshots protect array return/break values from cleanup mutation.
+- Parameters, caller return slots and join slots all use the existing checked 16 MiB
+  per-function aggregate budget. Unsupported layouts and oversized slots diagnose.
+  No scalar array temporaries, pointer-to-local returns, globals or static-variable
+  shortcuts implement the calling convention. Direct, recursive and indirect calls
+  share the same physical argument lowering; zero-sized arrays retain zero-byte copies.
+- C ABI array parameters/returns are forbidden, as actual Zig requires. Validate them
+  in func_queue only when exported or runtime-referenced; a discarded known extern
+  address need not validate a machine ABI. The initial strict signature-time check
+  disagreed with Zig on discarded addresses; the final matrix covers both used and
+  discarded declarations. Known failed functions are not called/lowered afterwards.
+- Grounding: Zig 0.17 langref parameter rules permit copying immutable array params;
+  direct official Debug probes return the original 1 for aliased/later-mutated args
+  and return-before-defer. Sema.zig zirRetPtr and validateResolvedFuncType/explainWhyTypeIsNotExtern
+  ground return storage and C array restrictions. Native/Debug probes do not assert
+  that every optimization level must choose the same copy/reference strategy.
+- Coverage: three executable fixtures for direct/recursive/nested/callback/many-arg
+  calls, snapshots, weakly aligned inputs, empty/u0 results, if/block/while joins and
+  defers; the width generator adds argument/return/join and nested roundtrips across
+  24 signed/unsigned widths. Promote the old nested-return NYI; add TIR/SSA call+join
+  goldens, lazy extern-address golden, nine boundary/type/budget error goldens and one
+  noreturn callback safety case. The array matrix adds 54 runtime/C/lazy cases.
+- Validation: final frozen GCC -Werror ASan/UBSan suite passes 599 units, 791
+  goldens, 67 ordinary/generated native+reference programs, two scoped szc-only inputs,
+  lifecycle/runner 8/18, driver 16, existing storage 15, immutable array storage seven,
+  mutable C storage, function ABI four, unaligned seven, alignment 135/270/153/153/27,
+  volatile 44 and safety 181. All 382 array comparisons match actual Zig. Final Clang
+  sanitizer goldens (791), nine array/generated programs and 181 safety cases pass;
+  the earlier independent Clang full native/unit/storage batch also passed. Optimized
+  GCC passes all nine array/generated inputs and mutable C storage. Four final 60s
+  fuzzers plus standalone 20,000 mutations per stage pass, without sanitizer findings;
+  retained irgen/sema corpora are 38/92. Previous 78c7872 CI is entirely green
+  (38731429720), as is a866467 (38726742217). Check the new push independently.
+- Still out of scope: comptime element-pointer provenance, mutable array globals,
+  explicit sentinel syntax, slices, generic/comptime function evaluation, variadic
+  array arguments and broader array element coercions. Array C ABI is a real language
+  rejection, not an unimplemented private ABI feature. M5.2c/M5.2 stay partial.
 
 ## M5.2c2 mutable arrays, initialization and snapshots
 
@@ -139,9 +201,10 @@ Read this first when resuming work (the sandbox resets often).
   completed clean suite is separate. Freeze independent compiler binaries before
   parallel checks. Stopping a shell can leave its make/fuzzer descendants running;
   identify and stop only those owned processes before superseding a fuzz run.
-- Still NYI: by-value array arguments/returns, runtime array joins, comptime element-
-  pointer provenance, volatile whole-array copies, mutable array globals and explicit
-  sentinel syntax. Element volatile scalar accesses work. M5.2c/M5.2 remain partial.
+- At this checkpoint, by-value array ABI/joins were still NYI; c3a above supersedes
+  those limits. Comptime element-pointer provenance, volatile whole-array copies,
+  mutable array globals and explicit sentinel syntax remain pending. Element volatile
+  scalar accesses work. M5.2c/M5.2 remain partial.
 
 ## M5.2c1 immutable array storage and runtime scalar reads
 

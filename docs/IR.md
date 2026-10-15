@@ -319,7 +319,7 @@ prints a file's IR.
   VALUE_ARRAY/VALUE_REF backing is used. Whole-array byte loads produce VALUE_ARRAY.
 - Dense array construction/copies share a 1,048,576 element-work budget per Sema.
   This explicit NYI resource limit is separate from full-width type lengths. There
-  is no by-value aggregate ABI yet; runtime storage is described below.
+  is a private internal array ABI described below; C by-value arrays are forbidden.
 
 ## Immutable array backing and runtime scalar element reads
 
@@ -372,6 +372,31 @@ prints a file's IR.
   elements initialize private storage only after their expressions have been evaluated.
   Known literals keep existing interning/comptime behavior. Dense element-work limits
   remain independent of stack/static byte limits.
-- By-value array arguments/returns and runtime aggregate joins remain explicit NYI at
-  scalar materialization. General comptime element-pointer provenance, volatile whole-
-  array copies, mutable array globals, explicit sentinel syntax and slices remain NYI.
+- Scalar materialization still rejects arrays; calls and joins use the indirect
+  lowering below. General comptime element-pointer provenance, volatile whole-array
+  copies, mutable array globals, explicit sentinel syntax and slices remain NYI.
+
+## Internal array calls, returns and joins
+
+- Source TypeFn keeps logical array parameter/return types. Physical TIR_ARG array
+  parameters are const align(1) single pointers; a fresh ABI-aligned snapshot binds
+  each immutable source parameter. TIR_CALL arguments carry array backing addresses,
+  not scalar array instructions, and preserve source evaluation order/snapshots.
+- Array results allocate caller-owned storage; the lowered argument list appends its
+  pointer after every source argument. The call instruction has type void and the
+  caller obtains an immutable aggregate operand only after it completes. Callee
+  SemaFunc.return_pointer names the matching trailing ARG; array returns copy to it
+  then ret void. The hidden pointer is trailing so noreturn-to-array-result function
+  pointer coercions do not shift any original arguments, including stack arguments.
+- Codegen emits void headers for array-returning internal functions and derives all
+  physical parameters from pointer/scalar TIR_ARG instructions. TIR_CALL.arg_count is
+  the lowered count, including the optional trailing destination, not the source arity.
+  C scalar returns/arguments and pointer-to-array C interoperability are unchanged.
+- Array-valued if/block/while exits copy into an owned shared result slot before a
+  void BR; terminating exits do not initialize or read it. A single constant exit
+  stays known. Result storage is ALLOC-hoisted and still counts against the checked
+  aggregate budget. Captured values precede defer effects as in scalar lowering.
+- Exported/runtime-referenced C declarations reject array params/results in func_queue
+  and become FUNC_FAILED. Discarding a known extern address is not runtime use and
+  does not force ABI validation. Private array transport is never silently used as a
+  C convention or claimed to match another Zig compiler's object-file ABI.

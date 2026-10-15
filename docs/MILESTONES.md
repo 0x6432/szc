@@ -91,7 +91,9 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
   - [~] **M5.2c Runtime array storage, copies, indexing and element addresses** (checked bounds and aggregate ABI).
     - [x] **M5.2c1 Immutable array backing and checked scalar runtime reads**.
     - [x] **M5.2c2 Mutable aggregate slots, initialization and copies**.
-    - [~] **M5.2c3 Element address provenance and aggregate value/ABI integration** (runtime element addresses landed with c2; comptime provenance/joins/ABI pending).
+    - [~] **M5.2c3 Element address provenance and aggregate value/ABI integration**.
+      - [x] **M5.2c3a Internal array calls/returns and runtime aggregate joins**.
+      - [ ] **M5.2c3b General comptime element-pointer provenance** (runtime addresses landed with c2).
 - [ ] **M5.3 Slices, many-pointers, slicing, `.len`, `.ptr`, for over slices.**
 - [~] **M5.4 String literals, sentinels, `[*:0]const u8`.** Literal byte values landed in M4.5b; general string/memory operations and sentinel pointer syntax remain pending.
 - [ ] **M5.5 Casting builtins**: `@intCast`, `@truncate`, `@ptrCast`, `@intFromPtr`, `@ptrFromInt`, `@bitCast`, `@as`.
@@ -144,6 +146,33 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
 ## Completed milestone log
 
 (newest first; each entry: what, limitations, interactions)
+
+### M5.2c3a Internal array calls/returns and runtime aggregate joins
+- **What**: by-value arrays in internal direct, recursive and indirect calls; nested,
+  zero-bit/empty arrays and array-valued runtime if/labeled-block/while results.
+  Array return/break snapshots survive cleanup mutation. Scalar and C-pointer ABI
+  behavior remains unchanged; extern/export by-value arrays are rejected by language
+  rules, with lazy validation only on export or actual runtime use.
+- **Interactions**: source function types remain array-typed. Physical array args use
+  byte-aligned transport pointers and private ABI-aligned callee snapshots; returns
+  use a trailing caller-owned destination and void QBE return. A trailing hidden
+  argument preserves source parameter positions for noreturn callback coercions.
+  Join exits copy into owned slots and branch through void merges, never scalar array
+  temporaries. All new slots share the c2 checked stack budget. This is a private
+  convention, not compatibility with the official Zig compiler's native binary ABI.
+- **Tests**: three native/reference call/control/callback programs; 24-width and nested
+  argument/return/join roundtrips; TIR/SSA goldens and a lazy extern golden; promote the
+  nested-return NYI; nine type/C-ABI/budget errors; an eight-argument noreturn callback
+  safety case. The expanded array matrix adds 54 runtime/C-boundary/lazy-use cases.
+- **Validation**: final GCC -Werror ASan/UBSan/reference suite passes 599 units,
+  791 goldens, 67 ordinary/generated programs, 181 safety cases and all existing
+  storage/driver/ABI/alignment/volatile suites. All 382 array comparisons match Zig.
+  Independent Clang sanitizer/native tests and optimized array roundtrips pass. Four
+  final 60s fuzzers and 20k standalone mutations per stage pass with no sanitizer error.
+- **Limits**: general comptime element-pointer provenance, mutable array globals,
+  explicit sentinel syntax, volatile whole-array copies, slices, generic/comptime
+  calls, variadic arrays and broader array-child coercions remain pending. c3 and the
+  enclosing milestones remain partial.
 
 ### M5.2c2 Mutable aggregate slots, initialization and copies
 - **What**: mutable local arrays, mixed/runtime and nested literals, snapshot loads,
