@@ -433,6 +433,20 @@ test_element_pointers(void)
 	ValueId logical = value_element_pointer(&table, 4, root, 1, 1, true);
 	address = value_pointer_address(&table, logical);
 	CHECK(address.root == root && address.offset == 1 && address.logical);
+	ValueId field = value_slice_field_pointer(&table, 6, first, 16, true);
+	CHECK(field == value_slice_field_pointer(&table, 6, first, 16, true));
+	CHECK(field != value_slice_field_pointer(&table, 6, first, 16, false));
+	CHECK(field != value_slice_field_pointer(&table, 7, first, 16, true));
+	CHECK(field != value_slice_field_pointer(&table, 6, first, 17, true));
+	CHECK(field != value_slice_field_pointer(&table, 6, root, 16, true));
+	address = value_pointer_address(&table, field);
+	CHECK(address.root == root && address.offset == 16 && !address.logical);
+	ValueId field_cast = value_pointer_cast(&table, 7, field);
+	address = value_pointer_address(&table, field_cast);
+	CHECK(address.root == root && address.offset == 16 && !address.logical);
+	ValueId field_element = value_element_pointer(&table, 8, field_cast, 1, 24, false);
+	address = value_pointer_address(&table, field_element);
+	CHECK(address.root == root && address.offset == 24 && !address.logical);
 	ValueId ids[512];
 	for (uint32_t i = 0; i < 512; i++)
 		ids[i] = value_element_pointer(&table, 3, root, i, (uint64_t)i << 33, false);

@@ -35,6 +35,15 @@ def cases():
     ):
         yield "panic_slice_" + label, source + "\n", message
 
+    for label, operation in (
+        ('shrink_index', 's.len = 0; _ = s[0];'),
+        ('advance_index', 's.ptr += 2; s.len = 1; _ = s[1];'),
+        ('shrink_window', 's.len = 1; _ = s[0..2];'),
+    ):
+        source = ('pub fn main() void { var a = [3]u8{7,8,9}; var s: []u8 = &a; '
+                  +operation+' }\n')
+        yield 'slice_field_'+label, source, 'index out of bounds'
+
     for label, ty in (('array', '*[3]u8'), ('slice', '[]u8'), ('many', '[*]u8')):
         for lo, hi in ((2,1), (4,3), (0,4), (4,4)):
             if ty == '[*]u8' and lo <= hi:

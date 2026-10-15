@@ -599,3 +599,29 @@ reports "genSetReg called with a value larger than dst_reg". The inferred type i
 reference-checked without native emission; native reload behavior is separately
 covered by tests/run_szc/slice_deref_mutable.zig, never claimed as a successful
 reference execution. Known immutable/address/explicit-copy cases execute against Zig.
+
+
+### Slice descriptor field lvalues
+
+IR_FIELD_PTR projects an address from an addressable base. Direct slice storage
+and a single pointer to a descriptor are supported; one implicit pointer load is
+allowed, not arbitrary recursive autodereference. Array `.len` remains a type-only
+constant and its address is immutable, never an invented field in array backing.
+
+VALUE_SLICE_FIELD_PTR records its descriptor pointer, selected word and cumulative
+root-relative byte offset. Hashing/interning, pointer equality, address conversion,
+constant loads, function dependency walking and QBE/static-data emission retain
+that path. Nested array projections therefore preserve field address identity and
+PIE-safe relocations. Mutable-global roots stay runtime contents even when the
+field's address is constant. Constant field reads select an interned descriptor
+component without reading a copied array or fabricating a scalar pointer value.
+
+Runtime projection reuses PTR_CAST for `.ptr` and SLICE_LEN_PTR (+8) for `.len`.
+Field pointer attributes follow descriptor storage, independently of element
+pointer attributes. Field alignment is min(storage alignment, field ABI alignment),
+including word zero of over-aligned storage, as Type.fieldPtrType specifies.
+Borrowed field stores reuse scalar STORE/STORE_VOLATILE and existing coercion/
+const checks; no descriptor snapshot is used as an assignment destination.
+Pointer-to-slice field reads now project/read a single word, allowing volatile
+fields without allowing volatile whole-descriptor copies. Forming a field address
+performs no external memory access; this is verified by the page-fault observer.

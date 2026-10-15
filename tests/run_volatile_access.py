@@ -50,13 +50,29 @@ def fixtures():
             f'if (&cancel_{offset}.* != cancel_{offset}) return 8;',
             'if (!observe_finish(0, 0)) return 9;',
         ])
+    slice_index = len(TYPES) + 2
+    declarations.append(f'extern fn memory_{slice_index}(offset: usize) *align(1) volatile []u8;')
+    for offset in (0, 1):
+        checks.extend([
+            f'const descriptor_{offset} = memory_{slice_index}({offset});',
+            f'descriptor_{offset}.len = 1;', f'descriptor_{offset}.ptr = &byte_left;',
+            f'_ = descriptor_{offset}.len;', f'_ = descriptor_{offset}.len;',
+            f'descriptor_{offset}.ptr = &byte_right;',
+            f'const descriptor_data_{offset} = descriptor_{offset}.ptr;',
+            'if (!observe_finish(3, 3)) return 10;',
+            f'if (descriptor_data_{offset}[0] != 9) return 11;',
+            f'const field_only_{offset} = memory_{slice_index}({offset});',
+            f'_ = &field_only_{offset}.len;', f'_ = &field_only_{offset}.ptr;',
+            'if (!observe_finish(0, 0)) return 12;',
+        ])
     source = ('extern fn observe_finish(reads: u32, writes: u32) bool;\n'
               'extern fn observe_finish_compound() bool;\n'
               'var left: u8 = 1;\nvar right: u8 = 2;\n'
+              'var byte_left: [1]u8 = .{7}; var byte_right: [1]u8 = .{9};\n'
               'fn seven() u8 { return 7; }\nfn nine() u8 { return 9; }\n'
               + '\n'.join(declarations) + '\npub fn main() u8 {\n' + '\n'.join(checks) + '\nreturn 0;\n}\n')
     aliases = []
-    for index in range(len(TYPES) + 2):
+    for index in range(len(TYPES) + 3):
         aliases.extend(['.text', f'.globl memory_{index}', f'memory_{index}:', 'jmp observe_memory'])
     assembly = '\n'.join(aliases) + '\n.section .note.GNU-stack,"",@progbits\n'
     return source, assembly
@@ -95,7 +111,7 @@ def main():
                      '-O' + mode, '-j2', '-lc', f'-femit-bin={executable}'])
                 result = run([str(executable)])
                 assert not result.stdout and not result.stderr
-    print(f'volatile accesses: {2 * (len(TYPES) + 5)} observed sequences, 0 failed', flush=True)
+    print(f'volatile accesses: {2 * (len(TYPES) + 7)} observed sequences, 0 failed', flush=True)
 
 
 if __name__ == '__main__':

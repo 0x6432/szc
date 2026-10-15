@@ -891,9 +891,10 @@ queue_value_functions(Block *block, ValueId id, uint32_t src)
 		return;
 	sema->queued_values[id] = true;
 	const Value *value = value_get(&sema->values, id);
-	while (value->kind == VALUE_REF || value->kind == VALUE_ELEMENT_PTR || value->kind == VALUE_PTR_CAST) {
+	while (value->kind == VALUE_REF || value->kind == VALUE_ELEMENT_PTR || value->kind == VALUE_PTR_CAST || value->kind == VALUE_SLICE_FIELD_PTR) {
 		id = value->kind == VALUE_REF ? sema->values.objects[value->as.object].value
-			: value->kind == VALUE_ELEMENT_PTR ? value->as.element.base : value->as.pointer;
+			: value->kind == VALUE_ELEMENT_PTR ? value->as.element.base
+			: value->kind == VALUE_SLICE_FIELD_PTR ? value->as.field.base : value->as.pointer;
 		value = value_get(&sema->values, id);
 	}
 	if (value->kind == VALUE_SLICE) {
@@ -3625,6 +3626,7 @@ pointer_operand(Block *block, Operand operand, uint32_t src)
 
 static Operand constant_array_element(Block *block, Operand base, TypeArray array, uint64_t index, uint32_t src);
 static Operand load_offset_pointer(Block *block, Operand pointer, uint32_t src);
+static TypeId indexable_array_type(Sema *sema, TypeId type);
 static TypeId array_type_id(Sema *sema, TypeId child, uint64_t length, bool sentinel_zero);
 
 /* Immutable declaration loads resolve their initializer; mutable contents need runtime. */
@@ -3707,6 +3709,12 @@ load_pointer(Block *block, Operand pointer, uint32_t src)
 			Operand stored = load_pointer(block, comptime_operand(value_get(&sema->values, parent)->type, parent), src);
 			return coerce(block, stored, child, src);
 		}
+		if (value->kind == VALUE_SLICE_FIELD_PTR) {
+			SliceFieldPointer field = value->as.field;
+			TypeId base_type = value_get(&sema->values, field.base)->type;
+			Operand slice = load_pointer(block, comptime_operand(base_type, field.base), src);
+			return slice.kind == OPERAND_NONE ? operand_none : slice_field(block, slice, field.length, src);
+		}
 		if (value->kind == VALUE_ELEMENT_PTR) {
 			ElementPointer element = value->as.element;
 			TypeId base_type = value_get(&sema->values, element.base)->type;
@@ -3748,6 +3756,69 @@ load_pointer(Block *block, Operand pointer, uint32_t src)
 	if (!pointer_operand(block, pointer, src) || !require_runtime(block, src))
 		return operand_none;
 	return runtime_operand(child, emit_tir_un(block, pointer_type.is_volatile ? TIR_LOAD_VOLATILE : TIR_LOAD, child, src, materialize(block, pointer, src)));
+}
+
+/* Project a word of the original descriptor, never an owned descriptor copy. */
+static Operand
+slice_field_address(Block *block, Operand storage, bool length, uint32_t src)
+{
+	Sema *sema = block->sema;
+	TypePointer shape = sema->types[storage.type].as.pointer;
+	TypeId child = length ? T_USIZE : slice_pointer_type(sema, shape.child);
+	uint32_t alignment = pointer_alignment(sema, shape);
+	uint32_t field_alignment = sema_type_align(sema, child);
+	if (alignment > field_alignment)
+		alignment = field_alignment;
+	uint64_t offset = length ? 8u : 0u;
+	shape.child = child;
+	shape.alignment = alignment == sema_type_align(sema, child) ? 0 : alignment;
+	Type pointer = make_type(TYPE_POINTER);
+	pointer.as.pointer = shape;
+	TypeId type = type_intern(sema, &pointer);
+	if (operand_is_undefined(block, storage)) {
+		sema_error(block, src, "use of undefined value here causes illegal behavior");
+		return operand_none;
+	}
+	if (storage.kind == OPERAND_COMPTIME) {
+		PointerAddress address = value_pointer_address(&sema->values, storage.value);
+		if (address.offset > UINT64_MAX - offset) {
+			sema_error(block, src, "pointer offset overflow");
+			return operand_none;
+		}
+		return comptime_operand(type, value_slice_field_pointer(&sema->values, type,
+			storage.value, address.offset + offset, length));
+	}
+	if (!require_runtime(block, src))
+		return operand_none;
+	return runtime_operand(type, emit_tir_un(block, length ? TIR_SLICE_LEN_PTR : TIR_PTR_CAST,
+		type, src, materialize(block, storage, src)));
+}
+
+static Operand
+analyze_field_pointer(Block *block, Operand base, StringId name, uint32_t src)
+{
+	Sema *sema = block->sema;
+	if (!pointer_type_operand(block, base, src))
+		return operand_none;
+	TypeId child = sema->types[base.type].as.pointer.child;
+	bool length = name == intern_cstr(sema->interner, "len");
+	TypeId array = indexable_array_type(sema, child);
+	if (array != 0 && length) {
+		Operand count = comptime_operand(T_USIZE, value_int_u64(&sema->values, T_USIZE, sema->types[array].as.array.length));
+		return analyze_ref(block, count, src, 0, 0);
+	}
+	if (sema->types[child].kind == TYPE_POINTER && sema->types[child].as.pointer.size == POINTER_ONE
+		&& is_slice(sema, sema->types[child].as.pointer.child)) {
+		base = load_pointer(block, base, src);
+		if (base.kind == OPERAND_NONE)
+			return operand_none;
+		child = sema->types[base.type].as.pointer.child;
+	}
+	if (!is_slice(sema, child) || (!length && name != intern_cstr(sema->interner, "ptr"))) {
+		sema_error(block, src, "type '%s' has no member named '%s'", sema_type_name(sema, child), intern_text(sema->interner, name));
+		return operand_none;
+	}
+	return slice_field_address(block, base, length, src);
 }
 
 /* Supported one-possible-value children follow Zig analyzeLoad's early fold. */
@@ -4654,6 +4725,9 @@ analyze_inst(Block *block, IrInstIndex index, Operand *break_value)
 	case IR_ARRAY_CAT:
 		result = analyze_array_cat(block, inst);
 		break;
+	case IR_FIELD_PTR:
+		result = analyze_field_pointer(block, resolve_ref(block, inst->data.name.operand), inst->data.name.name, src);
+		break;
 	case IR_FIELD_REF:
 	case IR_FIELD_VAL: {
 		Operand base = resolve_ref(block, inst->data.name.operand);
@@ -4669,14 +4743,18 @@ analyze_inst(Block *block, IrInstIndex index, Operand *break_value)
 			&& sema->types[base_type].as.pointer.size == POINTER_ONE
 			&& is_slice(sema, sema->types[base_type].as.pointer.child);
 		if (inst->op == IR_FIELD_REF && (is_slice(sema, base_type) || slice_pointer)) {
-			base = load_pointer(block, base, src);
-			if (base.kind == OPERAND_NONE)
-				break;
+			Operand address = analyze_field_pointer(block, base, inst->data.name.name, src);
+			result = address.kind == OPERAND_NONE ? operand_none : load_pointer(block, address, src);
+			break;
 		}
 		if (slice_pointer) {
-			base = load_pointer(block, base, src);
-			if (base.kind == OPERAND_NONE)
-				break;
+			bool length = inst->data.name.name == intern_cstr(sema->interner, "len");
+			if (length || inst->data.name.name == intern_cstr(sema->interner, "ptr")) {
+				Operand address = slice_field_address(block, base, length, src);
+				result = address.kind == OPERAND_NONE ? operand_none : load_pointer(block, address, src);
+			} else
+				result = unsupported_inst(block, inst);
+			break;
 		}
 		if (is_slice(sema, base.type)) {
 			bool length = inst->data.name.name == intern_cstr(sema->interner, "len");
@@ -5408,6 +5486,9 @@ value_text(Sema *sema, ValueId id)
 		return arena_sprintf(sema->arena, "elem(base.%u, index.%" PRIu64 ", %s.%" PRIu64 ")",
 			(unsigned)value->as.element.base, value->as.element.index,
 			value->as.element.logical ? "leaf" : "offset", value->as.element.offset);
+	case VALUE_SLICE_FIELD_PTR:
+		return arena_sprintf(sema->arena, "slice_field(base.%u, %s, offset.%" PRIu64 ")",
+			(unsigned)value->as.field.base, value->as.field.length ? "len" : "ptr", value->as.field.offset);
 	case VALUE_SLICE:
 		return arena_sprintf(sema->arena, "slice(ptr.%u, len.%s)", (unsigned)value->as.slice.pointer, value_text(sema, value->as.slice.length));
 	case VALUE_ARRAY:

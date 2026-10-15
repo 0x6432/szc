@@ -73,6 +73,7 @@ jobs:
           - diff_function_alignment
           - diff_volatile_pointers
           - diff_function_pointers
+          - diff_slice_fields
           - diff_slice_deref
           - diff_slicing
           - diff_slices

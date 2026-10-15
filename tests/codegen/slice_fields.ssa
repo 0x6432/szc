@@ -1,0 +1,64 @@
+function w $szc.main.1() {
+@start
+	call $szc.trim.2(l $szc.g.1)
+	%t2 =l add $szc.g.1, 8
+	%t3 =l loadl %t2
+	%g4_high =w cugtl %t3, 255
+	jnz %g4_high, @g4_high_panic, @g4_high_ok
+@g4_high_panic
+	call $szc.panic.1()
+	hlt
+@g4_high_ok
+	%t4 =w copy %t3
+	%t4 =w and %t4, 255
+	ret %t4
+}
+
+function $szc.trim.2(l %t0) {
+@start
+	%t1 =l alloc8 8
+	storel %t0, %t1
+	%t3 =l loadl %t1
+	%t4 =l copy %t3
+	%t5 =l loadl %t4
+	%e7_offset =l mul 1, 1
+	%t7 =l add %t5, %e7_offset
+	storel %t7, %t4
+	%t9 =l loadl %t1
+	%t10 =l add %t9, 8
+	%t11 =l loadl %t10
+	%t13 =l sub %t11, 1
+	%g13_overflow =w cultl %t11, 1
+	jnz %g13_overflow, @g13_overflow_panic, @g13_overflow_ok
+@g13_overflow_panic
+	call $szc.panic.0()
+	hlt
+@g13_overflow_ok
+	storel %t13, %t10
+	ret
+}
+
+data $szc.g.1 = align 8 { l $szc.bytes.15, l 5 }
+section ".rodata"
+data $szc.bytes.15 = { b 104, b 101, b 108, b 108, b 111, b 0 }
+data $szc.panic.msg.0 = { b "integer overflow\n", b 0 }
+function $szc.panic.0() {
+@start
+	call $write(w 2, l $szc.panic.msg.0, l 17)
+	call $abort()
+	hlt
+}
+
+data $szc.panic.msg.1 = { b "integer does not fit in destination type\n", b 0 }
+function $szc.panic.1() {
+@start
+	call $write(w 2, l $szc.panic.msg.1, l 41)
+	call $abort()
+	hlt
+}
+
+export function w $main() {
+@start
+	%status =w call $szc.main.1()
+	ret %status
+}

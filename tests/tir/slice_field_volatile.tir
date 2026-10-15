@@ -1,0 +1,11 @@
+fn szc.main.1: fn () void {
+  %0: *volatile []u8 = const undefined
+  %1: usize = call szc.f.2(%0)
+  %2: noreturn = ret
+}
+fn szc.f.2: fn (*volatile []u8) usize {
+  %0: *volatile []u8 = arg 0
+  %1: *volatile usize = slice_len_ptr %0
+  %2: usize = load_volatile %1
+  %3: noreturn = ret %2
+}

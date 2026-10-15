@@ -19,6 +19,37 @@ Read this first when resuming work (the sandbox resets often).
 
 ## Current state
 
+- Latest language checkpoint: M5.3e writable/addressable slice descriptor fields
+  is complete. /data/slice-fields-final immutable GCC/Clang snapshots match all
+  1659 checked source/test files. Werror ASan/UBSan: 640 units/930 goldens;
+  85 ordinary/generated + three scoped native programs, 16 driver checks,
+  all C/ABI/alignment suites, 48 observed volatile sequences and 216 safety cases.
+  GCC full e2e also checks Zig; both compilers separately reference-check the
+  new native program, four C descriptor layouts and volatile Debug/ReleaseFast.
+  Actual semantic matrices: 168 fields + 87 dereference + 204 slicing + 252 old
+  slices. Optimized GCC passes 85 native/216 safety cases. The 949 array/layout
+  cases are source-hash-verified replays of the previously actual-reference
+  validated oracle, not fresh Zig compilations. Four 60-second fuzzers execute
+  1430533/44280/53821/66966 inputs; both builds replay 20000 mutations/stage
+  (54 irgen/110 sema seeds). All final scripts exit zero; logs use
+  /data/slice-fields-final-*.
+- IR_FIELD_PTR/VALUE_SLICE_FIELD_PTR borrow the descriptor's original word,
+  preserving selection, root and cumulative offset through casts/nested arrays.
+  Field address alignment is capped at the word ABI alignment, even for an
+  over-aligned descriptor. Descriptor storage controls field const/volatile/
+  allowzero qualifiers independently of element pointer qualifiers. Individual
+  undefined descriptor words may be initialized without loading the descriptor.
+  Volatile field loads/stores are observable; address formation does no access.
+  Whole-descriptor volatile copies and sentinel descriptors/slicing remain NYI.
+- CI run 38778400121 (8dfaab9): 18 jobs successful, native reference suite still
+  running at last check; no aggregate success claimed. Follow-on prepared in
+  /data/ci-native-final splits native/storage/alignment/safety into independently
+  bounded suites, preserving all 24 original e2e commands exactly once and max
+  concurrency four. All four partitioned local suites passed; commit separately
+  after the language checkpoint. Coverage proof: /data/ci-native-coverage.log.
+  Next language work: sentinel descriptors/slicing, remaining memory integration;
+  no build-Zig question before M10.2.
+
 - CI follow-on M0.5a: reference checks now run in sixteen independent suites
   (14 semantic tools + native/parser), max four concurrent, fail-fast disabled.
   The final `differential` status requires all matrix suites to succeed. GCC/Clang
@@ -49,7 +80,7 @@ Read this first when resuming work (the sandbox resets often).
   in tests/run_szc/slice_deref_mutable.zig. Never claim these reference bugs pass.
 - M5.3d1 was pushed as db49ca9; CI run 38775924855 has passed GCC/Clang/fuzz,
   with differential still running at last check. Next: sentinel descriptors/
-  slicing and writable descriptor fields, then remaining memory integration;
+  slicing (writable descriptor fields completed in M5.3e), then remaining memory integration;
   no build-Zig question before M10.2. Bounded reference CI sharding follows
   as M0.5a; coverage validation is /data/ci-sharding-validation.log.
 

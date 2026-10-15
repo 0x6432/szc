@@ -105,6 +105,7 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
   - [x] **M5.3c3 Inferred unsentinelled array-pointer/slice joins and comparison guards.**
   - [x] **M5.3d1 Borrowed slicing expressions and bounds checks** (explicit/runtime sentinel slices remain NYI).
   - [x] **M5.3d2 Known slice dereference and borrowed array addresses.**
+  - [x] **M5.3e Writable/addressable slice descriptor fields and volatile word access.**
 - [~] **M5.4 String literals, sentinels, `[*:0]const u8`.** Literal byte values landed in M4.5b; general string/memory operations and sentinel pointer syntax remain pending.
 - [~] **M5.5 Casting builtins**: `@intCast`, `@truncate`, `@ptrCast`, `@intFromPtr`, `@ptrFromInt`, `@bitCast`, `@as`.
   - [x] **M5.5a Pointer address conversion (`@intFromPtr`).**
@@ -159,6 +160,48 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
 ## Completed milestone log
 
 (newest first; each entry: what, limitations, interactions)
+
+### M5.3e Writable/addressable slice descriptor fields
+- **What**: `.ptr`/`.len` assignment, compound assignment and borrowed addresses
+  for local/global/nested descriptors, including pointer-to-slice field access.
+  Field words can be initialized independently without loading an undefined
+  descriptor. Mutable element pointers do not imply mutable descriptor storage;
+  immutable descriptors/parameters retain correct constant-field errors.
+- **Grounding**: Sema's slice fieldPtr path, Type.fieldPtrType and upstream
+  behavior/slice.zig field constness/alignment/global mutation tests. Actual Zig
+  comparison caught an over-alignment mistake: even descriptor word zero must
+  cap field-address alignment to the word's ABI alignment, not inherit excess.
+- **Interactions**: new IR_FIELD_PTR and VALUE_SLICE_FIELD_PTR preserve selected
+  word, original descriptor root and cumulative offset through casts/array paths.
+  Constant loads, function queues, hashing, equality, static relocations and
+  QBE operands honor field provenance. Existing scalar coercion/store and volatile
+  helpers implement individual words; plain field address formation does not
+  load descriptor contents or create a mutable snapshot destination.
+- **Coverage**: eight interning/provenance unit checks, three stage goldens,
+  six new error cases and a positive volatile-field golden. The former volatile
+  field NYI fixture now tests an actual whole-descriptor copy instead. Native
+  tests cover escaped field addresses, nested/global aliases, once-only compound
+  operands, snapshots, unaligned storage and per-word initialization. Four C
+  PIE/RELRO variants check actual descriptor-word relocation addresses. The
+  volatile observer adds four access/no-access sequences checked against Zig
+  in Debug/ReleaseFast; three safety cases verify updated lengths guard indexing
+  and slicing. Add fuzz seeds and an independent semantic CI suite.
+- **Validation**: immutable /data/slice-fields-final GCC/Clang source/test copies
+  match the integrated tree (1659 files checked). Both Werror ASan/UBSan builds
+  pass 640 units/930 goldens, 85 ordinary/generated + three scoped native cases,
+  16 driver checks, all C/ABI/alignment suites, 48 volatile sequences and 216
+  safety cases. GCC's full e2e suite also runs Zig; both builds separately
+  reference-check the new native case, four C descriptor variants and all 48
+  volatile sequences in Debug/ReleaseFast. Actual semantic comparisons pass
+  168 fields + 87 dereference + 204 slicing + 252 previous slice cases. Optimized
+  GCC passes 85 native/216 safety checks; 949 unchanged array/layout cases replay
+  against the source-hash-verified actual-reference oracle (not fresh Zig runs).
+  Four 60-second fuzzers execute 1430533/44280/53821/66966 inputs without failures;
+  both builds replay 20000 mutations/stage (54 irgen/110 sema seeds). Logs use
+  /data/slice-fields-final-*.
+- **Limits/next**: whole-descriptor volatile copies and sentinel descriptors/
+  slicing remain NYI; writable fields do not make arbitrary pointer/length pairs
+  safe to dereference. M5.3 remains partial. Q6 stays deferred to M10.2.
 
 ### M0.5a Bounded parallel reference CI
 - **What**: replace the long serial differential job with sixteen independent

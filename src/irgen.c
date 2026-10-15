@@ -818,7 +818,7 @@ lvalue(GenBody *body, Scope *scope, AstNode *node)
 		error_at(gen, node->offset, "use of undeclared identifier '%s'", intern_text(gen->interner, name));
 		return IR_REF_VOID_VALUE;
 	}
-	if (node->kind == AST_INDEX)
+	if (node->kind == AST_INDEX || node->kind == AST_FIELD_ACCESS)
 		return address_of(body, scope, result_none, node);
 	if (node->kind == AST_DEREF)
 		return emit_un(body, IR_REF_DEREF, node->offset, expr(body, scope, result_none, AST_CAST(AstWrap, node, AST_DEREF)->operand));
@@ -839,6 +839,11 @@ address_of(GenBody *body, Scope *scope, ResultInfo info, AstNode *node)
 		IrRef base = emit_un(body, IR_ARRAY_BASE_PTR, node->offset, address_of(body, scope, result_none, index->lhs));
 		IrRef item = expr(body, scope, result_type(IR_REF_TYPE_USIZE), index->index);
 		return emit_bin(body, IR_ARRAY_INDEX_PTR, node->offset, base, item);
+	}
+	if (node->kind == AST_FIELD_ACCESS) {
+		AstFieldAccess *field = AST_CAST(AstFieldAccess, node, AST_FIELD_ACCESS);
+		IrRef base = address_of(body, scope, result_none, field->lhs);
+		return emit_name(body, IR_FIELD_PTR, node->offset, intern_span(body->gen, field->name), base);
 	}
 	if (node->kind == AST_IDENTIFIER) {
 		StringId name = intern_span(body->gen, AST_CAST(AstIdentifier, node, AST_IDENTIFIER)->name);

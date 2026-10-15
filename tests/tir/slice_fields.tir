@@ -1,0 +1,27 @@
+global szc.g.1: []const u8 = slice(ptr.16, len.5)
+fn szc.main.1: fn () u8 {
+  %0: *[]const u8 = const szc.g.1
+  %1: void = call szc.trim.2(%0)
+  %2: *usize = const slice_field(base.8, len, offset.8)
+  %3: usize = load %2
+  %4: u8 = int_cast %3
+  %5: noreturn = ret %4
+}
+fn szc.trim.2: fn (*[]const u8) void {
+  %0: *[]const u8 = arg 0
+  %1: *const *[]const u8 = alloc
+  %2: void = store %1, %0
+  %3: *[]const u8 = load %1
+  %4: *[*]const u8 = ptr_cast %3
+  %5: [*]const u8 = load %4
+  %6: usize = const 1
+  %7: [*]const u8 = ptr_add %5, %6
+  %8: void = store %4, %7
+  %9: *[]const u8 = load %1
+  %10: *usize = slice_len_ptr %9
+  %11: usize = load %10
+  %12: usize = const 1
+  %13: usize = sub %11, %12
+  %14: void = store %10, %13
+  %15: noreturn = ret
+}

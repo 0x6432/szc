@@ -548,6 +548,12 @@ value_hash(const Value *value)
 		hash = hash_mix(hash, (uint32_t)(value->as.element.offset >> 32));
 		hash = hash_mix(hash, value->as.element.logical ? 1u : 0u);
 		break;
+	case VALUE_SLICE_FIELD_PTR:
+		hash = hash_mix(hash, value->as.field.base);
+		hash = hash_mix(hash, (uint32_t)value->as.field.offset);
+		hash = hash_mix(hash, (uint32_t)(value->as.field.offset >> 32));
+		hash = hash_mix(hash, value->as.field.length ? 1u : 0u);
+		break;
 	case VALUE_SLICE:
 		hash = hash_mix(hash, value->as.slice.pointer);
 		hash = hash_mix(hash, value->as.slice.length);
@@ -595,6 +601,9 @@ value_equal(const Value *a, const Value *b)
 			&& a->as.element.index == b->as.element.index
 			&& a->as.element.offset == b->as.element.offset
 			&& a->as.element.logical == b->as.element.logical;
+	case VALUE_SLICE_FIELD_PTR:
+		return a->as.field.base == b->as.field.base
+			&& a->as.field.offset == b->as.field.offset && a->as.field.length == b->as.field.length;
 	case VALUE_SLICE:
 		return a->as.slice.pointer == b->as.slice.pointer && a->as.slice.length == b->as.slice.length;
 	case VALUE_ARRAY:
@@ -859,6 +868,14 @@ value_element_pointer(ValueTable *table, TypeId type, ValueId base, uint64_t ind
 }
 
 ValueId
+value_slice_field_pointer(ValueTable *table, TypeId type, ValueId base, uint64_t offset, bool length)
+{
+	Value value = make_value(VALUE_SLICE_FIELD_PTR, type);
+	value.as.field = (SliceFieldPointer){base, offset, length};
+	return value_intern(table, &value);
+}
+
+ValueId
 value_pointer_cast(ValueTable *table, TypeId type, ValueId pointer)
 {
 	if (value_get(table, pointer)->kind == VALUE_PTR_CAST)
@@ -875,7 +892,7 @@ value_pointer_address(const ValueTable *table, ValueId id)
 	PointerAddress address = {id, 0, false};
 	bool selected = false;
 	const Value *value = value_get(table, id);
-	while (value->kind == VALUE_ELEMENT_PTR || value->kind == VALUE_PTR_CAST) {
+	while (value->kind == VALUE_ELEMENT_PTR || value->kind == VALUE_PTR_CAST || value->kind == VALUE_SLICE_FIELD_PTR) {
 		if (value->kind == VALUE_ELEMENT_PTR) {
 			if (!selected) {
 				address.offset = value->as.element.offset;
@@ -883,6 +900,12 @@ value_pointer_address(const ValueTable *table, ValueId id)
 				selected = true;
 			}
 			address.root = value->as.element.base;
+		} else if (value->kind == VALUE_SLICE_FIELD_PTR) {
+			if (!selected) {
+				address.offset = value->as.field.offset;
+				selected = true;
+			}
+			address.root = value->as.field.base;
 		} else {
 			address.root = value->as.pointer;
 		}

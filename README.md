@@ -30,7 +30,8 @@ Fixed-size arrays support typed literals, checked indexing, mutable/immutable ba
 owned snapshots, function arguments/returns and scalar-element mutation. Single/many
 pointers support qualifiers, array-to-many coercion, borrowed indexing, element offsets,
 differences and `@intFromPtr` addresses. `@sizeOf`/`@alignOf`/`@bitSizeOf` query supported layouts and representations;
-unsentinelled slices have pointer/length descriptors, `.ptr`/`.len`, indexing,
+unsentinelled slices have pointer/length descriptors, writable/addressable `.ptr`/`.len`
+fields (including individual volatile word access), indexing,
 array/string coercions, storage and internal calls/returns. Differently sized
 unsentinelled array pointers can infer a slice at runtime joins. Array/slice loops
 support values and pointer captures. Slicing checks bounds and returns array pointers

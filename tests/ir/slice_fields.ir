@@ -1,0 +1,76 @@
+%53 = struct_decl (flags=0) {
+  decl var "s" type {
+    %0 = ptr_type @type_u8, @true slice
+    %1 = as @type_type, %0
+    %2 = break_inline result, %1
+  } value {
+    %3 = decl_type
+    %4 = str "hello"
+    %5 = as %3, %4
+    %6 = break_inline result, %5
+  }
+  decl const "length" value {
+    %7 = decl_ref "s"
+    %8 = field_ptr "len", %7
+    %9 = break_inline result, %8
+  }
+  decl fn "trim" value {
+    %37 = func "trim" {
+      %15 = param "p" type {
+        %10 = ptr_type @type_u8, @true slice
+        %11 = as @type_type, %10
+        %12 = ptr_type %11, @false
+        %13 = as @type_type, %12
+        %14 = break_inline result, %13
+      }
+      ret type {
+        %16 = break_inline result, @type_void
+      }
+      body insts {
+        %17 = ref %15
+        %18 = field_ptr "ptr", %17
+        %19 = load %18
+        %20 = add_sub_rhs_type %19
+        %21 = int 1
+        %22 = as %20, %21
+        %23 = add %19, %22
+        %24 = elem_type %18
+        %25 = as %24, %23
+        %26 = store %18, %25
+        %27 = field_ptr "len", %17
+        %28 = load %27
+        %29 = add_sub_rhs_type %28
+        %30 = int 1
+        %31 = as %29, %30
+        %32 = sub %28, %31
+        %33 = elem_type %27
+        %34 = as %33, %32
+        %35 = store %27, %34
+        %36 = ret_implicit
+      }
+    }
+    %38 = break_inline result, %37
+  }
+  decl fn "main" pub value {
+    %51 = func "main" {
+      ret type {
+        %39 = break_inline result, @type_u8
+      }
+      body insts {
+        %40 = decl_val "trim"
+        %41 = call %40 arg0 {
+          %42 = arg_type %41, 0
+          %43 = decl_ref "s"
+          %44 = as %42, %43
+          %45 = break_inline result, %44
+        }
+        %46 = ret_type
+        %47 = decl_val "length"
+        %48 = deref %47
+        %49 = int_cast %46, %48
+        %50 = ret %49
+      }
+    }
+    %52 = break_inline result, %51
+  }
+}
