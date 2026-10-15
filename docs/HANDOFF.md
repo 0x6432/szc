@@ -112,11 +112,14 @@ Read this first when resuming work (the sandbox resets often).
   8 checks and differential adapter wiring passes 18. Final forced fuzz rebuilds pass
   four 60-second libFuzzer runs and 20,000 standalone mutations per stage; retained
   irgen/sema corpus inputs are 35/85.
-- Broader matrices are still running. The initial local pool has a Permission denied
-  start failure for allowzero case 49 because build/asan/szc was relinked during that
-  run; the original pool is not a passing run. Rerun the entire 864-case allowzero
-  matrix on the stable binary and record its result separately. Do not rebuild an
-  executable while tests use it. Other matrix failures/timeouts must still be reported.
+- All eleven actual semantic matrices now pass 4,827 cases: nested-pointer 168,
+  allowzero 864, pointer-alignment 1,035, local-alignment 300, constant-alignment 626,
+  global-alignment 300, global-constant-alignment 519, function-alignment 77,
+  volatile-pointer 240, function-pointer 486, arrays 212. Final array rerun passes.
+  The initial local pool failed to start allowzero case 49 (Permission denied) because
+  build/asan/szc was relinked during that run; it remains a failed orchestration run.
+  A separate entire 864-case allowzero rerun passes on the stable binary, with no
+  filtering or skipped cases. Do not rebuild an executable while tests use it.
 - CI deadline follow-up 64c6130/run 38716130912 has passed GCC, Clang and fuzz;
   differential is still running when checked. Check this array push independently.
 - Batch related easy milestones as requested, but keep runtime aggregate memory work

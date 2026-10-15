@@ -174,11 +174,12 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
   15 physical storage checks. The new semantic array matrix matches all 212 real Zig
   cases; 17 invalid fixtures reject with Zig and six explicit NYI fixtures are valid
   reference programs. CI includes the matrix and generated width readbacks. Lifecycle
-  regressions pass 8 checks and adapter wiring passes 18. Broader pointer matrices are
-  being rechecked separately: one initial local pool failed to start szc while its
-  executable was being replaced (Permission denied), not on a semantic mismatch. The
-  entire affected allowzero matrix is rerunning against a stable binary, without
-  filtering, skipped cases or automatic retries. Final forced fuzz rebuilds pass all
+  regressions pass 8 checks and adapter wiring passes 18. All eleven actual semantic
+  matrices pass 4,827 cases (4,615 existing plus 212 arrays). One initial local pool
+  failed to start szc while its executable was being replaced (Permission denied),
+  not on a semantic mismatch; that pool remains a failed run. A separate full rerun
+  of all 864 allowzero cases passes on the stable binary, as does the final 212-case
+  array rerun. No filtered/skipped cases or automatic retries. Final forced fuzz rebuilds pass all
   four 60-second libFuzzer targets and 20,000 standalone mutations per stage
   (35 irgen/85 sema retained corpus inputs).
 - **Limits/next**: dense constant construction has an explicit per-compilation budget
