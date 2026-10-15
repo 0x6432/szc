@@ -7,6 +7,9 @@
 #include "comptime.h"
 #include "diag.h"
 #include "lexer.h"
+#include "parser.h"
+#include "ir.h"
+#include "sema.h"
 
 static uint32_t failures = 0;
 static uint32_t checks = 0;
@@ -440,6 +443,51 @@ test_array_values(void)
 }
 
 static void
+test_array_layout(void)
+{
+	Arena arena;
+	arena_init(&arena);
+	SourceTable sources;
+	source_table_init(&sources, &arena);
+	Diag diag;
+	diag_init(&diag, &arena, &sources);
+	Interner interner;
+	intern_init(&interner, &arena);
+	static const char source[] =
+		"fn consume(a: *const [18446744073709551615]u0, b: *const [18446744073709551615]u8, "
+		"c: *const [9223372036854775808]u16, d: *const [2][9223372036854775808]u16, "
+		"e: *const [2][3]i33, f: *const [0]u64) void { "
+		"_ = a.len; _ = b.len; _ = c.len; _ = d.len; _ = e.len; _ = f.len; } "
+		"pub fn main() void { consume(undefined, undefined, undefined, undefined, undefined, undefined); }";
+	FileId file = source_add_memory(&sources, "layout.zig", source, sizeof(source) - 1);
+	AstContainerDecl *root = parse_file(&arena, &diag, &sources, file);
+	CHECK(!diag_has_errors(&diag));
+	IrFile *ir = irgen_file(&arena, &diag, &interner, source_get(&sources, file), file, root);
+	CHECK(!diag_has_errors(&diag));
+	Sema *sema = sema_create(&arena, &diag, &interner, &sources);
+	CHECK(sema_analyze_executable(sema, file, ir));
+	CHECK(sema_func_count(sema) == 3);
+	TypeFn fn = sema_type(sema, sema_func(sema, 2)->type)->as.fn;
+	CHECK(fn.param_count == 6);
+	static const bool valid[] = {true, true, false, false, true, true};
+	static const uint64_t sizes[] = {0, UINT64_MAX, 17, 17, 48, 0};
+	static const uint32_t alignments[] = {1, 1, 2, 2, 8, 8};
+	for (uint32_t i = 0; i < 6; i++) {
+		TypeId array = sema_type(sema, fn.params[i])->as.pointer.child;
+		uint64_t size = 17;
+		CHECK(sema_type_size(sema, array, &size) == valid[i]);
+		CHECK(size == sizes[i]);
+		CHECK(sema_type_align(sema, array) == alignments[i]);
+	}
+	uint64_t size;
+	CHECK(sema_type_size(sema, IR_REF_TYPE_U8, &size) && size == 1);
+	CHECK(sema_type_size(sema, IR_REF_TYPE_I32, &size) && size == 4);
+	CHECK(sema_type_size(sema, IR_REF_TYPE_U64, &size) && size == 8);
+	CHECK(sema_type_size(sema, IR_REF_TYPE_BOOL, &size) && size == 1);
+	arena_free(&arena);
+}
+
+static void
 test_binary_diagnostics(void)
 {
 	Arena arena;
@@ -485,6 +533,7 @@ main(void)
 	test_constant_references();
 	test_global_references();
 	test_array_values();
+	test_array_layout();
 	test_binary_diagnostics();
 
 	printf("unit: %u checks, %u failed\n", checks, failures);

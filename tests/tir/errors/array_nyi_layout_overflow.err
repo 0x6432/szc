@@ -1,0 +1,3 @@
+tests/tir/errors/array_nyi_layout_overflow.zig:1:69: error: not supported by szc yet: array layout size exceeds 64-bit address space
+fn read(p: *const [9223372036854775808]u16, n: usize) u16 { return p[n]; }
+                                                                    ^

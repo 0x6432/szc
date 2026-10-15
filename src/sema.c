@@ -82,6 +82,8 @@ struct Sema {
 	uint32_t   type_slot_count;
 
 	ValueTable values;
+	bool *queued_values;	/* immutable value DAG reachability, visited once */
+	uint32_t queued_value_capacity;
 	uint32_t array_elements;	/* work/storage charged by dense constant construction */
 
 	SemaFunc   **funcs;	/* funcs[0] is unused; each SemaFunc stays at its address */
@@ -551,31 +553,54 @@ sema_type_name(Sema *sema, TypeId type_id)
 	return "?";
 }
 
-uint64_t
-sema_type_size(const Sema *sema, TypeId type_id)
+/* Layout overflow is reported to the caller, never replaced by a wrapped size. */
+bool
+sema_type_size(const Sema *sema, TypeId type_id, uint64_t *out)
 {
 	const Type *type = &sema->types[type_id];
+	uint64_t size = 0;
 	switch (type->kind) {
 	case TYPE_BOOL:
-		return 1;
+		size = 1;
+		break;
 	case TYPE_INT: {
 		uint32_t bits = type->as.integer.bits;
-		if (bits == 0)
-			return 0;
-		uint64_t bytes = 1;
-		while (bytes * 8 < bits)
-			bytes = bytes * 2;
-		return bytes;
+		if (bits != 0) {
+			size = 1;
+			while (size * 8 < bits)
+				size *= 2;
+		}
+		break;
 	}
-	case TYPE_ARRAY:
-		return ((uint64_t)type->as.array.length + (type->as.array.sentinel_zero ? 1u : 0u)) * sema_type_size(sema, type->as.array.child);
+	case TYPE_ARRAY: {
+		uint64_t child;
+		if (!sema_type_size(sema, type->as.array.child, &child))
+			return false;
+		uint64_t count = type->as.array.length;
+		/* Even maximal zero-bit array types occupy zero bytes. */
+		if (child == 0)
+			break;
+		if (type->as.array.sentinel_zero) {
+			if (count == UINT64_MAX)
+				return false;
+			count++;
+		}
+		if (count > UINT64_MAX / child)
+			return false;
+		size = count * child;
+		break;
+	}
 	case TYPE_FLOAT:
-		return type->as.floating.bits / 8;
+		size = type->as.floating.bits / 8;
+		break;
 	case TYPE_POINTER:
-		return type->as.pointer.size == POINTER_SLICE ? 16 : 8;
+		size = type->as.pointer.size == POINTER_SLICE ? 16 : 8;
+		break;
 	default:
-		return 0;
+		break;
 	}
+	*out = size;
+	return true;
 }
 
 uint32_t
@@ -583,7 +608,9 @@ sema_type_align(const Sema *sema, TypeId type_id)
 {
 	if (sema->types[type_id].kind == TYPE_ARRAY)
 		return sema_type_align(sema, sema->types[type_id].as.array.child);
-	uint64_t size = sema_type_size(sema, type_id);
+	uint64_t size;
+	if (!sema_type_size(sema, type_id, &size))
+		return 1;
 	if (size == 0)
 		return 1;
 	if (size > 16)
@@ -829,10 +856,27 @@ static void
 queue_value_functions(Block *block, ValueId id, uint32_t src)
 {
 	Sema *sema = block->sema;
+	if (id >= sema->queued_value_capacity) {
+		uint32_t capacity = sema->values.capacity;
+		sema->queued_values = arena_grow_array(sema->arena, sema->queued_values,
+			sema->queued_value_capacity, capacity, sizeof(bool), alignof(bool));
+		memset(sema->queued_values + sema->queued_value_capacity, 0,
+			(capacity - sema->queued_value_capacity) * sizeof(bool));
+		sema->queued_value_capacity = capacity;
+	}
+	if (sema->queued_values[id])
+		return;
+	sema->queued_values[id] = true;
 	const Value *value = value_get(&sema->values, id);
 	while (value->kind == VALUE_REF) {
 		id = sema->values.objects[value->as.object].value;
 		value = value_get(&sema->values, id);
+	}
+	if (value->kind == VALUE_ARRAY) {
+		ArrayValue array = value->as.array;
+		for (uint32_t i = 0; i < array.count; i++)
+			queue_value_functions(block, array.items[i], src);
+		return;
 	}
 	if (value->kind != VALUE_FUNCTION)
 		return;
@@ -3152,6 +3196,49 @@ constant_array_element(Block *block, Operand base, TypeArray array, uint64_t ind
 	return comptime_operand(array.child, element);
 }
 
+/* Runtime reads use real backing storage and a checked element address. */
+static Operand
+runtime_array_element(Block *block, Operand base, Operand index, TypeArray array, uint32_t src)
+{
+	Sema *sema = block->sema;
+	if (block->is_comptime) {
+		sema_error(block, src, "unable to evaluate comptime expression");
+		return operand_none;
+	}
+	TypeKind kind = sema->types[array.child].kind;
+	if (kind != TYPE_INT && kind != TYPE_BOOL && kind != TYPE_POINTER && kind != TYPE_VOID) {
+		sema_error(block, src, "not supported by szc yet: runtime array element type '%s'", sema_type_name(sema, array.child));
+		return operand_none;
+	}
+	if (is_int(sema, array.child) && sema->types[array.child].as.integer.bits > 64) {
+		sema_error(block, src, "not supported by szc yet: integers wider than 64 bits");
+		return operand_none;
+	}
+	if (sema->types[base.type].kind == TYPE_ARRAY)
+		base = analyze_ref(block, base, src, 0, 0);
+	if (base.kind == OPERAND_NONE || !check_defined(block, base, src) || !require_runtime(block, src))
+		return operand_none;
+	TypePointer pointer = sema->types[base.type].as.pointer;
+	uint64_t size;
+	if (!sema_type_size(sema, pointer.child, &size)) {
+		sema_error(block, src, "not supported by szc yet: array layout size exceeds 64-bit address space");
+		return operand_none;
+	}
+	/* Never claim stronger alignment than either the base or the element stride. */
+	uint32_t alignment = pointer_alignment(sema, pointer);
+	uint32_t child_alignment = sema_type_align(sema, array.child);
+	if (alignment > child_alignment)
+		alignment = child_alignment;
+	Type type = make_type(TYPE_POINTER);
+	type.as.pointer = pointer;
+	type.as.pointer.child = array.child;
+	type.as.pointer.alignment = alignment == child_alignment ? 0 : alignment;
+	TypeId element_pointer = type_intern(sema, &type);
+	TirRef address = emit_tir_bin(block, TIR_ARRAY_ELEM_PTR, element_pointer, src,
+		materialize(block, base, src), materialize(block, index, src));
+	return load_pointer(block, runtime_operand(element_pointer, address), src);
+}
+
 static Operand
 analyze_array_index(Block *block, const IrInst *inst)
 {
@@ -3165,19 +3252,44 @@ analyze_array_index(Block *block, const IrInst *inst)
 		sema_error(block, inst->src, "expected array or pointer to array, found '%s'", sema_type_name(sema, base.type));
 		return operand_none;
 	}
-	if (index.kind != OPERAND_COMPTIME) {
-		sema_error(block, inst->src, "not supported by szc yet: runtime array indexing");
-		return operand_none;
-	}
+	TypeArray array = sema->types[type].as.array;
 	if (!check_defined(block, index, inst->src))
 		return operand_none;
-	uint64_t item = bigint_to_u64_bits(&operand_value(block, index)->as.integer);
-	TypeArray array = sema->types[type].as.array;
-	if (item > array.length || (item == array.length && !array.sentinel_zero)) {
-		sema_error(block, inst->src, "index %" PRIu64 " outside array of length %" PRIu64 "%s", item, array.length, array.sentinel_zero ? " +1 (sentinel)" : "");
+	if (index.kind == OPERAND_COMPTIME) {
+		uint64_t item = bigint_to_u64_bits(&operand_value(block, index)->as.integer);
+		if (item > array.length || (item == array.length && !array.sentinel_zero)) {
+			sema_error(block, inst->src, "index %" PRIu64 " outside array of length %" PRIu64 "%s", item, array.length, array.sentinel_zero ? " +1 (sentinel)" : "");
+			return operand_none;
+		}
+		if (base.kind == OPERAND_COMPTIME)
+			return constant_array_element(block, base, array, item, inst->src);
+	} else if (array.length == 0 && !array.sentinel_zero) {
+		sema_error(block, inst->src, sema->types[base.type].kind == TYPE_POINTER
+			? "cannot index into empty array" : "indexing into empty array is not allowed");
 		return operand_none;
 	}
-	return constant_array_element(block, base, array, item, inst->src);
+	/* Zig folds known one-possible/wholly undefined array values before a dynamic
+	 * bounds guard. Pointer-based accesses must still keep their guard. */
+	if (base.kind == OPERAND_COMPTIME && sema->types[base.type].kind == TYPE_ARRAY) {
+		if (array.child == T_VOID)
+			return void_operand(sema);
+		if (is_int(sema, array.child) && sema->types[array.child].as.integer.bits == 0)
+			return comptime_operand(array.child, value_int_u64(&sema->values, array.child, 0));
+		const Value *value = operand_value(block, base);
+		bool undefined = value->kind == VALUE_UNDEFINED;
+		if (value->kind == VALUE_ARRAY) {
+			ArrayValue elements = value->as.array;
+			undefined = true;
+			for (uint32_t i = 0; i < elements.count; i++)
+				if (value_get(&sema->values, elements.items[i])->kind != VALUE_UNDEFINED) {
+					undefined = false;
+					break;
+				}
+		}
+		if (undefined)
+			return comptime_operand(array.child, value_undefined(&sema->values, array.child));
+	}
+	return runtime_array_element(block, base, index, array, inst->src);
 }
 
 static Operand

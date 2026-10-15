@@ -1,0 +1,280 @@
+fn szc.main.1: fn () u8 {
+  %0: *const [3]i7 = const ref(object.1)
+  %1: usize = const 0
+  %2: i7 = call szc.read.2(%0, %1)
+  %3: i7 = const -63
+  %4: bool = cmp_neq %2, %3
+  %5: bool = block {
+    %13: noreturn = condbr %4 then {
+      %11: bool = const true
+      %12: noreturn = br %5, %11
+    } else {
+      %6: *const [3]i7 = const ref(object.1)
+      %7: i7 = call szc.known.3(%6)
+      %8: i7 = const 7
+      %9: bool = cmp_neq %7, %8
+      %10: noreturn = br %5, %9
+    }
+  }
+  %14: void = block {
+    %18: noreturn = condbr %5 then {
+      %15: u8 = const 1
+      %16: noreturn = ret %15
+    } else {
+      %17: noreturn = br %14
+    }
+  }
+  %19: *const [3]u33 = const ref(object.2)
+  %20: usize = const 1
+  %21: u33 = call szc.read_wide.4(%19, %20)
+  %22: u33 = const 8589934591
+  %23: bool = cmp_neq %21, %22
+  %24: void = block {
+    %28: noreturn = condbr %23 then {
+      %25: u8 = const 2
+      %26: noreturn = ret %25
+    } else {
+      %27: noreturn = br %24
+    }
+  }
+  %29: *const [2]bool = const ref(object.3)
+  %30: usize = const 0
+  %31: bool = call szc.read_bool.5(%29, %30)
+  %32: bool = not %31
+  %33: bool = block {
+    %40: noreturn = condbr %32 then {
+      %38: bool = const true
+      %39: noreturn = br %33, %38
+    } else {
+      %34: *const [2]bool = const ref(object.3)
+      %35: usize = const 1
+      %36: bool = call szc.read_bool.5(%34, %35)
+      %37: noreturn = br %33, %36
+    }
+  }
+  %41: void = block {
+    %45: noreturn = condbr %33 then {
+      %42: u8 = const 3
+      %43: noreturn = ret %42
+    } else {
+      %44: noreturn = br %41
+    }
+  }
+  %46: *const [2]*const u8 = const ref(object.6)
+  %47: usize = const 1
+  %48: u8 = call szc.read_ref.6(%46, %47)
+  %49: u8 = const 47
+  %50: bool = cmp_neq %48, %49
+  %51: void = block {
+    %55: noreturn = condbr %50 then {
+      %52: u8 = const 4
+      %53: noreturn = ret %52
+    } else {
+      %54: noreturn = br %51
+    }
+  }
+  %56: *const [2]*const fn () u8 = const ref(object.7)
+  %57: usize = const 1
+  %58: u8 = call szc.read_callback.9(%56, %57)
+  %59: u8 = const 19
+  %60: bool = cmp_neq %58, %59
+  %61: void = block {
+    %65: noreturn = condbr %60 then {
+      %62: u8 = const 5
+      %63: noreturn = ret %62
+    } else {
+      %64: noreturn = br %61
+    }
+  }
+  %66: usize = const 1
+  %67: u8 = call szc.bytes.10(%66)
+  %68: u8 = const 9
+  %69: bool = cmp_neq %67, %68
+  %70: bool = block {
+    %78: noreturn = condbr %69 then {
+      %76: bool = const true
+      %77: noreturn = br %70, %76
+    } else {
+      %71: usize = const 2
+      %72: u8 = call szc.str.11(%71)
+      %73: u8 = const 0
+      %74: bool = cmp_neq %72, %73
+      %75: noreturn = br %70, %74
+    }
+  }
+  %79: bool = block {
+    %88: noreturn = condbr %70 then {
+      %86: bool = const true
+      %87: noreturn = br %79, %86
+    } else {
+      %80: *const [2]u8 = const "hi"
+      %81: usize = const 1
+      %82: u8 = call szc.plain_str.12(%80, %81)
+      %83: u8 = const 105
+      %84: bool = cmp_neq %82, %83
+      %85: noreturn = br %79, %84
+    }
+  }
+  %89: void = block {
+    %93: noreturn = condbr %79 then {
+      %90: u8 = const 6
+      %91: noreturn = ret %90
+    } else {
+      %92: noreturn = br %89
+    }
+  }
+  %94: *const volatile [2]u8 = const ref(object.8)
+  %95: usize = const 1
+  %96: u8 = call szc.volatile_read.13(%94, %95)
+  %97: u8 = const 29
+  %98: bool = cmp_neq %96, %97
+  %99: void = block {
+    %103: noreturn = condbr %98 then {
+      %100: u8 = const 7
+      %101: noreturn = ret %100
+    } else {
+      %102: noreturn = br %99
+    }
+  }
+  %104: *const [2]u0 = const ref(object.9)
+  %105: usize = const 1
+  %106: u0 = call szc.zero.14(%104, %105)
+  %107: u0 = const 0
+  %108: bool = cmp_neq %106, %107
+  %109: void = block {
+    %113: noreturn = condbr %108 then {
+      %110: u8 = const 8
+      %111: noreturn = ret %110
+    } else {
+      %112: noreturn = br %109
+    }
+  }
+  %114: *const [2]void = const ref(object.10)
+  %115: usize = const 1
+  %116: void = call szc.no_bits.15(%114, %115)
+  %117: usize = const 2
+  %118: u0 = call szc.zero_value.16(%117)
+  %119: u0 = const 0
+  %120: bool = cmp_neq %118, %119
+  %121: void = block {
+    %125: noreturn = condbr %120 then {
+      %122: u8 = const 9
+      %123: noreturn = ret %122
+    } else {
+      %124: noreturn = br %121
+    }
+  }
+  %126: usize = const 2
+  %127: void = call szc.void_value.17(%126)
+  %128: usize = const 2
+  %129: u8 = call szc.undefined_value.18(%128)
+  %130: u8 = const 0
+  %131: noreturn = ret %130
+}
+fn szc.read.2: fn (*const [3]i7, usize) i7 {
+  %0: *const [3]i7 = arg 0
+  %1: usize = arg 1
+  %2: *const i7 = array_elem_ptr %0, %1
+  %3: i7 = load %2
+  %4: noreturn = ret %3
+}
+fn szc.known.3: fn (*const [3]i7) i7 {
+  %0: *const [3]i7 = arg 0
+  %1: usize = const 2
+  %2: *const i7 = array_elem_ptr %0, %1
+  %3: i7 = load %2
+  %4: noreturn = ret %3
+}
+fn szc.read_wide.4: fn (*const [3]u33, usize) u33 {
+  %0: *const [3]u33 = arg 0
+  %1: usize = arg 1
+  %2: *const u33 = array_elem_ptr %0, %1
+  %3: u33 = load %2
+  %4: noreturn = ret %3
+}
+fn szc.read_bool.5: fn (*const [2]bool, usize) bool {
+  %0: *const [2]bool = arg 0
+  %1: usize = arg 1
+  %2: *const bool = array_elem_ptr %0, %1
+  %3: bool = load %2
+  %4: noreturn = ret %3
+}
+fn szc.read_ref.6: fn (*const [2]*const u8, usize) u8 {
+  %0: *const [2]*const u8 = arg 0
+  %1: usize = arg 1
+  %2: *const *const u8 = array_elem_ptr %0, %1
+  %3: *const u8 = load %2
+  %4: u8 = load %3
+  %5: noreturn = ret %4
+}
+fn szc.target.7: fn () u8 {
+  %0: u8 = const 17
+  %1: noreturn = ret %0
+}
+fn szc.other.8: fn () u8 {
+  %0: u8 = const 19
+  %1: noreturn = ret %0
+}
+fn szc.read_callback.9: fn (*const [2]*const fn () u8, usize) u8 {
+  %0: *const [2]*const fn () u8 = arg 0
+  %1: usize = arg 1
+  %2: *const *const fn () u8 = array_elem_ptr %0, %1
+  %3: *const fn () u8 = load %2
+  %4: u8 = call %3()
+  %5: noreturn = ret %4
+}
+fn szc.bytes.10: fn (usize) u8 {
+  %0: usize = arg 0
+  %1: *const [2]u8 = const ref(object.11)
+  %2: *const u8 = array_elem_ptr %1, %0
+  %3: u8 = load %2
+  %4: noreturn = ret %3
+}
+fn szc.str.11: fn (usize) u8 {
+  %0: usize = arg 0
+  %1: *const [2:0]u8 = const "hi"
+  %2: *const u8 = array_elem_ptr %1, %0
+  %3: u8 = load %2
+  %4: noreturn = ret %3
+}
+fn szc.plain_str.12: fn (*const [2]u8, usize) u8 {
+  %0: *const [2]u8 = arg 0
+  %1: usize = arg 1
+  %2: *const u8 = array_elem_ptr %0, %1
+  %3: u8 = load %2
+  %4: noreturn = ret %3
+}
+fn szc.volatile_read.13: fn (*const volatile [2]u8, usize) u8 {
+  %0: *const volatile [2]u8 = arg 0
+  %1: usize = arg 1
+  %2: *const volatile u8 = array_elem_ptr %0, %1
+  %3: u8 = load_volatile %2
+  %4: noreturn = ret %3
+}
+fn szc.zero.14: fn (*const [2]u0, usize) u0 {
+  %0: *const [2]u0 = arg 0
+  %1: usize = arg 1
+  %2: *const u0 = array_elem_ptr %0, %1
+  %3: u0 = const 0
+  %4: noreturn = ret %3
+}
+fn szc.no_bits.15: fn (*const [2]void, usize) void {
+  %0: *const [2]void = arg 0
+  %1: usize = arg 1
+  %2: *const void = array_elem_ptr %0, %1
+  %3: noreturn = ret
+}
+fn szc.zero_value.16: fn (usize) u0 {
+  %0: usize = arg 0
+  %1: u0 = const 0
+  %2: noreturn = ret %1
+}
+fn szc.void_value.17: fn (usize) void {
+  %0: usize = arg 0
+  %1: noreturn = ret
+}
+fn szc.undefined_value.18: fn (usize) u8 {
+  %0: usize = arg 0
+  %1: u8 = const undefined
+  %2: noreturn = ret %1
+}

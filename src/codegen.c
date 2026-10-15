@@ -31,6 +31,7 @@ typedef enum PanicKind {
 	PANIC_EXACT,
 	PANIC_FOR_LEN,
 	PANIC_UNREACHABLE,
+	PANIC_INDEX,
 	PANIC_COUNT,
 } PanicKind;
 
@@ -54,6 +55,8 @@ typedef struct Codegen {
 	bool					panic_used[PANIC_COUNT];
 	bool *bytes_used;
 	bool *constants_used;
+	bool *dependencies_seen;
+	uint64_t array_storage_bytes;
 	bool explicit_panic_used;
 	bool volatile_loads[2][MEMORY_WIDTH_COUNT];
 	bool volatile_stores[MEMORY_WIDTH_COUNT];
@@ -235,6 +238,7 @@ static const char *const panic_messages[PANIC_COUNT] = {
 	"exact division produced remainder",
 	"for loop over objects with non-equal lengths",
 	"reached unreachable code",
+	"index out of bounds",
 };
 
 /* Bounds as canonical 64-bit bit patterns; wider types have already errored. */
@@ -505,10 +509,22 @@ emit_panic_stubs(Codegen *cg)
 
 /* ---------- Memory ---------- */
 
+/* All physical storage callers must handle layout overflow explicitly. */
+static uint64_t
+storage_size(Codegen *cg, TypeId type, uint32_t src)
+{
+	uint64_t size;
+	if (!sema_type_size(cg->sema, type, &size)) {
+		codegen_error(cg, src, "not supported by szc yet: array layout size exceeds 64-bit address space");
+		return 0;
+	}
+	return size;
+}
+
 static const char *
 load_op(Codegen *cg, TypeId type)
 {
-	uint64_t size = sema_type_size(cg->sema, type);
+	uint64_t size = storage_size(cg, type, 0);
 	bool is_signed = type_is_signed(cg, type);
 	switch (size) {
 	case 1:
@@ -525,7 +541,7 @@ load_op(Codegen *cg, TypeId type)
 static const char *
 store_op(Codegen *cg, TypeId type)
 {
-	switch (sema_type_size(cg->sema, type)) {
+	switch (storage_size(cg, type, 0)) {
 	case 1:
 		return "storeb";
 	case 2:
@@ -541,7 +557,7 @@ store_op(Codegen *cg, TypeId type)
 static MemoryWidth
 memory_width(Codegen *cg, TypeId type)
 {
-	switch (sema_type_size(cg->sema, type)) {
+	switch (storage_size(cg, type, 0)) {
 	case 1: return MEMORY_BYTE;
 	case 2: return MEMORY_HALF;
 	case 4: return MEMORY_WORD;
@@ -727,6 +743,22 @@ emit_inst(Codegen *cg, TirRef ref)
 			normalize(cg, ref, inst->type, cls);
 		return;
 	}
+	case TIR_ARRAY_ELEM_PTR: {
+		TypePointer pointer = sema_type(cg->sema, inst_at(cg, inst->data.bin.lhs)->type)->as.pointer;
+		TypeArray array = sema_type(cg->sema, pointer.child)->as.array;
+		uint64_t stride = storage_size(cg, array.child, inst->src);
+		if (inst_at(cg, inst->data.bin.rhs)->op != TIR_CONST)
+			emit_bound_check(cg, ref, inst->data.bin.rhs, "index",
+				array.sentinel_zero ? "cugt" : "cuge", array.length, PANIC_INDEX);
+		fprintf(out, "\t%%e%u_offset =l mul ", (unsigned)ref);
+		print_operand(cg, inst->data.bin.rhs);
+		fprintf(out, ", %" PRIu64 "\n", stride);
+		print_dest(cg, ref, QBE_L);
+		fputs("add ", out);
+		print_operand(cg, inst->data.bin.lhs);
+		fprintf(out, ", %%e%u_offset\n", (unsigned)ref);
+		return;
+	}
 	case TIR_LOAD_VOLATILE: {
 		if (cls == QBE_NONE)
 			return;
@@ -761,6 +793,9 @@ emit_inst(Codegen *cg, TirRef ref)
 		fprintf(out, "%s ", load_op(cg, inst->type));
 		print_operand(cg, inst->data.un.operand);
 		fputs("\n", out);
+		/* Unused high storage bits are not part of a narrow Zig value. */
+		if (type_bits(cg, inst->type) < storage_size(cg, inst->type, inst->src) * 8)
+			normalize(cg, ref, inst->type, cls);
 		return;
 	case TIR_STORE: {
 		const TirInst *value = inst_at(cg, inst->data.bin.rhs);
@@ -930,7 +965,7 @@ emit_function(Codegen *cg, const SemaFunc *func, FuncId id)
 		if (inst->op != TIR_ALLOC)
 			continue;
 		TypePointer pointer = sema_type(cg->sema, inst->type)->as.pointer;
-		uint64_t size = sema_type_size(cg->sema, pointer.child);
+		uint64_t size = storage_size(cg, pointer.child, inst->src);
 		if (size == 0)
 			size = 1;
 		uint32_t align = pointer.alignment != 0 ? pointer.alignment : sema_type_align(cg->sema, pointer.child);
@@ -969,6 +1004,25 @@ emit_entry(Codegen *cg, const SemaFunc *main_func)
 	fputs("}\n", out);
 }
 
+/* Array leaves may contain relocations to other immutable objects or byte backing. */
+static void
+mark_value_dependencies(Codegen *cg, ValueId id)
+{
+	if (cg->dependencies_seen[id])
+		return;
+	cg->dependencies_seen[id] = true;
+	const Value *value = value_get(sema_values(cg->sema), id);
+	if (value->kind == VALUE_REF)
+		cg->constants_used[value->as.object] = true;
+	else if (value->kind == VALUE_BYTES)
+		cg->bytes_used[id] = true;
+	else if (value->kind == VALUE_ARRAY) {
+		ArrayValue array = value->as.array;
+		for (uint32_t i = 0; i < array.count; i++)
+			mark_value_dependencies(cg, array.items[i]);
+	}
+}
+
 /* Nested objects predate their parents, so descending IDs close all dependencies. */
 static void
 mark_constant_dependencies(Codegen *cg)
@@ -976,58 +1030,66 @@ mark_constant_dependencies(Codegen *cg)
 	const ValueTable *values = sema_values(cg->sema);
 	for (ConstObjectId id = values->object_count; id > 1;) {
 		id--;
-		if (!cg->constants_used[id])
-			continue;
-		ValueId stored = values->objects[id].value;
-		const Value *value = value_get(values, stored);
-		if (value->kind == VALUE_REF)
-			cg->constants_used[value->as.object] = true;
-		else if (value->kind == VALUE_BYTES)
-			cg->bytes_used[stored] = true;
+		if (cg->constants_used[id])
+			mark_value_dependencies(cg, values->objects[id].value);
 	}
 }
 
-static void
-emit_data_object(Codegen *cg, ValueId stored, const char *symbol, bool immutable, uint32_t src, uint32_t alignment)
+static bool
+data_type_allowed(Codegen *cg, TypeId type_id, uint32_t src)
 {
-	const Value *value = value_get(sema_values(cg->sema), stored);
-	const Type *type = sema_type(cg->sema, value->type);
-	uint64_t size = sema_type_size(cg->sema, value->type);
-	uint32_t align = alignment != 0 ? alignment : sema_type_align(cg->sema, value->type);
-	bool outlined = align > 64;
+	const Type *type = sema_type(cg->sema, type_id);
+	if (type->kind == TYPE_ARRAY)
+		return data_type_allowed(cg, type->as.array.child, src);
 	if (type->kind != TYPE_VOID && type->kind != TYPE_BOOL && type->kind != TYPE_POINTER && type->kind != TYPE_INT) {
 		codegen_error(cg, src, "not supported by szc yet: runtime storage of this constant type");
-		return;
+		return false;
 	}
 	if (type->kind == TYPE_INT && type->as.integer.bits > 64) {
 		codegen_error(cg, src, "not supported by szc yet: integers wider than 64 bits");
+		return false;
+	}
+	return true;
+}
+
+static bool
+data_type_has_relocations(Codegen *cg, TypeId type_id)
+{
+	const Type *type = sema_type(cg->sema, type_id);
+	if (type->kind == TYPE_ARRAY)
+		return data_type_has_relocations(cg, type->as.array.child);
+	return type->kind == TYPE_POINTER;
+}
+
+/* Emit one layout-checked value, not an address standing in for an aggregate. */
+static void
+emit_data_value(Codegen *cg, FILE *out, ValueId stored, bool outlined, bool *first, uint32_t src)
+{
+	const Value *value = value_get(sema_values(cg->sema), stored);
+	const Type *type = sema_type(cg->sema, value->type);
+	uint64_t size = storage_size(cg, value->type, src);
+	if (size == 0)
+		return;
+	if (type->kind == TYPE_ARRAY && value->kind == VALUE_ARRAY) {
+		ArrayValue array = value->as.array;
+		uint64_t count = type->as.array.length + (type->as.array.sentinel_zero ? 1u : 0u);
+		if (array.count != count) {
+			codegen_error(cg, src, "invalid constant array backing for runtime storage");
+			return;
+		}
+		for (uint32_t i = 0; i < array.count; i++)
+			emit_data_value(cg, out, array.items[i], outlined, first, src);
 		return;
 	}
-	if (outlined && cg->assembly == NULL) {
-		codegen_error(cg, src, "static alignment above 64 requires assembly output; use build-exe");
+	if (!outlined && !*first)
+		fputs(", ", out);
+	*first = false;
+	if (value->kind == VALUE_UNDEFINED || value->kind == VALUE_VOID) {
+		fprintf(out, outlined ? ".zero %" PRIu64 "\n" : "z %" PRIu64, size);
 		return;
 	}
-	FILE *out = outlined ? cg->assembly : cg->out;
-	if (outlined) {
-		if (immutable)
-			fputs(type->kind == TYPE_POINTER ? ".section .data.rel.ro,\"aw\",@progbits\n" : ".section .rodata,\"a\",@progbits\n", out);
-		else
-			fputs(".data\n", out);
-		fprintf(out, ".balign %u\n%s:\n", (unsigned)align, symbol);
-	} else {
-		if (immutable)
-			fputs(type->kind == TYPE_POINTER ? "section \".data.rel.ro\"\n" : "section \".rodata\"\n", out);
-		fprintf(out, "data $%s = align %u { ", symbol, (unsigned)align);
-	}
-	bool zero = value->kind == VALUE_UNDEFINED || value->kind == VALUE_VOID
-		|| (value->kind == VALUE_BOOL && !value->as.boolean)
-		|| (value->kind == VALUE_INT && value->as.integer.limb_count == 0);
-	if (!immutable && zero) {
-		fprintf(out, outlined ? ".zero %" PRIu64 "\n" : "z %" PRIu64 " }\n", size == 0 ? UINT64_C(1) : size);
-		return;
-	}
-	if (size == 0) {
-		fputs(outlined ? ".byte 0\n" : "b 0 }\n", out);
+	if (type->kind == TYPE_ARRAY) {
+		codegen_error(cg, src, "not supported by szc yet: this array constant backing");
 		return;
 	}
 	char cls = size == 1 ? 'b' : size == 2 ? 'h' : size == 4 ? 'w' : 'l';
@@ -1036,9 +1098,6 @@ emit_data_object(Codegen *cg, ValueId stored, const char *symbol, bool immutable
 	else
 		fprintf(out, "%c ", cls);
 	switch (value->kind) {
-	case VALUE_UNDEFINED:
-		fputs("0", out);
-		break;
 	case VALUE_INT:
 		fprintf(out, "%" PRId64, (int64_t)bigint_to_u64_bits(&value->as.integer));
 		break;
@@ -1062,7 +1121,67 @@ emit_data_object(Codegen *cg, ValueId stored, const char *symbol, bool immutable
 		fputs("0", out);
 		break;
 	}
-	fputs(outlined ? "\n" : " }\n", out);
+	if (outlined)
+		fputc('\n', out);
+}
+
+static void
+emit_data_object(Codegen *cg, ValueId stored, const char *symbol, bool immutable, uint32_t src, uint32_t alignment)
+{
+	const Value *value = value_get(sema_values(cg->sema), stored);
+	if (!data_type_allowed(cg, value->type, src))
+		return;
+	uint64_t size;
+	if (!sema_type_size(cg->sema, value->type, &size)) {
+		codegen_error(cg, src, "not supported by szc yet: array layout size exceeds 64-bit address space");
+		return;
+	}
+	/* Dense static emission is bounded until compact/repeated aggregate backing lands. */
+	if (sema_type(cg->sema, value->type)->kind == TYPE_ARRAY && size > 16777216) {
+		codegen_error(cg, src, "not supported by szc yet: array static storage exceeds 16777216 bytes");
+		return;
+	}
+	if (sema_type(cg->sema, value->type)->kind == TYPE_ARRAY) {
+		if (size > UINT64_C(16777216) - cg->array_storage_bytes) {
+			codegen_error(cg, src, "not supported by szc yet: array static storage budget exceeds 16777216 bytes");
+			return;
+		}
+		cg->array_storage_bytes += size;
+	}
+	uint32_t align = alignment != 0 ? alignment : sema_type_align(cg->sema, value->type);
+	bool outlined = align > 64;
+	if (outlined && cg->assembly == NULL) {
+		codegen_error(cg, src, "static alignment above 64 requires assembly output; use build-exe");
+		return;
+	}
+	bool relocations = data_type_has_relocations(cg, value->type);
+	FILE *out = outlined ? cg->assembly : cg->out;
+	if (outlined) {
+		if (immutable)
+			fputs(relocations ? ".section .data.rel.ro,\"aw\",@progbits\n" : ".section .rodata,\"a\",@progbits\n", out);
+		else
+			fputs(".data\n", out);
+		fprintf(out, ".balign %u\n%s:\n", (unsigned)align, symbol);
+	} else {
+		if (immutable)
+			fputs(relocations ? "section \".data.rel.ro\"\n" : "section \".rodata\"\n", out);
+		fprintf(out, "data $%s = align %u { ", symbol, (unsigned)align);
+	}
+	bool zero = value->kind == VALUE_UNDEFINED || value->kind == VALUE_VOID
+		|| (value->kind == VALUE_BOOL && !value->as.boolean)
+		|| (value->kind == VALUE_INT && value->as.integer.limb_count == 0);
+	if (!immutable && zero) {
+		fprintf(out, outlined ? ".zero %" PRIu64 "\n" : "z %" PRIu64 " }\n", size == 0 ? UINT64_C(1) : size);
+		return;
+	}
+	if (size == 0) {
+		fputs(outlined ? ".byte 0\n" : "b 0 }\n", out);
+		return;
+	}
+	bool first = true;
+	emit_data_value(cg, out, stored, outlined, &first, src);
+	if (!outlined)
+		fputs(" }\n", out);
 }
 
 bool
@@ -1078,6 +1197,7 @@ codegen_qbe(FILE *out, FILE *assembly, Sema *sema, Diag *diag)
 	arena_init(&arena);
 	cg.bytes_used = ARENA_ARRAY(&arena, bool, sema_values(sema)->count);
 	cg.constants_used = ARENA_ARRAY(&arena, bool, sema_values(sema)->object_count);
+	cg.dependencies_seen = ARENA_ARRAY(&arena, bool, sema_values(sema)->count);
 	for (FuncId id = 1; id < sema_func_count(sema); id++) {
 		const SemaFunc *func = sema_func(sema, id);
 		if (func->state == FUNC_ANALYSED && !func->is_extern)
@@ -1085,11 +1205,7 @@ codegen_qbe(FILE *out, FILE *assembly, Sema *sema, Diag *diag)
 	}
 	for (GlobalId id = 1; id < sema_global_count(sema); id++) {
 		ValueId stored = sema_global(sema, id)->initializer;
-		const Value *value = value_get(sema_values(sema), stored);
-		if (value->kind == VALUE_REF)
-			cg.constants_used[value->as.object] = true;
-		else if (value->kind == VALUE_BYTES)
-			cg.bytes_used[stored] = true;
+		mark_value_dependencies(&cg, stored);
 	}
 	mark_constant_dependencies(&cg);
 	const ValueTable *values = sema_values(sema);

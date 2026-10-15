@@ -51,13 +51,18 @@ Read this first when resuming work (the sandbox resets often).
   storage. Local explicitly aligned bare-function aliases retain the verified upstream
   emission-crash NYI. All enclosing M5.1 alignment/integration milestones stay partial.
 - Done: M5.2a–b compile-time array types/literals, indexing, `.len` and `++`.
-  Runtime array memory/ABI and element addresses are not implemented; M5.2 is partial.
+- Done: M5.2c1 immutable array backing and checked scalar runtime reads, including
+  pointer/callback relocations, volatile/zero-bit reads, checked layout and total
+  static-emission budget. Mutable arrays/copies, aggregate value ABI and element
+  addresses remain pending; M5.2 is partial.
 - Current batching preference: group related straightforward milestones when practical;
   keep complex semantic changes independently tested/documented/committed. Do not return
   to an unconditional one-checkpoint policy. Select the next independently implementable
   memory item without pretending the blocked function-alias case is complete. Next is
-  M5.2c: design real aggregate layout/storage and checked runtime indexing, keeping
-  scalar codegen from treating an array as an ordinary scalar slot.
+  M5.2c2: mutable aggregate slots, initialization and copies. Decide an explicit
+  indirect aggregate Operand/TIR representation and snapshot/aliasing rules before
+  implementing it; element addresses need real base/offset provenance, not copied
+  constant elements. Keep by-value aggregate ABI separately scoped.
 - Run `PATH=/data/tools/bin:$PATH ZIG=/data/zig/zig-x86_64-linux-0.17.0/zig make e2e-test`
   locally. `tools/build_qbe.sh` builds the pinned QBE into `build/qbe-src` on CI.
 - Tools: `SZC_QBE`/`qbe`, `SZC_CC`/`cc`; pinned QBE revision
@@ -80,7 +85,57 @@ Read this first when resuming work (the sandbox resets often).
   also passed all jobs (run 38590520673), as did M5.1c2b2b1 ecfb6ab
   (run 38593742928). Check each new push's run.
 
+## M5.2c1 immutable array storage and runtime scalar reads
+
+- TIR_ARRAY_ELEM_PTR uses bin(array pointer, usize index); its result is an ordinary
+  element pointer. Guard dynamic indices with unsigned >= ordinary length or > length
+  for zero-sentinel backing before stride arithmetic, even when the element is u0/void.
+  Constant indices diagnose during sema. Runtime element pointer types retain qualifiers
+  and never overstate alignment. Nested runtime aggregate results still diagnose NYI.
+- Direct known array values with one possible child value (u0/void), or wholly undefined
+  contents, fold before a dynamic guard as actual Zig does. Pointer-based reads do not
+  use that shortcut. Keep this distinction when adding array-value memory lowering.
+- sema_type_size is now bool with uint64_t *out; failure preserves the output and must
+  be diagnosed by physical-layout callers. Checked recursive multiplication/counting
+  handles arrays, including maximal zero-bit type lengths. Never restore wrapped sizes.
+- Static VALUE_ARRAY storage recursively emits true strides and nested relocations;
+  known value addresses remain ConstObjectId-based. Scalar/bool/void/u0 arrays use
+  .rodata; pointer-bearing arrays use .data.rel.ro and the existing >64 assembly path.
+  Total array static emission is bounded at 16,777,216 bytes; exceeding it is explicit
+  NYI, separate from the existing 1,048,576 dense-value work budget. Shared immutable
+  DAG callback/dependency walks memoize visited ValueIds to avoid exponential work.
+- Narrow scalar loads now normalize logical bit widths, like volatile loads already
+  did. Exactly two existing/new SSA goldens gained only checked normalization lines.
+  The physical C-ABI fixture uses canonical i7/u7/i33/u33 representations verified
+  against Zig. Exploratory noncanonical foreign bytes did not match Zig and are not
+  asserted to be valid ABI input. Do not generalize their padding semantics from memory.
+- Final fresh GCC/Clang -Werror ASan/UBSan pass 599 unit checks, 770 goldens and
+  61 ordinary/generated executable inputs. GCC final full suite is reference-enabled:
+  16 driver checks, 15 existing storage checks, 7 array storage/C-ABI cases, 4 function
+  ABI, 7 unaligned memory, 135 local/270 constant/153 mutable-global/153 global-constant/
+  27 function alignment, 44 volatile sequences and 176 safety cases all pass, plus
+  two separately scoped szc-only executable inputs. Clang native executable/driver/
+  both storage/volatile/safety subsets pass. Optimized GCC passes three array executable
+  inputs and all seven storage/C-ABI checks. Lifecycle/adapter regressions pass 8/18.
+  Four final 60-second libFuzzer runs and 20,000 standalone mutations per stage pass;
+  retained irgen/sema seeds are 36/88. The expanded real array matrix passes 284 cases;
+  all ten existing pointer matrices also pass 4,615 cases against the same new sema,
+  for 4,899 actual semantic comparisons total. No skipped cases, retries or tolerated
+  reference timeouts. Final backend normalization is separately covered by the fresh
+  GCC/Clang executable, golden and physical C-ABI suites.
+- No mutable aggregate representation/ABI, element-address interpretation, explicit
+  sentinel syntax, typed array address-dependency cycles, slices or for-array extension
+  landed. Next is M5.2c2 mutable slots/copies; preserve standalone failure modes and
+  separately test array snapshot semantics and address identity.
+- Reference emission of a maximal undefined u0 object stalled again: the initial
+  physical-suite run timed out after 120 seconds, not a language rejection. Final
+  physical fixtures use [3]u0; maximal lengths remain separately covered by units and
+  type-only pointer cases. The new harness uses process-group timeout cleanup.
+
 ## M5.2a–b compile-time arrays
+
+This historical checkpoint is superseded by M5.2c1 above for runtime scalar reads and
+immutable static backing. Its other aggregate/ABI limits remain.
 
 - TypeArray.length is uint64_t; hashing includes both words. IR_ARRAY_INIT carries
   `[type_ref, count, element_refs...]`; child result types reach nested literals/casts.
@@ -145,7 +200,13 @@ pub fn main() void { _ = convert(undefined); }
   unchanged. No retry, filtering, skipped case or tolerated timeout is introduced.
 - Shared lifecycle and adapter wiring regressions pass; the adapter test now requires
   120 seconds uniformly. All 168 real nested-pointer comparisons pass against Zig.
-  Check the new push separately; this is not a claim that hosted runner stalls are fixed.
+  64c6130/run 38716130912 and array implementation 1db8b2c/run 38717248604
+  subsequently passed all jobs. Documentation-only d90426b/run 38718287776 passed
+  GCC/Clang/fuzz but the nested-pointer reference exceeded 120 seconds in case 116:
+  `pub fn main() void { const p: *const **u8 = undefined; const q: *const **const u8 = p; _ = q; }`.
+  Empty stdout/stderr and source were retained; no acceptance disagreement was reported.
+  Do not raise deadlines again, skip cases or add retries without investigating new
+  evidence. Hosted reference stalls remain incompletely diagnosed; check new pushes.
 
 ## CI follow-up: bounded differential compiler processes
 

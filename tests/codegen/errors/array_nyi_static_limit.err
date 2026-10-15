@@ -1,0 +1,3 @@
+tests/codegen/errors/array_nyi_static_limit.zig:1:1: error: not supported by szc yet: array static storage exceeds 16777216 bytes
+const a: [16777217]u8 = undefined;
+^

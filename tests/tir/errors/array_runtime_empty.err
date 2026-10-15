@@ -1,0 +1,3 @@
+tests/tir/errors/array_runtime_empty.zig:1:49: error: cannot index into empty array
+fn read(p: *const [0]u8, n: usize) u8 { return p[n]; }
+                                                ^

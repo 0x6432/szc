@@ -113,6 +113,8 @@ function w $szc.read.3(l %t0) {
 function l $szc.signed_read.4(l %t0) {
 @start
 	%t1 =l loadl %t0
+	%t1 =l shl %t1, 24
+	%t1 =l sar %t1, 24
 	ret %t1
 }
 
@@ -134,6 +136,7 @@ function w $szc.invoke.6(l %t0) {
 function w $szc.read_bool.7(l %t0) {
 @start
 	%t1 =w loadub %t0
+	%t1 =w and %t1, 1
 	ret %t1
 }
 

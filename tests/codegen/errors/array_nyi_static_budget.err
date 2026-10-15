@@ -1,0 +1,3 @@
+tests/codegen/errors/array_nyi_static_budget.zig:1:1: error: not supported by szc yet: array static storage budget exceeds 16777216 bytes
+const a: [8388608]u8 = undefined;
+^

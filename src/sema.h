@@ -167,8 +167,8 @@ FuncId            sema_main_func(const Sema *sema);
 const ValueTable *sema_values(const Sema *sema);
 const Interner   *sema_interner(const Sema *sema);
 
-/* Size and alignment in bytes of a runtime type. */
-uint64_t sema_type_size(const Sema *sema, TypeId type);
+/* Size and alignment in bytes. Size returns false on overflow, preserving *out. */
+bool sema_type_size(const Sema *sema, TypeId type, uint64_t *out);
 uint32_t sema_type_align(const Sema *sema, TypeId type);
 
 /* Human-readable type name (for diagnostics and dumps). */

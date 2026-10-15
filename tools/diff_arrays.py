@@ -30,6 +30,11 @@ def cases():
     for target, source in itertools.product(("u8", "u16", "bool"), repeat=2):
         yield (f"pub fn main() void {{ const a: [2]{target} = @as([2]{source}, undefined); "
                "_ = a.len; }\n")
+    for child, length, index in itertools.product(
+            ("u0", "void", "bool", "i7", "u33", "u64"), (0, 1, 3), ("n", "0", "3", "undefined")):
+        yield (f"fn read(p: *const [{length}]{child}, n: usize) {child} {{ "
+               + ("_ = n; " if index != "n" else "")
+               + f"return p[{index}]; }} pub fn main() void {{ _ = read(undefined, 0); }}\n")
     for source in (
         'const a: [2]u8 = "hi".*; _ = a[1];',
         'const a: *const [2]u8 = "hi"; _ = a[1];',

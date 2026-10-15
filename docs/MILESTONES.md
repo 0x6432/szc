@@ -88,7 +88,10 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
 - [~] **M5.2 Arrays, indexing, array literals, `++` at comptime** (0.17.0 has no `**`).
   - [x] **M5.2a Array types and compile-time literals** (typed/inferred length, nested result types).
   - [x] **M5.2b Compile-time indexing, `.len` and concatenation** (including literal byte backing).
-  - [ ] **M5.2c Runtime array storage, copies, indexing and element addresses** (checked bounds and aggregate ABI).
+  - [~] **M5.2c Runtime array storage, copies, indexing and element addresses** (checked bounds and aggregate ABI).
+    - [x] **M5.2c1 Immutable array backing and checked scalar runtime reads**.
+    - [ ] **M5.2c2 Mutable aggregate slots, initialization and copies**.
+    - [ ] **M5.2c3 Element address provenance and aggregate value/ABI integration**.
 - [ ] **M5.3 Slices, many-pointers, slicing, `.len`, `.ptr`, for over slices.**
 - [~] **M5.4 String literals, sentinels, `[*:0]const u8`.** Literal byte values landed in M4.5b; general string/memory operations and sentinel pointer syntax remain pending.
 - [ ] **M5.5 Casting builtins**: `@intCast`, `@truncate`, `@ptrCast`, `@intFromPtr`, `@ptrFromInt`, `@bitCast`, `@as`.
@@ -141,6 +144,68 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
 ## Completed milestone log
 
 (newest first; each entry: what, limitations, interactions)
+
+### M5.2c1 Immutable array backing and checked scalar runtime reads
+- **What**: known array values now have actual immutable static backing when passed
+  by address or dynamically indexed. Emit nested integer/bool/pointer/void/u0 arrays
+  with true element strides; recursively retain pointer/byte-object relocations and
+  reachable callbacks. Scalar reads through single array pointers work with constant
+  or runtime indices, including strings, zero-bit elements and volatile pointers.
+- **Representation/interactions**: TIR_ARRAY_ELEM_PTR carries an array pointer and
+  usize index, with an element pointer result preserving const/volatile/allowzero and
+  conservative alignment. Codegen compares unsigned indices against ordinary length
+  (`>=`) or sentinel length (`>`), then multiplies by the checked element stride.
+  Known indices are checked during sema. Loads reuse scalar/volatile memory lowering;
+  narrow loaded representations normalize to their logical width, including signed
+  i7/i33 and bool. Aggregate values never masquerade as QBE scalar temporaries.
+- **Layout/storage**: sema_type_size now reports success/overflow through a checked
+  output API; multiplication/sentinel-count overflow cannot become a wrapped size.
+  Zero-bit arrays retain zero physical size even at maximal type lengths. Read-only
+  arrays use .rodata; recursively pointer-bearing arrays use .data.rel.ro, with real
+  over-alignment through the assembly companion. Nested immutable-value dependency
+  and callback reachability walks memoize visited ValueIds rather than exponentially
+  revisiting shared aggregate DAGs. Static array emission has an explicit total
+  16,777,216-byte budget per compilation, in addition to the existing dense-value
+  work budget; oversize/budget/layout limitations diagnose NYI and never emit a
+  successful truncated object. Mutable globals/scalar backing retain existing behavior.
+- **Grounding**: actual Zig 0.17 Type.zig abiSize/abiAlignment and Sema.zig elemValArray/
+  elemPtrArray confirm stride, zero-bit layout, empty/bounds rejection and sentinel
+  comparisons. Reference execution confirms a subtle distinction: known zero-bit or
+  wholly undefined array *values* fold before a dynamic bounds check, whereas runtime
+  pointer accesses retain bounds checks even for u0/void. Preserve that distinction.
+  C interoperability tests use canonical narrow representations verified with Zig;
+  an exploratory noncanonical-byte fixture failed the reference and is not treated
+  as a supported C-to-Zig ABI contract.
+- **Tests**: add 27 checked-layout units, three stage goldens, a positive promotion of
+  the old runtime-index NYI, four TIR diagnostics and two backend-limit diagnostics.
+  Backend error goldens now have an explicit harness route. The array matrix expands
+  to 284 actual reference comparisons; generated widths include runtime pointer reads
+  across 24 signed/unsigned types. Add ten actual reference panic cases, ordinary
+  callback/volatile/string/OPV readbacks, and seven physical storage/C-ABI checks.
+  The storage harness verifies bytes, section membership, local symbols, 256-byte
+  alignment, PIE, full RELRO and absence of TEXTREL. Compiler subprocesses use
+  bounded process-group cleanup. Final fresh GCC/Clang -Werror ASan/UBSan pass
+  599 unit checks, 770 goldens and 61 ordinary/generated inputs. GCC full reference
+  executable/storage/alignment/ABI/volatile/safety suites pass, as do Clang native
+  executable/driver/storage/volatile/safety subsets. All 176 reference panic cases
+  pass. Optimized GCC passes three array inputs and all seven storage cases. Four
+  final 60-second fuzz targets and 20,000 mutations per stage pass (irgen 36/sema 88).
+  All eleven semantic matrices pass 4,899 actual comparisons (4,615 existing plus
+  284 arrays); no ignored failures/retries. Detailed scopes and prior CI/reference-probe
+  limitations are in HANDOFF.md.
+- **Reference probe limitation**: materializing a maximal undefined u0 array again
+  stalled reference emission; an initial physical-suite run timed out after 120 seconds
+  and remains a failed exploratory run. Final physical fixtures use a three-element
+  zero-bit object and are actually compiled/executed with Zig; maximal lengths remain
+  covered separately in checked-layout units and type-only pointer probes. This is
+  not a reference language rejection, ignored timeout or automatic retry policy.
+- **Next/limits**: immutable supported-element backing only. Mutable array variables,
+  runtime aggregate elements/loads/copies, nested runtime aggregate indexing, element
+  addresses/provenance and by-value array ABI remain NYI. Arrays do not gain typed
+  address-dependency cycles or general comptime pointer interpretation here. Explicit
+  sentinel syntax, slices/many-pointers and array/slice for integration stay pending.
+  M5.2 remains partial; Q6 stays deferred to M10.2. Batch easy related additions, not
+  this next aggregate-memory design without independent validation.
 
 ### M5.2a–b Compile-time array foundation
 - **What**: fixed-size array types with full 64-bit usize lengths, typed and inferred

@@ -23,6 +23,15 @@ def binary_case(name, integer_type, operator, lhs, rhs, message="integer overflo
 
 
 def cases():
+    for child, value in (("u8", "7"), ("i33", "-7"), ("u0", "0"), ("void", "{}")):
+        for index in ("2", "18446744073709551615"):
+            source = (f"fn read(p: *const [2]{child}, n: usize) {child} {{ return p[n]; }}\n"
+                      f"pub fn main() void {{ const a = [_]{child}{{{value}, {value}}}; _ = read(&a, {index}); }}\n")
+            yield f"array_pointer_{child}_{index}", source, "index out of bounds"
+    yield "array_value_index", ("fn read(n: usize) u8 { const a = [_]u8{7,9}; return a[n]; }\n"
+                                "pub fn main() void { _ = read(2); }\n"), "index out of bounds"
+    yield "array_string_index", ("fn read(n: usize) u8 { return \"hi\"[n]; }\n"
+                                 "pub fn main() void { _ = read(3); }\n"), "index out of bounds"
     yield "function_pointer_noreturn_coercion", ('fn stop() noreturn { @panic("coerced callback"); }\n'
           'fn invoke(p: *const fn () void) void { p(); }\n'
           'pub fn main() void { invoke(&stop); }\n'), "coerced callback"

@@ -321,3 +321,24 @@ prints a file's IR.
   This explicit NYI resource limit is separate from full-width type lengths. There
   are no new TIR array instructions or aggregate ABI: runtime array variables/elements/
   indices/storage and element addresses remain NYI until a real layout/memory design.
+
+## Immutable array backing and runtime scalar element reads
+
+- TIR_ARRAY_ELEM_PTR is bin(array pointer, usize index), with an element-pointer type.
+  Parent array type supplies ordinary length, sentinel flag and checked child stride.
+  Runtime unsigned guards use >= ordinary length or > sentinel length, without adding
+  one to a possibly maximal usize. Constant indices are validated before TIR lowering.
+- Immutable VALUE_ARRAY data uses recursive element emission and dependency/callback
+  reachability over the interned DAG. Read-only pointer leaves select .data.rel.ro;
+  other supported leaves select .rodata. Data alignment and physical byte sizes are
+  real, including outlined >64-byte alignment. Runtime aggregate values remain NYI.
+- sema_type_size now returns bool and writes a uint64_t result only on success. Physical
+  callers diagnose overflow instead of consuming a wrapped/truncated size. Zero-bit
+  array layout remains zero; total static array bytes have a 16,777,216-byte NYI budget.
+- Element loads reuse LOAD/LOAD_VOLATILE; qualifiers propagate and ordinary narrow
+  loads also normalize logical width. Known u0/void or wholly undefined array *values*
+  can fold before a dynamic bounds guard, matching Zig; runtime pointer accesses
+  preserve the guard. This is not permission to skip pointer bounds checks for OPV.
+- Mutable arrays, aggregate snapshot/copy lowering, source element addresses and
+  by-value ABI are not implemented. Existing element-address NYI must not be replaced
+  by a ref to a copied known element; the next representation needs real provenance.

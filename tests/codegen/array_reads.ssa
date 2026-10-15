@@ -1,0 +1,374 @@
+function w $szc.main.1() {
+@start
+	%t2 =w call $szc.read.2(l $szc.const.1, l 0)
+	%t2 =w shl %t2, 25
+	%t2 =w sar %t2, 25
+	%t4 =w cnew %t2, -63
+	jnz %t4, @c13_then, @c13_else
+@c13_then
+	%t5 =w copy 1
+	jmp @b5
+@c13_else
+	%t7 =w call $szc.known.3(l $szc.const.1)
+	%t7 =w shl %t7, 25
+	%t7 =w sar %t7, 25
+	%t9 =w cnew %t7, 7
+	%t5 =w copy %t9
+	jmp @b5
+@b5
+	jnz %t5, @c18_then, @c18_else
+@c18_then
+	ret 1
+@c18_else
+	jmp @b14
+@b14
+	%t21 =l call $szc.read_wide.4(l $szc.const.2, l 1)
+	%t21 =l and %t21, 8589934591
+	%t23 =w cnel %t21, 8589934591
+	jnz %t23, @c28_then, @c28_else
+@c28_then
+	ret 2
+@c28_else
+	jmp @b24
+@b24
+	%t31 =w call $szc.read_bool.5(l $szc.const.3, l 0)
+	%t31 =w and %t31, 1
+	%t32 =w xor %t31, 1
+	%t32 =w and %t32, 1
+	jnz %t32, @c40_then, @c40_else
+@c40_then
+	%t33 =w copy 1
+	jmp @b33
+@c40_else
+	%t36 =w call $szc.read_bool.5(l $szc.const.3, l 1)
+	%t36 =w and %t36, 1
+	%t33 =w copy %t36
+	jmp @b33
+@b33
+	jnz %t33, @c45_then, @c45_else
+@c45_then
+	ret 3
+@c45_else
+	jmp @b41
+@b41
+	%t48 =w call $szc.read_ref.6(l $szc.const.6, l 1)
+	%t48 =w and %t48, 255
+	%t50 =w cnew %t48, 47
+	jnz %t50, @c55_then, @c55_else
+@c55_then
+	ret 4
+@c55_else
+	jmp @b51
+@b51
+	%t58 =w call $szc.read_callback.9(l $szc.const.7, l 1)
+	%t58 =w and %t58, 255
+	%t60 =w cnew %t58, 19
+	jnz %t60, @c65_then, @c65_else
+@c65_then
+	ret 5
+@c65_else
+	jmp @b61
+@b61
+	%t67 =w call $szc.bytes.10(l 1)
+	%t67 =w and %t67, 255
+	%t69 =w cnew %t67, 9
+	jnz %t69, @c78_then, @c78_else
+@c78_then
+	%t70 =w copy 1
+	jmp @b70
+@c78_else
+	%t72 =w call $szc.str.11(l 2)
+	%t72 =w and %t72, 255
+	%t74 =w cnew %t72, 0
+	%t70 =w copy %t74
+	jmp @b70
+@b70
+	jnz %t70, @c88_then, @c88_else
+@c88_then
+	%t79 =w copy 1
+	jmp @b79
+@c88_else
+	%t82 =w call $szc.plain_str.12(l $szc.bytes.93, l 1)
+	%t82 =w and %t82, 255
+	%t84 =w cnew %t82, 105
+	%t79 =w copy %t84
+	jmp @b79
+@b79
+	jnz %t79, @c93_then, @c93_else
+@c93_then
+	ret 6
+@c93_else
+	jmp @b89
+@b89
+	%t96 =w call $szc.volatile_read.13(l $szc.const.8, l 1)
+	%t96 =w and %t96, 255
+	%t98 =w cnew %t96, 29
+	jnz %t98, @c103_then, @c103_else
+@c103_then
+	ret 7
+@c103_else
+	jmp @b99
+@b99
+	call $szc.zero.14(l $szc.const.9, l 1)
+	%t108 =w cnew 0, 0
+	jnz %t108, @c113_then, @c113_else
+@c113_then
+	ret 8
+@c113_else
+	jmp @b109
+@b109
+	call $szc.no_bits.15(l $szc.const.10, l 1)
+	call $szc.zero_value.16(l 2)
+	%t120 =w cnew 0, 0
+	jnz %t120, @c125_then, @c125_else
+@c125_then
+	ret 9
+@c125_else
+	jmp @b121
+@b121
+	call $szc.void_value.17(l 2)
+	%t129 =w call $szc.undefined_value.18(l 2)
+	%t129 =w and %t129, 255
+	ret 0
+}
+
+function w $szc.read.2(l %t0, l %t1) {
+@start
+	%g2_index =w cugel %t1, 3
+	jnz %g2_index, @g2_index_panic, @g2_index_ok
+@g2_index_panic
+	call $szc.panic.7()
+	hlt
+@g2_index_ok
+	%e2_offset =l mul %t1, 1
+	%t2 =l add %t0, %e2_offset
+	%t3 =w loadsb %t2
+	%t3 =w shl %t3, 25
+	%t3 =w sar %t3, 25
+	ret %t3
+}
+
+function w $szc.known.3(l %t0) {
+@start
+	%e2_offset =l mul 2, 1
+	%t2 =l add %t0, %e2_offset
+	%t3 =w loadsb %t2
+	%t3 =w shl %t3, 25
+	%t3 =w sar %t3, 25
+	ret %t3
+}
+
+function l $szc.read_wide.4(l %t0, l %t1) {
+@start
+	%g2_index =w cugel %t1, 3
+	jnz %g2_index, @g2_index_panic, @g2_index_ok
+@g2_index_panic
+	call $szc.panic.7()
+	hlt
+@g2_index_ok
+	%e2_offset =l mul %t1, 8
+	%t2 =l add %t0, %e2_offset
+	%t3 =l loadl %t2
+	%t3 =l and %t3, 8589934591
+	ret %t3
+}
+
+function w $szc.read_bool.5(l %t0, l %t1) {
+@start
+	%g2_index =w cugel %t1, 2
+	jnz %g2_index, @g2_index_panic, @g2_index_ok
+@g2_index_panic
+	call $szc.panic.7()
+	hlt
+@g2_index_ok
+	%e2_offset =l mul %t1, 1
+	%t2 =l add %t0, %e2_offset
+	%t3 =w loadub %t2
+	%t3 =w and %t3, 1
+	ret %t3
+}
+
+function w $szc.read_ref.6(l %t0, l %t1) {
+@start
+	%g2_index =w cugel %t1, 2
+	jnz %g2_index, @g2_index_panic, @g2_index_ok
+@g2_index_panic
+	call $szc.panic.7()
+	hlt
+@g2_index_ok
+	%e2_offset =l mul %t1, 8
+	%t2 =l add %t0, %e2_offset
+	%t3 =l loadl %t2
+	%t4 =w loadub %t3
+	ret %t4
+}
+
+function w $szc.target.7() {
+@start
+	ret 17
+}
+
+function w $szc.other.8() {
+@start
+	ret 19
+}
+
+function w $szc.read_callback.9(l %t0, l %t1) {
+@start
+	%g2_index =w cugel %t1, 2
+	jnz %g2_index, @g2_index_panic, @g2_index_ok
+@g2_index_panic
+	call $szc.panic.7()
+	hlt
+@g2_index_ok
+	%e2_offset =l mul %t1, 8
+	%t2 =l add %t0, %e2_offset
+	%t3 =l loadl %t2
+	%t4 =w call %t3()
+	%t4 =w and %t4, 255
+	ret %t4
+}
+
+function w $szc.bytes.10(l %t0) {
+@start
+	%g2_index =w cugel %t0, 2
+	jnz %g2_index, @g2_index_panic, @g2_index_ok
+@g2_index_panic
+	call $szc.panic.7()
+	hlt
+@g2_index_ok
+	%e2_offset =l mul %t0, 1
+	%t2 =l add $szc.const.11, %e2_offset
+	%t3 =w loadub %t2
+	ret %t3
+}
+
+function w $szc.str.11(l %t0) {
+@start
+	%g2_index =w cugtl %t0, 2
+	jnz %g2_index, @g2_index_panic, @g2_index_ok
+@g2_index_panic
+	call $szc.panic.7()
+	hlt
+@g2_index_ok
+	%e2_offset =l mul %t0, 1
+	%t2 =l add $szc.bytes.92, %e2_offset
+	%t3 =w loadub %t2
+	ret %t3
+}
+
+function w $szc.plain_str.12(l %t0, l %t1) {
+@start
+	%g2_index =w cugel %t1, 2
+	jnz %g2_index, @g2_index_panic, @g2_index_ok
+@g2_index_panic
+	call $szc.panic.7()
+	hlt
+@g2_index_ok
+	%e2_offset =l mul %t1, 1
+	%t2 =l add %t0, %e2_offset
+	%t3 =w loadub %t2
+	ret %t3
+}
+
+function w $szc.volatile_read.13(l %t0, l %t1) {
+@start
+	%g2_index =w cugel %t1, 2
+	jnz %g2_index, @g2_index_panic, @g2_index_ok
+@g2_index_panic
+	call $szc.panic.7()
+	hlt
+@g2_index_ok
+	%e2_offset =l mul %t1, 1
+	%t2 =l add %t0, %e2_offset
+	%t3 =w call $szc.volatile.load.u8(l %t2)
+	%t3 =w and %t3, 255
+	ret %t3
+}
+
+function $szc.zero.14(l %t0, l %t1) {
+@start
+	%g2_index =w cugel %t1, 2
+	jnz %g2_index, @g2_index_panic, @g2_index_ok
+@g2_index_panic
+	call $szc.panic.7()
+	hlt
+@g2_index_ok
+	%e2_offset =l mul %t1, 0
+	%t2 =l add %t0, %e2_offset
+	ret
+}
+
+function $szc.no_bits.15(l %t0, l %t1) {
+@start
+	%g2_index =w cugel %t1, 2
+	jnz %g2_index, @g2_index_panic, @g2_index_ok
+@g2_index_panic
+	call $szc.panic.7()
+	hlt
+@g2_index_ok
+	%e2_offset =l mul %t1, 0
+	%t2 =l add %t0, %e2_offset
+	ret
+}
+
+function $szc.zero_value.16(l %t0) {
+@start
+	ret
+}
+
+function $szc.void_value.17(l %t0) {
+@start
+	ret
+}
+
+function w $szc.undefined_value.18(l %t0) {
+@start
+	ret 0
+}
+
+section ".rodata"
+data $szc.const.1 = align 64 { b -63, b 3, b 7 }
+section ".rodata"
+data $szc.const.2 = align 8 { l 4294967297, l 8589934591, l 3 }
+section ".rodata"
+data $szc.const.3 = align 1 { b 1, b 0 }
+section ".rodata"
+data $szc.const.4 = align 1 { b 31 }
+section ".rodata"
+data $szc.const.5 = align 1 { b 47 }
+section ".data.rel.ro"
+data $szc.const.6 = align 64 { l $szc.const.4, l $szc.const.5 }
+section ".data.rel.ro"
+data $szc.const.7 = align 64 { l $szc.target.7, l $szc.other.8 }
+section ".rodata"
+data $szc.const.8 = align 1 { b 13, b 29 }
+section ".rodata"
+data $szc.const.9 = align 1 { b 0 }
+section ".rodata"
+data $szc.const.10 = align 1 { b 0 }
+section ".rodata"
+data $szc.const.11 = align 1 { b 7, b 9 }
+section ".rodata"
+data $szc.bytes.92 = { b 104, b 105, b 0 }
+section ".rodata"
+data $szc.bytes.93 = { b 104, b 105, b 0 }
+function w $szc.volatile.load.u8(l %ptr) {
+@start
+	%value =w loadub %ptr
+	ret %value
+}
+
+data $szc.panic.msg.7 = { b "index out of bounds\n", b 0 }
+function $szc.panic.7() {
+@start
+	call $write(w 2, l $szc.panic.msg.7, l 20)
+	call $abort()
+	hlt
+}
+
+export function w $main() {
+@start
+	%status =w call $szc.main.1()
+	ret %status
+}
