@@ -1,0 +1,3 @@
+tests/tir/errors/element_pointer_sentinel_drop.zig:2:13: error: index 2 outside array of length 2
+const p = &a[2];
+            ^

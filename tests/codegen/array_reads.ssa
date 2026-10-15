@@ -88,7 +88,7 @@ function w $szc.main.1() {
 	%t79 =w copy 1
 	jmp @b79
 @c88_else
-	%t82 =w call $szc.plain_str.12(l $szc.bytes.93, l 1)
+	%t82 =w call $szc.plain_str.12(l $szc.bytes.92, l 1)
 	%t82 =w and %t82, 255
 	%t84 =w cnew %t82, 105
 	%t79 =w copy %t84
@@ -351,8 +351,6 @@ section ".rodata"
 data $szc.const.11 = align 1 { b 7, b 9 }
 section ".rodata"
 data $szc.bytes.92 = { b 104, b 105, b 0 }
-section ".rodata"
-data $szc.bytes.93 = { b 104, b 105, b 0 }
 function w $szc.volatile.load.u8(l %ptr) {
 @start
 	%value =w loadub %ptr

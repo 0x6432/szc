@@ -9,6 +9,39 @@ from compiler_process import run_compiler
 
 
 def cases():
+    for child, value in (("u8", "7"), ("i33", "-7"), ("bool", "true"), ("u0", "0"),
+                         ("void", "{}"), ("type", "u8")):
+        for index in ("0", "1", "2", "-1", "undefined"):
+            yield (f"const a = [_]{child}{{{value},{value}}}; const p = &a[{index}]; "
+                   "pub fn main() void { _ = p; }\n")
+        zero_sized = child in ("u0", "void")
+        equality = "true" if zero_sized else "false"
+        yield (f"const a = [_]{child}{{{value},{value}}}; const same = &a[0] == &a[0]; "
+               f"const equal = &a[0] == &a[1]; "
+               f"const check: u8 = if (!same or equal != {equality}) 256 else 0; "
+               "pub fn main() void { _ = check; }\n")
+        yield (f"const a = [2][2]{child}{{.{{{value},{value}}},.{{{value},{value}}}}}; "
+               "const row = &a[1]; const p = &a[1][1]; const q = &row[1]; "
+               "const check: u8 = if (p != q) 256 else 0; "
+               "pub fn main() void { _ = check; _ = p.*; }\n")
+        yield (f"const a = [_]{child}{{{value},{value}}}; "
+               f"const p: *const {child} = &a[1]; pub fn main() void {{ p.* = {value}; }}\n")
+    for alignment, index, target in itertools.product((1, 8, 16), (0, 1, 2, 4), (1, 2, 8, 16)):
+        yield (f"const a: [8]u8 align({alignment}) = .{{1,2,3,4,5,6,7,8}}; "
+               f"const p: *align({target}) const u8 = &a[{index}]; "
+               "pub fn main() void { _ = p; }\n")
+    for index, target in itertools.product((0, 1), ("", "allowzero ")):
+        yield (f"fn f(p: *allowzero const [2]u8) void {{ const q: *{target}const u8 = &p[{index}]; _ = q; }} "
+               "pub fn main() void { f(undefined); }\n")
+    for source in (
+        'const p: *const [2]u8 = undefined; const q = &p[1]; _ = q;',
+        'const a = "ab"; const p: *const [2]u8 = a; const q = &a[1]; const r = &p[1]; '
+        'const check: u8 = if (q != r) 256 else 0; _ = check;',
+        'const a = "ab"; const q = &a[2]; const check: u8 = if (q.* != 0) 256 else 0; _ = check;',
+        'const a = "ab"; const p: *const [2]u8 = a; _ = &p[2];',
+        'const a = [_]u8{undefined,7}; const p = &a[1]; const check: u8 = if (p.* != 7) 256 else 0; _ = check;',
+    ):
+        yield "pub fn main() void { " + source + " }\n"
     for child, value in (("u8", "7"), ("i33", "-7"), ("bool", "true"), ("u0", "0"), ("void", "{}")):
         for body in (
             f"return if (c) a else .{{{value}, {value}}};",

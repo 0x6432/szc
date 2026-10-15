@@ -1,0 +1,3 @@
+tests/tir/errors/element_pointer_logical_stride_limit.zig:2:13: error: not supported by szc yet: array element offset exceeds 64-bit address space
+const p = &a[1];
+            ^

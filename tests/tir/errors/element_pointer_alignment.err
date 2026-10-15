@@ -1,0 +1,3 @@
+tests/tir/errors/element_pointer_alignment.zig:2:31: error: expected type '*align(8) const u8', found '*const u8'
+const p: *align(8) const u8 = &a[1];
+                              ^

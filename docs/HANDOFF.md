@@ -58,13 +58,17 @@ Read this first when resuming work (the sandbox resets often).
   runtime element lvalues/addresses and borrowed indexing.
 - Done: M5.2c3a internal by-value array arguments/returns and array-valued if/block/
   while results, with caller-owned return storage and callee parameter snapshots.
-  M5.2c3 remains partial: general comptime element-pointer provenance is pending.
+- Done: M5.2c3b known element-pointer provenance, namespace/comptime loads/equality,
+  real root-relative relocations and upstream-derived element alignment/allowzero.
+  M5.2c3 is complete for the current array/type system; M5.2c and M5.2 stay partial.
 - Current batching preference: group related straightforward milestones when practical;
   keep complex semantic changes independently tested/documented/committed. Do not return
   to an unconditional one-checkpoint policy. Select the next independently implementable
   memory item without pretending the blocked function-alias case is complete. Next is
-  M5.2c3b: general comptime element-pointer provenance (real root/subobject identity,
-  checked offsets and pointer comparisons/loads, not copied element constants).
+  M5.2c4: mutable array globals (checked lazy initialization, real global backing,
+  borrowed element accesses and owned runtime loads/copies). Known VALUE_GLOBAL roots
+  are addresses, not known mutable contents; extend element-pointer loads to runtime
+  without folding a mutable initializer. Preserve const-address/value resolution.
   Keep coherent work batched, targeted checks during development and a single full
   validation pass per stable batch; independent checks can run on immutable binaries.
   Preserve owned snapshot versus borrowed pointer semantics, and scope by-value ABI
@@ -90,6 +94,49 @@ Read this first when resuming work (the sandbox resets often).
   GCC/Clang/fuzz/differential jobs, restoring green CI. M5.1c2b2a 8b1d3cf
   also passed all jobs (run 38590520673), as did M5.1c2b2b1 ecfb6ab
   (run 38593742928). Check each new push's run.
+
+## M5.2c3b known element pointers
+
+- VALUE_ELEMENT_PTR records `{base, index, offset, logical}`. Keep root/subobject
+  identity through nested indexing and aliases; never invent a ConstObject for a
+  copied scalar element. Loads follow the actual parent path and select ValueIds.
+  Comparisons strip qualifiers and compare root identity plus cumulative offset.
+- Runtime-layout offsets are checked bytes; comptime-only arrays use checked logical
+  leaf offsets. Actual Zig treats two u0/void elements at the same byte address as
+  equal, but two type-array slots as distinct even when they contain the same type.
+- VALUE_PTR_CAST preserves byte backing across qualification and sentinel weakening.
+  A probe found the old retagged VALUE_BYTES scheme could fold pointers equal but
+  produce distinct byte symbols at runtime. Keep the original root through casts;
+  avoid dense copies for a known byte element read.
+- Scalar TIR_CONST elements materialize a root-plus-offset QBE add when nonzero;
+  static pointer tables/globals emit relocation addends. Outlined >64-byte data must
+  print into the assembly FILE, not the SSA FILE. Dependency/function walks reach the
+  real root and retain callbacks; physical ELF tests confirm root offsets and RELRO.
+- Shared element-pointer typing follows actual Type.zig elemPtrType and Value.zig
+  ptrElem/getOffsetPtr: preserve const/volatile, derive alignment from base plus known
+  offset or dynamic stride, drop allowzero for known nonzero indices. Do not restore
+  ABI alignment to a weakly aligned base. Runtime borrowed indexing reuses the helper.
+- Boundary checks cover physical/logical stride and accumulated-offset overflow,
+  ordinary/sentinel bounds, undefined indices, pointer qualifiers and immutable writes.
+  Root paths remain interned DAG values; no static state or native addresses enter sema.
+- Validation: frozen GCC -Werror ASan/UBSan passes 612 units, final 801 goldens,
+  70 ordinary/generated native+Zig programs, two scoped szc-only programs, lifecycle/
+  runner 8/18, driver 16, reference storage 15, array storage eight, mutable C storage,
+  function ABI four, unaligned seven, alignment 135/270/153/153/27, volatile 44 and
+  safety 181. All 487 array comparisons match actual Zig 0.17. Frozen Clang sanitizer
+  passes 612 units, final 801 goldens, 12 array/generated programs, both array storage
+  harnesses and 181 safety cases; optimized GCC passes the 12 programs and ELF storage.
+  Final expanded function-body/nested-type provenance fixture passes all three builds
+  against Zig. Four 60s fuzzers pass (901840/22043/20586/28054 executions); standalone
+  replay passes 20k mutations per stage and repeats irgen/sema after expanding the
+  provenance seed. Retained corpora are irgen 39/sema 94; no sanitizer finding.
+  Previous 53efbd5 CI has green GCC/Clang/fuzz jobs; its differential job was still
+  running when checked. Do not claim it or this new push fully green prematurely.
+- Out of scope: comptime mutation, mutable array globals, explicit sentinel syntax,
+  slices, generic/comptime calls, variadic arrays and volatile whole-array copying.
+  c3 is complete for current array types; enclosing M5.2c/M5.2 remain partial. Next c4
+  needs mutable-global element loads to materialize root addresses instead of reading
+  initializer values, and must retain c2's borrow-before-index-side-effects semantics.
 
 ## M5.2c3a internal array calls and control-flow values
 

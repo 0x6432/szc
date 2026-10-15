@@ -406,6 +406,46 @@ test_global_references(void)
 }
 
 static void
+test_element_pointers(void)
+{
+	Arena arena;
+	arena_init(&arena);
+	ValueTable table;
+	value_table_init(&table, &arena);
+	ValueId n = value_int_u64(&table, 1, 42);
+	ValueId root = value_ref(&table, 2, n, 1, 16);
+	ValueId first = value_element_pointer(&table, 3, root, 1, 8, false);
+	CHECK(first == value_element_pointer(&table, 3, root, 1, 8, false));
+	CHECK(first != value_element_pointer(&table, 4, root, 1, 8, false));
+	CHECK(first != value_element_pointer(&table, 3, root, 2, 8, false));
+	CHECK(first != value_element_pointer(&table, 3, root, 1, 9, false));
+	CHECK(first != value_element_pointer(&table, 3, root, 1, 8, true));
+	ValueId nested = value_element_pointer(&table, 4, first, 2, 10, false);
+	PointerAddress address = value_pointer_address(&table, nested);
+	CHECK(address.root == root && address.offset == 10 && !address.logical);
+	ValueId cast = value_pointer_cast(&table, 5, nested);
+	address = value_pointer_address(&table, cast);
+	CHECK(address.root == root && address.offset == 10 && !address.logical);
+	CHECK(cast == value_pointer_cast(&table, 5, nested));
+	CHECK(cast != value_pointer_cast(&table, 6, nested));
+	address = value_pointer_address(&table, root);
+	CHECK(address.root == root && address.offset == 0 && !address.logical);
+	ValueId logical = value_element_pointer(&table, 4, root, 1, 1, true);
+	address = value_pointer_address(&table, logical);
+	CHECK(address.root == root && address.offset == 1 && address.logical);
+	ValueId ids[512];
+	for (uint32_t i = 0; i < 512; i++)
+		ids[i] = value_element_pointer(&table, 3, root, i, (uint64_t)i << 33, false);
+	bool preserved = true;
+	for (uint32_t i = 0; i < 512; i++)
+		if (ids[i] != value_element_pointer(&table, 3, root, i, (uint64_t)i << 33, false))
+			preserved = false;
+	CHECK(preserved);
+	CHECK(table.objects[value_get(&table, root)->as.object].value == n);
+	arena_free(&arena);
+}
+
+static void
 test_array_values(void)
 {
 	Arena arena;
@@ -532,6 +572,7 @@ main(void)
 	test_byte_values();
 	test_constant_references();
 	test_global_references();
+	test_element_pointers();
 	test_array_values();
 	test_array_layout();
 	test_binary_diagnostics();

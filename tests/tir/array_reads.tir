@@ -107,7 +107,7 @@ fn szc.main.1: fn () u8 {
       %86: bool = const true
       %87: noreturn = br %79, %86
     } else {
-      %80: *const [2]u8 = const "hi"
+      %80: *const [2]u8 = const ptr_cast(value.92)
       %81: usize = const 1
       %82: u8 = call szc.plain_str.12(%80, %81)
       %83: u8 = const 105

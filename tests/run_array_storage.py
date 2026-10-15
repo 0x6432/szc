@@ -42,6 +42,9 @@ def main():
         ("pointers", "[2]*const u8", ".{&x,&y}", 256, None, (b"\x1f", b"\x2f"),
          "const x: u8 = 31; const y: u8 = 47;"),
         ("bytes", "[2]*const [2]u8", '.{"hi","by"}', 64, None, (b"hi\0", b"by\0"), ""),
+        ("elements", "[2]*const u16", ".{&backing[0][1],&backing[1][2]}", 128,
+         None, (struct.pack("<H", 2), struct.pack("<H", 6)),
+         "const backing: [2][3]u16 align(128) = .{.{1,2,3},.{4,5,6}};"),
         ("zero", "[3]u0", "undefined", 1, b"\0", None, ""),
     ]
     passed = 0
@@ -91,6 +94,9 @@ def main():
                 pointers = struct.unpack("<QQ", at_address(address, 16))
                 for pointer, expected_target in zip(pointers, targets):
                     assert at_address(pointer, len(expected_target)) == expected_target, name
+                if name == "elements":
+                    assert pointers[1] - pointers[0] == 8, "element relocations lost root offsets"
+                    assert (pointers[0] - 2) % 128 == 0, "element relocation lost root alignment"
                 protected = False
                 for line in run(["readelf", "-lW", str(executable)]).decode().splitlines():
                     fields = line.split()

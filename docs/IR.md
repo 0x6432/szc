@@ -338,9 +338,38 @@ prints a file's IR.
   loads also normalize logical width. Known u0/void or wholly undefined array *values*
   can fold before a dynamic bounds guard, matching Zig; runtime pointer accesses
   preserve the guard. This is not permission to skip pointer bounds checks for OPV.
-- Mutable arrays, aggregate snapshot/copy lowering, source element addresses and
-  by-value ABI are not implemented. Existing element-address NYI must not be replaced
-  by a ref to a copied known element; the next representation needs real provenance.
+- Mutable slots/snapshots, source element addresses and the private by-value ABI are
+  described below. Known element addresses use the provenance model following this
+  section; never replace them with refs to copied element constants.
+
+## Comptime element-pointer provenance
+
+- VALUE_ELEMENT_PTR holds ElementPointer `{base, index, offset, logical}`. `base` is
+  an interned pointer to the actual parent array, not a value ref to a copied element;
+  nested element paths keep the same root. `index` drives known loads through the
+  parent array value. `offset` is a checked cumulative root-relative byte offset for
+  runtime-layout children, or logical leaf index for comptime-only children.
+- value_pointer_address strips element paths and VALUE_PTR_CAST qualification aliases
+  to return `{root, offset, logical}`. Sema equality compares root object/global/byte
+  identity and offset, ignoring qualifiers. Zero-sized runtime children therefore share
+  addresses, while distinct slots of type-only arrays keep logical identity.
+- VALUE_PTR_CAST retains original byte backing when a known string pointer is qualified
+  or loses its sentinel. Retagging VALUE_BYTES itself could otherwise emit a new symbol
+  and make runtime equality disagree with comptime equality. Known byte reads access
+  compact backing directly; whole-array loads still construct ordinary VALUE_ARRAY.
+- Known constant indices in ARRAY_INDEX_PTR and borrowed ARRAY_INDEX_BASE create these
+  values after bounds/undefined-index checks. Known undefined base pointers propagate
+  undefined addresses; undefined *array values* still have real immutable backing.
+  Strides, physical layouts and cumulative offsets never silently wrap. Comptime-only
+  paths cannot materialize machine addresses; they are for semantic loads/equality.
+- Scalar TIR_CONST element pointers use a root symbol directly at offset zero and a
+  QBE `add` temporary otherwise. Static pointer initializers emit symbol-plus-addend
+  relocations, in QBE data or outlined assembly as appropriate. Root dependency and
+  function-address walks preserve backing/callback reachability.
+- Element-pointer type derivation follows Zig 0.17 Type.elemPtrType: constant index zero
+  preserves base alignment; other known offsets and dynamic strides constrain it by
+  divisibility. Const/volatile survive, known nonzero indices drop allowzero, and a
+  weakly aligned root stays weak. Borrowed runtime indexing shares this helper.
 
 ## Mutable array slots and owned runtime values
 

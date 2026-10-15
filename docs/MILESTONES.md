@@ -91,9 +91,10 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
   - [~] **M5.2c Runtime array storage, copies, indexing and element addresses** (checked bounds and aggregate ABI).
     - [x] **M5.2c1 Immutable array backing and checked scalar runtime reads**.
     - [x] **M5.2c2 Mutable aggregate slots, initialization and copies**.
-    - [~] **M5.2c3 Element address provenance and aggregate value/ABI integration**.
+    - [x] **M5.2c3 Element address provenance and aggregate value/ABI integration**.
       - [x] **M5.2c3a Internal array calls/returns and runtime aggregate joins**.
-      - [ ] **M5.2c3b General comptime element-pointer provenance** (runtime addresses landed with c2).
+      - [x] **M5.2c3b General comptime element-pointer provenance** (root/subobject identity, checked offsets and loads).
+    - [ ] **M5.2c4 Mutable array globals** (lazy initialization, borrowed element accesses and runtime snapshots).
 - [ ] **M5.3 Slices, many-pointers, slicing, `.len`, `.ptr`, for over slices.**
 - [~] **M5.4 String literals, sentinels, `[*:0]const u8`.** Literal byte values landed in M4.5b; general string/memory operations and sentinel pointer syntax remain pending.
 - [ ] **M5.5 Casting builtins**: `@intCast`, `@truncate`, `@ptrCast`, `@intFromPtr`, `@ptrFromInt`, `@bitCast`, `@as`.
@@ -146,6 +147,50 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
 ## Completed milestone log
 
 (newest first; each entry: what, limitations, interactions)
+
+### M5.2c3b Comptime element-pointer provenance
+- **What**: known array element addresses retain their real root and selection path;
+  nested row aliases, pointer dereferences, comparisons and namespace/comptime loads
+  no longer fall back to runtime evaluation or references to copied scalar elements.
+  Known byte/sentinel addresses, pointer/callback leaves, zero-bit/void and type-only
+  arrays share the provenance model. Source writes through immutable elements reject.
+- **Interactions**: VALUE_ELEMENT_PTR records an interned parent pointer, index and
+  checked cumulative offset. Runtime-layout children use bytes; comptime-only children
+  use logical leaf offsets, so equal type values in different slots still have distinct
+  element addresses. Loads follow the selection path, not a guessed byte-to-value map.
+  Pointer comparisons strip qualifiers and compare root identity plus offset; u0/void
+  element pointers share a zero byte offset, matching actual Zig. VALUE_PTR_CAST keeps
+  byte backing intact when dropping a string sentinel or adding pointer qualifiers;
+  previously retagging VALUE_BYTES could duplicate physical backing and disagree with
+  comptime equality. Known byte indexing remains compact rather than copying the string.
+- **Lowering**: nonzero element constants materialize root-plus-offset QBE adds. Static
+  pointer leaves use root-plus-addend relocations in .data.rel.ro, including outlined
+  assembly for >64-byte alignment. Dependency and callback reachability follow the
+  root, so no separate copied-element data is emitted. Physical/logical stride and
+  cumulative-offset overflow diagnose before interning a wrapped address.
+- **Qualifiers**: one shared element-pointer type helper follows upstream elemPtrType:
+  preserve const/volatile, retain stronger alignment for index zero or suitably aligned
+  constant offsets, use the stride guarantee for dynamic indices, and drop allowzero
+  for known nonzero indices. Weakly aligned roots do not gain ABI alignment.
+- **Tests**: three native/reference provenance/alignment/outlined-data programs; 24-width
+  known-address/dereference roundtrips; TIR/SSA goldens; eight const/bounds/sentinel/
+  alignment/undefined/stride/offset errors; root-relative physical relocation and RELRO
+  checks; value interning/hash/path unit coverage and three fuzz seeds. The array matrix
+  adds 105 acceptance/constant-assertion cases, including nested/type-only identities,
+  alignment guarantees, allowzero refinement and string-sentinel weakening.
+- **Validation**: frozen GCC -Werror ASan/UBSan/reference suite passes 612 units,
+  final 801 goldens, 70 ordinary/generated programs and 181 safety cases, plus every
+  existing lifecycle/driver/storage/ABI/alignment/volatile suite. All 487 array
+  comparisons match actual Zig 0.17. Clang sanitizer units/goldens/12 array programs/
+  both storage harnesses/181 safety cases and optimized GCC array/storage checks pass.
+  The expanded function-body/nested-type fixture passes all three builds against Zig.
+  Four 60s fuzzers and 20k standalone mutations/stage pass; irgen/sema replay repeats
+  after expanding the provenance seed. No sanitizer error; retained corpora 39/94.
+- **Limits**: no comptime mutation, mutable array globals, explicit sentinel syntax,
+  slices, generic/comptime function evaluation, variadic arrays or volatile whole-array
+  copies. Runtime addresses of comptime-only element types remain rejected, not physical
+  zero-byte pointers. c3 is complete for the existing array/type system; c and M5.2 stay
+  partial. Next is c4 mutable array globals; do not conflate it with immutable provenance.
 
 ### M5.2c3a Internal array calls/returns and runtime aggregate joins
 - **What**: by-value arrays in internal direct, recursive and indirect calls; nested,

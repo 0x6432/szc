@@ -537,6 +537,17 @@ value_hash(const Value *value)
 	case VALUE_REF:
 		hash = hash_mix(hash, value->as.object);
 		break;
+	case VALUE_PTR_CAST:
+		hash = hash_mix(hash, value->as.pointer);
+		break;
+	case VALUE_ELEMENT_PTR:
+		hash = hash_mix(hash, value->as.element.base);
+		hash = hash_mix(hash, (uint32_t)value->as.element.index);
+		hash = hash_mix(hash, (uint32_t)(value->as.element.index >> 32));
+		hash = hash_mix(hash, (uint32_t)value->as.element.offset);
+		hash = hash_mix(hash, (uint32_t)(value->as.element.offset >> 32));
+		hash = hash_mix(hash, value->as.element.logical ? 1u : 0u);
+		break;
 	case VALUE_ARRAY:
 		hash = hash_mix(hash, value->as.array.count);
 		for (uint32_t i = 0; i < value->as.array.count; i++)
@@ -573,6 +584,13 @@ value_equal(const Value *a, const Value *b)
 		return a->as.global == b->as.global;
 	case VALUE_REF:
 		return a->as.object == b->as.object;
+	case VALUE_PTR_CAST:
+		return a->as.pointer == b->as.pointer;
+	case VALUE_ELEMENT_PTR:
+		return a->as.element.base == b->as.element.base
+			&& a->as.element.index == b->as.element.index
+			&& a->as.element.offset == b->as.element.offset
+			&& a->as.element.logical == b->as.element.logical;
 	case VALUE_ARRAY:
 		return a->as.array.count == b->as.array.count && (a->as.array.count == 0
 			|| memcmp(a->as.array.items, b->as.array.items, (size_t)a->as.array.count * sizeof(ValueId)) == 0);
@@ -815,6 +833,47 @@ value_ref(ValueTable *table, TypeId type, ValueId pointee, uint32_t identity, ui
 	Value value = make_value(VALUE_REF, type);
 	value.as.object = intern_object(table, pointee, identity, alignment);
 	return value_intern(table, &value);
+}
+
+ValueId
+value_element_pointer(ValueTable *table, TypeId type, ValueId base, uint64_t index, uint64_t offset, bool logical)
+{
+	Value value = make_value(VALUE_ELEMENT_PTR, type);
+	value.as.element = (ElementPointer){base, index, offset, logical};
+	return value_intern(table, &value);
+}
+
+ValueId
+value_pointer_cast(ValueTable *table, TypeId type, ValueId pointer)
+{
+	if (value_get(table, pointer)->kind == VALUE_PTR_CAST)
+		pointer = value_get(table, pointer)->as.pointer;
+	Value value = make_value(VALUE_PTR_CAST, type);
+	value.as.pointer = pointer;
+	return value_intern(table, &value);
+}
+
+/* Qualifier coercions retain the path; address identity ignores pointer types. */
+PointerAddress
+value_pointer_address(const ValueTable *table, ValueId id)
+{
+	PointerAddress address = {id, 0, false};
+	bool selected = false;
+	const Value *value = value_get(table, id);
+	while (value->kind == VALUE_ELEMENT_PTR || value->kind == VALUE_PTR_CAST) {
+		if (value->kind == VALUE_ELEMENT_PTR) {
+			if (!selected) {
+				address.offset = value->as.element.offset;
+				address.logical = value->as.element.logical;
+				selected = true;
+			}
+			address.root = value->as.element.base;
+		} else {
+			address.root = value->as.pointer;
+		}
+		value = value_get(table, address.root);
+	}
+	return address;
 }
 
 ValueId

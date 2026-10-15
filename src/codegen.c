@@ -136,6 +136,39 @@ inst_at(Codegen *cg, TirRef ref)
 	return &cg->tir->insts[ref];
 }
 
+/* Constant subobjects are relocations into their root, not separate data objects. */
+static void
+print_pointer_address(Codegen *cg, FILE *out, ValueId id, bool outlined, bool with_offset)
+{
+	PointerAddress address = value_pointer_address(sema_values(cg->sema), id);
+	const Value *root = value_get(sema_values(cg->sema), address.root);
+	const char *prefix = outlined ? "" : "$";
+	if (address.logical) {
+		codegen_error(cg, 0, "not supported by szc yet: runtime address of comptime-only array element");
+		fputs("0", out);
+		return;
+	}
+	switch (root->kind) {
+	case VALUE_REF:
+		cg->constants_used[root->as.object] = true;
+		fprintf(out, "%sszc.const.%u", prefix, (unsigned)root->as.object);
+		break;
+	case VALUE_BYTES:
+		cg->bytes_used[address.root] = true;
+		fprintf(out, "%sszc.bytes.%u", prefix, (unsigned)address.root);
+		break;
+	case VALUE_GLOBAL:
+		fprintf(out, "%s%s", prefix, sema_global(cg->sema, root->as.global)->symbol);
+		break;
+	default:
+		codegen_error(cg, 0, "not supported by szc yet: this array element pointer backing");
+		fputs("0", out);
+		return;
+	}
+	if (with_offset && address.offset != 0)
+		fprintf(out, " + %" PRIu64, address.offset);
+}
+
 static void
 print_operand(Codegen *cg, TirRef ref)
 {
@@ -168,6 +201,13 @@ print_operand(Codegen *cg, TirRef ref)
 	case VALUE_REF:
 		cg->constants_used[value->as.object] = true;
 		fprintf(cg->out, "$szc.const.%u", (unsigned)value->as.object);
+		return;
+	case VALUE_PTR_CAST:
+	case VALUE_ELEMENT_PTR:
+		if (value_pointer_address(sema_values(cg->sema), inst->data.value).offset == 0)
+			print_pointer_address(cg, cg->out, inst->data.value, false, false);
+		else
+			fprintf(cg->out, "%%t%u", (unsigned)ref);
 		return;
 	case VALUE_BYTES:
 		cg->bytes_used[inst->data.value] = true;
@@ -622,8 +662,18 @@ emit_inst(Codegen *cg, TirRef ref)
 	if (cls == QBE_NONE && sema_type(cg->sema, inst->type)->kind == TYPE_INT && inst->op != TIR_CALL && inst->op != TIR_INT_CAST)
 		return;
 	switch (inst->op) {
+	case TIR_CONST: {
+		const Value *value = value_get(sema_values(cg->sema), inst->data.value);
+		PointerAddress address = value_pointer_address(sema_values(cg->sema), inst->data.value);
+		if ((value->kind == VALUE_ELEMENT_PTR || value->kind == VALUE_PTR_CAST) && address.offset != 0) {
+			print_dest(cg, ref, QBE_L);
+			fputs("add ", out);
+			print_pointer_address(cg, cg->out, inst->data.value, false, false);
+			fprintf(out, ", %" PRIu64 "\n", address.offset);
+		}
+		return;
+	}
 	case TIR_ARG:
-	case TIR_CONST:
 	case TIR_ALLOC:
 		/* parameters, inline immediates, and allocations hoisted to @start */
 		return;
@@ -1025,7 +1075,9 @@ mark_value_dependencies(Codegen *cg, ValueId id)
 		return;
 	cg->dependencies_seen[id] = true;
 	const Value *value = value_get(sema_values(cg->sema), id);
-	if (value->kind == VALUE_REF)
+	if (value->kind == VALUE_ELEMENT_PTR || value->kind == VALUE_PTR_CAST)
+		mark_value_dependencies(cg, value_pointer_address(sema_values(cg->sema), id).root);
+	else if (value->kind == VALUE_REF)
 		cg->constants_used[value->as.object] = true;
 	else if (value->kind == VALUE_BYTES)
 		cg->bytes_used[id] = true;
@@ -1125,6 +1177,10 @@ emit_data_value(Codegen *cg, FILE *out, ValueId stored, bool outlined, bool *fir
 		break;
 	case VALUE_REF:
 		fprintf(out, "%sszc.const.%u", outlined ? "" : "$", (unsigned)value->as.object);
+		break;
+	case VALUE_PTR_CAST:
+	case VALUE_ELEMENT_PTR:
+		print_pointer_address(cg, out, stored, outlined, true);
 		break;
 	case VALUE_BYTES:
 		fprintf(out, "%sszc.bytes.%u", outlined ? "" : "$", (unsigned)stored);

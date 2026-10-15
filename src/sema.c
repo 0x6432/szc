@@ -869,8 +869,9 @@ queue_value_functions(Block *block, ValueId id, uint32_t src)
 		return;
 	sema->queued_values[id] = true;
 	const Value *value = value_get(&sema->values, id);
-	while (value->kind == VALUE_REF) {
-		id = sema->values.objects[value->as.object].value;
+	while (value->kind == VALUE_REF || value->kind == VALUE_ELEMENT_PTR || value->kind == VALUE_PTR_CAST) {
+		id = value->kind == VALUE_REF ? sema->values.objects[value->as.object].value
+			: value->kind == VALUE_ELEMENT_PTR ? value->as.element.base : value->as.pointer;
 		value = value_get(&sema->values, id);
 	}
 	if (value->kind == VALUE_ARRAY) {
@@ -1517,7 +1518,10 @@ coerce(Block *block, Operand operand, TypeId dest, uint32_t src)
 				return operand_none;
 			return runtime_operand(dest, emit_tir_un(block, TIR_PTR_CAST, dest, src, operand.inst));
 		}
-		Value value = *operand_value(block, operand);
+		const Value *known = operand_value(block, operand);
+		if (known->kind == VALUE_BYTES || known->kind == VALUE_PTR_CAST)
+			return comptime_operand(dest, value_pointer_cast(&sema->values, dest, operand.value));
+		Value value = *known;
 		value.type = dest;
 		return comptime_operand(dest, value_intern(&sema->values, &value));
 	}
@@ -2182,8 +2186,10 @@ analyze_compare(Block *block, const IrInst *inst)
 		if (operand_is_undefined(block, lhs) || operand_is_undefined(block, rhs))
 			return comptime_operand(T_BOOL, value_undefined(&sema->values, T_BOOL));
 		if (lhs.kind == OPERAND_COMPTIME && rhs.kind == OPERAND_COMPTIME) {
-			const Value *a = operand_value(block, lhs);
-			const Value *b = operand_value(block, rhs);
+			PointerAddress left = value_pointer_address(&sema->values, lhs.value);
+			PointerAddress right = value_pointer_address(&sema->values, rhs.value);
+			const Value *a = value_get(&sema->values, left.root);
+			const Value *b = value_get(&sema->values, right.root);
 			bool equal;
 			if (a->kind == VALUE_FUNCTION && b->kind == VALUE_FUNCTION)
 				equal = a->as.function == b->as.function;
@@ -2194,11 +2200,14 @@ analyze_compare(Block *block, const IrInst *inst)
 			else if (a->kind == VALUE_REF && b->kind == VALUE_REF)
 				equal = a->as.object == b->as.object;
 			else if (a->kind == VALUE_BYTES && b->kind == VALUE_BYTES)
-				equal = lhs.value == rhs.value;
+				equal = a->as.bytes.length == b->as.bytes.length
+					&& (a->as.bytes.length == 0 || memcmp(a->as.bytes.data, b->as.bytes.data, a->as.bytes.length) == 0);
 			else {
 				sema_error(block, src, "not supported by szc yet: comptime pointer equality");
 				return operand_none;
 			}
+			equal = equal && left.offset == right.offset
+				&& (left.offset == 0 || left.logical == right.logical);
 			return bool_operand(sema, (op == IR_CMP_EQ) == equal);
 		}
 		if (!require_runtime(block, src))
@@ -3151,6 +3160,8 @@ pointer_operand(Block *block, Operand operand, uint32_t src)
 	return true;
 }
 
+static Operand constant_array_element(Block *block, Operand base, TypeArray array, uint64_t index, uint32_t src);
+
 /* Immutable declaration loads resolve their initializer; mutable contents need runtime. */
 static Operand
 load_pointer(Block *block, Operand pointer, uint32_t src)
@@ -3168,8 +3179,10 @@ load_pointer(Block *block, Operand pointer, uint32_t src)
 		const Value *value = operand_value(block, pointer);
 		if (value->kind == VALUE_FUNCTION && sema->types[child].kind == TYPE_FN)
 			return comptime_operand(child, value_function(&sema->values, child, value->as.function));
-		if (value->kind == VALUE_BYTES && sema->types[child].kind == TYPE_ARRAY) {
-			ByteString bytes = value->as.bytes;
+		PointerAddress address = value_pointer_address(&sema->values, pointer.value);
+		const Value *root = value_get(&sema->values, address.root);
+		if (root->kind == VALUE_BYTES && sema->types[child].kind == TYPE_ARRAY) {
+			ByteString bytes = root->as.bytes;
 			if (bytes.length == UINT32_MAX) {
 				sema_error(block, src, "not supported by szc yet: array constant with this many elements");
 				return operand_none;
@@ -3182,6 +3195,19 @@ load_pointer(Block *block, Operand pointer, uint32_t src)
 			for (uint32_t i = 0; i < count; i++)
 				items[i] = value_int_u64(&sema->values, byte, i < bytes.length ? bytes.data[i] : 0);
 			return comptime_operand(child, value_array(&sema->values, child, items, count));
+		}
+		if (value->kind == VALUE_PTR_CAST) {
+			ValueId parent = value->as.pointer;
+			Operand stored = load_pointer(block, comptime_operand(value_get(&sema->values, parent)->type, parent), src);
+			return coerce(block, stored, child, src);
+		}
+		if (value->kind == VALUE_ELEMENT_PTR) {
+			ElementPointer element = value->as.element;
+			TypeId base_type = value_get(&sema->values, element.base)->type;
+			TypeId array_type = sema->types[base_type].as.pointer.child;
+			Operand selected = constant_array_element(block, comptime_operand(base_type, element.base),
+				sema->types[array_type].as.array, element.index, src);
+			return coerce(block, selected, child, src);
 		}
 		if (value->kind == VALUE_REF) {
 			ValueId stored = sema->values.objects[value->as.object].value;
@@ -3417,9 +3443,12 @@ constant_array_element(Block *block, Operand base, TypeArray array, uint64_t ind
 	if (sema->types[base.type].kind == TYPE_POINTER) {
 		if (!check_defined(block, base, src))
 			return operand_none;
-		if (operand_value(block, base)->kind == VALUE_BYTES) {
-			ByteString bytes = operand_value(block, base)->as.bytes;
-			return comptime_operand(array.child, value_int_u64(&sema->values, array.child, index < bytes.length ? bytes.data[index] : 0));
+		PointerAddress address = value_pointer_address(&sema->values, base.value);
+		const Value *root = value_get(&sema->values, address.root);
+		if (root->kind == VALUE_BYTES) {
+			ByteString bytes = root->as.bytes;
+			uint64_t position = address.offset + index;
+			return comptime_operand(array.child, value_int_u64(&sema->values, array.child, position < bytes.length ? bytes.data[position] : 0));
 		}
 		base = load_pointer(block, base, src);
 		if (base.kind == OPERAND_NONE)
@@ -3438,6 +3467,84 @@ constant_array_element(Block *block, Operand base, TypeArray array, uint64_t ind
 	}
 	ValueId element = value->as.array.items[index];
 	return comptime_operand(array.child, element);
+}
+
+/* Byte offsets for runtime-layout children; logical leaf offsets for comptime-only arrays. */
+static bool
+array_element_stride(Sema *sema, TypeId child, uint64_t *stride, bool *logical)
+{
+	uint64_t count = 1;
+	TypeId leaf = child;
+	while (sema->types[leaf].kind == TYPE_ARRAY)
+		leaf = sema->types[leaf].as.array.child;
+	*logical = is_comptime_only_type(sema, leaf);
+	if (!*logical)
+		return sema_type_size(sema, child, stride);
+	while (sema->types[child].kind == TYPE_ARRAY) {
+		TypeArray array = sema->types[child].as.array;
+		if (array.length != 0 && count > UINT64_MAX / array.length)
+			return false;
+		count *= array.length;
+		child = array.child;
+	}
+	*stride = count;
+	return true;
+}
+
+static TypeId
+array_element_pointer_type(Sema *sema, TypePointer pointer, TypeArray array, Operand index, uint64_t stride, bool logical)
+{
+	uint32_t alignment = pointer_alignment(sema, pointer);
+	uint64_t item = index.kind == OPERAND_COMPTIME
+		? bigint_to_u64_bits(&value_get(&sema->values, index.value)->as.integer) : 1;
+	if (logical) {
+		uint32_t child_alignment = sema_type_align(sema, array.child);
+		if (alignment > child_alignment)
+			alignment = child_alignment;
+	} else if (stride != 0 && item != 0) {
+		/* Only the low alignment bits matter; unsigned multiplication is intentional. */
+		uint64_t offset = stride * item;
+		while ((offset & (alignment - 1u)) != 0)
+			alignment /= 2;
+	}
+	Type type = make_type(TYPE_POINTER);
+	type.as.pointer = pointer;
+	type.as.pointer.child = array.child;
+	type.as.pointer.alignment = alignment == sema_type_align(sema, array.child) ? 0 : alignment;
+	type.as.pointer.is_allowzero = pointer.is_allowzero && (index.kind != OPERAND_COMPTIME || item == 0);
+	return type_intern(sema, &type);
+}
+
+static Operand
+constant_array_pointer(Block *block, Operand base, Operand index, TypeArray array, uint32_t src)
+{
+	Sema *sema = block->sema;
+	if (sema->types[base.type].kind == TYPE_ARRAY)
+		base = analyze_ref(block, base, src, 0, 0);
+	if (base.kind == OPERAND_NONE)
+		return operand_none;
+	uint64_t stride;
+	bool logical;
+	if (!array_element_stride(sema, array.child, &stride, &logical)) {
+		sema_error(block, src, "not supported by szc yet: array element offset exceeds 64-bit address space");
+		return operand_none;
+	}
+	TypeId type = array_element_pointer_type(sema, sema->types[base.type].as.pointer, array, index, stride, logical);
+	if (operand_is_undefined(block, base))
+		return comptime_operand(type, value_undefined(&sema->values, type));
+	uint64_t size;
+	if (!logical && !sema_type_size(sema, sema->types[base.type].as.pointer.child, &size)) {
+		sema_error(block, src, "not supported by szc yet: array layout size exceeds 64-bit address space");
+		return operand_none;
+	}
+	uint64_t item = bigint_to_u64_bits(&operand_value(block, index)->as.integer);
+	PointerAddress address = value_pointer_address(&sema->values, base.value);
+	if (stride != 0 && item > (UINT64_MAX - address.offset) / stride) {
+		sema_error(block, src, "not supported by szc yet: array element offset exceeds 64-bit address space");
+		return operand_none;
+	}
+	uint64_t offset = address.offset + item * stride;
+	return comptime_operand(type, value_element_pointer(&sema->values, type, base.value, item, offset, logical));
 }
 
 /* Runtime reads use real backing storage and a checked element address. */
@@ -3468,16 +3575,13 @@ runtime_array_element(Block *block, Operand base, Operand index, TypeArray array
 		sema_error(block, src, "not supported by szc yet: array layout size exceeds 64-bit address space");
 		return operand_none;
 	}
-	/* Never claim stronger alignment than either the base or the element stride. */
-	uint32_t alignment = pointer_alignment(sema, pointer);
-	uint32_t child_alignment = sema_type_align(sema, array.child);
-	if (alignment > child_alignment)
-		alignment = child_alignment;
-	Type type = make_type(TYPE_POINTER);
-	type.as.pointer = pointer;
-	type.as.pointer.child = array.child;
-	type.as.pointer.alignment = alignment == child_alignment ? 0 : alignment;
-	TypeId element_pointer = type_intern(sema, &type);
+	uint64_t stride;
+	bool logical;
+	if (!array_element_stride(sema, array.child, &stride, &logical)) {
+		sema_error(block, src, "not supported by szc yet: array element offset exceeds 64-bit address space");
+		return operand_none;
+	}
+	TypeId element_pointer = array_element_pointer_type(sema, pointer, array, index, stride, logical);
 	TirRef base_ref = materialize(block, base, src);
 	TirRef index_ref = materialize(block, index, src);
 	TirRef address = emit_tir_bin(block, TIR_ARRAY_ELEM_PTR, element_pointer, src, base_ref, index_ref);
@@ -3507,8 +3611,11 @@ analyze_array_index(Block *block, const IrInst *inst, bool address_only, bool bo
 			sema_error(block, inst->src, "index %" PRIu64 " outside array of length %" PRIu64 "%s", item, array.length, array.sentinel_zero ? " +1 (sentinel)" : "");
 			return operand_none;
 		}
-		if (!address_only && base.kind == OPERAND_COMPTIME)
+		if (base.kind == OPERAND_COMPTIME) {
+			if (address_only || (borrow && sema->types[array.child].kind == TYPE_ARRAY))
+				return constant_array_pointer(block, base, index, array, inst->src);
 			return constant_array_element(block, base, array, item, inst->src);
+		}
 	} else if (array.length == 0 && !array.sentinel_zero) {
 		sema_error(block, inst->src, sema->types[base.type].kind == TYPE_POINTER
 			? "cannot index into empty array" : "indexing into empty array is not allowed");
@@ -4373,6 +4480,12 @@ value_text(Sema *sema, ValueId id)
 		snprintf(text, 32, "ref(object.%u)", (unsigned)value->as.object);
 		return text;
 	}
+	case VALUE_PTR_CAST:
+		return arena_sprintf(sema->arena, "ptr_cast(value.%u)", (unsigned)value->as.pointer);
+	case VALUE_ELEMENT_PTR:
+		return arena_sprintf(sema->arena, "elem(base.%u, index.%" PRIu64 ", %s.%" PRIu64 ")",
+			(unsigned)value->as.element.base, value->as.element.index,
+			value->as.element.logical ? "leaf" : "offset", value->as.element.offset);
 	case VALUE_ARRAY:
 		return arena_sprintf(sema->arena, "array(%u elements)", (unsigned)value->as.array.count);
 	case VALUE_BYTES: {

@@ -7,9 +7,9 @@
 #include "arena.h"
 
 /*
- * Comptime values and arithmetic (comptime.c). Values are interned: equal
- * values have equal `ValueId`s, so sema can compare them (and later use them as
- * memoization keys for generic instantiations) by id.
+ * Comptime values and arithmetic (comptime.c). Values are structurally interned:
+ * equal representations have equal `ValueId`s. Pointer address equivalence instead
+ * compares roots and offsets; distinct selection paths may denote the same address.
  */
 
 typedef uint32_t TypeId;
@@ -35,6 +35,8 @@ typedef enum ValueKind {
 	VALUE_FUNCTION,
 	VALUE_GLOBAL,	/* stable declaration address; contents resolve separately */
 	VALUE_REF,	/* immutable address of an interned value */
+	VALUE_PTR_CAST,	/* pointer qualification preserving the original byte backing */
+	VALUE_ELEMENT_PTR,	/* subobject path into real backing, never a copied element */
 	VALUE_ARRAY,	/* immutable aggregate of interned element IDs */
 	VALUE_BYTES,	/* immutable bytes; length excludes the zero sentinel */
 	VALUE_UNDEFINED,	/* `undefined` of any type */
@@ -50,6 +52,19 @@ typedef struct ArrayValue {
 	uint32_t count;
 } ArrayValue;
 
+typedef struct ElementPointer {
+	ValueId base;
+	uint64_t index;
+	uint64_t offset;	/* cumulative bytes, or leaf indices for comptime-only children */
+	bool logical;
+} ElementPointer;
+
+typedef struct PointerAddress {
+	ValueId root;
+	uint64_t offset;
+	bool logical;
+} PointerAddress;
+
 typedef struct Value {
 	ValueKind kind;
 	TypeId    type;
@@ -62,6 +77,8 @@ typedef struct Value {
 		ByteString bytes;
 		ArrayValue array;
 		ConstObjectId object;
+		ElementPointer element;
+		ValueId pointer;
 	} as;
 } Value;
 
@@ -93,6 +110,9 @@ const Value *value_get(const ValueTable *table, ValueId id);
 
 ValueId value_global(ValueTable *table, TypeId type, GlobalId global);
 ValueId value_ref(ValueTable *table, TypeId type, ValueId pointee, uint32_t identity, uint32_t alignment);
+ValueId value_element_pointer(ValueTable *table, TypeId type, ValueId base, uint64_t index, uint64_t offset, bool logical);
+ValueId value_pointer_cast(ValueTable *table, TypeId type, ValueId pointer);
+PointerAddress value_pointer_address(const ValueTable *table, ValueId id);
 ValueId value_array(ValueTable *table, TypeId type, const ValueId *items, uint32_t count);
 ValueId value_bytes(ValueTable *table, TypeId type, const uint8_t *data, uint32_t length);
 ValueId value_void(ValueTable *table, TypeId void_type);

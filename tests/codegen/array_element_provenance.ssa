@@ -1,0 +1,21 @@
+function w $szc.main.1() {
+@start
+	%t0 =l add $szc.const.2, 3
+	%t1 =w call $szc.read.2(l %t0)
+	%t1 =w and %t1, 255
+	ret %t1
+}
+
+function w $szc.read.2(l %t0) {
+@start
+	%t1 =w loadub %t0
+	ret %t1
+}
+
+section ".rodata"
+data $szc.const.2 = align 1 { b 1, b 2, b 3, b 4 }
+export function w $main() {
+@start
+	%status =w call $szc.main.1()
+	ret %status
+}
