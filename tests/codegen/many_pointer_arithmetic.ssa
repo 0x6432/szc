@@ -1,0 +1,89 @@
+function w $szc.main.1() {
+@start
+	%t0 =l alloc4 6
+	call $memmove(l %t0, l $szc.const.1, l 6)
+	%t3 =l copy %t0
+	%t5 =l call $szc.advance.3(l %t3, l 2)
+	%t6 =l copy %t5
+	%t7 =l copy %t3
+	%t8 =l call $szc.delta.2(l %t6, l %t7)
+	%g9_high =w cugtl %t8, 255
+	jnz %g9_high, @g9_high_panic, @g9_high_ok
+@g9_high_panic
+	call $szc.panic.1()
+	hlt
+@g9_high_ok
+	%t9 =w copy %t8
+	%t9 =w and %t9, 255
+	ret %t9
+}
+
+function l $szc.delta.2(l %t0, l %t1) {
+@start
+	%t2 =l copy %t0
+	%t3 =l copy %t1
+	%t4 =l sub %t2, %t3
+	%g6_zero =w ceql 2, 0
+	jnz %g6_zero, @g6_zero_panic, @g6_zero_ok
+@g6_zero_panic
+	call $szc.panic.2()
+	hlt
+@g6_zero_ok
+	%t6 =l udiv %t4, 2
+	%g6_remainder =l urem %t4, 2
+	%g6_nonzero =w cnel %g6_remainder, 0
+	jnz %g6_nonzero, @g6_nonzero_panic, @g6_nonzero_ok
+@g6_nonzero_panic
+	call $szc.panic.4()
+	hlt
+@g6_nonzero_ok
+	ret %t6
+}
+
+function l $szc.advance.3(l %t0, l %t1) {
+@start
+	%t2 =l alloc8 8
+	storel %t0, %t2
+	%t4 =l loadl %t2
+	%e5_offset =l mul %t1, 2
+	%t5 =l add %t4, %e5_offset
+	storel %t5, %t2
+	%t7 =l loadl %t2
+	%e9_offset =l mul 1, 2
+	%t9 =l sub %t7, %e9_offset
+	storel %t9, %t2
+	%t11 =l loadl %t2
+	ret %t11
+}
+
+section ".rodata"
+data $szc.const.1 = align 2 { h 7, h 9, h 11 }
+data $szc.panic.msg.1 = { b "integer does not fit in destination type\n", b 0 }
+function $szc.panic.1() {
+@start
+	call $write(w 2, l $szc.panic.msg.1, l 41)
+	call $abort()
+	hlt
+}
+
+data $szc.panic.msg.2 = { b "division by zero\n", b 0 }
+function $szc.panic.2() {
+@start
+	call $write(w 2, l $szc.panic.msg.2, l 17)
+	call $abort()
+	hlt
+}
+
+data $szc.panic.msg.4 = { b "exact division produced remainder\n", b 0 }
+function $szc.panic.4() {
+@start
+	call $write(w 2, l $szc.panic.msg.4, l 34)
+	call $abort()
+	hlt
+}
+
+export function w $main() {
+@start
+	%status =w call $szc.main.1()
+	ret %status
+}

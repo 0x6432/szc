@@ -15,6 +15,8 @@ def generate():
             functions.append(f"var global_{ty}: [3]{ty} = .{{{seed},0,{seed}}};")
             functions.append(f"fn deref_{ty}(p: *const {ty}) {ty} {{ return p.*; }}")
             functions.append(f"fn read_{ty}(p: *const [3]{ty}, n: usize) {ty} {{ return p[n]; }}")
+            functions.append(f"fn offset_{ty}(p: [*]{ty}, i: usize) [*]{ty} {{ return (p + i) - i; }}")
+            functions.append(f"fn delta_{ty}(p: [*]const {ty}, q: [*]const {ty}) usize {{ return p - q; }}")
             functions.append(f"fn many_{ty}(p: [*]{ty}, i: usize, n: {ty}) {ty} {{ p[i] = n; return p[i]; }}")
             functions.append(f"fn copy_{ty}(a: [3]{ty}, c: bool) [3]{ty} {{ return if (c) a else .{{0, {seed}, 0}}; }}")
             functions.append(f"fn nested_{ty}(a: [2][3]{ty}) [2][3]{ty} {{ return a; }}")
@@ -30,7 +32,8 @@ def generate():
                            f"if (deref_{ty}(p_{ty}) != {seed}) return 10;",
                            f"const saved_{ty} = global_{ty}; global_{ty}[0] = 0; if (saved_{ty}[0] != {seed} or global_{ty}[0] != 0) return 11;",
                            f"global_{ty} = copy_{ty}({name}, true); if (global_{ty}[2] != {seed}) return 12;",
-                           f"if (many_{ty}(&global_{ty}, 1, {seed}) != {seed} or global_{ty}[1] != {seed}) return 13;"))
+                           f"if (many_{ty}(&global_{ty}, 1, {seed}) != {seed} or global_{ty}[1] != {seed}) return 13;",
+                           f"const mp_{ty}: [*]{ty} = &global_{ty}; if (offset_{ty}(mp_{ty},2) != mp_{ty} or delta_{ty}(mp_{ty}+2,mp_{ty}) != 2) return 14;"))
     checks.extend(("const zero = [_]u0{0, 0}; if (zero[1] != 0) return 4;",
                    "const empty = [_]void{{}, {}}; _ = empty[1];",
                    "const flags = [_]bool{true, false}; if (!flags[0] or flags[1]) return 5;"))

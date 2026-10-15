@@ -1745,6 +1745,145 @@ require_runtime(Block *block, uint32_t src)
 	return false;
 }
 
+/* Root identity is independent of pointer qualifiers and element paths. */
+static bool
+pointer_same_root(const Sema *sema, PointerAddress left, PointerAddress right)
+{
+	const Value *a = value_get(&sema->values, left.root);
+	const Value *b = value_get(&sema->values, right.root);
+	if (a->kind != b->kind)
+		return false;
+	switch (a->kind) {
+	case VALUE_FUNCTION:
+		return a->as.function == b->as.function;
+	case VALUE_GLOBAL:
+		return a->as.global == b->as.global;
+	case VALUE_REF:
+		return a->as.object == b->as.object;
+	case VALUE_BYTES:
+		return a->as.bytes.length == b->as.bytes.length
+			&& (a->as.bytes.length == 0 || memcmp(a->as.bytes.data, b->as.bytes.data, a->as.bytes.length) == 0);
+	default:
+		return false;
+	}
+}
+
+static bool check_defined(Block *block, Operand operand, uint32_t src);
+static bool array_element_stride(Sema *sema, TypeId child, uint64_t *stride, bool *logical);
+static TypeId array_element_pointer_type(Sema *sema, TypePointer pointer, TypeArray array, Operand index, uint64_t stride, bool logical);
+
+/* Zig 0.17 subtracts single array pointers in units of their array elements. */
+static TypeId
+pointer_difference_child(const Sema *sema, TypePointer pointer)
+{
+	if (pointer.size == POINTER_ONE && sema->types[pointer.child].kind == TYPE_ARRAY)
+		return sema->types[pointer.child].as.array.child;
+	return pointer.child;
+}
+
+static Operand
+analyze_pointer_difference(Block *block, Operand lhs, Operand rhs, uint32_t src)
+{
+	Sema *sema = block->sema;
+	TypeId child = pointer_difference_child(sema, sema->types[lhs.type].as.pointer);
+	TypeId other = pointer_difference_child(sema, sema->types[rhs.type].as.pointer);
+	if (child != other) {
+		sema_error(block, src, "incompatible pointer arithmetic operands '%s' and '%s'", sema_type_name(sema, lhs.type), sema_type_name(sema, rhs.type));
+		return operand_none;
+	}
+	uint64_t stride;
+	if (!sema_type_size(sema, child, &stride)) {
+		sema_error(block, src, "not supported by szc yet: pointer subtraction with element type '%s'", sema_type_name(sema, child));
+		return operand_none;
+	}
+	if (stride == 0) {
+		sema_error(block, src, "pointer subtraction requires element type '%s' to have runtime bits", sema_type_name(sema, child));
+		return operand_none;
+	}
+	if (!check_defined(block, lhs, src) || !check_defined(block, rhs, src))
+		return operand_none;
+	if (lhs.kind == OPERAND_COMPTIME && rhs.kind == OPERAND_COMPTIME) {
+		PointerAddress left = value_pointer_address(&sema->values, lhs.value);
+		PointerAddress right = value_pointer_address(&sema->values, rhs.value);
+		if (pointer_same_root(sema, left, right)) {
+			if (left.offset < right.offset) {
+				sema_error(block, src, "operation results in overflow");
+				return operand_none;
+			}
+			return comptime_operand(T_USIZE, value_int_u64(&sema->values, T_USIZE, (left.offset - right.offset) / stride));
+		}
+	}
+	if (!require_runtime(block, src))
+		return operand_none;
+	TirRef left = materialize(block, lhs, src);
+	TirRef right = materialize(block, rhs, src);
+	left = emit_tir_un(block, TIR_PTR_TO_INT, T_USIZE, src, left);
+	right = emit_tir_un(block, TIR_PTR_TO_INT, T_USIZE, src, right);
+	TirRef difference = emit_tir_bin(block, TIR_SUB_WRAP, T_USIZE, src, left, right);
+	Operand size = comptime_operand(T_USIZE, value_int_u64(&sema->values, T_USIZE, stride));
+	TirRef divisor = materialize(block, size, src);
+	return runtime_operand(T_USIZE, emit_tir_bin(block, TIR_DIV_EXACT, T_USIZE, src, difference, divisor));
+}
+
+/* Offsets are usize; arithmetic borrows a root and never reads its contents. */
+static Operand
+analyze_pointer_offset(Block *block, IrOp op, Operand base, Operand offset, uint32_t src)
+{
+	Sema *sema = block->sema;
+	if (op != IR_ADD && op != IR_SUB) {
+		sema_error(block, src, "invalid pointer-integer arithmetic operator");
+		return operand_none;
+	}
+	offset = coerce(block, offset, T_USIZE, src);
+	if (offset.kind == OPERAND_NONE || !check_defined(block, offset, src))
+		return operand_none;
+	TypePointer shape = sema->types[base.type].as.pointer;
+	uint64_t stride;
+	bool logical;
+	if (!array_element_stride(sema, shape.child, &stride, &logical)) {
+		sema_error(block, src, "not supported by szc yet: pointer element offset exceeds 64-bit address space");
+		return operand_none;
+	}
+	if (stride == 0)
+		return base;
+	TypeArray element = {shape.child, 0, false};
+	TypeId single = array_element_pointer_type(sema, shape, element, offset, stride, logical);
+	Type result_type = sema->types[single];
+	result_type.as.pointer.size = POINTER_MANY;
+	TypeId type = type_intern(sema, &result_type);
+	if (operand_is_undefined(block, base))
+		return comptime_operand(type, value_undefined(&sema->values, type));
+	if (base.kind == OPERAND_COMPTIME && offset.kind == OPERAND_COMPTIME) {
+		uint64_t index = bigint_to_u64_bits(&operand_value(block, offset)->as.integer);
+		if (index == 0)
+			return base;
+		PointerAddress address = value_pointer_address(&sema->values, base.value);
+		/* Upstream subtraction uses ABI bytes, even for logical comptime pointers. */
+		if (op == IR_SUB && logical)
+			return comptime_operand(type, value_pointer_cast(&sema->values, type, base.value));
+		if (index > UINT64_MAX / stride || (op == IR_ADD && index * stride > UINT64_MAX - address.offset)) {
+			sema_error(block, src, "not supported by szc yet: pointer element offset exceeds 64-bit address space");
+			return operand_none;
+		}
+		uint64_t delta = index * stride;
+		if (op == IR_SUB && delta > address.offset) {
+			sema_error(block, src, "pointer computation here causes illegal behavior");
+			return operand_none;
+		}
+		uint64_t result = op == IR_SUB ? address.offset - delta : address.offset + delta;
+		return comptime_operand(type, value_element_pointer(&sema->values, type, base.value, index, result, logical));
+	}
+	if (!require_runtime(block, src))
+		return operand_none;
+	if (logical) {
+		sema_error(block, src, "not supported by szc yet: runtime arithmetic on comptime-only pointers");
+		return operand_none;
+	}
+	TirRef pointer = materialize(block, base, src);
+	TirRef index = materialize(block, offset, src);
+	return runtime_operand(type, emit_tir_bin(block, op == IR_SUB ? TIR_PTR_SUB : TIR_PTR_ADD, type, src, pointer, index));
+}
+
 /* ---------- Analysis: arithmetic ---------- */
 
 static bool
@@ -1917,6 +2056,19 @@ analyze_arith(Block *block, const IrInst *inst)
 	Operand rhs = resolve_ref(block, inst->data.bin.rhs);
 	if (lhs.kind == OPERAND_NONE || rhs.kind == OPERAND_NONE)
 		return operand_none;
+	if (sema->types[lhs.type].kind == TYPE_POINTER) {
+		TypePointer pointer = sema->types[lhs.type].as.pointer;
+		if (sema->types[rhs.type].kind == TYPE_POINTER
+			&& pointer.size != POINTER_SLICE && sema->types[rhs.type].as.pointer.size != POINTER_SLICE) {
+			if (op != IR_SUB) {
+				sema_error(block, src, "invalid pointer-pointer arithmetic operator");
+				return operand_none;
+			}
+			return analyze_pointer_difference(block, lhs, rhs, src);
+		}
+		if (pointer.size == POINTER_MANY)
+			return analyze_pointer_offset(block, op, lhs, rhs, src);
+	}
 	/* u0 is known zero even when peer coercion widens it. */
 	bool rhs_is_zero_type = is_int(sema, rhs.type) && sema->types[rhs.type].as.integer.bits == 0;
 	TypeId type;
@@ -2212,25 +2364,7 @@ analyze_compare(Block *block, const IrInst *inst)
 		if (lhs.kind == OPERAND_COMPTIME && rhs.kind == OPERAND_COMPTIME) {
 			PointerAddress left = value_pointer_address(&sema->values, lhs.value);
 			PointerAddress right = value_pointer_address(&sema->values, rhs.value);
-			const Value *a = value_get(&sema->values, left.root);
-			const Value *b = value_get(&sema->values, right.root);
-			bool equal;
-			if (a->kind == VALUE_FUNCTION && b->kind == VALUE_FUNCTION)
-				equal = a->as.function == b->as.function;
-			else if (a->kind == VALUE_GLOBAL && b->kind == VALUE_GLOBAL)
-				equal = a->as.global == b->as.global;
-			else if (a->kind == VALUE_GLOBAL || b->kind == VALUE_GLOBAL)
-				equal = false;
-			else if (a->kind == VALUE_REF && b->kind == VALUE_REF)
-				equal = a->as.object == b->as.object;
-			else if (a->kind == VALUE_BYTES && b->kind == VALUE_BYTES)
-				equal = a->as.bytes.length == b->as.bytes.length
-					&& (a->as.bytes.length == 0 || memcmp(a->as.bytes.data, b->as.bytes.data, a->as.bytes.length) == 0);
-			else {
-				sema_error(block, src, "not supported by szc yet: comptime pointer equality");
-				return operand_none;
-			}
-			equal = equal && left.offset == right.offset
+			bool equal = pointer_same_root(sema, left, right) && left.offset == right.offset
 				&& (left.offset == 0 || left.logical == right.logical);
 			return bool_operand(sema, (op == IR_CMP_EQ) == equal);
 		}
@@ -4170,6 +4304,16 @@ analyze_inst(Block *block, IrInstIndex index, Operand *break_value)
 	case IR_INT_FROM_BOOL:
 		result = analyze_int_from_bool(block, inst);
 		break;
+	case IR_ADD_SUB_RHS_TYPE: {
+		Operand operand = resolve_ref(block, inst->data.un.operand);
+		if (operand.kind != OPERAND_NONE) {
+			TypeId type = operand.type;
+			if (sema->types[type].kind == TYPE_POINTER && sema->types[type].as.pointer.size == POINTER_MANY)
+				type = T_USIZE;
+			result = type_operand(sema, type);
+		}
+		break;
+	}
 	case IR_TYPEOF: {
 		Operand operand = resolve_ref(block, inst->data.un.operand);
 		if (operand.kind != OPERAND_NONE)
@@ -4687,6 +4831,7 @@ dump_tir_inst(FILE *out, Sema *sema, const TirFunc *tir, TirRef ref, uint32_t de
 	case TIR_NOT:
 	case TIR_NEGATE:
 	case TIR_NEGATE_WRAP:
+	case TIR_PTR_TO_INT:
 	case TIR_PTR_CAST:
 	case TIR_INT_CAST:
 	case TIR_TRUNCATE:

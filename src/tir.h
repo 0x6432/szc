@@ -55,6 +55,9 @@ typedef uint32_t TirBody;	/* extra index of a body, 0 = none */
 	X(INT_CAST, "int_cast")	/* un: widen/narrow integer to `type` */ \
 	X(TRUNCATE, "truncate")	/* un: discard high integer bits */ \
 	X(INT_FROM_BOOL, "int_from_bool")	/* un: bool -> u1 */ \
+	X(PTR_TO_INT, "ptr_to_int")	/* un: pointer address as usize */ \
+	X(PTR_ADD, "ptr_add")	/* bin: many pointer, usize element count */ \
+	X(PTR_SUB, "ptr_sub")	/* bin: many pointer, usize element count */ \
 	X(PTR_ELEM_PTR, "ptr_elem_ptr")	/* bin: many pointer, usize index; no length bound */ \
 	X(ARRAY_ELEM_PTR, "array_elem_ptr")	/* bin: single array pointer, checked usize index */ \
 	X(ARRAY_COPY, "array_copy")	/* bin: destination and source array pointers; overlap-safe */ \

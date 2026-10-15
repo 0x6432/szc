@@ -1826,7 +1826,9 @@ assign(GenBody *body, Scope *scope, AstAssign *node)
 		IrOp op = assignment_op(node->op);
 		IrRef lhs = emit_un(body, IR_LOAD, node->base.offset, pointer);
 		ResultInfo rhs_info = info;
-		if (op == IR_SHL || op == IR_SHR)
+		if (op == IR_ADD || op == IR_SUB)
+			rhs_info = result_type(emit_un(body, IR_ADD_SUB_RHS_TYPE, node->base.offset, lhs));
+		else if (op == IR_SHL || op == IR_SHR)
 			rhs_info = result_type(emit_un(body, IR_LOG2_INT_TYPE, node->base.offset, lhs));
 		else if (op == IR_SHL_SAT)
 			rhs_info = result_none;

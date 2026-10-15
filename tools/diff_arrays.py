@@ -8,7 +8,38 @@ import tempfile
 from compiler_process import run_compiler
 
 
+def arithmetic_qualifier_cases():
+    for operator, offset, alignment, qualifier in itertools.product(
+            ("+", "-"), ("0", "1", "n"), (1, 2, 8), ("", "allowzero ")):
+        use = "_ = n; " if offset != "n" else ""
+        yield (f"fn f(p: [*]align(8) allowzero u16, n: usize) [*]align({alignment}) {qualifier}u16 {{ "
+               f"{use}return p {operator} {offset}; }} "
+               "pub fn main() void { _ = f(undefined,1); }\n")
+
+
 def cases():
+    yield from arithmetic_qualifier_cases()
+    for target, statement in (("[*]u8", "q += 1;"), ("[*]u8", "q -= 1;"),
+                              ("[*]u16", "q += @intCast(@as(u8,1));"), ("*u8", "q += 1;")):
+        yield (f'fn f(p: {target}) {target} {{ var q = p; {statement} return q; }} '
+               'pub fn main() void { _ = f(undefined); }\n')
+    for child, value in (("u8", "7"), ("i33", "-7"), ("u0", "0"), ("void", "{}"), ("type", "u8")):
+        for expr in ("p+0", "p+1", "(p+1)-1", "p-1", "p-p", "(p+1)-p", "p-(p+1)",
+                     "p+p", "p*2", "p+%1", "1+p", "p+undefined", "p + -1"):
+            yield (f'const a = [2]{child}{{{value},{value}}}; const p: [*]const {child} = &a; '
+                   f'pub fn main() void {{ _ = {expr}; }}\n')
+    for expr in ("p+n", "p-n", "p-p", "p+n-p", "p+0", "p+undefined"):
+        use = "_ = n; " if "n" not in expr or "undefined" in expr else ""
+        yield (f'fn f(p: [*]const u16, n: usize) void {{ {use}_ = {expr}; }} '
+               'pub fn main() void { f(undefined,1); }\n')
+    for source in (
+        'const a = [3]u8{7,9,11}; const p: [*]const u8 = &a; '
+        'const n: u8 = if ((p+2)[0] != 11 or ((p+2)-1)[0] != 9 or (p+2)-&a != 2) 256 else 0; _ = n;',
+        'const a = [2]type{u8,u16}; const p: [*]const type = &a; const q = (p+1)-1; const n: q[0] = 256; _ = n;',
+        'const p: [*]const u8 = undefined; _ = p+1;',
+        'const p: [*]const u8 = undefined; _ = &(p+1)[0];',
+    ):
+        yield 'pub fn main() void { ' + source + ' }\n'
     for expr in ('&.{7,9}', '&([2]u8{7,9})'):
         yield f'const p: [*]const u8 = {expr}; pub fn main() void {{ _ = p[1]; }}\n'
     yield 'const p: [*]const [2]u8 = &.{.{1,2},.{3,4}}; pub fn main() void { _ = p[1][1]; }\n'

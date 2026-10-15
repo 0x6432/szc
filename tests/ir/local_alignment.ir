@@ -26,9 +26,9 @@
       body insts {
         %26 = ref_deref %13
         %27 = load %26
-        %28 = int 2
-        %29 = elem_type %26
-        %30 = as %29, %28
+        %28 = add_sub_rhs_type %27
+        %29 = int 2
+        %30 = as %28, %29
         %31 = add %27, %30
         %32 = elem_type %26
         %33 = as %32, %31
@@ -39,9 +39,9 @@
         %38 = defer  {
           %15 = ref_deref %13
           %16 = load %15
-          %17 = int 1
-          %18 = elem_type %15
-          %19 = as %18, %17
+          %17 = add_sub_rhs_type %16
+          %18 = int 1
+          %19 = as %17, %18
           %20 = add %16, %19
           %21 = elem_type %15
           %22 = as %21, %20
@@ -69,9 +69,9 @@
         %48 = as @type_u32, %47
         %49 = alloc type=@type_u32 init=%48 align=%46
         %50 = load %49
-        %51 = int 1
-        %52 = elem_type %49
-        %53 = as %52, %51
+        %51 = add_sub_rhs_type %50
+        %52 = int 1
+        %53 = as %51, %52
         %54 = add %50, %53
         %55 = elem_type %49
         %56 = as %55, %54
@@ -85,9 +85,9 @@
         %63 = as @type_u64, %62
         %64 = alloc type=@type_u64 init=%63 align=%61
         %65 = load %64
-        %66 = int 1
-        %67 = elem_type %64
-        %68 = as %67, %66
+        %66 = add_sub_rhs_type %65
+        %67 = int 1
+        %68 = as %66, %67
         %69 = add %65, %68
         %70 = elem_type %64
         %71 = as %70, %69
@@ -101,9 +101,9 @@
         %78 = as @type_u32, %77
         %79 = alloc type=@type_u32 init=%78 align=%76
         %80 = load %79
-        %81 = int 1
-        %82 = elem_type %79
-        %83 = as %82, %81
+        %81 = add_sub_rhs_type %80
+        %82 = int 1
+        %83 = as %81, %82
         %84 = add %80, %83
         %85 = elem_type %79
         %86 = as %85, %84
@@ -117,9 +117,9 @@
         %93 = as @type_u16, %92
         %94 = alloc type=inferred init=%93 align=%91
         %95 = load %94
-        %96 = int 1
-        %97 = elem_type %94
-        %98 = as %97, %96
+        %96 = add_sub_rhs_type %95
+        %97 = int 1
+        %98 = as %96, %97
         %99 = add %95, %98
         %100 = elem_type %94
         %101 = as %100, %99

@@ -97,7 +97,7 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
     - [x] **M5.2c4 Mutable array globals** (lazy initialization, borrowed element accesses and runtime snapshots).
 - [~] **M5.3 Slices, many-pointers, slicing, `.len`, `.ptr`, for over slices.**
   - [x] **M5.3a Many-pointer types, array coercions and borrowed indexing.**
-  - [ ] **M5.3b Pointer arithmetic and differences.**
+  - [x] **M5.3b Pointer arithmetic and differences.**
 - [~] **M5.4 String literals, sentinels, `[*:0]const u8`.** Literal byte values landed in M4.5b; general string/memory operations and sentinel pointer syntax remain pending.
 - [ ] **M5.5 Casting builtins**: `@intCast`, `@truncate`, `@ptrCast`, `@intFromPtr`, `@ptrFromInt`, `@bitCast`, `@as`.
 
@@ -149,6 +149,48 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
 ## Completed milestone log
 
 (newest first; each entry: what, limitations, interactions)
+
+### M5.3b Pointer arithmetic, differences and compound assignments
+- **What**: many-pointer plus/minus usize offsets, `+=`/`-=`, runtime/known pointer
+  differences (including upstream's single-array-pointer element-unit rules), actual
+  root-relative initializer relocations and reads, qualification/alignment weakening,
+  undefined propagation and defined zero-size no-op arithmetic. Negative integer
+  offsets, known root underflow, negative known differences and zero-size differences
+  reject. Reverse integer-plus-pointer and invalid pointer operators stay rejected.
+- **Representation/interactions**: PTR_ADD/PTR_SUB emit scaled address arithmetic with
+  no invented length/overflow guard. PTR_TO_INT exposes internal pointer addresses;
+  subtraction uses wrapping byte differences and unsigned element division, not signed
+  C ptrdiff semantics. Known root identities are shared with pointer equality.
+  ADD_SUB_RHS_TYPE gives compound many-pointer offsets usize context while retaining
+  integer result types and cast inference; new IR goldens cover that distinction.
+  Comptime-only element additions retain logical offsets. Actual upstream subtraction
+  uses ABI bytes (zero here), so known logical subtraction preserves its address.
+- **Grounding/coverage**: actual Sema.zig analyzeArithmetic/analyzePtrArithmetic/
+  ptrSubtract and Value.ptrElem, plus executable and semantic probes. Add a native
+  arithmetic program, seven errors, TIR/QBE goldens, 24 generated width roundtrips,
+  arithmetic qualifier matrices, compound/cast regressions, foreign unaligned pointer
+  arithmetic, relocations and reversed unsigned runtime differences. Add one seed to
+  each semantic stage.
+- **Safety distinction**: szc reuses its exact-division debug check for non-integral
+  pointer differences. Upstream raw AIR div_exact does not promise that panic; such
+  execution is illegal behavior. The fifth foreign test checks only szc's diagnostic,
+  not reference execution on an invalid input. Four valid variants still execute both.
+  An initial harness incorrectly demanded a reference panic, was corrected after
+  reproducing official exit 0, and the corrected suites were rerun. No mismatch was
+  hidden and no compiler failure was inferred from that wrong test assumption.
+- **Validation**: final compound-aware GCC/Clang -Werror ASan/UBSan pass 612 unit
+  checks and 832 goldens. Full reference-enabled GCC e2e passes 76 ordinary/generated
+  inputs, two scoped inputs, 16 driver checks, all storage/alignment/ABI/volatile suites
+  and 185 safety cases. Clang passes four native/reference inputs, all five foreign
+  variants and 185 native safety cases; optimized GCC passes four native inputs and
+  five foreign variants. The complete final semantic matrix matches all 780 real Zig
+  cases, including 36 arithmetic alignment/allowzero and four compound cases. Four
+  fresh 60-second fuzz runs pass (973812/23596/21277/26842 inputs), plus 20000 standalone
+  mutations per stage (43 irgen/99 sema retained seeds).
+- **Limits/next**: ordinary pointer arithmetic does not create bounded pointers or
+  slices. Slice pairs, slicing/fields and for integration remain future milestones.
+  Layout/known offset overflow remains an explicit NYI; logical runtime arithmetic
+  and opaque/unsupported layouts reject. Enclosing M5.3 stays partial; Q6 at M10.2.
 
 ### M5.3a Many-pointer types, coercions and borrowed indexing
 - **What**: `[*]T` types with const/volatile/allowzero/alignment qualification;

@@ -19,6 +19,13 @@ Read this first when resuming work (the sandbox resets often).
 
 ## Current state
 
+- Latest CI triage: a1d2e66/run 38744651213 passed GCC/Clang/fuzz, but reference
+  safety compilation timed out on cast_unsigned_narrow/cast_signed_low/cast_signed_high
+  (120 seconds each), then the runner received a shutdown signal and exited 143.
+  Full log retained locally at /data/a1d2e66-differential.log. No language mismatch
+  was reported. Do not describe this as green or fully solved by harness hardening;
+  keep monitoring current CI and retain strict deadlines/no retries.
+
 - Done: M0 (infrastructure), M1 (lexer), M2 (AST + parser, differential-tested against
   `std.zig.Ast`).
 - Done: M3.1–M3.2 (untyped IR + irgen basics, `szc ir`).
@@ -74,9 +81,12 @@ Read this first when resuming work (the sandbox resets often).
   keep complex semantic changes independently tested/documented/committed. Do not return
   to an unconditional one-checkpoint policy. Select the next independently implementable
   memory item without pretending the blocked function-alias case is complete.
-  M5.3a is implemented: many-pointer types, array coercions/joins, runtime borrowed
-  indexing and actual-root comptime loads/relocations. Next is M5.3b pointer arithmetic
-  and differences, grounded in Sema.zig analyzeArithmetic/analyzePtrArithmetic.
+  M5.3a/b are implemented: many-pointer types, array coercions/joins, runtime borrowed
+  indexing and actual-root comptime loads/relocations, pointer arithmetic/differences
+  and compound assignments. Next take the small @intFromPtr milestone using the
+  existing PTR_TO_INT, then coherent runtime slice pairs/slicing. Pointer arithmetic
+  follows Sema.zig analyzeArithmetic/analyzePtrArithmetic; compound offsets use usize
+  through ADD_SUB_RHS_TYPE, not a pointer-typed RHS result context.
   Many-pointer indices carry no language-level length guard; known dereferences must
   fit their containing backing. Preserve root provenance, mutable global contents vs
   addresses, and qualifier/alignment rules. Anonymous array temporaries recover their

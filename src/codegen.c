@@ -763,6 +763,7 @@ emit_inst(Codegen *cg, TirRef ref)
 		fputs("\n", out);
 		normalize(cg, ref, inst->type, cls);
 		return;
+	case TIR_PTR_TO_INT:
 	case TIR_PTR_CAST:
 		print_dest(cg, ref, QBE_L);
 		fputs("copy ", out);
@@ -793,6 +794,8 @@ emit_inst(Codegen *cg, TirRef ref)
 			normalize(cg, ref, inst->type, cls);
 		return;
 	}
+	case TIR_PTR_ADD:
+	case TIR_PTR_SUB:
 	case TIR_PTR_ELEM_PTR: {
 		TypePointer pointer = sema_type(cg->sema, inst_at(cg, inst->data.bin.lhs)->type)->as.pointer;
 		uint64_t stride = storage_size(cg, pointer.child, inst->src);
@@ -800,7 +803,7 @@ emit_inst(Codegen *cg, TirRef ref)
 		print_operand(cg, inst->data.bin.rhs);
 		fprintf(out, ", %" PRIu64 "\n", stride);
 		print_dest(cg, ref, QBE_L);
-		fputs("add ", out);
+		fputs(inst->op == TIR_PTR_SUB ? "sub " : "add ", out);
 		print_operand(cg, inst->data.bin.lhs);
 		fprintf(out, ", %%e%u_offset\n", (unsigned)ref);
 		return;

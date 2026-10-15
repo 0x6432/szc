@@ -95,9 +95,9 @@
       body insts {
         %66 = ref_deref %53
         %67 = load %66
-        %68 = int 2
-        %69 = elem_type %66
-        %70 = as %69, %68
+        %68 = add_sub_rhs_type %67
+        %69 = int 2
+        %70 = as %68, %69
         %71 = add %67, %70
         %72 = elem_type %66
         %73 = as %72, %71
@@ -117,9 +117,9 @@
               %86 = block  {
                 %87 = ref_deref %53
                 %88 = load %87
-                %89 = int 1
-                %90 = elem_type %87
-                %91 = as %90, %89
+                %89 = add_sub_rhs_type %88
+                %90 = int 1
+                %91 = as %89, %90
                 %92 = add %88, %91
                 %93 = elem_type %87
                 %94 = as %93, %92
@@ -142,9 +142,9 @@
         %107 = defer  {
           %55 = ref_deref %53
           %56 = load %55
-          %57 = int 1
-          %58 = elem_type %55
-          %59 = as %58, %57
+          %57 = add_sub_rhs_type %56
+          %58 = int 1
+          %59 = as %57, %58
           %60 = add %56, %59
           %61 = elem_type %55
           %62 = as %61, %60

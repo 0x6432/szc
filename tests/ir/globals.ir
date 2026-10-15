@@ -20,9 +20,9 @@
         %8 = decl_val "p"
         %9 = ref_deref %8
         %10 = load %9
-        %11 = int 2
-        %12 = elem_type %9
-        %13 = as %12, %11
+        %11 = add_sub_rhs_type %10
+        %12 = int 2
+        %13 = as %11, %12
         %14 = add %10, %13
         %15 = elem_type %9
         %16 = as %15, %14

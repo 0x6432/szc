@@ -169,9 +169,9 @@
         %103 = decl_val "pointer"
         %104 = ref_deref %103
         %105 = load %104
-        %106 = int 1
-        %107 = elem_type %104
-        %108 = as %107, %106
+        %106 = add_sub_rhs_type %105
+        %107 = int 1
+        %108 = as %106, %107
         %109 = add %105, %108
         %110 = elem_type %104
         %111 = as %110, %109

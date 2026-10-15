@@ -1,0 +1,3 @@
+tests/tir/errors/many_arithmetic_operator.zig:1:57: error: invalid pointer-integer arithmetic operator
+pub fn main() void { const p: [*]const u8 = "ab"; _ = p * 2; }
+                                                        ^

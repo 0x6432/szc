@@ -158,6 +158,7 @@ typedef enum IrDataKind {
 	X(AS, "as", IR_DATA_BIN)	/* coerce rhs to type lhs */ \
 	X(TYPEOF, "typeof", IR_DATA_UN)	/* type of operand */ \
 	X(ELEM_TYPE, "elem_type", IR_DATA_UN)	/* pointee type of pointer value operand */ \
+	X(ADD_SUB_RHS_TYPE, "add_sub_rhs_type", IR_DATA_UN)	/* usize for many-pointer offsets, otherwise lhs value type */ \
 	X(LOG2_INT_TYPE, "log2_int_type", IR_DATA_UN)	/* shift amount type for integer value operand */ \
 	X(PANIC, "panic", IR_DATA_PAYLOAD)	/* normal message expression operand */ \
 	X(DEFER, "defer", IR_DATA_PAYLOAD)	/* reusable cleanup body, ending in break_inline */ \

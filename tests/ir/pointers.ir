@@ -14,9 +14,9 @@
       body insts {
         %7 = ref_deref %3
         %8 = load %7
-        %9 = int 1
-        %10 = elem_type %7
-        %11 = as %10, %9
+        %9 = add_sub_rhs_type %8
+        %10 = int 1
+        %11 = as %9, %10
         %12 = add %8, %11
         %13 = elem_type %7
         %14 = as %13, %12

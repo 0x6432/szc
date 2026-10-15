@@ -469,3 +469,23 @@ prints a file's IR.
 - Nested lvalues borrow storage; array-valued reads still own snapshots. Scalar,
   callback and pointer leaves retain existing physical ABI/relocations/volatile paths.
   Runtime slices are not scalar pointers and are not implemented by this milestone.
+
+## Pointer arithmetic and differences
+
+- PTR_ADD/PTR_SUB take a many pointer and usize element count; the result remains a
+  many pointer with stride/offset-derived alignment and allowzero qualification.
+  Codegen scales by child ABI bytes and adds/subtracts without a length check.
+- ADD_SUB_RHS_TYPE takes the loaded lhs value of a compound assignment. It yields
+  usize for many-pointer offsets, otherwise the original type, preserving integer
+  cast result contexts without trying to coerce integer offsets into pointers.
+- PTR_TO_INT is a pointer-address copy to usize. Pointer differences use two copies,
+  SUB_WRAP and DIV_EXACT by the effective element size; single array-pointer children
+  mean the array element, as in Zig 0.17. Known same-root subtraction folds relative
+  offsets; negative results reject, distinct roots require runtime addresses.
+- The reused DIV_EXACT debug guard diagnoses non-integral differences in szc.
+  Upstream raw AIR div_exact does not guarantee a panic on that illegal behavior;
+  only valid pointer differences are execution-compared with Zig.
+- Arithmetic preserves real roots and cumulative offsets for static relocations and
+  subsequent known loads. Zero-bit runtime children preserve the base pointer;
+  comptime-only additions use logical slots, while known subtraction follows
+  upstream ABI-byte (zero) subtraction. Unsupported layout/offset overflow rejects.
