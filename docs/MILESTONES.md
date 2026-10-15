@@ -148,6 +148,29 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
 
 (newest first; each entry: what, limitations, interactions)
 
+### CI follow-up: bounded native/reference compilation and case progress
+- **Trigger**: prior 53efbd5 run 38737351381 passed GCC/Clang/fuzz jobs, then its
+  differential runner lost communication during native/reference tests. GitHub's check
+  annotation identifies a hosted-runner interruption, not a reported language mismatch.
+  The newer 1db8afa differential job progressed beyond native tests. Do not attribute
+  the earlier host loss to a proven compiler bug or claim it fully solved.
+- **What**: e2e compile/emission commands now use the existing process-group cleanup
+  helper through a shell CLI adapter with a fixed 120-second compilation budget.
+  Reference Zig uses -j2 consistently with the semantic/safety harnesses. Each source
+  is logged before work; hangs retain the active source. Runtime execution's existing
+  ten-second guard and byte-exact/nonzero exit checks are unchanged; no retries/skips
+  or widened acceptance budgets are added.
+- **Tests**: CLI bytes/status/signal/missing-command/invalid-budget tests and real
+  descendant/pipe cleanup (13); four e2e adapter regressions with spaced paths, reference
+  -j2 wiring and compile failures including the expected program status. Compilation
+  success remains separate from expected program exit. Existing lifecycle/runner tests
+  remain passing (8/18). The hardened harness passes all 73 ordinary/generated
+  native+Zig programs, two scoped inputs and 16 driver checks; no compiler source or
+  corpus changes, so the preceding full sanitizer/fuzz/language validation still applies.
+- **Limits**: this bounds/diagnoses the previously unbounded e2e compile path and reduces
+  reference parallelism; it cannot guarantee hosted-runner networking or availability.
+  No compiler language milestone advances here. Continue M5.3 after monitoring new CI.
+
 ### M5.2c4 Mutable array globals
 - **What**: internal mutable typed/inferred and nested array globals, checked layout,
   lazy known initialization, persistent scalar/pointer/callback element mutation,

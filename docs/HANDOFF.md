@@ -106,6 +106,33 @@ Read this first when resuming work (the sandbox resets often).
   also passed all jobs (run 38590520673), as did M5.1c2b2b1 ecfb6ab
   (run 38593742928). Check each new push's run.
 
+## CI follow-up: bounded e2e compiler adapter
+
+- Prior 53efbd5/run 38737351381 failed with GitHub's hosted-runner communication-loss
+  annotation during native/reference tests; GCC/Clang/fuzz jobs passed. It did not
+  report a compiler mismatch. Newer 1db8afa differential CI has progressed beyond native
+  tests; check later runs independently, without automatic retries or declaring green.
+- tools/compiler_process.py now has a shell CLI with finite positive timeout checking,
+  exact output/status forwarding, conventional signal/124 timeout/127 missing-command
+  statuses, and the existing whole-process-group cleanup (including inherited pipes).
+- tests/run_e2e.sh finds the runner relative to its script, logs each source, bounds
+  native emission/build and reference compilation to 120 seconds, and uses Zig -j2.
+  Program execution remains a ten-second guard; reference compile success must precede
+  expected runtime-exit checks. No timeout is accepted/retried/skipped.
+- New tests cover 13 CLI/lifecycle cases and four e2e adapter cases, including paths
+  with spaces, reference -j2 arguments, and a failed reference compiler that exits with
+  the same status expected from the test program. Existing process/runner tests are
+  unchanged. Compiler sources and fuzz corpora do not change in this follow-up.
+- Validation: shared lifecycle eight, compiler-wrapper 18, new CLI 13 and e2e adapter
+  four regressions pass. The adapter tests run outside the repository cwd and cover
+  spaced paths. The hardened harness passes all 73 ordinary/generated native+Zig
+  programs, both scoped szc-only inputs and 16 driver tests, using the frozen validated
+  GCC sanitizer compiler. Compiler code/corpora are unchanged from a1d2e66's full
+  GCC/Clang/fuzz/542-comparison/185-safety validation; no language retest is skipped.
+- Hosted runner stability is not guaranteed by this change; keep monitoring Actions.
+  Next language work remains M5.3 many-pointers/slices. Continuous-run strategy remains
+  active: document/test/push checkpoints, proceed, and ask only for genuine blockers.
+
 ## M5.2c4 mutable array globals
 
 - global_type_allowed admits recursive bool/pointer/void/u0/integer<=64 array leaves

@@ -4,6 +4,8 @@
 # Set ZIG to also compile and run every test with the official compiler.
 # // outlined-data: true expects a standalone-IL limitation and tests full assembly.
 set -u
+root=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd) || exit 1
+runner=$root/tools/compiler_process.py
 SZC=${1:-build/asan/szc}
 [ "$#" -eq 0 ] || shift
 [ "$#" -ne 0 ] || set -- tests/run/*.zig
@@ -39,6 +41,7 @@ check_program() {
 }
 
 for input do
+	printf 'checking e2e: %s\n' "$input"
 	expected=$(sed -n '1s|^// exit: \([0-9][0-9]*\)$|\1|p' "$input")
 	case "$expected" in
 		''|*[!0-9]*) echo "FAIL (missing exit expectation): $input"; fail=$((fail + 1)); continue ;;
@@ -53,7 +56,7 @@ for input do
 	outlined=false
 	if grep -q '^// outlined-data: true$' "$input"; then
 		outlined=true
-		"$SZC" emit-qbe "$input" > "$tmp/expected.ssa" 2> "$tmp/emit-error"
+		python3 "$runner" --timeout 120 -- "$SZC" emit-qbe "$input" > "$tmp/expected.ssa" 2> "$tmp/emit-error"
 		status=$?
 		if [ "$status" -ne 1 ] || ! grep -q 'static alignment above 64 requires assembly output' "$tmp/emit-error"; then
 			echo "FAIL (standalone outlined-data diagnostic): $input"
@@ -61,13 +64,13 @@ for input do
 			continue
 		fi
 	else
-		if ! "$SZC" emit-qbe "$input" > "$tmp/expected.ssa"; then
+		if ! python3 "$runner" --timeout 120 -- "$SZC" emit-qbe "$input" > "$tmp/expected.ssa"; then
 			echo "FAIL (emit-qbe): $input"
 			fail=$((fail + 1))
 			continue
 		fi
 	fi
-	if ! "$SZC" build-exe "$input" -o "$tmp/native" --keep-temps; then
+	if ! python3 "$runner" --timeout 120 -- "$SZC" build-exe "$input" -o "$tmp/native" --keep-temps; then
 		echo "FAIL (build-exe): $input"
 		fail=$((fail + 1))
 		continue
@@ -88,7 +91,7 @@ for input do
 	if [ -n "${ZIG:-}" ]; then
 		# Compilation success is checked separately: a compile error must never
 		# count as an expected nonzero program exit.
-		if ! "$ZIG" build-exe "$input" -femit-bin="$tmp/reference"; then
+		if ! python3 "$runner" --timeout 120 -- "$ZIG" build-exe "$input" -j2 -femit-bin="$tmp/reference"; then
 			echo "FAIL (reference compilation): $input"
 			fail=$((fail + 1))
 			continue
