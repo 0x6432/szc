@@ -1055,6 +1055,7 @@ typedef enum Builtin {
 	BUILTIN_TRUNCATE,
 	BUILTIN_INT_FROM_BOOL,
 	BUILTIN_INT_FROM_PTR,
+	BUILTIN_LAYOUT,
 	BUILTIN_ARITH,
 	BUILTIN_PANIC,
 } Builtin;
@@ -1073,6 +1074,8 @@ static const BuiltinInfo builtin_table[] = {
 	{"truncate", BUILTIN_TRUNCATE, 1, IR_OP_COUNT},
 	{"intFromBool", BUILTIN_INT_FROM_BOOL, 1, IR_OP_COUNT},
 	{"intFromPtr", BUILTIN_INT_FROM_PTR, 1, IR_OP_COUNT},
+	{"sizeOf", BUILTIN_LAYOUT, 1, IR_SIZE_OF},
+	{"alignOf", BUILTIN_LAYOUT, 1, IR_ALIGN_OF},
 	{"divTrunc", BUILTIN_ARITH, 2, IR_DIV_TRUNC},
 	{"divFloor", BUILTIN_ARITH, 2, IR_DIV_FLOOR},
 	{"divCeil", BUILTIN_ARITH, 2, IR_DIV_CEIL},
@@ -1154,6 +1157,10 @@ builtin_call(GenBody *body, Scope *scope, ResultInfo info, AstNode *node)
 		IrRef lhs = expr(body, scope, result_none, args[0]);
 		IrRef rhs = expr(body, scope, result_none, args[1]);
 		return rvalue(body, info, emit_bin(body, builtin->arith_op, node->offset, lhs, rhs), node->offset);
+	}
+	case BUILTIN_LAYOUT: {
+		IrRef type = type_expr(body, scope, args[0]);
+		return rvalue(body, info, emit_un(body, builtin->arith_op, node->offset, type), node->offset);
 	}
 	case BUILTIN_INT_FROM_PTR:
 	case BUILTIN_INT_FROM_BOOL: {

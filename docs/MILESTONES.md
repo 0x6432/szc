@@ -136,6 +136,7 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
 - [ ] **M9.2 u128/i128 lowering via helpers.**
 - [ ] **M9.3 `@Vector` lowered to scalar loops.**
 - [ ] **M9.4 Labeled switch `continue :sw`, `@fieldParentPtr`, `@memcpy`/`@memset`, remaining builtins.**
+  - [x] **M9.4a `@sizeOf`/`@alignOf` for supported type layouts.**
 - [ ] **M9.5 Inline asm for x86_64-linux std usage.**
 
 ## Phase 10: std tests and bootstrap
@@ -150,6 +151,37 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
 ## Completed milestone log
 
 (newest first; each entry: what, limitations, interactions)
+
+### M9.4a Type layout queries and exact wide-integer ABI strides
+- **What**: `@sizeOf(T)` and `@alignOf(T)` produce comptime integers for supported
+  integer, float, bool, void, pointer and array layouts. Runtime values are not
+  needed. Size rejects uninstantiable and comptime-only types, while alignment
+  of comptime-only types is available. Empty logical arrays retain their zero-byte
+  one-possible-value representation; zero-length arrays still inherit child alignment.
+- **Correctness fix**: integer ABI bytes round up to their alignment, not to the
+  next power of two once alignment caps at 16 on x86_64-linux. In particular u257
+  occupies 48 bytes, u513 occupies 80, and u65535 occupies 8192. This also fixes
+  many-pointer offsets, differences and nested-array strides for these types.
+  No wide-integer runtime arithmetic/load support is claimed.
+- **Grounding**: actual Sema.zig zirSizeOf/zirAlignOf, Type.abiSize/abiAlignment and
+  std.zig.target intByteSize/intAlignment, plus official binary probes. Query IR
+  folds entirely in sema; existing codegen/address operations use corrected layout.
+- **Coverage**: 85 new actual-reference semantic comparisons assert numeric sizes
+  and alignments (signed/unsigned widths through 65535, nested/empty/zero-bit arrays,
+  functions/comptime types, pointers/qualifiers and rejection cases). Four C/PIE
+  executions check runtime wide-pointer strides and differences against real storage
+  without loading wide values. Add stage goldens, nine diagnostic fixtures, 13 unit
+  checks and one seed per semantic stage; wire C checks into normal CI.
+- **Validation**: GCC/Clang Werror ASan/UBSan: 625 unit checks and 853 goldens.
+  Full GCC native suite: 78 ordinary/generated programs plus two scoped cases,
+  16 driver checks, all storage/alignment/ABI/volatile checks and 185 safety cases.
+  Clang/optimized builds pass targeted execution; Clang runs three programs and
+  four C variants against the actual reference. All 897 semantic comparisons match
+  Zig 0.17.0. Four 60-second fuzz runs execute 1374096/33330/34340/38554 inputs,
+  plus 20000 mutations per stage (irgen 45/sema 101 seed files).
+- **Limits/next**: aggregate/error-set layouts, vector/slice representations and
+  overflowing array sizes stay explicit NYI. f16/f80/f128 remain hard errors.
+  M9.4 remains partial; bit-size queries and general runtime slices are future work.
 
 ### M5.5a Pointer address conversion (`@intFromPtr`)
 - **What**: expose usize addresses of supported single/many pointers, including

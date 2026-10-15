@@ -528,6 +528,41 @@ test_array_layout(void)
 }
 
 static void
+test_wide_integer_layout(void)
+{
+	Arena arena;
+	arena_init(&arena);
+	SourceTable sources;
+	source_table_init(&sources, &arena);
+	Diag diag;
+	diag_init(&diag, &arena, &sources);
+	Interner interner;
+	intern_init(&interner, &arena);
+	static const char source[] =
+		"fn consume(a: *const u129, b: *const u257, c: *const u513, d: *const u65535) void { "
+		"_ = a; _ = b; _ = c; _ = d; } "
+		"pub fn main() void { consume(undefined,undefined,undefined,undefined); }";
+	FileId file = source_add_memory(&sources, "wide_layout.zig", source, sizeof(source) - 1);
+	AstContainerDecl *root = parse_file(&arena, &diag, &sources, file);
+	CHECK(!diag_has_errors(&diag));
+	IrFile *ir = irgen_file(&arena, &diag, &interner, source_get(&sources, file), file, root);
+	CHECK(!diag_has_errors(&diag));
+	Sema *sema = sema_create(&arena, &diag, &interner, &sources);
+	CHECK(sema_analyze_executable(sema, file, ir));
+	CHECK(sema_func_count(sema) == 3);
+	TypeFn fn = sema_type(sema, sema_func(sema, 2)->type)->as.fn;
+	CHECK(fn.param_count == 4);
+	static const uint64_t sizes[] = {32, 48, 80, 8192};
+	for (uint32_t i = 0; i < 4; i++) {
+		TypeId type = sema_type(sema, fn.params[i])->as.pointer.child;
+		uint64_t size;
+		CHECK(sema_type_size(sema, type, &size) && size == sizes[i]);
+		CHECK(sema_type_align(sema, type) == 16);
+	}
+	arena_free(&arena);
+}
+
+static void
 test_binary_diagnostics(void)
 {
 	Arena arena;
@@ -575,6 +610,7 @@ main(void)
 	test_element_pointers();
 	test_array_values();
 	test_array_layout();
+	test_wide_integer_layout();
 	test_binary_diagnostics();
 
 	printf("unit: %u checks, %u failed\n", checks, failures);

@@ -567,9 +567,11 @@ sema_type_size(const Sema *sema, TypeId type_id, uint64_t *out)
 	case TYPE_INT: {
 		uint32_t bits = type->as.integer.bits;
 		if (bits != 0) {
-			size = 1;
-			while (size * 8 < bits)
-				size *= 2;
+			uint64_t bytes = ((uint64_t)bits + 7) / 8;
+			uint64_t alignment = 1;
+			while (alignment < bytes && alignment < 16)
+				alignment *= 2;
+			size = ((bytes + alignment - 1) / alignment) * alignment;
 		}
 		break;
 	}
@@ -1662,6 +1664,53 @@ analyze_int_from_ptr(Block *block, const IrInst *inst)
 		return operand_none;
 	TirRef address = materialize(block, pointer, inst->src);
 	return runtime_operand(T_USIZE, emit_tir_un(block, TIR_PTR_TO_INT, T_USIZE, inst->src, address));
+}
+
+/* Empty arrays are OPV even when their element type is comptime-only. */
+static bool
+layout_is_comptime_only(const Sema *sema, TypeId type)
+{
+	while (sema->types[type].kind == TYPE_ARRAY) {
+		TypeArray array = sema->types[type].as.array;
+		if (array.length == 0 && !array.sentinel_zero)
+			return false;
+		type = array.child;
+	}
+	return is_comptime_only_type(sema, type);
+}
+
+static Operand
+analyze_type_layout(Block *block, const IrInst *inst)
+{
+	Sema *sema = block->sema;
+	TypeId type;
+	if (!operand_to_type(block, resolve_ref(block, inst->data.un.operand), inst->src, &type))
+		return operand_none;
+	bool size_of = inst->op == IR_SIZE_OF;
+	const char *name = size_of ? "size" : "align";
+	TypeId leaf = type;
+	while (sema->types[leaf].kind == TYPE_ARRAY)
+		leaf = sema->types[leaf].as.array.child;
+	if (sema->types[leaf].kind == TYPE_NORETURN || sema->types[leaf].kind == TYPE_ANYOPAQUE) {
+		sema_error(block, inst->src, "no %s available for uninstantiable type '%s'", name, sema_type_name(sema, type));
+		return operand_none;
+	}
+	if (sema->types[leaf].kind == TYPE_STRUCT || sema->types[leaf].kind == TYPE_ANYERROR) {
+		sema_error(block, inst->src, "not supported by szc yet: layout of type '%s'", sema_type_name(sema, type));
+		return operand_none;
+	}
+	if (size_of && layout_is_comptime_only(sema, type)) {
+		sema_error(block, inst->src, "no size available for comptime-only type '%s'", sema_type_name(sema, type));
+		return operand_none;
+	}
+	uint64_t result;
+	if (!size_of) {
+		result = sema_type_align(sema, type);
+	} else if (!sema_type_size(sema, type, &result)) {
+		sema_error(block, inst->src, "not supported by szc yet: array layout size exceeds 64-bit address space");
+		return operand_none;
+	}
+	return comptime_operand(T_COMPTIME_INT, value_int_u64(&sema->values, T_COMPTIME_INT, result));
 }
 
 /* Peer type of two integer operands (Zig's peer type resolution, integer part). */
@@ -4327,6 +4376,10 @@ analyze_inst(Block *block, IrInstIndex index, Operand *break_value)
 	case IR_INT_CAST:
 	case IR_TRUNCATE:
 		result = analyze_cast(block, inst);
+		break;
+	case IR_SIZE_OF:
+	case IR_ALIGN_OF:
+		result = analyze_type_layout(block, inst);
 		break;
 	case IR_INT_FROM_PTR:
 		result = analyze_int_from_ptr(block, inst);

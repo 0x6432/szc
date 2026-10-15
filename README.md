@@ -26,6 +26,15 @@ first-class string-literal values, aliases, variables and runtime choices with
 statically known message lengths. Literal bytes, escapes, Unicode and multiline
 strings are supported; general runtime slices and string operations remain pending.
 
+Fixed-size arrays support typed literals, checked indexing, mutable/immutable backing,
+owned snapshots, function arguments/returns and scalar-element mutation. Single/many
+pointers support qualifiers, array-to-many coercion, borrowed indexing, element offsets,
+differences and `@intFromPtr` addresses. `@sizeOf`/`@alignOf` query supported layouts;
+integer ABI sizes and pointer strides include widths beyond 64 bits, but runtime
+wide-integer values/arithmetic are still unsupported. Structs, slices, modules/imports,
+generic functions and the full comptime interpreter remain pending; szc does not yet
+bootstrap Zig.
+
 ## Build & test
 
 ```sh
@@ -93,7 +102,7 @@ edge discrepancies (currently signed minimum remainder by -1).
 | `tests/` | unit and golden tests |
 | `fuzz/` | fuzz targets and seed corpora |
 
-Standard library: szc uses the `lib/` that ships with Zig 0.17.0, found via
+Planned standard-library resolution uses the `lib/` that ships with Zig 0.17.0, via
 `ZIG_LIB_DIR`, `<szc dir>/../lib/zig` or `<szc dir>/../lib`.
 
 `tools/reference/tokenizer.zig` and `docs/grammar.peg` are from the Zig project (MIT license).

@@ -8,6 +8,37 @@ import tempfile
 from compiler_process import run_compiler
 
 
+def layout_cases():
+    widths = (0, 1, 7, 8, 9, 16, 17, 31, 32, 33, 63, 64, 65, 127,
+              128, 129, 255, 256, 257, 511, 512, 513, 65535)
+    layouts = []
+    for sign in ("u", "i"):
+        for bits in widths:
+            byte_count = (bits + 7) // 8
+            alignment = min(16, 1 << max(0, (byte_count - 1).bit_length()))
+            size = ((byte_count + alignment - 1) // alignment) * alignment
+            layouts.append((f"{sign}{bits}", size, alignment))
+    layouts += [("bool", 1, 1), ("void", 0, 1), ("f32", 4, 4), ("f64", 8, 8),
+                ("*type", 8, 8), ("[*]type", 8, 8), ("*const fn () void", 8, 8),
+                ("*anyopaque", 8, 8), ("*align(64) volatile allowzero u8", 8, 8),
+                ("[0]type", 0, 1), ("[2][0]type", 0, 1), ("[0]u16", 0, 2),
+                ("[3]u257", 144, 16), ("[2][3]i33", 48, 8),
+                ("[18446744073709551615]u0", 0, 1)]
+    for target, size, alignment in layouts:
+        yield (f"const n: u8 = if (@sizeOf({target}) != {size} or "
+               f"@alignOf({target}) != {alignment}) 256 else 0; "
+               "pub fn main() void { _ = n; }\n")
+    for target in ("type", "comptime_int", "fn () void", "[2]type", "[3]comptime_int"):
+        yield (f"const n: u8 = if (@alignOf({target}) != 1) 256 else 0; "
+               "pub fn main() void { _ = n; }\n")
+        yield f"pub fn main() void {{ _ = @sizeOf({target}); }}\n"
+    for target in ("noreturn", "anyopaque", "[0]noreturn", "[0]anyopaque", "[2]noreturn"):
+        for builtin in ("sizeOf", "alignOf"):
+            yield f"pub fn main() void {{ _ = @{builtin}({target}); }}\n"
+    for expression in ("@sizeOf(7)", "@alignOf(true)", "@sizeOf()", "@alignOf(u8,u16)"):
+        yield f"pub fn main() void {{ _ = {expression}; }}\n"
+
+
 def int_from_ptr_cases():
     for target in ("*u8", "[*]const u8", "*u0", "*void", "*u128", "*anyopaque",
                    "*const fn () void", "[*]align(1) volatile allowzero u16"):
@@ -35,6 +66,7 @@ def arithmetic_qualifier_cases():
 
 
 def cases():
+    yield from layout_cases()
     yield from int_from_ptr_cases()
     yield from arithmetic_qualifier_cases()
     for target, statement in (("[*]u8", "q += 1;"), ("[*]u8", "q -= 1;"),

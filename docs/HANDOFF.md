@@ -19,18 +19,20 @@ Read this first when resuming work (the sandbox resets often).
 
 ## Current state
 
-- Latest local checkpoint: M5.5a @intFromPtr passes 812 reference semantic cases,
-  GCC/Clang sanitizer units/goldens, full native regression, targeted reference/C
-  execution and fresh four-stage fuzzing. Next isolated work: @sizeOf/@alignOf
-  and correcting non-power-of-two wide-integer ABI sizes; runtime wide values
-  remain unsupported.
-
-- Latest CI triage: a1d2e66/run 38744651213 passed GCC/Clang/fuzz, but reference
-  safety compilation timed out on cast_unsigned_narrow/cast_signed_low/cast_signed_high
-  (120 seconds each), then the runner received a shutdown signal and exited 143.
-  Full log retained locally at /data/a1d2e66-differential.log. No language mismatch
-  was reported. Do not describe this as green or fully solved by harness hardening;
-  keep monitoring current CI and retain strict deadlines/no retries.
+- Latest local checkpoints: M5.5a @intFromPtr passed all 812 reference semantic
+  cases and full local validation; M9.4a @sizeOf/@alignOf and exact wide-integer ABI
+  sizes pass 897 reference cases, 625 units/853 goldens, native/C checks and fresh
+  fuzzing. Next isolated checkpoint: @bitSizeOf (final validation underway). Runtime
+  wide values remain unsupported.
+- CI triage: 1b2b5e1/run 38751855739 passed GCC/Clang/fuzz; differential failed
+  on execution timeout of official Zig divCeil_zero_i8. 9c40b82/run 38745648212
+  passed GCC/Clang/fuzz; differential hit a 120-second official Zig timeout in
+  pointer qualifier case 6 and later runner shutdown. The earlier a1d2e66 run
+  similarly timed out compiling cast safety cases and received shutdown. No
+  semantic disagreement was reported in these failures. All four affected safety
+  cases and the const-discard qualifier case reproduce correctly locally under
+  unchanged deadlines. Logs are /data/ci-{arithmetic,qualifiers}.log and
+  /data/ci-timeout-reproduction.log. Do not claim CI green or weaken deadlines.
 
 - Done: M0 (infrastructure), M1 (lexer), M2 (AST + parser, differential-tested against
   `std.zig.Ast`).

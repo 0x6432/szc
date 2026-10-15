@@ -501,3 +501,12 @@ prints a file's IR.
   at comptime. Runtime addresses of comptime-only backing remain explicitly NYI.
 - The builtin does not introduce numeric pointers, integer-to-pointer conversion,
   vector/optional pointer handling or slice extraction. Those need separate semantics.
+
+## Type layout queries
+
+`size_of` and `align_of` take a type ref and yield a comptime integer; there is no
+TIR or runtime query. Size queries distinguish empty one-possible-value arrays
+from nonempty comptime-only backing. Alignment queries use child alignment even
+for empty arrays. On x86_64-linux integer storage rounds ceil(bits/8) up to the
+integer alignment (power of two, capped at 16), not an unbounded power of two.
+Pointer indexing/arithmetic and array layout share this exact byte stride.
