@@ -8,6 +8,27 @@ import tempfile
 from compiler_process import run_compiler
 
 
+def bit_size_cases():
+    for sign in ("u", "i"):
+        for bits in (0, 1, 7, 8, 9, 16, 33, 64, 65, 129, 257, 513, 65535):
+            yield (f"const n: u8 = if (@bitSizeOf({sign}{bits}) != {bits} or "
+                   f"@bitSizeOf([3]{sign}{bits}) != {bits * 3}) 256 else 0; "
+                   "pub fn main() void { _ = n; }\n")
+    for target, bits in (("bool", 1), ("void", 0), ("f32", 32), ("f64", 64),
+                         ("*type", 64), ("[*]type", 64), ("*const fn () void", 64),
+                         ("*anyopaque", 64), ("[*]align(1) volatile allowzero u8", 64),
+                         ("[2][3]u7", 42), ("[0]u257", 0),
+                         ("[18446744073709551615]u0", 0),
+                         ("[18446744073709551615][0]u8", 0)):
+        yield (f"const n: u8 = if (@bitSizeOf({target}) != {bits}) 256 else 0; "
+               "pub fn main() void { _ = n; }\n")
+    for target in ("type", "comptime_int", "comptime_float", "fn () void", "[0]type",
+                   "[2]type", "[2][0]type", "noreturn", "anyopaque", "[0]noreturn"):
+        yield f"pub fn main() void {{ _ = @bitSizeOf({target}); }}\n"
+    for expression in ("@bitSizeOf(7)", "@bitSizeOf()", "@bitSizeOf(u8,u16)"):
+        yield f"pub fn main() void {{ _ = {expression}; }}\n"
+
+
 def layout_cases():
     widths = (0, 1, 7, 8, 9, 16, 17, 31, 32, 33, 63, 64, 65, 127,
               128, 129, 255, 256, 257, 511, 512, 513, 65535)
@@ -66,6 +87,7 @@ def arithmetic_qualifier_cases():
 
 
 def cases():
+    yield from bit_size_cases()
     yield from layout_cases()
     yield from int_from_ptr_cases()
     yield from arithmetic_qualifier_cases()

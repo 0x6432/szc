@@ -1075,6 +1075,7 @@ static const BuiltinInfo builtin_table[] = {
 	{"intFromBool", BUILTIN_INT_FROM_BOOL, 1, IR_OP_COUNT},
 	{"intFromPtr", BUILTIN_INT_FROM_PTR, 1, IR_OP_COUNT},
 	{"sizeOf", BUILTIN_LAYOUT, 1, IR_SIZE_OF},
+	{"bitSizeOf", BUILTIN_LAYOUT, 1, IR_BIT_SIZE_OF},
 	{"alignOf", BUILTIN_LAYOUT, 1, IR_ALIGN_OF},
 	{"divTrunc", BUILTIN_ARITH, 2, IR_DIV_TRUNC},
 	{"divFloor", BUILTIN_ARITH, 2, IR_DIV_FLOOR},

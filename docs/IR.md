@@ -510,3 +510,9 @@ from nonempty comptime-only backing. Alignment queries use child alignment even
 for empty arrays. On x86_64-linux integer storage rounds ceil(bits/8) up to the
 integer alignment (power of two, capped at 16), not an unbounded power of two.
 Pointer indexing/arithmetic and array layout share this exact byte stride.
+
+`bit_size_of` queries representation bits rather than ABI bytes. Its arrays
+multiply child representation bits (u257 -> 257 bits, ABI size 48 bytes). Child
+representation eligibility is checked even for empty arrays: [0]type has byte
+size zero but no bit size. A zero array dimension suppresses multiplication
+overflow only after this eligibility check. Pointer representations remain 64 bits.

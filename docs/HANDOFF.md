@@ -22,16 +22,23 @@ Read this first when resuming work (the sandbox resets often).
 - Latest local checkpoints: M5.5a @intFromPtr passed all 812 reference semantic
   cases and full local validation; M9.4a @sizeOf/@alignOf and exact wide-integer ABI
   sizes pass 897 reference cases, 625 units/853 goldens, native/C checks and fresh
-  fuzzing. Next isolated checkpoint: @bitSizeOf (final validation underway). Runtime
-  wide values remain unsupported.
-- CI triage: 1b2b5e1/run 38751855739 passed GCC/Clang/fuzz; differential failed
+  fuzzing. M9.4b @bitSizeOf passes 949 actual-reference semantic cases,
+  GCC/Clang sanitizer 625 units/864 goldens, full native AND reference-enabled
+  executable/storage/185 safety suites, optimized checks and fresh four-stage
+  fuzzing. Final snapshots/logs: /data/bits-final and /data/bits-final-*.log.
+  Runtime wide values remain unsupported. Next: runtime slice pointer/length
+  pairs and slicing, with owned aggregate ABI and qualifier/bounds invariants;
+  read actual Zig sources first. Q6 remains deferred to M10.2.
+- CI triage: d986dc5/run 38753436518 passed GCC/Clang/fuzz; differential
+  failed on a 120-second official Zig compilation timeout for divExact_zero_i8
+  (log /data/ci-intfromptr.log). 1b2b5e1/run 38751855739 passed GCC/Clang/fuzz; differential failed
   on execution timeout of official Zig divCeil_zero_i8. 9c40b82/run 38745648212
   passed GCC/Clang/fuzz; differential hit a 120-second official Zig timeout in
   pointer qualifier case 6 and later runner shutdown. The earlier a1d2e66 run
   similarly timed out compiling cast safety cases and received shutdown. No
-  semantic disagreement was reported in these failures. All four affected safety
-  cases and the const-discard qualifier case reproduce correctly locally under
-  unchanged deadlines. Logs are /data/ci-{arithmetic,qualifiers}.log and
+  semantic disagreement was reported in these failures. The final full 185-case
+  reference-enabled safety suite and the const-discard qualifier reproduction
+  pass locally under unchanged deadlines. Logs are /data/ci-{arithmetic,qualifiers}.log and
   /data/ci-timeout-reproduction.log. Do not claim CI green or weaken deadlines.
 
 - Done: M0 (infrastructure), M1 (lexer), M2 (AST + parser, differential-tested against

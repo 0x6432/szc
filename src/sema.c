@@ -1713,6 +1713,68 @@ analyze_type_layout(Block *block, const IrInst *inst)
 	return comptime_operand(T_COMPTIME_INT, value_int_u64(&sema->values, T_COMPTIME_INT, result));
 }
 
+/* Representation bits exclude integer ABI padding, including inside arrays. */
+static Operand
+analyze_bit_size(Block *block, const IrInst *inst)
+{
+	Sema *sema = block->sema;
+	TypeId type;
+	if (!operand_to_type(block, resolve_ref(block, inst->data.un.operand), inst->src, &type))
+		return operand_none;
+	TypeId leaf = type;
+	bool empty = false;
+	while (sema->types[leaf].kind == TYPE_ARRAY) {
+		TypeArray array = sema->types[leaf].as.array;
+		empty |= array.length == 0 && !array.sentinel_zero;
+		leaf = array.child;
+	}
+	bool has_representation = true;
+	uint64_t bits;
+	switch (sema->types[leaf].kind) {
+	case TYPE_VOID:
+		bits = 0;
+		break;
+	case TYPE_BOOL:
+		bits = 1;
+		break;
+	case TYPE_INT:
+		bits = sema->types[leaf].as.integer.bits;
+		break;
+	case TYPE_FLOAT:
+		bits = sema->types[leaf].as.floating.bits;
+		break;
+	case TYPE_POINTER:
+		has_representation = sema->types[leaf].as.pointer.size != POINTER_SLICE;
+		bits = 64;
+		break;
+	case TYPE_ANYERROR:
+		sema_error(block, inst->src, "not supported by szc yet: bit size of error sets");
+		return operand_none;
+	default:
+		has_representation = false;
+		bits = 0;
+		break;
+	}
+	if (!has_representation) {
+		sema_error(block, inst->src, "no bit size available for type '%s'", sema_type_name(sema, type));
+		return operand_none;
+	}
+	if (empty)
+		bits = 0;
+	for (TypeId current = type; sema->types[current].kind == TYPE_ARRAY; current = sema->types[current].as.array.child) {
+		TypeArray array = sema->types[current].as.array;
+		if (bits == 0)
+			break;
+		if ((array.sentinel_zero && array.length == UINT64_MAX) ||
+			array.length + array.sentinel_zero > UINT64_MAX / bits) {
+			sema_error(block, inst->src, "not supported by szc yet: array bit size exceeds 64-bit range");
+			return operand_none;
+		}
+		bits *= array.length + array.sentinel_zero;
+	}
+	return comptime_operand(T_COMPTIME_INT, value_int_u64(&sema->values, T_COMPTIME_INT, bits));
+}
+
 /* Peer type of two integer operands (Zig's peer type resolution, integer part). */
 static bool
 peer_type(Block *block, Operand lhs, Operand rhs, uint32_t src, TypeId *out)
@@ -4376,6 +4438,9 @@ analyze_inst(Block *block, IrInstIndex index, Operand *break_value)
 	case IR_INT_CAST:
 	case IR_TRUNCATE:
 		result = analyze_cast(block, inst);
+		break;
+	case IR_BIT_SIZE_OF:
+		result = analyze_bit_size(block, inst);
 		break;
 	case IR_SIZE_OF:
 	case IR_ALIGN_OF:

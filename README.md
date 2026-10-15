@@ -29,7 +29,7 @@ strings are supported; general runtime slices and string operations remain pendi
 Fixed-size arrays support typed literals, checked indexing, mutable/immutable backing,
 owned snapshots, function arguments/returns and scalar-element mutation. Single/many
 pointers support qualifiers, array-to-many coercion, borrowed indexing, element offsets,
-differences and `@intFromPtr` addresses. `@sizeOf`/`@alignOf` query supported layouts;
+differences and `@intFromPtr` addresses. `@sizeOf`/`@alignOf`/`@bitSizeOf` query supported layouts and representations;
 integer ABI sizes and pointer strides include widths beyond 64 bits, but runtime
 wide-integer values/arithmetic are still unsupported. Structs, slices, modules/imports,
 generic functions and the full comptime interpreter remain pending; szc does not yet

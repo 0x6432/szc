@@ -137,6 +137,7 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
 - [ ] **M9.3 `@Vector` lowered to scalar loops.**
 - [ ] **M9.4 Labeled switch `continue :sw`, `@fieldParentPtr`, `@memcpy`/`@memset`, remaining builtins.**
   - [x] **M9.4a `@sizeOf`/`@alignOf` for supported type layouts.**
+  - [x] **M9.4b `@bitSizeOf` for supported bit representations.**
 - [ ] **M9.5 Inline asm for x86_64-linux std usage.**
 
 ## Phase 10: std tests and bootstrap
@@ -151,6 +152,37 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
 ## Completed milestone log
 
 (newest first; each entry: what, limitations, interactions)
+
+### M9.4b Representation bit-size queries
+- **What**: `@bitSizeOf(T)` folds to a comptime integer for integers, bool, void,
+  f32/f64, single/many pointers and arrays of representable children. Arrays
+  multiply representation bits, not padded ABI bytes: [3]u257 has 771 bits but
+  occupies 144 bytes. Bool has one bit despite occupying one byte.
+- **Grounding/interactions**: actual Sema.zig zirBitSizeOf and Type.bitSize /
+  hasBitRepresentation. Unlike size queries, even empty arrays of comptime-only
+  children have no bit representation and reject. Pointers use 64 bits independent
+  of their child's representation. Any zero-length array dimension collapses a
+  representable nested array to zero before multiplication, avoiding false overflow.
+  The new IR operation folds in sema; no TIR/codegen representation changes.
+- **Coverage**: 52 new actual-reference semantic cases assert sizes across signed/
+  unsigned widths, padded/nested/empty arrays, pointers, floating types and rejected
+  logical types. Add a native padded-vs-representation program, three stage goldens,
+  seven invalid-input diagnostics and one explicit overflow-NYI fixture, plus one
+  seed per semantic stage. Numeric computation checks uint64 multiplication rather
+  than wrapping or crashing on oversized representation counts.
+- **Validation**: GCC/Clang Werror ASan/UBSan: 625 units and 864 goldens;
+  integrated sources exactly match the isolated tested snapshot. Complete GCC
+  native and reference-enabled executable suites pass: 79 ordinary/generated
+  programs plus two scoped szc-only cases, 16 driver checks, all storage/alignment/
+  ABI/volatile tests and 185 safety cases. Clang passes four targeted programs
+  and four C-backed stride variants against Zig; optimized GCC also passes these
+  native checks. All 949 semantic cases match official Zig 0.17.0. Four fresh
+  60-second fuzz runs execute 1131133/28941/28049/32071 inputs; each stage also
+  passes 20000 mutations (irgen 46/sema 102 seed files).
+- **Limits/next**: bit sizes for error sets, packed aggregates, vectors and slices
+  depend on their future implementations. f16/f80/f128 remain hard errors; array
+  bit sizes exceeding uint64 are explicit NYI. M9.4 remains partial. General runtime
+  slice pairs/slicing are the next larger representation milestone; Q6 stays M10.2.
 
 ### M9.4a Type layout queries and exact wide-integer ABI strides
 - **What**: `@sizeOf(T)` and `@alignOf(T)` produce comptime integers for supported
@@ -181,7 +213,7 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
   plus 20000 mutations per stage (irgen 45/sema 101 seed files).
 - **Limits/next**: aggregate/error-set layouts, vector/slice representations and
   overflowing array sizes stay explicit NYI. f16/f80/f128 remain hard errors.
-  M9.4 remains partial; bit-size queries and general runtime slices are future work.
+  M9.4 remains partial; general runtime slices and other builtins remain future work.
 
 ### M5.5a Pointer address conversion (`@intFromPtr`)
 - **What**: expose usize addresses of supported single/many pointers, including

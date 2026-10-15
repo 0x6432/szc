@@ -1,0 +1,23 @@
+%14 = struct_decl (flags=0) {
+  decl fn "main" pub value {
+    %12 = func "main" {
+      ret type {
+        %0 = break_inline result, @type_u8
+      }
+      body insts {
+        %1 = ret_type
+        %2 = int 3
+        %3 = as @type_usize, %2
+        %4 = int_type u7
+        %5 = array_type %3, %4
+        %6 = as @type_type, %5
+        %7 = bit_size_of %6
+        %8 = bit_size_of @type_bool
+        %9 = add %7, %8
+        %10 = as_return %1, %9
+        %11 = ret %10
+      }
+    }
+    %13 = break_inline result, %12
+  }
+}
