@@ -83,6 +83,7 @@ build/function-pointer-widths.zig: tools/generate_function_pointer_tests.py
 # QBE must be on PATH (or SZC_QBE). ZIG enables reference-compiler checks.
 e2e-test: build/asan/szc $(GENERATED_RUN_TESTS)
 	python3 tests/run_process_timeout.py
+	python3 tests/run_compiler_process.py
 	./tests/run_e2e.sh build/asan/szc tests/run/*.zig $(GENERATED_RUN_TESTS)
 	env -u ZIG ./tests/run_e2e.sh build/asan/szc tests/run_szc/*.zig
 	./tests/run_driver.sh build/asan/szc
@@ -99,6 +100,7 @@ e2e-test: build/asan/szc $(GENERATED_RUN_TESTS)
 
 safety-test: build/asan/szc
 	python3 tests/run_process_timeout.py
+	python3 tests/run_compiler_process.py
 	python3 tests/run_safety.py build/asan/szc
 
 # libFuzzer builds (clang)

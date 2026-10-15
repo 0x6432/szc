@@ -138,6 +138,33 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
 
 (newest first; each entry: what, limitations, interactions)
 
+### CI follow-up: differential compiler process lifecycle
+- **Evidence**: 72914b5 push CI passed; scheduled run 38675456100 later passed
+  GCC/Clang/fuzz and all reference safety cases, then timed out after 30 seconds
+  in the nested-pointer reference comparison. Its old subprocess.run cleanup only
+  killed an immediate child, and no case/source context was retained. No compiler
+  acceptance disagreement was reported; hosted-runner stalls are not fully diagnosed.
+- **What**: extracted the already-tested group-cleanup runner into
+  tools/compiler_process.py, shared by safety and all ten semantic matrices. Added
+  per-actor/case progress and source/command/status/output failure reports; a timeout
+  still fails immediately after whole-group cleanup, without retries or skipping.
+  Reference matrix compilations use -j2, preserving every existing timeout budget
+  (30s nested-pointer, 120s other compilation matrices). Parser comparisons unchanged.
+- **Tests**: 17 compiler-wrapper/adapter regressions, including real matrix CLI
+  crashes outside the repo cwd and mocked wiring checks for all ten adapters,
+  plus the existing eight shared process-cleanup tests.
+  e2e-test and safety-test run both. Compiler sources/corpora are unchanged.
+  All ten actual matrices pass 4,428 Zig comparisons. GCC/Clang -Werror sanitizer
+  suites pass 558 units, 726 goldens, executable/driver/safety checks; GCC's full
+  e2e is reference-enabled. Four 60-second fuzz targets and 20,000 standalone
+  mutations per stage pass. Exact coverage is in HANDOFF.md; check new push CI
+  separately rather than claiming hosted stalls have been solved.
+- **Language follow-up**: actual Zig 0.17 semantic-only compilation accepts an
+  aligned local bare-function alias, but emitted compilation SIGSEGVs; a function-
+  declaration-aligned control succeeds. Keep the explicit alias-address NYI rather
+  than fabricating backend guarantees. No language checkbox advanced here; next
+  scoped language work is typed immutable address dependencies. Q6 stays at M10.2.
+
 ### M5.1c2b3b Observable volatile loads/stores
 - **What**: TIR_LOAD_VOLATILE/TIR_STORE_VOLATILE distinguish runtime observable
   accesses from ordinary memory. Sema keeps volatile reads even when discarded,

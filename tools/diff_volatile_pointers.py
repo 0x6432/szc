@@ -3,8 +3,9 @@
 import argparse
 import itertools
 from pathlib import Path
-import subprocess
 import tempfile
+
+from compiler_process import run_compiler
 
 
 def pointer(child='u8', const=False, volatile=False, allowzero=False, alignment=0):
@@ -48,9 +49,11 @@ def main():
         path = Path(directory) / 'main.zig'
         for source in cases():
             path.write_text(source)
-            actual = subprocess.run([args.szc, 'tir', str(path)], capture_output=True, timeout=120)
-            expected = subprocess.run([args.zig, 'build-exe', str(path), '-fno-emit-bin', '-j2'], capture_output=True, timeout=120)
-            if actual.returncode not in (0, 1) or expected.returncode not in (0, 1) or actual.returncode != expected.returncode:
+            actual = run_compiler([args.szc, 'tir', str(path)], source,
+                f"diff_volatile_pointers case {checked + 1} szc", timeout=120)
+            expected = run_compiler([args.zig, 'build-exe', str(path), '-fno-emit-bin', '-j2'], source,
+                f"diff_volatile_pointers case {checked + 1} zig", timeout=120)
+            if actual.returncode != expected.returncode:
                 raise SystemExit(source + actual.stderr.decode(errors='replace') + expected.stderr.decode(errors='replace'))
             checked += 1
     print(f'volatile pointers: {checked} matched Zig 0.17.0', flush=True)

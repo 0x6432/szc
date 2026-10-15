@@ -7,3 +7,5 @@
 /fuzz/crash-*
 /fuzz/leak-*
 /fuzz/timeout-*
+
+__pycache__/

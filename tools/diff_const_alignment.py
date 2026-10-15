@@ -3,8 +3,9 @@
 import argparse
 import itertools
 from pathlib import Path
-import subprocess
 import tempfile
+
+from compiler_process import run_compiler
 
 
 def pointer(ty, alignment, const):
@@ -42,11 +43,10 @@ def main():
         path = Path(directory) / "test.zig"
         for source in cases():
             path.write_text(source)
-            szc = subprocess.run([args.szc, "tir", str(path)], capture_output=True, timeout=120)
-            zig = subprocess.run([args.zig, "build-exe", str(path), "-fno-emit-bin"],
-                                 capture_output=True, timeout=120)
-            if szc.returncode not in (0, 1) or zig.returncode not in (0, 1):
-                raise SystemExit(f"compiler failed unexpectedly: szc={szc.returncode}, zig={zig.returncode}")
+            szc = run_compiler([args.szc, "tir", str(path)], source,
+                f"diff_const_alignment case {checked + 1} szc", timeout=120)
+            zig = run_compiler([args.zig, "build-exe", str(path), "-fno-emit-bin", "-j2"], source,
+                f"diff_const_alignment case {checked + 1} zig", timeout=120)
             if szc.returncode != zig.returncode:
                 raise SystemExit("disagreement:\n" + source + szc.stderr.decode(errors="replace")
                                  + zig.stderr.decode(errors="replace"))

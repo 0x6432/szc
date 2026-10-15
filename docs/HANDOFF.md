@@ -48,8 +48,9 @@ Read this first when resuming work (the sandbox resets often).
 - Done: M5.1c2b3b observable volatile scalar/bool/single-pointer loads/stores.
   This completes the user-requested three-checkpoint batch; return to small
   checkpoints next. Remaining alignment gaps: local bare-function alias alignment
-  and typed immutable address-dependency cycles. Plan/ground one of these next;
-  do not claim all M5.1 integration complete.
+  and typed immutable address-dependency cycles. Ground the latter next;
+  do not claim all M5.1 integration complete. Aligned local function aliases now
+  have a confirmed Zig 0.17 emission crash (details below); keep the explicit NYI.
   M5.1/M5.1c/M5.1c2/M5.1c2b/M5.1c2b2/M5.1c2b2b remain partial.
 - Run `PATH=/data/tools/bin:$PATH ZIG=/data/zig/zig-x86_64-linux-0.17.0/zig make e2e-test`
   locally. `tools/build_qbe.sh` builds the pinned QBE into `build/qbe-src` on CI.
@@ -72,6 +73,75 @@ Read this first when resuming work (the sandbox resets often).
   GCC/Clang/fuzz/differential jobs, restoring green CI. M5.1c2b2a 8b1d3cf
   also passed all jobs (run 38590520673), as did M5.1c2b2b1 ecfb6ab
   (run 38593742928). Check each new push's run.
+
+## CI follow-up: bounded differential compiler processes
+
+- The push CI for 72914b5 succeeded (38634766715). A later scheduled run on the
+  same commit, 38675456100, passed GCC/Clang/fuzz and all 166 reference safety
+  cases but failed tools/diff_pointer_coercions.py when Zig exceeded its existing
+  30-second compilation deadline. The old raw subprocess.run path only killed
+  the immediate child, and the log lacked the case number/source. This is not a
+  reported accept/reject disagreement or evidence that every runner stall has
+  been diagnosed. Do not claim the new push is green before checking it.
+- tools/compiler_process.py now owns the existing process-group helper extracted
+  unchanged from tests/run_safety.py. Both safety and all ten semantic differential
+  matrices use it: a new session, communicate with the original deadline, killpg
+  on timeout, drain output and preserve TimeoutExpired/output/status semantics.
+  The compiler wrapper logs each actor/case/command before execution and reports
+  full source, command, exit/budget and captured stdout/stderr on timeout, crash
+  or start failure. Status 0/1 still means accepted/rejected; signals and other
+  exits are never treated as language rejection. No retries or ignored failures.
+- All reference matrix compilations now use verified Zig -j2 support, matching
+  the safety runner. Existing budgets are unchanged: nested-pointer matrix 30s,
+  other semantic matrices 120s, safety compilation 120s/execution 15s. Parser/AST
+  differential tools remain outside this refactor. Python caches are ignored.
+- tests/run_compiler_process.py adds 17 regressions for statuses 0/1/99,
+  timeout/start-failure source+output context, no retry, and actual matrix CLI
+  behavior outside the repo cwd with space-containing compiler paths, plus all ten
+  adapters' actor/source/job-cap/budget wiring (structural mocks, not type checks). Existing
+  eight output/status/signal/ENOENT/ESRCH/zombie/group-cleanup checks now exercise
+  the same helper as the differential tools. e2e-test/safety-test run both suites.
+- Sandbox reset removed libasan/libubsan/Clang/compiler-rt; restored them before
+  validation. An initial restored ASan binary failed to load libasan.so.6 and
+  the new wrapper correctly reported unexpected exit 127 with source/command;
+  this was an environment failure, not a compiler accept/reject mismatch.
+  Compiler sources and fuzz corpora are unchanged (irgen 33/sema 79).
+- Validation: all ten real reference matrices pass, 4,428 comparisons total:
+  168 nested const coercions, 864 allowzero, 1,035 pointer alignment, 300 local
+  alignment, 626 local constants, 300 mutable globals, 332 global constants,
+  77 function alignment, 240 volatile qualifiers and 486 function signatures.
+  All 17 wrapper/adapter regressions and eight shared lifecycle checks pass.
+  GCC -Werror ASan/UBSan passes 558 units, 726 goldens, 57 ordinary/generated
+  executables plus two szc-only inputs, 16 driver, all existing memory/alignment
+  suites and 166 safety cases; full e2e has Zig comparisons enabled. Fresh Clang
+  sanitizer checks pass units/goldens, 57 executables, driver, safety and 44 physical
+  volatile sequences. Four 60-second fuzz targets and 20,000 standalone mutations
+  per stage pass. Additional adapter regressions were run after the initial suites;
+  no compiler or shared-runner behavior changed during that extension. Check new
+  push CI separately; none of these local results prove hosted stalls resolved.
+
+## Reference limitation: aligned local bare-function aliases
+
+- Actual 0.17.0 accepts this semantic-only probe, but build-exe with emission
+  returns -11 (SIGSEGV), with no diagnostics. A control using align(64) on the
+  actual function declaration and an unannotated alias builds successfully.
+  Do not substitute metadata-only promises, stubs or guessed alias semantics.
+  Sema.zig's local comptime-allocation reference path and LLVM's function/UAV
+  handling differ from ordinary analyzeRef; the reference crash prevents treating
+  semantic-only acceptance as a verified runtime contract.
+
+```zig
+fn target() align(1) u8 { return 7; }
+fn invoke(p: *align(64) const fn () u8) u8 { return p(); }
+pub fn main() u8 { const alias align(64) = target; return invoke(&alias); }
+```
+
+- Probe commands: zig build-exe probe.zig -j2 -fno-emit-bin (0), then the same
+  source with -femit-bin=probe (-11). Reference version command reports 0.17.0.
+  Existing szc aligned-local-function-address NYI stays explicit; the test is not
+  reclassified as reference-rejected Zig. Next language checkpoint: scoped typed
+  immutable address-dependency resolution, while keeping enclosing M5.1 partial.
+  Q6 remains deferred until M10.2.
 
 ## Validation at M5.1c2b3b
 

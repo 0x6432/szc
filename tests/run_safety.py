@@ -9,21 +9,10 @@ import tempfile
 from pathlib import Path
 
 
-def run(command, timeout=15):
-    # Drivers and reference programs can spawn children that inherit output pipes.
-    # Killing only the immediate child leaves work running and communicate blocked.
-    with subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                          start_new_session=True) as process:
-        try:
-            stdout, stderr = process.communicate(timeout=timeout)
-        except subprocess.TimeoutExpired:
-            try:
-                os.killpg(process.pid, signal.SIGKILL)
-            except ProcessLookupError:
-                pass
-            stdout, stderr = process.communicate()
-            raise subprocess.TimeoutExpired(command, timeout, output=stdout, stderr=stderr)
-        return subprocess.CompletedProcess(command, process.returncode, stdout, stderr)
+# Share the exact timeout lifecycle used by the compiler comparison tools.
+sys.dont_write_bytecode = True
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "tools"))
+from compiler_process import run
 
 
 def binary_case(name, integer_type, operator, lhs, rhs, message="integer overflow"):
