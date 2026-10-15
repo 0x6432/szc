@@ -24,6 +24,8 @@ def main():
         helper = root / "foreign.c"
         helper.write_text("#include <stdint.h>\n#include <string.h>\n"
                           "static unsigned char data[32];\n"
+                          "static uint16_t terminated[4] = {7,11,19,65535};\n"
+                          "void *foreign_sentinel(void) { return terminated; }\n"
                           "const void *odd(void) { return data+1; }\n"
                           "const void *even(void) { return data; }\n"
                           "const void *foreign(void) { uint16_t n = 43; memcpy(data+7,&n,2); return data+1; }\n"
@@ -47,6 +49,8 @@ def main():
                               "const element = &rows[1][1];\n"
                               "const table: [2][*]align(1) u16 = .{&a[0],second};\n"
                               "extern fn foreign() [*]align(1) const u16;\n"
+                              "extern fn foreign_sentinel() [*:65535]align(1) u16;\n"
+                              "fn sentinel_advance(p: [*:65535]align(1) u16, n: usize) [*:65535]align(1) u16 { return p+n; }\n"
                               "extern fn verify(base: [*]align(1) [3]u16, elem_arg: *align(1) u16, "
                               "slots: *const [2][*]align(1) u16, alignment: u64) u8;\n"
                               "fn read(p: [*]align(1) const u16, i: usize) u16 { return p[i]; }\n"
@@ -63,7 +67,11 @@ def main():
                               "if (read(table[0],4) != 33) return 7; "
                               "const fp = foreign(); const ep = advance(fp,3); "
                               "if (ep[0] != 43 or retreat(ep,3) != fp or delta(ep,fp) != 3) return 8; "
-                              "if (delta(fp,ep) != 9223372036854775805) return 9; return 0; }\n")
+                              "if (delta(fp,ep) != 9223372036854775805) return 9; "
+                              "const sp = foreign_sentinel(); if (sp[3] != 65535) return 10; "
+                              "sp[1] += 2; const sq = sentinel_advance(sp,1); "
+                              "if (sq[0] != 13 or sq[2] != 65535) return 11; "
+                              "const raw: [*]align(1) const u16 = sq; if (raw[1] != 19) return 12; return 0; }\n")
             executable = root / "native"
             run([compiler, "build-exe", str(source), "-o", str(executable)], env)
             assert run([str(executable)]) == b""

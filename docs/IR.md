@@ -625,3 +625,17 @@ const checks; no descriptor snapshot is used as an assignment destination.
 Pointer-to-slice field reads now project/read a single word, allowing volatile
 fields without allowing volatile whole-descriptor copies. Forming a field address
 performs no external memory access; this is verified by the page-fault observer.
+
+## Scalar-sentinel many-pointers (M5.4a)
+
+IR_PTR_TYPE now optionally names a sentinel value and its source position. Sema
+coerces it to the element type and requires a defined comptime integer or bool.
+TypePointer.sentinel is an interned ValueId (VALUE_NONE means absent); type
+hashing/equality/names include it. This does not change thin-pointer ABI/layout.
+Implicit coercions can remove a sentinel but cannot invent/change one; writable
+nested pointees require matching promises. Literal zero-sentinel backing can
+supply the zero promise. Peer inference retains a promise only when compatible.
+Pointer arithmetic/open tails preserve it, while element addresses and bounded
+unsentinelled slicing clear it. Existing root/offset values and codegen need no
+new representation. Sentinel slices, explicit sentinel arrays/slicing, and
+non-integer/bool pointer sentinel values remain separate work.

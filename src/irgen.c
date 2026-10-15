@@ -885,12 +885,16 @@ alignment_body(IrGen *gen, Scope *scope, AstNode *node)
 static IrRef
 pointer_type(GenBody *body, Scope *scope, AstPointerType *node)
 {
-	if ((node->size != AST_POINTER_ONE && node->size != AST_POINTER_MANY && node->size != AST_POINTER_SLICE) || node->sentinel != NULL || node->bit_offset != NULL || node->host_size != NULL || node->addrspace != NULL) {
+	if ((node->size != AST_POINTER_ONE && node->size != AST_POINTER_MANY && node->size != AST_POINTER_SLICE) || (node->sentinel != NULL && node->size != AST_POINTER_MANY) || node->bit_offset != NULL || node->host_size != NULL || node->addrspace != NULL) {
 		unsupported(body, &node->base, "pointer sizes other than single pointers or pointer attributes");
 		return IR_REF_VOID_VALUE;
 	}
 	IrRef child = type_expr(body, scope, node->child);
-	IrPointerType payload = {child, node->size == AST_POINTER_MANY ? IR_POINTER_MANY : node->size == AST_POINTER_SLICE ? IR_POINTER_SLICE : 0, 0, 0};
+	IrPointerType payload = {child, node->size == AST_POINTER_MANY ? IR_POINTER_MANY : node->size == AST_POINTER_SLICE ? IR_POINTER_SLICE : 0, 0, 0, IR_REF_NONE, 0};
+	if (node->sentinel != NULL) {
+		payload.sentinel = expr(body, scope, result_type(child), node->sentinel);
+		payload.sentinel_src = node->sentinel->offset;
+	}
 	if (node->align != NULL) {
 		payload.alignment_body = alignment_body(body->gen, scope, node->align);
 		payload.alignment_src = node->align->offset;
@@ -1141,7 +1145,7 @@ builtin_call(GenBody *body, Scope *scope, ResultInfo info, AstNode *node)
 	switch (builtin->builtin) {
 	case BUILTIN_PANIC: {
 		IrPanic payload;
-		IrPointerType slice = {IR_REF_TYPE_U8, IR_POINTER_SLICE | IR_POINTER_CONST, 0, 0};
+		IrPointerType slice = {IR_REF_TYPE_U8, IR_POINTER_SLICE | IR_POINTER_CONST, 0, 0, IR_REF_NONE, 0};
 		IrRef type = emit_payload(body, IR_PTR_TYPE, args[0]->offset, APPEND_EXTRA(gen, slice));
 		payload.message = expr(body, scope, result_type(type), args[0]);
 		payload.argument_src = args[0]->offset;
@@ -2673,6 +2677,10 @@ dump_inst(const IrDumper *dumper, IrInstIndex index, uint32_t depth)
 			fputs(" allowzero", out);
 		if ((payload.flags & IR_POINTER_VOLATILE) != 0)
 			fputs(" volatile", out);
+		if (payload.sentinel != IR_REF_NONE) {
+			fputs(" sentinel ", out);
+			dump_ref(dumper, payload.sentinel);
+		}
 		dump_labeled_body(dumper, "align", payload.alignment_body, depth);
 		break;
 	}

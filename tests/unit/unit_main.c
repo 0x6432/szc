@@ -599,6 +599,45 @@ test_wide_integer_layout(void)
 }
 
 static void
+test_sentinel_pointer_types(void)
+{
+	Arena arena;
+	arena_init(&arena);
+	SourceTable sources;
+	source_table_init(&sources, &arena);
+	Diag diag;
+	diag_init(&diag, &arena, &sources);
+	Interner interner;
+	intern_init(&interner, &arena);
+	static const char source[] =
+		"fn consume(a: [*:0]const u8, b: [*:(1 - 1)]const u8, c: [*:1]const u8, "
+		"d: [*]const u8, e: [*:false]bool, f: [*:true]bool) void { "
+		"_ = a; _ = b; _ = c; _ = d; _ = e; _ = f; } "
+		"pub fn main() void { consume(undefined,undefined,undefined,undefined,undefined,undefined); }";
+	FileId file = source_add_memory(&sources, "sentinel_types.zig", source, sizeof(source) - 1);
+	AstContainerDecl *root = parse_file(&arena, &diag, &sources, file);
+	CHECK(!diag_has_errors(&diag));
+	IrFile *ir = irgen_file(&arena, &diag, &interner, source_get(&sources, file), file, root);
+	CHECK(!diag_has_errors(&diag));
+	Sema *sema = sema_create(&arena, &diag, &interner, &sources);
+	CHECK(sema_analyze_executable(sema, file, ir));
+	CHECK(sema_func_count(sema) == 3);
+	TypeFn fn = sema_type(sema, sema_func(sema, 2)->type)->as.fn;
+	CHECK(fn.param_count == 6);
+	CHECK(fn.params[0] == fn.params[1]);
+	CHECK(fn.params[0] != fn.params[2] && fn.params[0] != fn.params[3]);
+	CHECK(fn.params[4] != fn.params[5]);
+	for (uint32_t i = 0; i < 6; i++) {
+		uint64_t size;
+		CHECK(sema_type_size(sema, fn.params[i], &size) && size == 8);
+		CHECK(sema_type_align(sema, fn.params[i]) == 8);
+		ValueId sentinel = sema_type(sema, fn.params[i])->as.pointer.sentinel;
+		CHECK((sentinel == VALUE_NONE) == (i == 3));
+	}
+	arena_free(&arena);
+}
+
+static void
 test_binary_diagnostics(void)
 {
 	Arena arena;
@@ -648,6 +687,7 @@ main(void)
 	test_array_layout();
 	test_slice_values();
 	test_wide_integer_layout();
+	test_sentinel_pointer_types();
 	test_binary_diagnostics();
 
 	printf("unit: %u checks, %u failed\n", checks, failures);

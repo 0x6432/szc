@@ -107,7 +107,8 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
   - [x] **M5.3d1 Borrowed slicing expressions and bounds checks** (explicit/runtime sentinel slices remain NYI).
   - [x] **M5.3d2 Known slice dereference and borrowed array addresses.**
   - [x] **M5.3e Writable/addressable slice descriptor fields and volatile word access.**
-- [~] **M5.4 String literals, sentinels, `[*:0]const u8`.** Literal byte values landed in M4.5b; general string/memory operations and sentinel pointer syntax remain pending.
+- [~] **M5.4 String literals, sentinels, `[*:0]const u8`.** Literal byte values landed in M4.5b; general string/memory operations and sentinel slices remain pending.
+  - [x] **M5.4a Scalar-sentinel many-pointers**: integer/bool promises, coercions and arithmetic.
 - [~] **M5.5 Casting builtins**: `@intCast`, `@truncate`, `@ptrCast`, `@intFromPtr`, `@ptrFromInt`, `@bitCast`, `@as`.
   - [x] **M5.5a Pointer address conversion (`@intFromPtr`).**
 
@@ -161,6 +162,39 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
 ## Completed milestone log
 
 (newest first; each entry: what, limitations, interactions)
+
+### M5.4a Scalar-sentinel many-pointers
+- **What**: `[*:value]T` for defined comptime integer/bool values; type interning,
+  naming, thin ABI, literal zero-sentinel coercion, qualification/nested memory
+  rules, inference, indexing and arithmetic/open-tail propagation. No runtime
+  scan is implied by the promise; bounded windows do not acquire a sentinel.
+- **Grounding**: Zig 0.17.0 zirPtrType, checkSentinelType, pointer coerce checks,
+  analyzePtrArithmetic and Type.elemPtrType. Promises survive pointer offsets but
+  not element-address formation; missing/mismatched promises cannot be coerced
+  into a stronger type. Mutable nested pointer slots require invariance.
+- **Coverage**: canonical equal-value/distinct-value/type/layout unit checks,
+  stage goldens, seven errors and replacement of the old supported-syntax NYI
+  fixture. Native tests scan string/empty/embedded-NUL backing and verify global
+  slots, arrays of pointers, callbacks, offsets and bounded windows. Existing C
+  PIE/RELRO variants now return writable, unaligned nonzero-sentinel pointers.
+  A dedicated semantic comparison matrix is part of reference CI; fuzz seeds
+  cover both irgen and sema.
+- **Validation**: /data/sentinel-many-final immutable GCC/Clang sources match
+  1673 checked integrated source/test files. Werror ASan/UBSan builds pass 666
+  units/940 goldens, 86 ordinary/generated + three scoped native programs,
+  16 driver checks, all C/ABI/alignment suites, 48 volatile sequences and 216
+  safety cases. GCC full e2e runs actual Zig; both compilers also separately
+  reference-check sentinel_pointers.zig, five C many-pointer variants and all
+  volatile sequences. Actual semantic comparisons pass 209 new sentinel cases
+  + 168 fields + 87 dereference + 204 slicing + 252 old slice cases. Optimized
+  GCC passes 86 native/216 safety checks. The 949 unchanged array/layout cases
+  replay the source-hash-verified previously actual-reference-validated oracle,
+  not fresh Zig compilations. Four 60-second fuzzers execute
+  1487814/47977/51638/67325 inputs; both builds replay 20000 mutations/stage
+  (55 irgen/111 sema seeds). All final scripts exit zero; logs share that prefix.
+- **Limits/next**: sentinel slices and explicit array/slicing sentinels remain
+  NYI, as do non-integer/bool sentinel values. Runtime wide-integer pointees keep
+  their existing restrictions; pointer promises do not establish backing bounds.
 
 ### M5.3e Writable/addressable slice descriptor fields
 - **What**: `.ptr`/`.len` assignment, compound assignment and borrowed addresses

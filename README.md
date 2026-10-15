@@ -30,6 +30,7 @@ Fixed-size arrays support typed literals, checked indexing, mutable/immutable ba
 owned snapshots, function arguments/returns and scalar-element mutation. Single/many
 pointers support qualifiers, array-to-many coercion, borrowed indexing, element offsets,
 differences and `@intFromPtr` addresses. `@sizeOf`/`@alignOf`/`@bitSizeOf` query supported layouts and representations;
+integer/boolean-sentinel many-pointers preserve promises through arithmetic;
 unsentinelled slices have pointer/length descriptors, writable/addressable `.ptr`/`.len`
 fields (including individual volatile word access), indexing,
 array/string coercions, storage and internal calls/returns. Differently sized

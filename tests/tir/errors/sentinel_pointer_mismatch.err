@@ -1,0 +1,3 @@
+tests/tir/errors/sentinel_pointer_mismatch.zig:1:47: error: expected type '[*:0]const u8', found '[*:1]const u8'
+fn f(p: [*:1]const u8) [*:0]const u8 { return p; }
+                                              ^

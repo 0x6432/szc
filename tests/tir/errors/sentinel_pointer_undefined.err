@@ -1,0 +1,3 @@
+tests/tir/errors/sentinel_pointer_undefined.zig:1:35: error: use of undefined value here causes illegal behavior
+pub fn main() void { const P = [*:undefined]u8; _ = P; }
+                                  ^

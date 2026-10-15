@@ -50,6 +50,7 @@ typedef enum PointerSize {
 typedef struct TypePointer {
 	TypeId			child;
 	PointerSize	size;
+	ValueId			sentinel;	/* VALUE_NONE, or a defined scalar element value */
 	uint32_t		alignment;	/* 0 = implicit ABI alignment */
 	bool				is_const;
 	bool				is_volatile;

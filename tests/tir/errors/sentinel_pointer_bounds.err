@@ -1,0 +1,3 @@
+tests/tir/errors/sentinel_pointer_bounds.zig:1:59: error: dereference of '*const u8' exceeds bounds of containing decl
+pub fn main() void { const p: [*:0]const u8 = "abc"; _ = p[4]; }
+                                                          ^

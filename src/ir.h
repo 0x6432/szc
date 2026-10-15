@@ -284,6 +284,8 @@ typedef struct IrPointerType {
 	uint32_t	flags;
 	IrBody		alignment_body;	/* 0 = implicit ABI alignment */
 	uint32_t	alignment_src;
+	IrRef			sentinel;	/* IR_REF_NONE = no sentinel */
+	uint32_t	sentinel_src;
 } IrPointerType;
 
 /* STRUCT_DECL: header, then field_count IrField, then decl_count IrDecl. */

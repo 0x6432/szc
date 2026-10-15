@@ -1,0 +1,330 @@
+function w $szc.main.1() {
+@start
+	%t151 =l alloc8 16
+	%t1 =l call $szc.length.3(l $szc.bytes.7)
+	%t3 =w cnel %t1, 5
+	jnz %t3, @c12_then, @c12_else
+@c12_then
+	%t4 =w copy 1
+	jmp @b4
+@c12_else
+	%t6 =l call $szc.length.3(l $szc.bytes.29)
+	%t8 =w cnel %t6, 0
+	%t4 =w copy %t8
+	jmp @b4
+@b4
+	jnz %t4, @c21_then, @c21_else
+@c21_then
+	%t13 =w copy 1
+	jmp @b13
+@c21_else
+	%t15 =l call $szc.length.3(l $szc.bytes.31)
+	%t17 =w cnel %t15, 1
+	%t13 =w copy %t17
+	jmp @b13
+@b13
+	jnz %t13, @c26_then, @c26_else
+@c26_then
+	ret 1
+@c26_else
+	jmp @b22
+@b22
+	%t28 =l call $szc.length.3(l $szc.bytes.38)
+	%t30 =w cnel %t28, 3
+	jnz %t30, @c39_then, @c39_else
+@c39_then
+	%t31 =w copy 1
+	jmp @b31
+@c39_else
+	%t33 =l call $szc.length.3(l $szc.bytes.40)
+	%t35 =w cnel %t33, 2
+	%t31 =w copy %t35
+	jmp @b31
+@b31
+	jnz %t31, @c44_then, @c44_else
+@c44_then
+	ret 2
+@c44_else
+	jmp @b40
+@b40
+	%t46 =l loadl $szc.g.1
+	%e48_offset =l mul 2, 1
+	%t48 =l add %t46, %e48_offset
+	storel %t48, $szc.g.1
+	%t52 =l loadl $szc.g.1
+	%t53 =l call $szc.length.3(l %t52)
+	%t55 =w cnel %t53, 3
+	jnz %t55, @c67_then, @c67_else
+@c67_then
+	%t56 =w copy 1
+	jmp @b56
+@c67_else
+	%t58 =l loadl $szc.g.1
+	%e60_offset =l mul 0, 1
+	%t60 =l add %t58, %e60_offset
+	%t61 =w loadub %t60
+	%t63 =w cnew %t61, 114
+	%t56 =w copy %t63
+	jmp @b56
+@b56
+	jnz %t56, @c72_then, @c72_else
+@c72_then
+	ret 3
+@c72_else
+	jmp @b68
+@b68
+	%t74 =l loadl $szc.g.1
+	%e76_offset =l mul 1, 1
+	%t76 =l sub %t74, %e76_offset
+	storel %t76, $szc.g.1
+	%t80 =l loadl $szc.g.1
+	%t81 =l call $szc.length.3(l %t80)
+	%t83 =w cnel %t81, 4
+	jnz %t83, @c95_then, @c95_else
+@c95_then
+	%t84 =w copy 1
+	jmp @b84
+@c95_else
+	%t86 =l loadl $szc.g.1
+	%e88_offset =l mul 0, 1
+	%t88 =l add %t86, %e88_offset
+	%t89 =w loadub %t88
+	%t91 =w cnew %t89, 111
+	%t84 =w copy %t91
+	jmp @b84
+@b84
+	jnz %t84, @c100_then, @c100_else
+@c100_then
+	ret 4
+@c100_else
+	jmp @b96
+@b96
+	%t103 =l call $szc.advance.4(l $szc.bytes.7, l 2)
+	%t104 =l call $szc.length.3(l %t103)
+	%t106 =w cnel %t104, 3
+	jnz %t106, @c118_then, @c118_else
+@c118_then
+	%t107 =w copy 1
+	jmp @b107
+@c118_else
+	%t109 =l call $szc.retreat.5(l %t103, l 1)
+	%e111_offset =l mul 0, 1
+	%t111 =l add %t109, %e111_offset
+	%t112 =w loadub %t111
+	%t114 =w cnew %t112, 101
+	%t107 =w copy %t114
+	jmp @b107
+@b107
+	jnz %t107, @c123_then, @c123_else
+@c123_then
+	ret 5
+@c123_else
+	jmp @b119
+@b119
+	%t126 =l call $szc.tail.6(l $szc.bytes.7, l 3)
+	%e128_offset =l mul 0, 1
+	%t128 =l add %t126, %e128_offset
+	%t129 =w loadub %t128
+	%t131 =w cnew %t129, 108
+	jnz %t131, @c142_then, @c142_else
+@c142_then
+	%t132 =w copy 1
+	jmp @b132
+@c142_else
+	%t135 =l call $szc.tail.6(l $szc.bytes.7, l 5)
+	%t136 =l call $szc.length.3(l %t135)
+	%t138 =w cnel %t136, 0
+	%t132 =w copy %t138
+	jmp @b132
+@b132
+	jnz %t132, @c147_then, @c147_else
+@c147_then
+	ret 6
+@c147_else
+	jmp @b143
+@b143
+	call $szc.window.7(l $szc.bytes.7, l 1, l 4, l %t151)
+	%t153 =l copy %t151
+	%t154 =l add %t153, 8
+	%t155 =l loadl %t154
+	%t157 =w cnel %t155, 3
+	jnz %t157, @c173_then, @c173_else
+@c173_then
+	%t158 =w copy 1
+	jmp @b158
+@c173_else
+	%t159 =l add %t153, 8
+	%t160 =l loadl %t159
+	%t161 =l copy %t153
+	%t162 =l loadl %t161
+	%g164_index =w cugel 2, %t160
+	jnz %g164_index, @g164_index_panic, @g164_index_ok
+@g164_index_panic
+	call $szc.panic.7()
+	hlt
+@g164_index_ok
+	%e166_offset =l mul 2, 1
+	%t166 =l add %t162, %e166_offset
+	%t167 =w loadub %t166
+	%t169 =w cnew %t167, 108
+	%t158 =w copy %t169
+	jmp @b158
+@b158
+	jnz %t158, @c178_then, @c178_else
+@c178_then
+	ret 7
+@c178_else
+	jmp @b174
+@b174
+	%t182 =l call $szc.choose.8(w 0, l $szc.bytes.7, l $szc.bytes.74)
+	%e184_offset =l mul 0, 1
+	%t184 =l add %t182, %e184_offset
+	%t185 =w loadub %t184
+	%t187 =w cnew %t185, 122
+	jnz %t187, @c192_then, @c192_else
+@c192_then
+	ret 9
+@c192_else
+	jmp @b188
+@b188
+	ret 0
+}
+
+function l $szc.length.3(l %t0) {
+@start
+	%t1 =l alloc8 8
+	storel 0, %t1
+@l5
+	%t6 =l loadl %t1
+	%e7_offset =l mul %t6, 1
+	%t7 =l add %t0, %e7_offset
+	%t8 =w loadub %t7
+	%t10 =w cnew %t8, 0
+	jnz %t10, @c20_then, @c20_else
+@c20_then
+	jmp @b11
+@b11
+	%t14 =l loadl %t1
+	%t16 =l add %t14, 1
+	%g16_overflow =w cultl %t16, %t14
+	jnz %g16_overflow, @g16_overflow_panic, @g16_overflow_ok
+@g16_overflow_panic
+	call $szc.panic.0()
+	hlt
+@g16_overflow_ok
+	storel %t16, %t1
+	jmp @l5
+@c20_else
+	jmp @b4
+@b4
+	%t22 =l loadl %t1
+	ret %t22
+}
+
+function l $szc.advance.4(l %t0, l %t1) {
+@start
+	%e2_offset =l mul %t1, 1
+	%t2 =l add %t0, %e2_offset
+	ret %t2
+}
+
+function l $szc.retreat.5(l %t0, l %t1) {
+@start
+	%e2_offset =l mul %t1, 1
+	%t2 =l sub %t0, %e2_offset
+	ret %t2
+}
+
+function l $szc.tail.6(l %t0, l %t1) {
+@start
+	%t2 =l alloc8 8
+	storel %t0, %t2
+	%t4 =l loadl %t2
+	%e5_offset =l mul %t1, 1
+	%t5 =l add %t4, %e5_offset
+	ret %t5
+}
+
+function $szc.window.7(l %t0, l %t1, l %t2, l %t3) {
+@start
+	%t4 =l alloc8 8
+	%t10 =l alloc8 16
+	storel %t0, %t4
+	%t6 =l loadl %t4
+	%g7_slice =w cugtl %t1, %t2
+	jnz %g7_slice, @g7_slice_panic, @g7_slice_ok
+@g7_slice_panic
+	call $szc.panic.8()
+	hlt
+@g7_slice_ok
+	%e8_offset =l mul %t1, 1
+	%t8 =l add %t6, %e8_offset
+	%t9 =l sub %t2, %t1
+	%t11 =l copy %t10
+	%t12 =l add %t10, 8
+	storel %t8, %t11
+	storel %t9, %t12
+	call $memmove(l %t3, l %t10, l 16)
+	ret
+}
+
+function l $szc.choose.8(w %t0, l %t1, l %t2) {
+@start
+	jnz %t0, @c7_then, @c7_else
+@c7_then
+	%t4 =l copy %t1
+	%t3 =l copy %t4
+	jmp @b3
+@c7_else
+	%t3 =l copy %t2
+	jmp @b3
+@b3
+	ret %t3
+}
+
+data $szc.g.1 = align 8 { l $szc.bytes.46 }
+section ".data.rel.ro"
+data $szc.g.2 = align 8 { l $szc.bytes.7 }
+section ".rodata"
+data $szc.bytes.7 = { b 104, b 101, b 108, b 108, b 111, b 0 }
+section ".rodata"
+data $szc.bytes.29 = { b 0 }
+section ".rodata"
+data $szc.bytes.31 = { b 97, b 0, b 98, b 0 }
+section ".rodata"
+data $szc.bytes.38 = { b 97, b 98, b 99, b 0 }
+section ".rodata"
+data $szc.bytes.40 = { b 120, b 121, b 0 }
+section ".rodata"
+data $szc.bytes.46 = { b 119, b 111, b 114, b 108, b 100, b 0 }
+section ".rodata"
+data $szc.bytes.74 = { b 122, b 0 }
+data $szc.panic.msg.0 = { b "integer overflow\n", b 0 }
+function $szc.panic.0() {
+@start
+	call $write(w 2, l $szc.panic.msg.0, l 17)
+	call $abort()
+	hlt
+}
+
+data $szc.panic.msg.7 = { b "index out of bounds\n", b 0 }
+function $szc.panic.7() {
+@start
+	call $write(w 2, l $szc.panic.msg.7, l 20)
+	call $abort()
+	hlt
+}
+
+data $szc.panic.msg.8 = { b "start index is larger than end index\n", b 0 }
+function $szc.panic.8() {
+@start
+	call $write(w 2, l $szc.panic.msg.8, l 37)
+	call $abort()
+	hlt
+}
+
+export function w $main() {
+@start
+	%status =w call $szc.main.1()
+	ret %status
+}

@@ -1,0 +1,3 @@
+tests/tir/errors/sentinel_pointer_bounded.zig:1:48: error: expected type '[*:0]const u8', found '*const [2]u8'
+fn f(p: [*:0]const u8) [*:0]const u8 { return p[0..2]; }
+                                               ^

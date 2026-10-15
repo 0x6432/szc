@@ -202,6 +202,7 @@ type_hash(const Type *type)
 	case TYPE_POINTER:
 		hash = hash_word(hash, type->as.pointer.child);
 		hash = hash_word(hash, (uint32_t)type->as.pointer.size);
+		hash = hash_word(hash, type->as.pointer.sentinel);
 		hash = hash_word(hash, type->as.pointer.alignment);
 		hash = hash_word(hash, type->as.pointer.is_const ? 1u : 0u);
 		hash = hash_word(hash, type->as.pointer.is_volatile ? 1u : 0u);
@@ -236,7 +237,7 @@ type_equal(const Type *a, const Type *b)
 	case TYPE_ARRAY:
 		return a->as.array.child == b->as.array.child && a->as.array.length == b->as.array.length && a->as.array.sentinel_zero == b->as.array.sentinel_zero;
 	case TYPE_POINTER:
-		return a->as.pointer.child == b->as.pointer.child && a->as.pointer.size == b->as.pointer.size && a->as.pointer.alignment == b->as.pointer.alignment && a->as.pointer.is_const == b->as.pointer.is_const && a->as.pointer.is_volatile == b->as.pointer.is_volatile && a->as.pointer.is_allowzero == b->as.pointer.is_allowzero;
+		return a->as.pointer.child == b->as.pointer.child && a->as.pointer.size == b->as.pointer.size && a->as.pointer.sentinel == b->as.pointer.sentinel && a->as.pointer.alignment == b->as.pointer.alignment && a->as.pointer.is_const == b->as.pointer.is_const && a->as.pointer.is_volatile == b->as.pointer.is_volatile && a->as.pointer.is_allowzero == b->as.pointer.is_allowzero;
 	case TYPE_FN:
 		if (a->as.fn.convention != b->as.fn.convention || a->as.fn.ret != b->as.fn.ret || a->as.fn.is_var_args != b->as.fn.is_var_args || a->as.fn.is_generic != b->as.fn.is_generic || a->as.fn.param_count != b->as.fn.param_count)
 			return false;
@@ -528,6 +529,12 @@ sema_type_name(Sema *sema, TypeId type_id)
 		return arena_sprintf(sema->arena, "[%" PRIu64 "%s]%s", type->as.array.length, type->as.array.sentinel_zero ? ":0" : "", sema_type_name(sema, type->as.array.child));
 	case TYPE_POINTER: {
 		const char *prefix = type->as.pointer.size == POINTER_ONE ? "*" : type->as.pointer.size == POINTER_MANY ? "[*]" : type->as.pointer.size == POINTER_SLICE ? "[]" : "[*c]";
+		if (type->as.pointer.sentinel != VALUE_NONE) {
+			const Value *sentinel = value_get(&sema->values, type->as.pointer.sentinel);
+			const char *text = sentinel->kind == VALUE_BOOL ? (sentinel->as.boolean ? "true" : "false")
+				: bigint_to_string(sema->arena, &sentinel->as.integer);
+			prefix = arena_sprintf(sema->arena, "[*:%s]", text);
+		}
 		const char *alignment = type->as.pointer.alignment == 0 ? "" : arena_sprintf(sema->arena, "align(%u) ", (unsigned)type->as.pointer.alignment);
 		return arena_sprintf(sema->arena, "%s%s%s%s%s%s", prefix, alignment, type->as.pointer.is_allowzero ? "allowzero " : "", type->as.pointer.is_const ? "const " : "", type->as.pointer.is_volatile ? "volatile " : "", sema_type_name(sema, type->as.pointer.child));
 	}
@@ -1412,6 +1419,15 @@ pointer_alignment(const Sema *sema, TypePointer pointer)
 	return pointer.alignment != 0 ? pointer.alignment : sema_type_align(sema, pointer.child);
 }
 
+static bool
+sentinel_is_zero(const Sema *sema, ValueId sentinel)
+{
+	if (sentinel == VALUE_NONE)
+		return false;
+	const Value *value = value_get(&sema->values, sentinel);
+	return value->kind == VALUE_INT && bigint_is_zero(&value->as.integer);
+}
+
 /* Memory-compatible types: mutable outer pointees require bidirectional coercions. */
 static bool
 memory_coercion_allowed(const Sema *sema, TypeId dest, TypeId source, bool dest_is_mut)
@@ -1448,8 +1464,16 @@ memory_coercion_allowed(const Sema *sema, TypeId dest, TypeId source, bool dest_
 		if (dest_is_mut || to.size != POINTER_MANY || from.size != POINTER_ONE
 			|| sema->types[from.child].kind != TYPE_ARRAY)
 			return false;
-		from.child = sema->types[from.child].as.array.child;
+		TypeArray array = sema->types[from.child].as.array;
+		if (to.sentinel != VALUE_NONE) {
+			if (!array.sentinel_zero || !sentinel_is_zero(sema, to.sentinel))
+				return false;
+			from.sentinel = to.sentinel;
+		}
+		from.child = array.child;
 	}
+	if (to.sentinel != from.sentinel && (dest_is_mut || to.sentinel != VALUE_NONE))
+		return false;
 	if (to.is_volatile != from.is_volatile && (dest_is_mut || !to.is_volatile))
 		return false;
 	if (to.is_allowzero != from.is_allowzero && (dest_is_mut || !to.is_allowzero))
@@ -1980,6 +2004,13 @@ peer_type(Block *block, Operand lhs, Operand rhs, uint32_t src, TypeId *out)
 				candidate.as.pointer.size = slice_array ? POINTER_SLICE : POINTER_MANY;
 				candidate.as.pointer.child = ap.size != POINTER_ONE ? ap.child : bp.child;
 			}
+			candidate.as.pointer.sentinel = ap.sentinel == bp.sentinel ? ap.sentinel : VALUE_NONE;
+			if (many_array) {
+				TypePointer many = ap.size == POINTER_MANY ? ap : bp;
+				TypeArray array = sema->types[ap.size == POINTER_ONE ? ap.child : bp.child].as.array;
+				candidate.as.pointer.sentinel = array.sentinel_zero && sentinel_is_zero(sema, many.sentinel)
+					? many.sentinel : VALUE_NONE;
+			}
 			candidate.as.pointer.is_const = ap.is_const || bp.is_const;
 			candidate.as.pointer.is_volatile = ap.is_volatile || bp.is_volatile;
 			candidate.as.pointer.is_allowzero = ap.is_allowzero || bp.is_allowzero;
@@ -2123,6 +2154,7 @@ analyze_pointer_offset(Block *block, IrOp op, Operand base, Operand offset, uint
 	TypeId single = array_element_pointer_type(sema, shape, element, offset, stride, logical);
 	Type result_type = sema->types[single];
 	result_type.as.pointer.size = POINTER_MANY;
+	result_type.as.pointer.sentinel = shape.sentinel;
 	TypeId type = type_intern(sema, &result_type);
 	if (operand_is_undefined(block, base))
 		return comptime_operand(type, value_undefined(&sema->values, type));
@@ -4186,6 +4218,7 @@ array_element_pointer_type(Sema *sema, TypePointer pointer, TypeArray array, Ope
 	type.as.pointer = pointer;
 	type.as.pointer.child = array.child;
 	type.as.pointer.size = POINTER_ONE;
+	type.as.pointer.sentinel = VALUE_NONE;
 	type.as.pointer.alignment = alignment == sema_type_align(sema, array.child) ? 0 : alignment;
 	type.as.pointer.is_allowzero = pointer.is_allowzero && (index.kind != OPERAND_COMPTIME || item == 0);
 	return type_intern(sema, &type);
@@ -4458,6 +4491,7 @@ analyze_slice(Block *block, const IrInst *inst)
 	if (known_start && known_end) {
 		uint64_t count = last - first;
 		result.as.pointer.size = POINTER_ONE;
+		result.as.pointer.sentinel = VALUE_NONE;
 		result.as.pointer.child = array_type_id(sema, result.as.pointer.child, count, sentinel);
 		TypeId type = type_intern(sema, &result);
 		if (operand_is_undefined(block, pointer)) {
@@ -4478,6 +4512,7 @@ analyze_slice(Block *block, const IrInst *inst)
 	TirRef length = emit_tir_bin(block, TIR_SUB_WRAP, T_USIZE, inst->src,
 		materialize(block, end, inst->src), materialize(block, start, inst->src));
 	result.as.pointer.size = POINTER_SLICE;
+	result.as.pointer.sentinel = VALUE_NONE;
 	return make_slice(block, type_intern(sema, &result), pointer, runtime_operand(T_USIZE, length), inst->src);
 }
 
@@ -4858,6 +4893,23 @@ analyze_inst(Block *block, IrInstIndex index, Operand *break_value)
 		pointer.as.pointer.child = type;
 		pointer.as.pointer.size = (payload.flags & IR_POINTER_SLICE) != 0 ? POINTER_SLICE
 			: (payload.flags & IR_POINTER_MANY) != 0 ? POINTER_MANY : POINTER_ONE;
+		if (payload.sentinel != IR_REF_NONE) {
+			Operand sentinel = coerce(block, resolve_ref(block, payload.sentinel), type, payload.sentinel_src);
+			if (sentinel.kind == OPERAND_NONE)
+				break;
+			if (sentinel.kind != OPERAND_COMPTIME) {
+				sema_error(block, payload.sentinel_src, "unable to resolve comptime value");
+				break;
+			}
+			if (!check_defined(block, sentinel, payload.sentinel_src))
+				break;
+			const Value *value = operand_value(block, sentinel);
+			if (value->kind != VALUE_INT && value->kind != VALUE_BOOL) {
+				sema_error(block, payload.sentinel_src, "not supported by szc yet: pointer sentinel type '%s'", sema_type_name(sema, type));
+				break;
+			}
+			pointer.as.pointer.sentinel = sentinel.value;
+		}
 		pointer.as.pointer.is_const = (payload.flags & IR_POINTER_CONST) != 0;
 		pointer.as.pointer.is_allowzero = (payload.flags & IR_POINTER_ALLOWZERO) != 0;
 		pointer.as.pointer.is_volatile = (payload.flags & IR_POINTER_VOLATILE) != 0;

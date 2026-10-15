@@ -19,6 +19,36 @@ Read this first when resuming work (the sandbox resets often).
 
 ## Current state
 
+- Latest language checkpoint: M5.4a scalar-sentinel many-pointers is complete.
+  `[*:value]T` supports defined comptime integer/bool sentinels. ValueId promises
+  participate in type interning/names; root/offset pointers and thin ABI remain
+  unchanged. Qualifier/coercion/inference rules cannot invent/change promises;
+  writable nested slots are invariant. Arithmetic/open tails preserve promises;
+  scalar element addresses and bounded unsentinelled windows drop them.
+  Literal zero backing supplies the zero promise. Other sentinel types/sentinel
+  slices/explicit array sentinel syntax remain separate work.
+- /data/sentinel-many-final GCC/Clang Werror ASan/UBSan: 666 units/940 goldens,
+  86 ordinary/generated + three scoped native cases, 16 driver checks, all C/ABI/
+  alignment suites, 48 volatile sequences and 216 safety cases. GCC full e2e
+  runs Zig; both builds separately reference-check the new native program,
+  five C many-pointer variants and volatile Debug/ReleaseFast. Actual matrices:
+  209 sentinel pointers + 168 fields + 87 dereference + 204 slicing + 252 slices.
+  Optimized GCC passes 86 native/216 safety cases; 949 unchanged array/layout
+  oracle replays retain verified source hashes (not fresh Zig runs). Four 60s
+  fuzzers execute 1487814/47977/51638/67325 inputs, both builds replay 20000
+  mutations/stage (55 irgen/111 sema seeds). All scripts exit zero; 1673 source/
+  test files match both frozen builds. Evidence uses /data/sentinel-many-final-*.
+- Next work is already isolated in /data/sentinel-array-next, not yet integrated:
+  general integer/bool ValueId array sentinels, explicit literal/type syntax,
+  end-of-in-place-init sentinel store, concat/memory rules. Native probe passed.
+  Initial actual-reference matrix found mutable top-level *[n:s]T -> *[n]T
+  coercion must be allowed (Sema.zig ~29735) without making nested writable
+  pointer slots covariant. Current correction is under comparison in
+  /data/sentinel-arrays-diff2.log. Do not claim that next milestone is complete.
+- CI dbe17c3/run 38786103135: 22 jobs passed, only safety reference running at
+  latest check; 7aeb3e5 has 19 passed/native reference running. New checks retain
+  all deadlines; no aggregate success is claimed until actually completed.
+
 - Latest language checkpoint: M5.3e writable/addressable slice descriptor fields
   is complete. /data/slice-fields-final immutable GCC/Clang snapshots match all
   1659 checked source/test files. Werror ASan/UBSan: 640 units/930 goldens;

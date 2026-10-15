@@ -1,0 +1,3 @@
+fn szc.main.1: fn () void {
+  %0: noreturn = ret
+}
