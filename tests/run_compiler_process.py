@@ -83,7 +83,7 @@ def main():
             nonlocal calls
             actor = "szc" if calls % 2 == 0 else "zig"
             assert context == f"{script.stem} case {calls // 2 + 1} {actor}"
-            assert timeout == (30 if script.stem == "diff_pointer_coercions" else 120)
+            assert timeout == 120
             assert Path(command[2]).read_text() == text
             if actor == "szc":
                 assert command == ["compiler", "tir", command[2]]

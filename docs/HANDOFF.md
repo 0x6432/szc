@@ -76,6 +76,28 @@ Read this first when resuming work (the sandbox resets often).
   also passed all jobs (run 38590520673), as did M5.1c2b2b1 ecfb6ab
   (run 38593742928). Check each new push's run.
 
+## CI follow-up: uniform compilation deadlines
+
+- 967329f/run 38711782475 passed GCC/Clang/fuzz and reference-enabled executable/
+  safety suites, then the nested-pointer reference matrix timed out after 30 seconds
+  in case 89. The retained source is:
+
+```zig
+fn convert(p: **const *const u8) ***u8 { return p; }
+pub fn main() void { _ = convert(undefined); }
+```
+
+- The wrapper retained source/command/empty stdout/stderr and failed explicitly; no
+  accept/reject disagreement was reported. The job later received a runner shutdown
+  signal. This does not establish a full root cause for hosted-runner delays.
+- diff_pointer_coercions.py now uses the same 120-second compilation deadline as all
+  other semantic matrices, for both actors. Runtime execution stays at 15 seconds.
+  Group cleanup, -j2, source/status/output diagnostics and immediate failure remain
+  unchanged. No retry, filtering, skipped case or tolerated timeout is introduced.
+- Shared lifecycle and adapter wiring regressions pass; the adapter test now requires
+  120 seconds uniformly. All 168 real nested-pointer comparisons pass against Zig.
+  Check the new push separately; this is not a claim that hosted runner stalls are fixed.
+
 ## CI follow-up: bounded differential compiler processes
 
 - The push CI for 72914b5 succeeded (38634766715). A later scheduled run on the

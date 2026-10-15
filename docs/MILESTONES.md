@@ -139,6 +139,20 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
 
 (newest first; each entry: what, limitations, interactions)
 
+### CI follow-up: uniform semantic compilation deadlines
+- **Evidence**: 967329f/run 38711782475 passed compiler/fuzz/native/reference safety
+  suites but reference Zig exceeded the nested-pointer matrix's 30-second deadline
+  in case 89. Source/command/output were retained; later runner shutdown was also
+  recorded. No accept/reject mismatch was reported, and runner delays remain incompletely
+  diagnosed. The exact source and job evidence are recorded in HANDOFF.md.
+- **What**: align the outlier nested-pointer compilation budget with the existing
+  120-second budget of other semantic matrices. Preserve -j2, whole-group timeout
+  cleanup, actionable failure context and strict exit checking. Runtime execution
+  remains bounded at 15 seconds. No retries or ignored failures.
+- **Tests**: shared lifecycle/adapter regressions pass, with uniform deadline assertions.
+  All 168 real nested-pointer comparisons pass against Zig. No language milestone
+  is advanced by this infrastructure-only checkpoint.
+
 ### M5.1c2b2b3c Typed immutable declaration address dependencies
 - **What**: separate explicit const type bodies from initializers. Publish an immutable
   declaration address after its type/alignment resolve, without forcing its value.

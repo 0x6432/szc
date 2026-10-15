@@ -32,9 +32,9 @@ def main():
                 for text in sources:
                     path.write_text(text)
                     szc = run_compiler([args.szc, "tir", str(path)], text,
-                        f"diff_pointer_coercions case {checked + 1} szc", timeout=30)
+                        f"diff_pointer_coercions case {checked + 1} szc", timeout=120)
                     zig = run_compiler([args.zig, "build-exe", str(path), "-fno-emit-bin", "-j2"], text,
-                        f"diff_pointer_coercions case {checked + 1} zig", timeout=30)
+                        f"diff_pointer_coercions case {checked + 1} zig", timeout=120)
                     if szc.returncode != zig.returncode:
                         raise SystemExit(f"disagreement in case {checked + 1}: {source} -> {destination}\n"
                                          + text
