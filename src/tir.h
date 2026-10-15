@@ -56,6 +56,7 @@ typedef uint32_t TirBody;	/* extra index of a body, 0 = none */
 	X(TRUNCATE, "truncate")	/* un: discard high integer bits */ \
 	X(INT_FROM_BOOL, "int_from_bool")	/* un: bool -> u1 */ \
 	X(ARRAY_ELEM_PTR, "array_elem_ptr")	/* bin: single array pointer, checked usize index */ \
+	X(ARRAY_COPY, "array_copy")	/* bin: destination and source array pointers; overlap-safe */ \
 	X(ALLOC, "alloc")	/* type is the pointer type; stack slot */ \
 	X(LOAD, "load")	/* un: pointer */ \
 	X(STORE, "store")	/* bin: pointer, value */ \

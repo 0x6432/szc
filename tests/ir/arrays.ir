@@ -1,4 +1,4 @@
-%524 = struct_decl (flags=0) {
+%544 = struct_decl (flags=0) {
   decl const "first" value {
     %0 = int 3
     %1 = as @type_usize, %0
@@ -17,629 +17,649 @@
     %12 = break_inline result, @type_u8
   } value {
     %13 = decl_type
-    %14 = decl_val "first"
-    %15 = int 1
-    %16 = as @type_usize, %15
-    %17 = array_index %14, %16
-    %18 = as %13, %17
-    %19 = break_inline result, %18
+    %14 = decl_ref "first"
+    %15 = array_base_ptr %14
+    %16 = int 1
+    %17 = as @type_usize, %16
+    %18 = array_index %15, %17
+    %19 = as %13, %18
+    %20 = break_inline result, %19
   }
   decl const "nested" type {
-    %20 = int 2
-    %21 = as @type_usize, %20
-    %22 = int 2
-    %23 = as @type_usize, %22
-    %24 = array_type %23, @type_u8
-    %25 = as @type_type, %24
-    %26 = array_type %21, %25
-    %27 = as @type_type, %26
-    %28 = break_inline result, %27
+    %21 = int 2
+    %22 = as @type_usize, %21
+    %23 = int 2
+    %24 = as @type_usize, %23
+    %25 = array_type %24, @type_u8
+    %26 = as @type_type, %25
+    %27 = array_type %22, %26
+    %28 = as @type_type, %27
+    %29 = break_inline result, %28
   } value {
-    %29 = decl_type
-    %30 = array_elem_type %29
+    %30 = decl_type
     %31 = array_elem_type %30
-    %32 = int 1
-    %33 = as %31, %32
-    %34 = int 2
-    %35 = as %31, %34
-    %36 = array_init %30, %33, %35
-    %37 = as %30, %36
-    %38 = array_elem_type %30
-    %39 = int 3
-    %40 = as %38, %39
-    %41 = int 4
-    %42 = as %38, %41
-    %43 = array_init %30, %40, %42
-    %44 = as %30, %43
-    %45 = array_init %29, %37, %44
-    %46 = as %29, %45
-    %47 = break_inline result, %46
+    %32 = array_elem_type %31
+    %33 = int 1
+    %34 = as %32, %33
+    %35 = int 2
+    %36 = as %32, %35
+    %37 = array_init %31, %34, %36
+    %38 = as %31, %37
+    %39 = array_elem_type %31
+    %40 = int 3
+    %41 = as %39, %40
+    %42 = int 4
+    %43 = as %39, %42
+    %44 = array_init %31, %41, %43
+    %45 = as %31, %44
+    %46 = array_init %30, %38, %45
+    %47 = as %30, %46
+    %48 = break_inline result, %47
   }
   decl const "wide" type {
-    %48 = int 2
-    %49 = as @type_usize, %48
-    %50 = array_type %49, @type_u16
-    %51 = as @type_type, %50
-    %52 = break_inline result, %51
+    %49 = int 2
+    %50 = as @type_usize, %49
+    %51 = array_type %50, @type_u16
+    %52 = as @type_type, %51
+    %53 = break_inline result, %52
   } value {
-    %53 = decl_type
-    %54 = int 1
-    %55 = as @type_usize, %54
-    %56 = array_type %55, @type_u8
-    %57 = array_elem_type %56
-    %58 = int 1
-    %59 = as %57, %58
-    %60 = array_init %56, %59
-    %61 = int 1
-    %62 = as @type_usize, %61
-    %63 = array_type %62, @type_u16
-    %64 = array_elem_type %63
-    %65 = int 258
-    %66 = as %64, %65
-    %67 = array_init %63, %66
-    %68 = array_cat %60, %67
-    %69 = as %53, %68
-    %70 = break_inline result, %69
+    %54 = decl_type
+    %55 = int 1
+    %56 = as @type_usize, %55
+    %57 = array_type %56, @type_u8
+    %58 = array_elem_type %57
+    %59 = int 1
+    %60 = as %58, %59
+    %61 = array_init %57, %60
+    %62 = int 1
+    %63 = as @type_usize, %62
+    %64 = array_type %63, @type_u16
+    %65 = array_elem_type %64
+    %66 = int 258
+    %67 = as %65, %66
+    %68 = array_init %64, %67
+    %69 = array_cat %61, %68
+    %70 = as %54, %69
+    %71 = break_inline result, %70
   }
   decl const "text" value {
-    %71 = str "ab"
-    %72 = str "cd"
-    %73 = array_cat %71, %72
-    %74 = break_inline result, %73
+    %72 = str "ab"
+    %73 = str "cd"
+    %74 = array_cat %72, %73
+    %75 = break_inline result, %74
   }
   decl const "mixed" value {
-    %75 = int 1
-    %76 = as @type_usize, %75
-    %77 = array_type %76, @type_u8
-    %78 = array_elem_type %77
-    %79 = int 42
-    %80 = as %78, %79
-    %81 = array_init %77, %80
-    %82 = str "x"
-    %83 = array_cat %81, %82
-    %84 = break_inline result, %83
+    %76 = int 1
+    %77 = as @type_usize, %76
+    %78 = array_type %77, @type_u8
+    %79 = array_elem_type %78
+    %80 = int 42
+    %81 = as %79, %80
+    %82 = array_init %78, %81
+    %83 = str "x"
+    %84 = array_cat %82, %83
+    %85 = break_inline result, %84
   }
   decl const "tail" value {
-    %85 = str "q"
-    %86 = int 1
-    %87 = as @type_usize, %86
-    %88 = array_type %87, @type_u8
-    %89 = array_elem_type %88
-    %90 = int 43
-    %91 = as %89, %90
-    %92 = array_init %88, %91
-    %93 = array_cat %85, %92
-    %94 = break_inline result, %93
+    %86 = str "q"
+    %87 = int 1
+    %88 = as @type_usize, %87
+    %89 = array_type %88, @type_u8
+    %90 = array_elem_type %89
+    %91 = int 43
+    %92 = as %90, %91
+    %93 = array_init %89, %92
+    %94 = array_cat %86, %93
+    %95 = break_inline result, %94
   }
   decl const "plain" type {
-    %95 = int 2
-    %96 = as @type_usize, %95
-    %97 = array_type %96, @type_u8
-    %98 = as @type_type, %97
-    %99 = break_inline result, %98
+    %96 = int 2
+    %97 = as @type_usize, %96
+    %98 = array_type %97, @type_u8
+    %99 = as @type_type, %98
+    %100 = break_inline result, %99
   } value {
-    %100 = decl_type
-    %101 = str "hi"
-    %102 = deref %101
-    %103 = as %100, %102
-    %104 = break_inline result, %103
+    %101 = decl_type
+    %102 = str "hi"
+    %103 = deref %102
+    %104 = as %101, %103
+    %105 = break_inline result, %104
   }
   decl const "empty" value {
-    %105 = int 0
-    %106 = as @type_usize, %105
-    %107 = array_type %106, @type_u8
-    %108 = array_elem_type %107
-    %109 = array_init %107
-    %110 = break_inline result, %109
+    %106 = int 0
+    %107 = as @type_usize, %106
+    %108 = array_type %107, @type_u8
+    %109 = array_elem_type %108
+    %110 = array_init %108
+    %111 = break_inline result, %110
   }
   decl const "flags" value {
-    %111 = int 2
-    %112 = as @type_usize, %111
-    %113 = array_type %112, @type_bool
-    %114 = array_elem_type %113
-    %115 = as %114, @true
-    %116 = as %114, @false
-    %117 = array_init %113, %115, %116
-    %118 = break_inline result, %117
+    %112 = int 2
+    %113 = as @type_usize, %112
+    %114 = array_type %113, @type_bool
+    %115 = array_elem_type %114
+    %116 = as %115, @true
+    %117 = as %115, @false
+    %118 = array_init %114, %116, %117
+    %119 = break_inline result, %118
   }
   decl const "types" value {
-    %119 = int 2
-    %120 = as @type_usize, %119
-    %121 = array_type %120, @type_type
-    %122 = array_elem_type %121
-    %123 = as %122, @type_u8
-    %124 = as %122, @type_u16
-    %125 = array_init %121, %123, %124
-    %126 = break_inline result, %125
+    %120 = int 2
+    %121 = as @type_usize, %120
+    %122 = array_type %121, @type_type
+    %123 = array_elem_type %122
+    %124 = as %123, @type_u8
+    %125 = as %123, @type_u16
+    %126 = array_init %122, %124, %125
+    %127 = break_inline result, %126
   }
   decl const "undef_array" type {
-    %127 = int 3
-    %128 = as @type_usize, %127
-    %129 = array_type %128, @type_u8
-    %130 = as @type_type, %129
-    %131 = break_inline result, %130
+    %128 = int 3
+    %129 = as @type_usize, %128
+    %130 = array_type %129, @type_u8
+    %131 = as @type_type, %130
+    %132 = break_inline result, %131
   } value {
-    %132 = decl_type
-    %133 = as %132, @undefined
-    %134 = break_inline result, %133
+    %133 = decl_type
+    %134 = as %133, @undefined
+    %135 = break_inline result, %134
   }
   decl const "undef_pointer" type {
-    %135 = int 5
-    %136 = as @type_usize, %135
-    %137 = array_type %136, @type_u8
-    %138 = as @type_type, %137
-    %139 = ptr_type %138, @true
-    %140 = as @type_type, %139
-    %141 = break_inline result, %140
+    %136 = int 5
+    %137 = as @type_usize, %136
+    %138 = array_type %137, @type_u8
+    %139 = as @type_type, %138
+    %140 = ptr_type %139, @true
+    %141 = as @type_type, %140
+    %142 = break_inline result, %141
   } value {
-    %142 = decl_type
-    %143 = as %142, @undefined
-    %144 = break_inline result, %143
+    %143 = decl_type
+    %144 = as %143, @undefined
+    %145 = break_inline result, %144
   }
   decl const "partly" value {
-    %145 = int 2
-    %146 = as @type_usize, %145
-    %147 = array_type %146, @type_u8
-    %148 = array_elem_type %147
-    %149 = as %148, @undefined
-    %150 = int 13
-    %151 = as %148, %150
-    %152 = array_init %147, %149, %151
-    %153 = str "z"
-    %154 = array_cat %152, %153
-    %155 = break_inline result, %154
+    %146 = int 2
+    %147 = as @type_usize, %146
+    %148 = array_type %147, @type_u8
+    %149 = array_elem_type %148
+    %150 = as %149, @undefined
+    %151 = int 13
+    %152 = as %149, %151
+    %153 = array_init %148, %150, %152
+    %154 = str "z"
+    %155 = array_cat %153, %154
+    %156 = break_inline result, %155
   }
   decl const "huge" type {
-    %156 = int 4294967296
-    %157 = as @type_usize, %156
-    %158 = int_type u0
-    %159 = array_type %157, %158
-    %160 = as @type_type, %159
-    %161 = ptr_type %160, @true
-    %162 = as @type_type, %161
-    %163 = break_inline result, %162
+    %157 = int 4294967296
+    %158 = as @type_usize, %157
+    %159 = int_type u0
+    %160 = array_type %158, %159
+    %161 = as @type_type, %160
+    %162 = ptr_type %161, @true
+    %163 = as @type_type, %162
+    %164 = break_inline result, %163
   } value {
-    %164 = decl_type
-    %165 = as %164, @undefined
-    %166 = break_inline result, %165
+    %165 = decl_type
+    %166 = as %165, @undefined
+    %167 = break_inline result, %166
   }
   decl const "max" type {
-    %167 = int 18446744073709551615
-    %168 = as @type_usize, %167
-    %169 = int_type u0
-    %170 = array_type %168, %169
-    %171 = as @type_type, %170
-    %172 = ptr_type %171, @true
-    %173 = as @type_type, %172
-    %174 = break_inline result, %173
+    %168 = int 18446744073709551615
+    %169 = as @type_usize, %168
+    %170 = int_type u0
+    %171 = array_type %169, %170
+    %172 = as @type_type, %171
+    %173 = ptr_type %172, @true
+    %174 = as @type_type, %173
+    %175 = break_inline result, %174
   } value {
-    %175 = decl_type
-    %176 = as %175, @undefined
-    %177 = break_inline result, %176
+    %176 = decl_type
+    %177 = as %176, @undefined
+    %178 = break_inline result, %177
   }
   decl const "callback" value {
-    %178 = int 2
-    %179 = as @type_usize, %178
-    %181 = fn_type "" {
+    %179 = int 2
+    %180 = as @type_usize, %179
+    %182 = fn_type "" {
       ret type {
-        %180 = break_inline result, @type_u8
+        %181 = break_inline result, @type_u8
       }
     }
-    %182 = as @type_type, %181
-    %183 = ptr_type %182, @true
-    %184 = as @type_type, %183
-    %185 = array_type %179, %184
-    %186 = array_elem_type %185
-    %187 = decl_val "target"
-    %188 = as %186, %187
-    %189 = decl_val "other"
-    %190 = as %186, %189
-    %191 = array_init %185, %188, %190
-    %192 = break_inline result, %191
+    %183 = as @type_type, %182
+    %184 = ptr_type %183, @true
+    %185 = as @type_type, %184
+    %186 = array_type %180, %185
+    %187 = array_elem_type %186
+    %188 = decl_val "target"
+    %189 = as %187, %188
+    %190 = decl_val "other"
+    %191 = as %187, %190
+    %192 = array_init %186, %189, %191
+    %193 = break_inline result, %192
   }
   decl fn "target" value {
-    %198 = func "target" {
+    %199 = func "target" {
       ret type {
-        %193 = break_inline result, @type_u8
+        %194 = break_inline result, @type_u8
       }
       body insts {
-        %194 = ret_type
-        %195 = int 23
-        %196 = as_return %194, %195
-        %197 = ret %196
+        %195 = ret_type
+        %196 = int 23
+        %197 = as_return %195, %196
+        %198 = ret %197
       }
     }
-    %199 = break_inline result, %198
+    %200 = break_inline result, %199
   }
   decl fn "other" value {
-    %205 = func "other" {
+    %206 = func "other" {
       ret type {
-        %200 = break_inline result, @type_u8
+        %201 = break_inline result, @type_u8
       }
       body insts {
-        %201 = ret_type
-        %202 = int 29
-        %203 = as_return %201, %202
-        %204 = ret %203
+        %202 = ret_type
+        %203 = int 29
+        %204 = as_return %202, %203
+        %205 = ret %204
       }
     }
-    %206 = break_inline result, %205
+    %207 = break_inline result, %206
   }
   decl fn "add" value {
-    %216 = func "add" {
-      %208 = param "a" type {
-        %207 = break_inline result, @type_u8
+    %217 = func "add" {
+      %209 = param "a" type {
+        %208 = break_inline result, @type_u8
       }
-      %210 = param "b" type {
-        %209 = break_inline result, @type_u8
+      %211 = param "b" type {
+        %210 = break_inline result, @type_u8
       }
       ret type {
-        %211 = break_inline result, @type_u8
+        %212 = break_inline result, @type_u8
       }
       body insts {
-        %212 = ret_type
-        %213 = add %208, %210
-        %214 = as_return %212, %213
-        %215 = ret %214
+        %213 = ret_type
+        %214 = add %209, %211
+        %215 = as_return %213, %214
+        %216 = ret %215
       }
     }
-    %217 = break_inline result, %216
+    %218 = break_inline result, %217
   }
   decl fn "main" pub value {
-    %522 = func "main" {
+    %542 = func "main" {
       ret type {
-        %218 = break_inline result, @type_u8
+        %219 = break_inline result, @type_u8
       }
       body insts {
-        %219 = decl_val "add"
-        %220 = call %219 arg0 {
-          %221 = arg_type %220, 0
-          %222 = decl_val "selected"
-          %223 = as %221, %222
-          %224 = break_inline result, %223
+        %220 = decl_val "add"
+        %221 = call %220 arg0 {
+          %222 = arg_type %221, 0
+          %223 = decl_val "selected"
+          %224 = as %222, %223
+          %225 = break_inline result, %224
         } arg1 {
-          %225 = arg_type %220, 1
-          %226 = decl_val "first"
-          %227 = int 0
-          %228 = as @type_usize, %227
-          %229 = array_index %226, %228
-          %230 = as %225, %229
-          %231 = break_inline result, %230
+          %226 = arg_type %221, 1
+          %227 = decl_ref "first"
+          %228 = array_base_ptr %227
+          %229 = int 0
+          %230 = as @type_usize, %229
+          %231 = array_index %228, %230
+          %232 = as %226, %231
+          %233 = break_inline result, %232
         }
-        %232 = int 16
-        %233 = cmp_neq %220, %232
-        %239 = if %233 then {
-          %234 = ret_type
-          %235 = int 1
-          %236 = as_return %234, %235
-          %237 = ret %236
+        %234 = int 16
+        %235 = cmp_neq %221, %234
+        %241 = if %235 then {
+          %236 = ret_type
+          %237 = int 1
+          %238 = as_return %236, %237
+          %239 = ret %238
         } else {
-          %238 = break_inline result, @void_value
+          %240 = break_inline result, @void_value
         }
-        %240 = decl_val "nested"
-        %241 = int 1
-        %242 = as @type_usize, %241
-        %243 = array_index %240, %242
-        %244 = int 0
+        %242 = decl_ref "nested"
+        %243 = array_base_ptr %242
+        %244 = int 1
         %245 = as @type_usize, %244
-        %246 = array_index %243, %245
-        %247 = int 3
-        %248 = cmp_neq %246, %247
-        %256 = bool_or %248 rhs {
-          %249 = decl_val "wide"
-          %250 = int 1
-          %251 = as @type_usize, %250
-          %252 = array_index %249, %251
-          %253 = int 258
-          %254 = cmp_neq %252, %253
-          %255 = break_inline result, %254
+        %246 = array_index_base %243, %245
+        %247 = int 0
+        %248 = as @type_usize, %247
+        %249 = array_index %246, %248
+        %250 = int 3
+        %251 = cmp_neq %249, %250
+        %260 = bool_or %251 rhs {
+          %252 = decl_ref "wide"
+          %253 = array_base_ptr %252
+          %254 = int 1
+          %255 = as @type_usize, %254
+          %256 = array_index %253, %255
+          %257 = int 258
+          %258 = cmp_neq %256, %257
+          %259 = break_inline result, %258
         }
-        %262 = if %256 then {
-          %257 = ret_type
-          %258 = int 2
-          %259 = as_return %257, %258
-          %260 = ret %259
+        %266 = if %260 then {
+          %261 = ret_type
+          %262 = int 2
+          %263 = as_return %261, %262
+          %264 = ret %263
         } else {
-          %261 = break_inline result, @void_value
+          %265 = break_inline result, @void_value
         }
-        %263 = decl_val "text"
-        %264 = field_val "len", %263
-        %265 = int 4
-        %266 = cmp_neq %264, %265
-        %274 = bool_or %266 rhs {
-          %267 = decl_val "text"
-          %268 = int 3
-          %269 = as @type_usize, %268
-          %270 = array_index %267, %269
-          %271 = int 100
-          %272 = cmp_neq %270, %271
-          %273 = break_inline result, %272
+        %267 = decl_val "text"
+        %268 = field_val "len", %267
+        %269 = int 4
+        %270 = cmp_neq %268, %269
+        %279 = bool_or %270 rhs {
+          %271 = decl_ref "text"
+          %272 = array_base_ptr %271
+          %273 = int 3
+          %274 = as @type_usize, %273
+          %275 = array_index %272, %274
+          %276 = int 100
+          %277 = cmp_neq %275, %276
+          %278 = break_inline result, %277
         }
-        %282 = bool_or %274 rhs {
-          %275 = decl_val "text"
-          %276 = int 4
-          %277 = as @type_usize, %276
-          %278 = array_index %275, %277
-          %279 = int 0
-          %280 = cmp_neq %278, %279
-          %281 = break_inline result, %280
+        %288 = bool_or %279 rhs {
+          %280 = decl_ref "text"
+          %281 = array_base_ptr %280
+          %282 = int 4
+          %283 = as @type_usize, %282
+          %284 = array_index %281, %283
+          %285 = int 0
+          %286 = cmp_neq %284, %285
+          %287 = break_inline result, %286
         }
-        %288 = if %282 then {
-          %283 = ret_type
-          %284 = int 3
-          %285 = as_return %283, %284
-          %286 = ret %285
+        %294 = if %288 then {
+          %289 = ret_type
+          %290 = int 3
+          %291 = as_return %289, %290
+          %292 = ret %291
         } else {
-          %287 = break_inline result, @void_value
+          %293 = break_inline result, @void_value
         }
-        %289 = decl_val "mixed"
-        %290 = field_val "len", %289
-        %291 = int 2
-        %292 = cmp_neq %290, %291
-        %300 = bool_or %292 rhs {
-          %293 = decl_val "mixed"
-          %294 = int 0
-          %295 = as @type_usize, %294
-          %296 = array_index %293, %295
-          %297 = int 42
-          %298 = cmp_neq %296, %297
-          %299 = break_inline result, %298
+        %295 = decl_val "mixed"
+        %296 = field_val "len", %295
+        %297 = int 2
+        %298 = cmp_neq %296, %297
+        %307 = bool_or %298 rhs {
+          %299 = decl_ref "mixed"
+          %300 = array_base_ptr %299
+          %301 = int 0
+          %302 = as @type_usize, %301
+          %303 = array_index %300, %302
+          %304 = int 42
+          %305 = cmp_neq %303, %304
+          %306 = break_inline result, %305
         }
-        %308 = bool_or %300 rhs {
-          %301 = decl_val "mixed"
-          %302 = int 2
-          %303 = as @type_usize, %302
-          %304 = array_index %301, %303
-          %305 = int 0
-          %306 = cmp_neq %304, %305
-          %307 = break_inline result, %306
+        %316 = bool_or %307 rhs {
+          %308 = decl_ref "mixed"
+          %309 = array_base_ptr %308
+          %310 = int 2
+          %311 = as @type_usize, %310
+          %312 = array_index %309, %311
+          %313 = int 0
+          %314 = cmp_neq %312, %313
+          %315 = break_inline result, %314
         }
-        %314 = if %308 then {
-          %309 = ret_type
-          %310 = int 4
-          %311 = as_return %309, %310
-          %312 = ret %311
+        %322 = if %316 then {
+          %317 = ret_type
+          %318 = int 4
+          %319 = as_return %317, %318
+          %320 = ret %319
         } else {
-          %313 = break_inline result, @void_value
+          %321 = break_inline result, @void_value
         }
-        %315 = decl_val "tail"
-        %316 = int 0
-        %317 = as @type_usize, %316
-        %318 = array_index %315, %317
-        %319 = int 113
-        %320 = cmp_neq %318, %319
-        %328 = bool_or %320 rhs {
-          %321 = decl_val "tail"
-          %322 = int 1
-          %323 = as @type_usize, %322
-          %324 = array_index %321, %323
-          %325 = int 43
-          %326 = cmp_neq %324, %325
-          %327 = break_inline result, %326
+        %323 = decl_ref "tail"
+        %324 = array_base_ptr %323
+        %325 = int 0
+        %326 = as @type_usize, %325
+        %327 = array_index %324, %326
+        %328 = int 113
+        %329 = cmp_neq %327, %328
+        %338 = bool_or %329 rhs {
+          %330 = decl_ref "tail"
+          %331 = array_base_ptr %330
+          %332 = int 1
+          %333 = as @type_usize, %332
+          %334 = array_index %331, %333
+          %335 = int 43
+          %336 = cmp_neq %334, %335
+          %337 = break_inline result, %336
         }
-        %336 = bool_or %328 rhs {
-          %329 = decl_val "tail"
-          %330 = int 2
-          %331 = as @type_usize, %330
-          %332 = array_index %329, %331
-          %333 = int 0
-          %334 = cmp_neq %332, %333
-          %335 = break_inline result, %334
+        %347 = bool_or %338 rhs {
+          %339 = decl_ref "tail"
+          %340 = array_base_ptr %339
+          %341 = int 2
+          %342 = as @type_usize, %341
+          %343 = array_index %340, %342
+          %344 = int 0
+          %345 = cmp_neq %343, %344
+          %346 = break_inline result, %345
         }
-        %342 = if %336 then {
-          %337 = ret_type
-          %338 = int 5
-          %339 = as_return %337, %338
-          %340 = ret %339
+        %353 = if %347 then {
+          %348 = ret_type
+          %349 = int 5
+          %350 = as_return %348, %349
+          %351 = ret %350
         } else {
-          %341 = break_inline result, @void_value
+          %352 = break_inline result, @void_value
         }
-        %343 = decl_val "plain"
-        %344 = int 1
-        %345 = as @type_usize, %344
-        %346 = array_index %343, %345
-        %347 = int 105
-        %348 = cmp_neq %346, %347
-        %358 = bool_or %348 rhs {
-          %349 = decl_val "empty"
-          %350 = decl_val "first"
-          %351 = array_cat %349, %350
-          %352 = int 2
-          %353 = as @type_usize, %352
-          %354 = array_index %351, %353
-          %355 = int 11
-          %356 = cmp_neq %354, %355
-          %357 = break_inline result, %356
+        %354 = decl_ref "plain"
+        %355 = array_base_ptr %354
+        %356 = int 1
+        %357 = as @type_usize, %356
+        %358 = array_index %355, %357
+        %359 = int 105
+        %360 = cmp_neq %358, %359
+        %370 = bool_or %360 rhs {
+          %361 = decl_val "empty"
+          %362 = decl_val "first"
+          %363 = array_cat %361, %362
+          %364 = int 2
+          %365 = as @type_usize, %364
+          %366 = array_index %363, %365
+          %367 = int 11
+          %368 = cmp_neq %366, %367
+          %369 = break_inline result, %368
         }
-        %364 = if %358 then {
-          %359 = ret_type
-          %360 = int 6
-          %361 = as_return %359, %360
-          %362 = ret %361
+        %376 = if %370 then {
+          %371 = ret_type
+          %372 = int 6
+          %373 = as_return %371, %372
+          %374 = ret %373
         } else {
-          %363 = break_inline result, @void_value
+          %375 = break_inline result, @void_value
         }
-        %365 = decl_val "flags"
-        %366 = int 0
-        %367 = as @type_usize, %366
-        %368 = array_index %365, %367
-        %369 = as @type_bool, %368
-        %370 = bool_not %369
-        %377 = bool_or %370 rhs {
-          %371 = decl_val "flags"
-          %372 = int 1
-          %373 = as @type_usize, %372
-          %374 = array_index %371, %373
-          %375 = as @type_bool, %374
-          %376 = break_inline result, %375
-        }
-        %384 = bool_or %377 rhs {
-          %378 = decl_val "types"
-          %379 = int 0
-          %380 = as @type_usize, %379
-          %381 = array_index %378, %380
-          %382 = cmp_neq %381, @type_u8
-          %383 = break_inline result, %382
-        }
-        %391 = bool_or %384 rhs {
-          %385 = decl_val "types"
+        %377 = decl_ref "flags"
+        %378 = array_base_ptr %377
+        %379 = int 0
+        %380 = as @type_usize, %379
+        %381 = array_index %378, %380
+        %382 = as @type_bool, %381
+        %383 = bool_not %382
+        %391 = bool_or %383 rhs {
+          %384 = decl_ref "flags"
+          %385 = array_base_ptr %384
           %386 = int 1
           %387 = as @type_usize, %386
           %388 = array_index %385, %387
-          %389 = cmp_neq %388, @type_u16
+          %389 = as @type_bool, %388
           %390 = break_inline result, %389
         }
-        %397 = if %391 then {
-          %392 = ret_type
-          %393 = int 7
-          %394 = as_return %392, %393
-          %395 = ret %394
-        } else {
-          %396 = break_inline result, @void_value
+        %399 = bool_or %391 rhs {
+          %392 = decl_ref "types"
+          %393 = array_base_ptr %392
+          %394 = int 0
+          %395 = as @type_usize, %394
+          %396 = array_index %393, %395
+          %397 = cmp_neq %396, @type_u8
+          %398 = break_inline result, %397
         }
-        %398 = decl_val "undef_array"
-        %399 = field_val "len", %398
-        %400 = int 3
-        %401 = cmp_neq %399, %400
-        %407 = bool_or %401 rhs {
-          %402 = decl_val "undef_pointer"
-          %403 = field_val "len", %402
-          %404 = int 5
-          %405 = cmp_neq %403, %404
+        %407 = bool_or %399 rhs {
+          %400 = decl_ref "types"
+          %401 = array_base_ptr %400
+          %402 = int 1
+          %403 = as @type_usize, %402
+          %404 = array_index %401, %403
+          %405 = cmp_neq %404, @type_u16
           %406 = break_inline result, %405
         }
         %413 = if %407 then {
           %408 = ret_type
-          %409 = int 8
+          %409 = int 7
           %410 = as_return %408, %409
           %411 = ret %410
         } else {
           %412 = break_inline result, @void_value
         }
-        %414 = decl_val "partly"
-        %415 = int 1
-        %416 = as @type_usize, %415
-        %417 = array_index %414, %416
-        %418 = int 13
-        %419 = cmp_neq %417, %418
-        %427 = bool_or %419 rhs {
-          %420 = decl_val "partly"
-          %421 = int 2
-          %422 = as @type_usize, %421
-          %423 = array_index %420, %422
-          %424 = int 122
-          %425 = cmp_neq %423, %424
-          %426 = break_inline result, %425
+        %414 = decl_val "undef_array"
+        %415 = field_val "len", %414
+        %416 = int 3
+        %417 = cmp_neq %415, %416
+        %423 = bool_or %417 rhs {
+          %418 = decl_val "undef_pointer"
+          %419 = field_val "len", %418
+          %420 = int 5
+          %421 = cmp_neq %419, %420
+          %422 = break_inline result, %421
         }
-        %435 = bool_or %427 rhs {
-          %428 = decl_val "partly"
-          %429 = int 3
-          %430 = as @type_usize, %429
-          %431 = array_index %428, %430
-          %432 = int 0
-          %433 = cmp_neq %431, %432
-          %434 = break_inline result, %433
-        }
-        %441 = if %435 then {
-          %436 = ret_type
-          %437 = int 9
-          %438 = as_return %436, %437
-          %439 = ret %438
+        %429 = if %423 then {
+          %424 = ret_type
+          %425 = int 8
+          %426 = as_return %424, %425
+          %427 = ret %426
         } else {
-          %440 = break_inline result, @void_value
+          %428 = break_inline result, @void_value
         }
-        %442 = decl_val "huge"
-        %443 = field_val "len", %442
-        %444 = int 4294967296
-        %445 = cmp_neq %443, %444
-        %451 = bool_or %445 rhs {
-          %446 = decl_val "max"
-          %447 = field_val "len", %446
-          %448 = int 18446744073709551615
-          %449 = cmp_neq %447, %448
-          %450 = break_inline result, %449
+        %430 = decl_ref "partly"
+        %431 = array_base_ptr %430
+        %432 = int 1
+        %433 = as @type_usize, %432
+        %434 = array_index %431, %433
+        %435 = int 13
+        %436 = cmp_neq %434, %435
+        %445 = bool_or %436 rhs {
+          %437 = decl_ref "partly"
+          %438 = array_base_ptr %437
+          %439 = int 2
+          %440 = as @type_usize, %439
+          %441 = array_index %438, %440
+          %442 = int 122
+          %443 = cmp_neq %441, %442
+          %444 = break_inline result, %443
         }
-        %457 = if %451 then {
-          %452 = ret_type
-          %453 = int 10
-          %454 = as_return %452, %453
-          %455 = ret %454
+        %454 = bool_or %445 rhs {
+          %446 = decl_ref "partly"
+          %447 = array_base_ptr %446
+          %448 = int 3
+          %449 = as @type_usize, %448
+          %450 = array_index %447, %449
+          %451 = int 0
+          %452 = cmp_neq %450, %451
+          %453 = break_inline result, %452
+        }
+        %460 = if %454 then {
+          %455 = ret_type
+          %456 = int 9
+          %457 = as_return %455, %456
+          %458 = ret %457
         } else {
-          %456 = break_inline result, @void_value
+          %459 = break_inline result, @void_value
         }
-        %458 = int 4294967296
-        %459 = as @type_usize, %458
-        %460 = int_type u0
-        %461 = array_type %459, %460
-        %462 = int 0
-        %463 = as @type_usize, %462
-        %464 = int_type u0
-        %465 = array_type %463, %464
-        %466 = cmp_eq %461, %465
-        %475 = bool_or %466 rhs {
-          %467 = int 2
-          %468 = as @type_usize, %467
-          %469 = array_type %468, @type_u8
-          %470 = int 2
-          %471 = as @type_usize, %470
-          %472 = array_type %471, @type_u8
-          %473 = cmp_neq %469, %472
-          %474 = break_inline result, %473
+        %461 = decl_val "huge"
+        %462 = field_val "len", %461
+        %463 = int 4294967296
+        %464 = cmp_neq %462, %463
+        %470 = bool_or %464 rhs {
+          %465 = decl_val "max"
+          %466 = field_val "len", %465
+          %467 = int 18446744073709551615
+          %468 = cmp_neq %466, %467
+          %469 = break_inline result, %468
         }
-        %481 = if %475 then {
-          %476 = ret_type
-          %477 = int 11
-          %478 = as_return %476, %477
-          %479 = ret %478
+        %476 = if %470 then {
+          %471 = ret_type
+          %472 = int 10
+          %473 = as_return %471, %472
+          %474 = ret %473
         } else {
-          %480 = break_inline result, @void_value
+          %475 = break_inline result, @void_value
         }
-        %482 = decl_val "callback"
-        %483 = int 1
-        %484 = as @type_usize, %483
-        %485 = array_index %482, %484
-        %486 = call %485
-        %487 = int 29
-        %488 = cmp_neq %486, %487
-        %494 = if %488 then {
-          %489 = ret_type
-          %490 = int 12
-          %491 = as_return %489, %490
-          %492 = ret %491
+        %477 = int 4294967296
+        %478 = as @type_usize, %477
+        %479 = int_type u0
+        %480 = array_type %478, %479
+        %481 = int 0
+        %482 = as @type_usize, %481
+        %483 = int_type u0
+        %484 = array_type %482, %483
+        %485 = cmp_eq %480, %484
+        %494 = bool_or %485 rhs {
+          %486 = int 2
+          %487 = as @type_usize, %486
+          %488 = array_type %487, @type_u8
+          %489 = int 2
+          %490 = as @type_usize, %489
+          %491 = array_type %490, @type_u8
+          %492 = cmp_neq %488, %491
+          %493 = break_inline result, %492
+        }
+        %500 = if %494 then {
+          %495 = ret_type
+          %496 = int 11
+          %497 = as_return %495, %496
+          %498 = ret %497
         } else {
-          %493 = break_inline result, @void_value
+          %499 = break_inline result, @void_value
         }
-        %495 = int 2
-        %496 = as @type_usize, %495
-        %497 = array_type %496, @type_u8
-        %498 = as @type_type, %497
-        %499 = array_elem_type %498
-        %500 = int 17
-        %501 = as @type_u16, %500
-        %502 = int_cast %499, %501
-        %503 = int 19
-        %504 = as %499, %503
-        %505 = array_init %498, %502, %504
-        %506 = as %498, %505
-        %507 = int 0
-        %508 = as @type_usize, %507
-        %509 = array_index %506, %508
-        %510 = int 17
-        %511 = cmp_neq %509, %510
-        %517 = if %511 then {
-          %512 = ret_type
-          %513 = int 13
-          %514 = as_return %512, %513
-          %515 = ret %514
+        %501 = decl_ref "callback"
+        %502 = array_base_ptr %501
+        %503 = int 1
+        %504 = as @type_usize, %503
+        %505 = array_index %502, %504
+        %506 = call %505
+        %507 = int 29
+        %508 = cmp_neq %506, %507
+        %514 = if %508 then {
+          %509 = ret_type
+          %510 = int 12
+          %511 = as_return %509, %510
+          %512 = ret %511
         } else {
-          %516 = break_inline result, @void_value
+          %513 = break_inline result, @void_value
         }
-        %518 = ret_type
-        %519 = int 0
-        %520 = as_return %518, %519
-        %521 = ret %520
+        %515 = int 2
+        %516 = as @type_usize, %515
+        %517 = array_type %516, @type_u8
+        %518 = as @type_type, %517
+        %519 = array_elem_type %518
+        %520 = int 17
+        %521 = as @type_u16, %520
+        %522 = int_cast %519, %521
+        %523 = int 19
+        %524 = as %519, %523
+        %525 = array_init %518, %522, %524
+        %526 = as %518, %525
+        %527 = int 0
+        %528 = as @type_usize, %527
+        %529 = array_index %526, %528
+        %530 = int 17
+        %531 = cmp_neq %529, %530
+        %537 = if %531 then {
+          %532 = ret_type
+          %533 = int 13
+          %534 = as_return %532, %533
+          %535 = ret %534
+        } else {
+          %536 = break_inline result, @void_value
+        }
+        %538 = ret_type
+        %539 = int 0
+        %540 = as_return %538, %539
+        %541 = ret %540
       }
     }
-    %523 = break_inline result, %522
+    %543 = break_inline result, %542
   }
 }

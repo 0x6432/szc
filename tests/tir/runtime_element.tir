@@ -1,0 +1,16 @@
+fn szc.main.1: fn () u8 {
+  %0: u8 = const 7
+  %1: u8 = call szc.make.2(%0)
+  %2: noreturn = ret %1
+}
+fn szc.make.2: fn (u8) u8 {
+  %0: u8 = arg 0
+  %1: *const [1]u8 = alloc
+  %2: usize = const 0
+  %3: *const u8 = array_elem_ptr %1, %2
+  %4: void = store %3, %0
+  %5: usize = const 0
+  %6: *const u8 = array_elem_ptr %1, %5
+  %7: u8 = load %6
+  %8: noreturn = ret %7
+}

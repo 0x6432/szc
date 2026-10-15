@@ -1,0 +1,3 @@
+tests/tir/errors/array_layout_leaf.zig:1:22: error: not supported by szc yet: runtime array storage layout
+pub fn main() void { var a: [2]u128 = undefined; _ = &a; }
+                     ^

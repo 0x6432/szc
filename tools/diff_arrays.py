@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Compare compile-time array types, literals, reads and concatenation with Zig."""
+"""Compare array types, literals, mutation, copies, reads and concatenation with Zig."""
 import argparse
 import itertools
 from pathlib import Path
@@ -9,6 +9,24 @@ from compiler_process import run_compiler
 
 
 def cases():
+    for child, value in (("u8", "7"), ("i33", "-7"), ("bool", "true"), ("u0", "0"), ("void", "{}")):
+        for body in (
+            "const b = a; a[0] = n; _ = b[1];",
+            "const b = a; a = b;",
+            "const p = &a[0]; p.* = n;",
+            "const p: *const [2]T = &a; _ = p[0];",
+            "const p: *const [2]T = &a; p[0] = n;",
+            "a = .{n};",
+            "a = .{n, n};",
+        ):
+            body = body.replace("T", child)
+            yield (f"fn operation(n: {child}) void {{ var a = [_]{child}{{n, n}}; {body} }}\n"
+                   f"pub fn main() void {{ operation({value}); }}\n")
+    for target, source in itertools.product(("u8", "u16", "bool"), repeat=2):
+        value = "true" if source == "bool" else "7"
+        yield (f"fn operation(n: {source}) void {{ const a = [_]{source}{{n,n}}; "
+               f"var b: [2]{target} = undefined; b = a; _ = &b; }}\n"
+               f"pub fn main() void {{ operation({value}); }}\n")
     for child, length in itertools.product(
             ("u8", "i40", "bool", "void", "u0", "type", "noreturn", "anyopaque"),
             ("0", "1", "3", "4294967296", "18446744073709551615", "-1", "18446744073709551616")):
@@ -69,7 +87,7 @@ def main():
                 raise SystemExit("disagreement:\n" + source + szc.stderr.decode(errors="replace")
                                  + zig.stderr.decode(errors="replace"))
             checked += 1
-    print(f"constant arrays: {checked} matched Zig 0.17.0", flush=True)
+    print(f"arrays: {checked} matched Zig 0.17.0", flush=True)
 
 
 if __name__ == "__main__":

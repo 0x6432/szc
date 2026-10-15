@@ -1,0 +1,3 @@
+tests/tir/errors/array_volatile_store.zig:1:40: error: not supported by szc yet: volatile whole-array copies
+fn copy(p: *volatile [2]u8) void { p.* = [_]u8{1, 2}; }
+                                       ^

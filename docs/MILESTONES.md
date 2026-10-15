@@ -90,8 +90,8 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
   - [x] **M5.2b Compile-time indexing, `.len` and concatenation** (including literal byte backing).
   - [~] **M5.2c Runtime array storage, copies, indexing and element addresses** (checked bounds and aggregate ABI).
     - [x] **M5.2c1 Immutable array backing and checked scalar runtime reads**.
-    - [ ] **M5.2c2 Mutable aggregate slots, initialization and copies**.
-    - [ ] **M5.2c3 Element address provenance and aggregate value/ABI integration**.
+    - [x] **M5.2c2 Mutable aggregate slots, initialization and copies**.
+    - [~] **M5.2c3 Element address provenance and aggregate value/ABI integration** (runtime element addresses landed with c2; comptime provenance/joins/ABI pending).
 - [ ] **M5.3 Slices, many-pointers, slicing, `.len`, `.ptr`, for over slices.**
 - [~] **M5.4 String literals, sentinels, `[*:0]const u8`.** Literal byte values landed in M4.5b; general string/memory operations and sentinel pointer syntax remain pending.
 - [ ] **M5.5 Casting builtins**: `@intCast`, `@truncate`, `@ptrCast`, `@intFromPtr`, `@ptrFromInt`, `@bitCast`, `@as`.
@@ -144,6 +144,32 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
 ## Completed milestone log
 
 (newest first; each entry: what, limitations, interactions)
+
+### M5.2c2 Mutable aggregate slots, initialization and copies
+- **What**: mutable local arrays, mixed/runtime and nested literals, snapshot loads,
+  whole-array assignment/copies and real runtime element addresses/lvalues. Copying
+  an array preserves values across later mutation; scalar/pointer/callback/bool/u0/
+  void leaves reuse existing layout/memory code. Empty arrays use zero-byte copies.
+- **Interactions**: explicit owned indirect aggregate operands keep arrays out of scalar
+  QBE temps. Borrow nested array pointers through index side effects; element pointers
+  retain qualifiers/alignment. ARRAY_COPY emits overlap-safe memmove. Anonymous literal
+  assignment writes fields in place; typed/@as literals initialize private temporaries,
+  matching official 0.17 execution. GCC/Clang operand materialization is explicitly
+  sequenced. Per-function aggregate slots include over-alignment padding in a checked
+  16 MiB budget; layout/leaf/budget errors do not become truncated allocations.
+- **Tests**: three native/reference executable fixtures; C interop for over-alignment,
+  unaligned snapshots and both partial-overlap directions; three NYI-to-positive TIR
+  promotions; nine new error goldens; four additional runtime bounds safety cases;
+  44 new mutable-array/copy/coercion comparisons in the existing array matrix.
+- **Validation**: 599 units, 779 goldens, 64 ordinary/generated programs, 180 safety
+  cases and all storage/driver/alignment/volatile/ABI suites pass (GCC ASan/UBSan,
+  reference-enabled); Clang sanitizer/native coverage and optimized array checks pass.
+  All 328 array comparisons match Zig. Four 60s fuzz runs plus final semantic-guard
+  fuzzing and 20k standalone mutations per stage pass; no sanitizer finding.
+- **Limits**: no by-value array argument/return ABI or runtime array joins, general
+  comptime element-pointer provenance, volatile whole-array copies, mutable array
+  globals, slices or explicit sentinel syntax. c3 and the enclosing milestones remain
+  partial; runtime addresses do not pretend to solve comptime provenance.
 
 ### M5.2c1 Immutable array backing and checked scalar runtime reads
 - **What**: known array values now have actual immutable static backing when passed

@@ -53,16 +53,19 @@ Read this first when resuming work (the sandbox resets often).
 - Done: M5.2a–b compile-time array types/literals, indexing, `.len` and `++`.
 - Done: M5.2c1 immutable array backing and checked scalar runtime reads, including
   pointer/callback relocations, volatile/zero-bit reads, checked layout and total
-  static-emission budget. Mutable arrays/copies, aggregate value ABI and element
-  addresses remain pending; M5.2 is partial.
+  static-emission budget.
+- Done: M5.2c2 mutable array slots, runtime/nested literals and snapshot copies, plus
+  runtime element lvalues/addresses and borrowed indexing. M5.2c3 remains partial:
+  comptime element-pointer provenance, aggregate joins and by-value ABI are pending.
 - Current batching preference: group related straightforward milestones when practical;
   keep complex semantic changes independently tested/documented/committed. Do not return
   to an unconditional one-checkpoint policy. Select the next independently implementable
   memory item without pretending the blocked function-alias case is complete. Next is
-  M5.2c2: mutable aggregate slots, initialization and copies. Decide an explicit
-  indirect aggregate Operand/TIR representation and snapshot/aliasing rules before
-  implementing it; element addresses need real base/offset provenance, not copied
-  constant elements. Keep by-value aggregate ABI separately scoped.
+  M5.2c3: comptime element-pointer provenance and aggregate value/ABI integration.
+  Keep coherent work batched, targeted checks during development and a single full
+  validation pass per stable batch; independent checks can run on immutable binaries.
+  Preserve owned snapshot versus borrowed pointer semantics, and scope by-value ABI
+  explicitly rather than pushing array values through scalar QBE temporaries.
 - Run `PATH=/data/tools/bin:$PATH ZIG=/data/zig/zig-x86_64-linux-0.17.0/zig make e2e-test`
   locally. `tools/build_qbe.sh` builds the pinned QBE into `build/qbe-src` on CI.
 - Tools: `SZC_QBE`/`qbe`, `SZC_CC`/`cc`; pinned QBE revision
@@ -84,6 +87,61 @@ Read this first when resuming work (the sandbox resets often).
   GCC/Clang/fuzz/differential jobs, restoring green CI. M5.1c2b2a 8b1d3cf
   also passed all jobs (run 38590520673), as did M5.1c2b2b1 ecfb6ab
   (run 38593742928). Check each new push's run.
+
+## M5.2c2 mutable arrays, initialization and snapshots
+
+- OPERAND_AGGREGATE owns private array storage via a pointer TIR ref; it never means
+  a QBE scalar array. Whole-array loads snapshot before subsequent side effects;
+  stores use TIR_ARRAY_COPY/memmove with checked destination size (zero bytes omitted).
+  Recursively support bool/pointer/void/u0 and <=64-bit integer leaves, nested arrays,
+  runtime literals, local variables, whole-array assignment and self/overlap copies.
+- Aggregate stack slots/snapshots share a 16,777,216-byte per-function budget including
+  >16 alignment over-allocation; checked layout overflow, unsupported leaves and budget
+  overflow diagnose explicitly. Keep the independent dense-value/static-storage limits.
+- Runtime element addresses use true base+offset and retain qualifiers/alignment.
+  IR_ARRAY_BASE_PTR/ARRAY_INDEX_BASE borrow live storage through index evaluation;
+  copying `a` before `a[index(&a)]` is wrong (reference mutator probe returns 9, not 1).
+  Nested borrowed indexing must not accidentally load/snapshot its intermediate row.
+- Only anonymous assignment literals use in-place result locations. Validate count
+  first with ARRAY_INIT_PTR, then immediately initialize each element (nested as needed).
+  Typed literals and @as use temporaries. The official probe `a = .{9, read(&a)}` reads
+  9, but typed/@as variants read the old 1. Final assignment uses an owned snapshot,
+  not an aggregate operand borrowing mutable destination storage.
+- Immutable const aliases may share immutable backing: official Zig returned equal
+  pointers for `const b=a; const c=b; &b == &c`, so tests do not demand distinct addresses.
+  Mutable-to-const copies still snapshot. Explicit alignments get real checked slots.
+- Materialize operand refs in explicit C statements before building ARRAY_COPY and
+  ARRAY_ELEM_PTR: C argument evaluation order otherwise makes GCC/Clang TIR goldens
+  disagree. Both compilers must produce the same checked-in goldens.
+- Grounding: actual Zig 0.17 Sema.zig zirArrayInit/zirArrayInitElemPtr and AstGen result
+  locations, with direct official-binary execution for aliasing/evaluation semantics.
+- Tests: three new executable fixtures cover snapshots, aliases, nested mutations,
+  constructors, qualifiers, zero-bit/empty arrays, pointer/callback leaves and alignment.
+  The new C harness verifies over-aligned slots, unaligned snapshots and both directions
+  of partially overlapping foreign buffers against Zig. Nine error goldens cover stack
+  single/total/alignment/overflow limits, unsupported leaves, const/type errors and
+  volatile copies; three old NYIs are promoted to positive TIR tests. Four new safety
+  cases guard element stores, addresses, zero-bit stores and nested stores. The array
+  accept/reject matrix adds 44 mutable/copy/coercion cases.
+- Validation: GCC -Werror ASan/UBSan full reference-enabled suite passes 599 unit
+  checks, 779 goldens, 64 ordinary/generated programs plus two scoped szc-only inputs,
+  16 driver, 15 existing storage, seven immutable array storage, new mutable array C
+  storage, four function ABI, seven unaligned memory, 135/270/153/153/27 alignment,
+  44 volatile sequences and 180 safety cases. The expanded 328-case array semantic
+  matrix matches actual Zig 0.17. Clang sanitizer units/goldens/native programs/both
+  array storage harnesses/safety pass; final frozen Clang/GCC goldens and array checks
+  also pass. Optimized GCC passes five array programs and the mutable C harness.
+  Four 60-second fuzz runs pass, with an additional semantic run after the final
+  defensive comptime-store guard. Final standalone replay passes 20,000 mutations per
+  stage; retained irgen/sema corpora are 37/90. No code crash or sanitizer finding.
+- Validation lifecycle: never rebuild a binary another test is executing. A superseded
+  overlapping validation attempt hit a linker-time executable PermissionError; the
+  completed clean suite is separate. Freeze independent compiler binaries before
+  parallel checks. Stopping a shell can leave its make/fuzzer descendants running;
+  identify and stop only those owned processes before superseding a fuzz run.
+- Still NYI: by-value array arguments/returns, runtime array joins, comptime element-
+  pointer provenance, volatile whole-array copies, mutable array globals and explicit
+  sentinel syntax. Element volatile scalar accesses work. M5.2c/M5.2 remain partial.
 
 ## M5.2c1 immutable array storage and runtime scalar reads
 
@@ -125,8 +183,8 @@ Read this first when resuming work (the sandbox resets often).
   GCC/Clang executable, golden and physical C-ABI suites.
 - No mutable aggregate representation/ABI, element-address interpretation, explicit
   sentinel syntax, typed array address-dependency cycles, slices or for-array extension
-  landed. Next is M5.2c2 mutable slots/copies; preserve standalone failure modes and
-  separately test array snapshot semantics and address identity.
+  landed at this historical checkpoint; mutable slots/copies and runtime element
+  addresses are now superseded by M5.2c2 above. Preserve standalone failure modes.
 - Reference emission of a maximal undefined u0 object stalled again: the initial
   physical-suite run timed out after 120 seconds, not a language rejection. Final
   physical fixtures use [3]u0; maximal lengths remain separately covered by units and

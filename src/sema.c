@@ -30,6 +30,7 @@ typedef enum OperandKind {
 	OPERAND_NONE,	/* an error was reported; use as "poison" */
 	OPERAND_COMPTIME,	/* value is known */
 	OPERAND_RUNTIME,	/* inst is a typed-IR instruction */
+	OPERAND_AGGREGATE,	/* array value owned by a private snapshot; inst is its pointer */
 	OPERAND_PENDING_CALL,	/* a call whose arguments are being analysed (type = callee's fn type) */
 	OPERAND_NO_RESULT_TYPE,	/* arg_type of a variadic argument: no coercion */
 } OperandKind;
@@ -891,6 +892,11 @@ queue_value_functions(Block *block, ValueId id, uint32_t src)
 static TirRef
 materialize(Block *block, Operand operand, uint32_t src)
 {
+	if (operand.kind == OPERAND_AGGREGATE || operand.kind == OPERAND_NONE
+		|| block->sema->types[operand.type].kind == TYPE_ARRAY) {
+		sema_error(block, src, "not supported by szc yet: array value in scalar runtime context");
+		return TIR_REF_NONE;
+	}
 	if (operand.kind == OPERAND_RUNTIME)
 		return operand.inst;
 	queue_value_functions(block, operand.value, src);
@@ -1424,6 +1430,17 @@ coerce(Block *block, Operand operand, TypeId dest, uint32_t src)
 	if (operand.kind == OPERAND_NONE || operand.type == dest || operand.type == T_NORETURN)
 		return operand;
 	TypeKind dest_kind = sema->types[dest].kind;
+	if (operand.kind == OPERAND_AGGREGATE && dest_kind == TYPE_ARRAY) {
+		TypeArray target = sema->types[dest].as.array;
+		TypeArray source = sema->types[operand.type].as.array;
+		if (target.child == source.child && target.length == source.length
+			&& (!target.sentinel_zero || source.sentinel_zero)) {
+			TypeId pointer = type_pointer(sema, dest, POINTER_ONE, true, false, 0);
+			operand.inst = emit_tir_un(block, TIR_PTR_CAST, pointer, src, operand.inst);
+			operand.type = dest;
+			return operand;
+		}
+	}
 	if (dest_kind == TYPE_POINTER && sema->types[operand.type].kind == TYPE_FN) {
 		operand = function_address(block, operand, src);
 		if (operand.kind == OPERAND_NONE)
@@ -2830,6 +2847,98 @@ analyze_call(Block *block, IrInstIndex index, Operand *out)
 	return INST_CONTINUE;
 }
 
+/* Aggregate values never enter scalar QBE temporaries. Every runtime value owns
+ * a snapshot; borrowed lvalues are represented only by ordinary pointer operands. */
+static bool
+array_storage_allowed(Sema *sema, TypeId type)
+{
+	while (sema->types[type].kind == TYPE_ARRAY)
+		type = sema->types[type].as.array.child;
+	TypeKind kind = sema->types[type].kind;
+	return kind == TYPE_BOOL || kind == TYPE_POINTER || kind == TYPE_VOID
+		|| (kind == TYPE_INT && sema->types[type].as.integer.bits <= 64);
+}
+
+static TirRef
+array_slot(Block *block, TypeId pointer, uint32_t src)
+{
+	Sema *sema = block->sema;
+	TypePointer shape = sema->types[pointer].as.pointer;
+	uint64_t size;
+	uint32_t alignment = pointer_alignment(sema, shape);
+	if (!array_storage_allowed(sema, shape.child) || !sema_type_size(sema, shape.child, &size)) {
+		sema_error(block, src, "not supported by szc yet: runtime array storage layout");
+		return TIR_REF_NONE;
+	}
+	if (block->is_comptime) {
+		sema_error(block, src, "unable to evaluate comptime expression");
+		return TIR_REF_NONE;
+	}
+	if (!require_runtime(block, src))
+		return TIR_REF_NONE;
+	if (size == 0)
+		size = 1;
+	uint64_t padding = alignment > 16 ? alignment - 1 : 0;
+	const uint64_t limit = 16777216;
+	if (size > limit || padding > limit - size || block->func->array_stack_bytes > limit - size - padding) {
+		sema_error(block, src, "not supported by szc yet: aggregate stack storage exceeds 16777216 bytes");
+		return TIR_REF_NONE;
+	}
+	block->func->array_stack_bytes += size + padding;
+	return emit_tir(block, TIR_ALLOC, pointer, src);
+}
+
+static Operand analyze_ref(Block *block, Operand value, uint32_t src, uint32_t identity, uint32_t alignment);
+
+static bool
+store_array(Block *block, Operand pointer, Operand value, uint32_t src)
+{
+	Sema *sema = block->sema;
+	TypePointer shape = sema->types[pointer.type].as.pointer;
+	if (shape.is_volatile) {
+		sema_error(block, src, "not supported by szc yet: volatile whole-array copies");
+		return false;
+	}
+	if (!array_storage_allowed(sema, shape.child)) {
+		sema_error(block, src, "not supported by szc yet: runtime array storage layout");
+		return false;
+	}
+	if (block->is_comptime) {
+		sema_error(block, src, "unable to evaluate comptime expression");
+		return false;
+	}
+	if (!require_runtime(block, src))
+		return false;
+	if (operand_is_undefined(block, value))
+		return true;
+	Operand source = analyze_ref(block, value, src, 0, 0);
+	if (source.kind == OPERAND_NONE)
+		return false;
+	TirRef destination_ref = materialize(block, pointer, src);
+	TirRef source_ref = materialize(block, source, src);
+	emit_tir_bin(block, TIR_ARRAY_COPY, T_VOID, src, destination_ref, source_ref);
+	return true;
+}
+
+static Operand
+array_snapshot(Block *block, Operand source, uint32_t alignment, uint32_t src)
+{
+	Sema *sema = block->sema;
+	TypeId type = sema->types[source.type].as.pointer.child;
+	TypeId pointer = type_pointer(sema, type, POINTER_ONE, true, false, alignment);
+	TirRef slot = array_slot(block, pointer, src);
+	if (slot == TIR_REF_NONE)
+		return operand_none;
+	if (sema->types[source.type].as.pointer.is_volatile) {
+		sema_error(block, src, "not supported by szc yet: volatile whole-array copies");
+		return operand_none;
+	}
+	emit_tir_bin(block, TIR_ARRAY_COPY, T_VOID, src, slot, materialize(block, source, src));
+	Operand result = runtime_operand(type, slot);
+	result.kind = OPERAND_AGGREGATE;
+	return result;
+}
+
 /* ---------- Analysis: memory ---------- */
 
 /* Known values have immutable backing objects; runtime values have anchored stack slots. */
@@ -2847,6 +2956,16 @@ analyze_ref(Block *block, Operand value, uint32_t src, uint32_t identity, uint32
 	if (kind == TYPE_FN)
 		return function_address(block, value, src);
 	TypeId pointer = type_pointer(sema, value.type, POINTER_ONE, true, false, alignment);
+	if (value.kind == OPERAND_AGGREGATE) {
+		TypePointer backing = sema->types[block->tir->insts[value.inst].type].as.pointer;
+		if (alignment != 0 && alignment > pointer_alignment(sema, backing)) {
+			Operand copy = array_snapshot(block, runtime_operand(block->tir->insts[value.inst].type, value.inst), alignment, src);
+			if (copy.kind == OPERAND_NONE)
+				return operand_none;
+			return runtime_operand(pointer, copy.inst);
+		}
+		return runtime_operand(block->tir->insts[value.inst].type, value.inst);
+	}
 	if (value.kind == OPERAND_COMPTIME)
 		return comptime_operand(pointer, value_ref(&sema->values, pointer, value.value, identity, alignment));
 	if (block->is_comptime || !require_runtime(block, src)) {
@@ -2888,7 +3007,7 @@ analyze_alloc(Block *block, const IrInst *inst)
 		sema_error(block, src, "variable of type '%s' must be const or comptime", sema_type_name(sema, type));
 		return operand_none;
 	}
-	if (sema->types[type].kind == TYPE_NORETURN || sema->types[type].kind == TYPE_STRUCT || sema->types[type].kind == TYPE_FN || sema->types[type].kind == TYPE_FLOAT || sema->types[type].kind == TYPE_ARRAY) {
+	if (sema->types[type].kind == TYPE_NORETURN || sema->types[type].kind == TYPE_STRUCT || sema->types[type].kind == TYPE_FN || sema->types[type].kind == TYPE_FLOAT) {
 		sema_error(block, src, "not supported by szc yet: variables of type '%s'", sema_type_name(sema, type));
 		return operand_none;
 	}
@@ -2903,6 +3022,13 @@ analyze_alloc(Block *block, const IrInst *inst)
 		}
 	}
 	TypeId pointer = type_pointer(sema, type, POINTER_ONE, (payload.flags & IR_ALLOC_CONST) != 0, false, alignment);
+	if (sema->types[type].kind == TYPE_ARRAY) {
+		TirRef slot = array_slot(block, pointer, src);
+		if (slot == TIR_REF_NONE)
+			return operand_none;
+		Operand address = runtime_operand(pointer, slot);
+		return store_array(block, address, init, src) ? address : operand_none;
+	}
 	TirRef slot = emit_tir(block, TIR_ALLOC, pointer, src);
 	if (!operand_is_undefined(block, init))
 		emit_tir_bin(block, TIR_STORE, T_VOID, src, slot, materialize(block, init, src));
@@ -2987,6 +3113,11 @@ load_pointer(Block *block, Operand pointer, uint32_t src)
 		return operand_none;
 	}
 	TypeKind kind = sema->types[child].kind;
+	if (kind == TYPE_ARRAY) {
+		if (!pointer_operand(block, pointer, src))
+			return operand_none;
+		return array_snapshot(block, pointer, 0, src);
+	}
 	if (kind != TYPE_INT && kind != TYPE_BOOL && kind != TYPE_POINTER) {
 		sema_error(block, src, "not supported by szc yet: dereference of '%s'", sema_type_name(sema, child));
 		return operand_none;
@@ -3142,23 +3273,47 @@ analyze_array_init(Block *block, const IrInst *inst)
 	if (!reserve_array_elements(block, total, inst->src))
 		return operand_none;
 	ValueId *items = ARENA_ARRAY(sema->arena, ValueId, total);
+	Operand *elements = ARENA_ARRAY(sema->arena, Operand, total);
+	bool all_known = true;
 	bool failed = false;
 	for (uint32_t i = 0; i < count; i++) {
 		Operand element = coerce(block, resolve_ref(block, block->ir->extra[payload + 2 + i]), array.child, inst->src);
 		if (element.kind == OPERAND_NONE) {
 			failed = true;
-		} else if (element.kind != OPERAND_COMPTIME) {
-			sema_error(block, inst->src, "not supported by szc yet: runtime array elements");
-			failed = true;
 		} else {
-			items[i] = element.value;
+			elements[i] = element;
+			if (element.kind == OPERAND_COMPTIME)
+				items[i] = element.value;
+			else
+				all_known = false;
 		}
 	}
 	if (failed)
 		return operand_none;
-	if (array.sentinel_zero)
+	if (array.sentinel_zero) {
 		items[count] = value_int_u64(&sema->values, array.child, 0);
-	return comptime_operand(type, value_array(&sema->values, type, items, total));
+		elements[count] = comptime_operand(array.child, items[count]);
+	}
+	if (all_known)
+		return comptime_operand(type, value_array(&sema->values, type, items, total));
+	TypeId pointer = type_pointer(sema, type, POINTER_ONE, true, false, 0);
+	TirRef slot = array_slot(block, pointer, inst->src);
+	if (slot == TIR_REF_NONE)
+		return operand_none;
+	TypeId child_pointer = type_pointer(sema, array.child, POINTER_ONE, true, false, 0);
+	for (uint32_t i = 0; i < total; i++) {
+		Operand index = comptime_operand(T_USIZE, value_int_u64(&sema->values, T_USIZE, i));
+		TirRef address = emit_tir_bin(block, TIR_ARRAY_ELEM_PTR, child_pointer, inst->src, slot, materialize(block, index, inst->src));
+		if (sema->types[array.child].kind == TYPE_ARRAY) {
+			if (!store_array(block, runtime_operand(child_pointer, address), elements[i], inst->src))
+				return operand_none;
+		} else if (!operand_is_undefined(block, elements[i])) {
+			emit_tir_bin(block, TIR_STORE, T_VOID, inst->src, address, materialize(block, elements[i], inst->src));
+		}
+	}
+	Operand result = runtime_operand(type, slot);
+	result.kind = OPERAND_AGGREGATE;
+	return result;
 }
 
 /* Indexing constant backing never materializes an aggregate in the scalar backend. */
@@ -3198,7 +3353,7 @@ constant_array_element(Block *block, Operand base, TypeArray array, uint64_t ind
 
 /* Runtime reads use real backing storage and a checked element address. */
 static Operand
-runtime_array_element(Block *block, Operand base, Operand index, TypeArray array, uint32_t src)
+runtime_array_element(Block *block, Operand base, Operand index, TypeArray array, uint32_t src, bool address_only)
 {
 	Sema *sema = block->sema;
 	if (block->is_comptime) {
@@ -3206,7 +3361,7 @@ runtime_array_element(Block *block, Operand base, Operand index, TypeArray array
 		return operand_none;
 	}
 	TypeKind kind = sema->types[array.child].kind;
-	if (kind != TYPE_INT && kind != TYPE_BOOL && kind != TYPE_POINTER && kind != TYPE_VOID) {
+	if (kind != TYPE_INT && kind != TYPE_BOOL && kind != TYPE_POINTER && kind != TYPE_VOID && kind != TYPE_ARRAY) {
 		sema_error(block, src, "not supported by szc yet: runtime array element type '%s'", sema_type_name(sema, array.child));
 		return operand_none;
 	}
@@ -3234,13 +3389,15 @@ runtime_array_element(Block *block, Operand base, Operand index, TypeArray array
 	type.as.pointer.child = array.child;
 	type.as.pointer.alignment = alignment == child_alignment ? 0 : alignment;
 	TypeId element_pointer = type_intern(sema, &type);
-	TirRef address = emit_tir_bin(block, TIR_ARRAY_ELEM_PTR, element_pointer, src,
-		materialize(block, base, src), materialize(block, index, src));
-	return load_pointer(block, runtime_operand(element_pointer, address), src);
+	TirRef base_ref = materialize(block, base, src);
+	TirRef index_ref = materialize(block, index, src);
+	TirRef address = emit_tir_bin(block, TIR_ARRAY_ELEM_PTR, element_pointer, src, base_ref, index_ref);
+	Operand pointer_value = runtime_operand(element_pointer, address);
+	return address_only ? pointer_value : load_pointer(block, pointer_value, src);
 }
 
 static Operand
-analyze_array_index(Block *block, const IrInst *inst)
+analyze_array_index(Block *block, const IrInst *inst, bool address_only, bool borrow)
 {
 	Sema *sema = block->sema;
 	Operand base = resolve_ref(block, inst->data.bin.lhs);
@@ -3261,7 +3418,7 @@ analyze_array_index(Block *block, const IrInst *inst)
 			sema_error(block, inst->src, "index %" PRIu64 " outside array of length %" PRIu64 "%s", item, array.length, array.sentinel_zero ? " +1 (sentinel)" : "");
 			return operand_none;
 		}
-		if (base.kind == OPERAND_COMPTIME)
+		if (!address_only && base.kind == OPERAND_COMPTIME)
 			return constant_array_element(block, base, array, item, inst->src);
 	} else if (array.length == 0 && !array.sentinel_zero) {
 		sema_error(block, inst->src, sema->types[base.type].kind == TYPE_POINTER
@@ -3270,7 +3427,7 @@ analyze_array_index(Block *block, const IrInst *inst)
 	}
 	/* Zig folds known one-possible/wholly undefined array values before a dynamic
 	 * bounds guard. Pointer-based accesses must still keep their guard. */
-	if (base.kind == OPERAND_COMPTIME && sema->types[base.type].kind == TYPE_ARRAY) {
+	if (!address_only && base.kind == OPERAND_COMPTIME && sema->types[base.type].kind == TYPE_ARRAY) {
 		if (array.child == T_VOID)
 			return void_operand(sema);
 		if (is_int(sema, array.child) && sema->types[array.child].as.integer.bits == 0)
@@ -3289,7 +3446,7 @@ analyze_array_index(Block *block, const IrInst *inst)
 		if (undefined)
 			return comptime_operand(array.child, value_undefined(&sema->values, array.child));
 	}
-	return runtime_array_element(block, base, index, array, inst->src);
+	return runtime_array_element(block, base, index, array, inst->src, address_only || (borrow && sema->types[array.child].kind == TYPE_ARRAY));
 }
 
 static Operand
@@ -3402,8 +3559,49 @@ analyze_inst(Block *block, IrInstIndex index, Operand *break_value)
 	case IR_ARRAY_INIT:
 		result = analyze_array_init(block, inst);
 		break;
+	case IR_ARRAY_BASE_PTR: {
+		Operand pointer = resolve_ref(block, inst->data.un.operand);
+		if (!pointer_type_operand(block, pointer, src))
+			break;
+		TypeId child = sema->types[pointer.type].as.pointer.child;
+		if (sema->types[child].kind == TYPE_POINTER)
+			pointer = load_pointer(block, pointer, src);
+		if (pointer.kind != OPERAND_NONE && indexable_array_type(sema, pointer.type) != 0)
+			result = pointer;
+		else if (pointer.kind != OPERAND_NONE)
+			sema_error(block, src, "expected array or pointer to array, found '%s'", sema_type_name(sema, child));
+		break;
+	}
+	case IR_ARRAY_INIT_PTR: {
+		Operand pointer = resolve_ref(block, inst->data.bin.lhs);
+		Operand count = resolve_ref(block, inst->data.bin.rhs);
+		if (!pointer_type_operand(block, pointer, src) || count.kind == OPERAND_NONE)
+			break;
+		TypePointer shape = sema->types[pointer.type].as.pointer;
+		if (sema->types[shape.child].kind != TYPE_ARRAY) {
+			sema_error(block, src, "expected array type, found '%s'", sema_type_name(sema, shape.child));
+			break;
+		}
+		TypeArray array = sema->types[shape.child].as.array;
+		uint64_t length = bigint_to_u64_bits(&operand_value(block, count)->as.integer);
+		if (length != array.length)
+			sema_error(block, src, "expected %" PRIu64 " array elements; found %" PRIu64, array.length, length);
+		else if (shape.is_const)
+			sema_error(block, src, "cannot assign to constant");
+		else if (shape.is_volatile || array.sentinel_zero)
+			sema_error(block, src, "not supported by szc yet: volatile or sentinel in-place array initialization");
+		else
+			result = pointer;
+		break;
+	}
+	case IR_ARRAY_INDEX_PTR:
+		result = analyze_array_index(block, inst, true, false);
+		break;
+	case IR_ARRAY_INDEX_BASE:
+		result = analyze_array_index(block, inst, false, true);
+		break;
 	case IR_ARRAY_INDEX:
-		result = analyze_array_index(block, inst);
+		result = analyze_array_index(block, inst, false, false);
 		break;
 	case IR_ARRAY_CAT:
 		result = analyze_array_cat(block, inst);
@@ -3513,10 +3711,24 @@ analyze_inst(Block *block, IrInstIndex index, Operand *break_value)
 		result = type_operand(sema, type_intern(sema, &pointer));
 		break;
 	}
-	case IR_CONST_BIND:
-		if (inst->data.bin.rhs == IR_REF_NONE || resolve_ref(block, inst->data.bin.rhs).kind != OPERAND_NONE)
-			result = resolve_ref(block, inst->data.bin.lhs);
+	case IR_CONST_BIND: {
+		uint32_t alignment = 0;
+		if (inst->data.bin.rhs != IR_REF_NONE) {
+			Operand value = resolve_ref(block, inst->data.bin.rhs);
+			if (value.kind == OPERAND_NONE)
+				break;
+			if (value.kind != OPERAND_COMPTIME || !bigint_to_u32(&operand_value(block, value)->as.integer, &alignment)) {
+				sema_error(block, src, "unable to resolve comptime value");
+				break;
+			}
+		}
+		result = resolve_ref(block, inst->data.bin.lhs);
+		if (result.kind == OPERAND_AGGREGATE) {
+			Operand pointer = analyze_ref(block, result, src, 0, 0);
+			result = array_snapshot(block, pointer, alignment, src);
+		}
 		break;
+	}
 	case IR_REF: {
 		IrRef operand = inst->data.un.operand;
 		uint32_t alignment = 0;
@@ -3706,6 +3918,11 @@ analyze_inst(Block *block, IrInstIndex index, Operand *break_value)
 		}
 		TypeId child = sema->types[pointer.type].as.pointer.child;
 		value = coerce(block, value, child, src);
+		if (value.kind != OPERAND_NONE && sema->types[child].kind == TYPE_ARRAY) {
+			if (pointer_operand(block, pointer, src) && store_array(block, pointer, value, src))
+				result = void_operand(sema);
+			break;
+		}
 		bool no_storage = child == T_VOID || (is_int(sema, child) && sema->types[child].as.integer.bits == 0);
 		if (value.kind != OPERAND_NONE && !no_storage) {
 			if (block->is_comptime && pointer.kind == OPERAND_COMPTIME && operand_value(block, pointer)->kind == VALUE_GLOBAL) {

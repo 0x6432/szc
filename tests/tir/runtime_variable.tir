@@ -1,0 +1,6 @@
+fn szc.main.1: fn () void {
+  %0: *[1]u8 = alloc
+  %1: *const [1]u8 = const ref(object.1)
+  %2: void = array_copy %0, %1
+  %3: noreturn = ret
+}

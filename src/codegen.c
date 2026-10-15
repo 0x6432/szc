@@ -797,6 +797,18 @@ emit_inst(Codegen *cg, TirRef ref)
 		if (type_bits(cg, inst->type) < storage_size(cg, inst->type, inst->src) * 8)
 			normalize(cg, ref, inst->type, cls);
 		return;
+	case TIR_ARRAY_COPY: {
+		TypePointer pointer = sema_type(cg->sema, inst_at(cg, inst->data.bin.lhs)->type)->as.pointer;
+		uint64_t size = storage_size(cg, pointer.child, inst->src);
+		if (size == 0)
+			return;
+		fputs("\tcall $memmove(l ", out);
+		print_operand(cg, inst->data.bin.lhs);
+		fputs(", l ", out);
+		print_operand(cg, inst->data.bin.rhs);
+		fprintf(out, ", l %" PRIu64 ")\n", size);
+		return;
+	}
 	case TIR_STORE: {
 		const TirInst *value = inst_at(cg, inst->data.bin.rhs);
 		if (type_class(cg, value->type, inst->src) == QBE_NONE)

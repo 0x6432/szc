@@ -92,6 +92,7 @@ e2e-test: build/asan/szc $(GENERATED_RUN_TESTS)
 	./tests/run_driver.sh build/asan/szc
 	python3 tests/run_reference_storage.py build/asan/szc
 	python3 tests/run_array_storage.py build/asan/szc
+	python3 tests/run_array_mutable_storage.py build/asan/szc
 	python3 tests/run_function_abi.py build/asan/szc
 	python3 tests/run_pointer_alignment.py build/asan/szc
 	python3 tests/run_local_alignment.py build/asan/szc

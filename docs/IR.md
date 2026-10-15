@@ -306,7 +306,7 @@ prints a file's IR.
   `[_]T` receives the positional literal count during irgen, not a fake standalone type.
 - IR_ARRAY_INIT extra words are `[type_ref, count, element_refs...]`. Each element
   receives the child result type, including nested anonymous literals and integer casts.
-  Sema checks exact count/coercion and requires known elements. VALUE_ARRAY interns
+  Sema checks exact count/coercion. Known elements use VALUE_ARRAY, which interns
   immutable, deep-copied ordered ValueIds, preserving undefined elements; zero-sentinel
   arrays include their sentinel value after the ordinary elements.
 - IR_ARRAY_INDEX uses bin(base, usize-index), accepting arrays or single pointers to
@@ -319,8 +319,7 @@ prints a file's IR.
   VALUE_ARRAY/VALUE_REF backing is used. Whole-array byte loads produce VALUE_ARRAY.
 - Dense array construction/copies share a 1,048,576 element-work budget per Sema.
   This explicit NYI resource limit is separate from full-width type lengths. There
-  are no new TIR array instructions or aggregate ABI: runtime array variables/elements/
-  indices/storage and element addresses remain NYI until a real layout/memory design.
+  is no by-value aggregate ABI yet; runtime storage is described below.
 
 ## Immutable array backing and runtime scalar element reads
 
@@ -331,7 +330,7 @@ prints a file's IR.
 - Immutable VALUE_ARRAY data uses recursive element emission and dependency/callback
   reachability over the interned DAG. Read-only pointer leaves select .data.rel.ro;
   other supported leaves select .rodata. Data alignment and physical byte sizes are
-  real, including outlined >64-byte alignment. Runtime aggregate values remain NYI.
+  real, including outlined >64-byte alignment. Runtime values use private snapshots below.
 - sema_type_size now returns bool and writes a uint64_t result only on success. Physical
   callers diagnose overflow instead of consuming a wrapped/truncated size. Zero-bit
   array layout remains zero; total static array bytes have a 16,777,216-byte NYI budget.
@@ -342,3 +341,37 @@ prints a file's IR.
 - Mutable arrays, aggregate snapshot/copy lowering, source element addresses and
   by-value ABI are not implemented. Existing element-address NYI must not be replaced
   by a ref to a copied known element; the next representation needs real provenance.
+
+## Mutable array slots and owned runtime values
+
+- OPERAND_AGGREGATE carries the semantic array type and a TIR pointer to an owned
+  private snapshot. It is never a scalar array temporary. Whole-array loads copy
+  into fresh storage before later side effects; immutable binding aliases may share
+  immutable storage, as Zig permits. Explicitly aligned bindings get their own slots.
+- TIR_ARRAY_COPY is bin(destination pointer, source pointer), type void. The destination
+  array type determines checked byte size; codegen emits overlap-safe libc memmove,
+  with no operation for zero bytes. Whole-array stores coerce exact child/length and
+  may drop a sentinel, never widen scalar elements. Undefined stores need no bytes.
+- Mutable slots, snapshots and runtime literal temporaries use existing TIR_ALLOC.
+  Supported recursive leaves are bool, pointers, void and integers up to 64 bits.
+  Checked sizes and over-alignment padding count against 16,777,216 aggregate stack
+  bytes per function; overflow and unsupported leaves diagnose instead of wrapping.
+- IR_ARRAY_BASE_PTR normalizes an array slot or a slot containing a single array
+  pointer. IR_ARRAY_INDEX_BASE preserves borrowed nested array storage until the next
+  index is evaluated. These avoid incorrectly snapshotting `a` before side effects in
+  `a[index(&a)]`. Borrowed storage always has a pointer operand, not an aggregate value.
+- IR_ARRAY_INDEX_PTR produces a checked real element address, preserving qualifiers
+  and conservative alignment. Scalar reads/writes reuse existing volatile/narrow-width
+  helpers. Runtime nested-array reads create snapshots when used as array values.
+- Anonymous assignment literals inherit result storage. IR_ARRAY_INIT_PTR validates
+  destination/count before children; each child pointer/store is lowered immediately,
+  recursively for nested anonymous literals. A final owned snapshot keeps the existing
+  assignment interface safe. Explicitly typed literals and @as create temporaries
+  instead: `a = .{9, read(&a)}` and `a = [_]u8{9, read(&a)}` intentionally differ.
+- Ordinary IR_ARRAY_INIT still has `[type_ref, count, element_refs...]`; mixed/runtime
+  elements initialize private storage only after their expressions have been evaluated.
+  Known literals keep existing interning/comptime behavior. Dense element-work limits
+  remain independent of stack/static byte limits.
+- By-value array arguments/returns and runtime aggregate joins remain explicit NYI at
+  scalar materialization. General comptime element-pointer provenance, volatile whole-
+  array copies, mutable array globals, explicit sentinel syntax and slices remain NYI.

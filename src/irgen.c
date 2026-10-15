@@ -497,6 +497,8 @@ local_init(LocalScope *local, Scope *parent, StringId name, LocalKind kind, IrRe
 
 static IrRef expr(GenBody *body, Scope *scope, ResultInfo info, AstNode *node);
 static IrRef type_expr(GenBody *body, Scope *scope, AstNode *node);
+static IrRef address_of(GenBody *body, Scope *scope, ResultInfo info, AstNode *node);
+static IrRef index_base_expr(GenBody *body, Scope *scope, AstNode *node);
 static IrRef function_proto(GenBody *body, Scope *scope, AstFnProto *proto, StringId name, uint32_t flags, StringId extern_lib, AstNode *definition, IrOp op);
 static void  block_statements(GenBody *body, Scope *scope, AstBlock *block);
 static IrRef container_decl(GenBody *body, Scope *scope, AstContainerDecl *decl, StringId name);
@@ -815,6 +817,8 @@ lvalue(GenBody *body, Scope *scope, AstNode *node)
 		error_at(gen, node->offset, "use of undeclared identifier '%s'", intern_text(gen->interner, name));
 		return IR_REF_VOID_VALUE;
 	}
+	if (node->kind == AST_INDEX)
+		return address_of(body, scope, result_none, node);
 	if (node->kind == AST_DEREF)
 		return emit_un(body, IR_REF_DEREF, node->offset, expr(body, scope, result_none, AST_CAST(AstWrap, node, AST_DEREF)->operand));
 	unsupported(body, node, "this kind of assignment target");
@@ -830,8 +834,10 @@ address_of(GenBody *body, Scope *scope, ResultInfo info, AstNode *node)
 	if (node->kind == AST_DEREF)
 		return lvalue(body, scope, node);
 	if (node->kind == AST_INDEX) {
-		unsupported(body, node, "array element addresses");
-		return IR_REF_VOID_VALUE;
+		AstIndex *index = AST_CAST(AstIndex, node, AST_INDEX);
+		IrRef base = emit_un(body, IR_ARRAY_BASE_PTR, node->offset, address_of(body, scope, result_none, index->lhs));
+		IrRef item = expr(body, scope, result_type(IR_REF_TYPE_USIZE), index->index);
+		return emit_bin(body, IR_ARRAY_INDEX_PTR, node->offset, base, item);
 	}
 	if (node->kind == AST_IDENTIFIER) {
 		StringId name = intern_span(body->gen, AST_CAST(AstIdentifier, node, AST_IDENTIFIER)->name);
@@ -1535,6 +1541,38 @@ array_type(GenBody *body, Scope *scope, AstArrayType *node, bool infer, uint32_t
 	return emit_bin(body, IR_ARRAY_TYPE, node->child->offset, length, child);
 }
 
+/* Small typed indices for compiler-generated literal initialization. */
+static IrRef
+emit_usize(GenBody *body, uint32_t src, uint32_t value)
+{
+	IrData data;
+	memset(&data, 0, sizeof(data));
+	data.integer = value;
+	return rvalue(body, result_type(IR_REF_TYPE_USIZE), emit(body, IR_INT, src, data), src);
+}
+
+static IrRef
+index_base_expr(GenBody *body, Scope *scope, AstNode *node)
+{
+	if (node->kind == AST_GROUPED)
+		return index_base_expr(body, scope, AST_CAST(AstWrap, node, AST_GROUPED)->operand);
+	if (node->kind == AST_INDEX) {
+		AstIndex *index = AST_CAST(AstIndex, node, AST_INDEX);
+		IrRef base = index_base_expr(body, scope, index->lhs);
+		IrRef item = expr(body, scope, result_type(IR_REF_TYPE_USIZE), index->index);
+		return emit_bin(body, IR_ARRAY_INDEX_BASE, node->offset, base, item);
+	}
+	bool borrow = node->kind == AST_DEREF;
+	if (node->kind == AST_IDENTIFIER) {
+		StringId name = intern_span(body->gen, AST_CAST(AstIdentifier, node, AST_IDENTIFIER)->name);
+		Lookup found = lookup_name(scope, name);
+		borrow = found.kind == LOOKUP_DECL || (found.kind == LOOKUP_LOCAL && found.local->local_kind == LOCAL_VAR);
+	}
+	if (borrow)
+		return emit_un(body, IR_ARRAY_BASE_PTR, node->offset, address_of(body, scope, result_none, node));
+	return expr(body, scope, result_none, node);
+}
+
 /* Element result types propagate into nested literals and integer casts. */
 static IrRef
 array_init(GenBody *body, Scope *scope, ResultInfo info, AstInitList *node)
@@ -1558,6 +1596,20 @@ array_init(GenBody *body, Scope *scope, ResultInfo info, AstInitList *node)
 	}
 	IrRef child = emit_un(body, IR_ARRAY_ELEM_TYPE, node->base.offset, type);
 	uint32_t count = node->elements.count;
+	/* Only anonymous assignment literals inherit the destination in Zig 0.17.
+	 * Explicit type syntax and @as create independent temporaries. */
+	if (node->type == NULL && info.kind == RESULT_PTR_ELEM) {
+		IrRef length = emit_usize(body, node->base.offset, count);
+		IrRef destination = emit_bin(body, IR_ARRAY_INIT_PTR, node->base.offset, info.ref, length);
+		for (uint32_t i = 0; i < count; i++) {
+			IrRef index = emit_usize(body, node->base.offset, i);
+			IrRef pointer = emit_bin(body, IR_ARRAY_INDEX_PTR, node->base.offset, destination, index);
+			ResultInfo element_info = {RESULT_PTR_ELEM, pointer};
+			IrRef value = expr(body, scope, element_info, node->elements.items[i]);
+			emit_bin(body, IR_STORE, node->base.offset, pointer, value);
+		}
+		return emit_un(body, IR_LOAD, node->base.offset, destination);
+	}
 	IrRef *items = ARENA_ARRAY(body->gen->arena, IrRef, count);
 	for (uint32_t i = 0; i < count; i++)
 		items[i] = expr(body, scope, result_type(child), node->elements.items[i]);
@@ -1579,7 +1631,7 @@ expr(GenBody *body, Scope *scope, ResultInfo info, AstNode *node)
 		return array_init(body, scope, info, AST_CAST(AstInitList, node, AST_INIT_LIST));
 	case AST_INDEX: {
 		AstIndex *index = AST_CAST(AstIndex, node, AST_INDEX);
-		IrRef base = expr(body, scope, result_none, index->lhs);
+		IrRef base = index_base_expr(body, scope, index->lhs);
 		IrRef item = expr(body, scope, result_type(IR_REF_TYPE_USIZE), index->index);
 		return rvalue(body, info, emit_bin(body, IR_ARRAY_INDEX, node->offset, base, item), node->offset);
 	}

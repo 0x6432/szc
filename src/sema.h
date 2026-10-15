@@ -132,6 +132,7 @@ typedef struct SemaFunc {
 	bool          is_export;
 	bool          is_generic;
 	FuncState     state;
+	uint64_t      array_stack_bytes;	/* bounded aggregate slots, including snapshots */
 	TirFunc       tir;
 } SemaFunc;
 

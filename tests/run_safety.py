@@ -23,6 +23,15 @@ def binary_case(name, integer_type, operator, lhs, rhs, message="integer overflo
 
 
 def cases():
+    for name, operation in (
+        ("store", "a[n] = 3;"),
+        ("address", "const p = &a[n]; p.* = 3;"),
+        ("zero_store", "var z: [2]u0 = undefined; z[n] = 0; _ = &a;"),
+        ("nested", "var z: [2][2]u8 = .{.{1,2},.{3,4}}; z[0][n] = 3; _ = &a;"),
+    ):
+        source = ("fn operation(n: usize) void { var a = [_]u8{1,2}; " + operation + " }\n"
+                  "pub fn main() void { operation(2); }\n")
+        yield "array_mutable_" + name, source, "index out of bounds"
     for child, value in (("u8", "7"), ("i33", "-7"), ("u0", "0"), ("void", "{}")):
         for index in ("2", "18446744073709551615"):
             source = (f"fn read(p: *const [2]{child}, n: usize) {child} {{ return p[n]; }}\n"

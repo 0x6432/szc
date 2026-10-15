@@ -144,6 +144,10 @@ typedef enum IrDataKind {
 	X(ARRAY_TYPE, "array_type", IR_DATA_BIN)	/* length (usize), child type */ \
 	X(ARRAY_ELEM_TYPE, "array_elem_type", IR_DATA_UN)	/* array type -> child type */ \
 	X(ARRAY_INIT, "array_init", IR_DATA_PAYLOAD)	/* type ref, count, element refs */ \
+	X(ARRAY_BASE_PTR, "array_base_ptr", IR_DATA_UN)	/* normalize array slot or pointer slot */ \
+	X(ARRAY_INDEX_PTR, "array_index_ptr", IR_DATA_BIN)	/* checked element address */ \
+	X(ARRAY_INDEX_BASE, "array_index_base", IR_DATA_BIN)	/* borrow nested array storage for indexing */ \
+	X(ARRAY_INIT_PTR, "array_init_ptr", IR_DATA_BIN)	/* validate anonymous initializer destination and count */ \
 	X(ARRAY_INDEX, "array_index", IR_DATA_BIN)	/* array/pointer value, usize index */ \
 	X(ARRAY_CAT, "array_cat", IR_DATA_BIN)	/* concatenate indexable constants */ \
 	X(FIELD_VAL, "field_val", IR_DATA_NAME)	/* field name, base operand (array .len initially) */ \
