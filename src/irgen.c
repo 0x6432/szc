@@ -829,6 +829,10 @@ address_of(GenBody *body, Scope *scope, ResultInfo info, AstNode *node)
 		return address_of(body, scope, info, AST_CAST(AstWrap, node, AST_GROUPED)->operand);
 	if (node->kind == AST_DEREF)
 		return lvalue(body, scope, node);
+	if (node->kind == AST_INDEX) {
+		unsupported(body, node, "array element addresses");
+		return IR_REF_VOID_VALUE;
+	}
 	if (node->kind == AST_IDENTIFIER) {
 		StringId name = intern_span(body->gen, AST_CAST(AstIdentifier, node, AST_IDENTIFIER)->name);
 		Lookup found = lookup_name(scope, name);
@@ -885,6 +889,8 @@ static IrOp
 binary_op(AstBinaryOp op)
 {
 	switch (op) {
+	case AST_OP_CONCAT:
+		return IR_ARRAY_CAT;
 	case AST_OP_ADD:
 		return IR_ADD;
 	case AST_OP_SUB:
@@ -1502,10 +1508,86 @@ if_expr(GenBody *body, Scope *scope, ResultInfo info, AstNode *node)
 	return emit_payload(body, IR_IF, node->offset, APPEND_EXTRA(body->gen, payload));
 }
 
+/* A literal supplies the length for `[_]T`; it is not a standalone type. */
+static IrRef
+array_type(GenBody *body, Scope *scope, AstArrayType *node, bool infer, uint32_t count)
+{
+	if (node->sentinel != NULL) {
+		unsupported(body, &node->base, "explicit array sentinels");
+		return IR_REF_VOID_VALUE;
+	}
+	bool underscore = node->length->kind == AST_IDENTIFIER
+		&& intern_span(body->gen, AST_CAST(AstIdentifier, node->length, AST_IDENTIFIER)->name) == intern_cstr(body->gen->interner, "_");
+	IrRef length;
+	if (underscore) {
+		if (!infer) {
+			error_at(body->gen, node->length->offset, "%s", "unable to infer array size");
+			return IR_REF_VOID_VALUE;
+		}
+		IrData data;
+		memset(&data, 0, sizeof(data));
+		data.integer = count;
+		length = rvalue(body, result_type(IR_REF_TYPE_USIZE), emit(body, IR_INT, node->length->offset, data), node->length->offset);
+	} else {
+		length = expr(body, scope, result_type(IR_REF_TYPE_USIZE), node->length);
+	}
+	IrRef child = type_expr(body, scope, node->child);
+	return emit_bin(body, IR_ARRAY_TYPE, node->child->offset, length, child);
+}
+
+/* Element result types propagate into nested literals and integer casts. */
+static IrRef
+array_init(GenBody *body, Scope *scope, ResultInfo info, AstInitList *node)
+{
+	if (node->is_struct_init && node->field_count != 0) {
+		unsupported(body, &node->base, "struct field initializers");
+		return IR_REF_VOID_VALUE;
+	}
+	IrRef type;
+	if (node->type != NULL) {
+		type = node->type->kind == AST_ARRAY_TYPE
+			? array_type(body, scope, AST_CAST(AstArrayType, node->type, AST_ARRAY_TYPE), true, node->elements.count)
+			: type_expr(body, scope, node->type);
+	} else if (info.kind == RESULT_TYPE) {
+		type = info.ref;
+	} else if (info.kind == RESULT_PTR_ELEM) {
+		type = emit_un(body, IR_ELEM_TYPE, node->base.offset, info.ref);
+	} else {
+		unsupported(body, &node->base, "anonymous tuples without an array result type");
+		return IR_REF_VOID_VALUE;
+	}
+	IrRef child = emit_un(body, IR_ARRAY_ELEM_TYPE, node->base.offset, type);
+	uint32_t count = node->elements.count;
+	IrRef *items = ARENA_ARRAY(body->gen->arena, IrRef, count);
+	for (uint32_t i = 0; i < count; i++)
+		items[i] = expr(body, scope, result_type(child), node->elements.items[i]);
+	uint32_t payload = reserve_extra(body->gen, count + 2);
+	body->gen->ir->extra[payload] = type;
+	body->gen->ir->extra[payload + 1] = count;
+	for (uint32_t i = 0; i < count; i++)
+		body->gen->ir->extra[payload + 2 + i] = items[i];
+	return rvalue(body, info, emit_payload(body, IR_ARRAY_INIT, node->base.offset, payload), node->base.offset);
+}
+
 static IrRef
 expr(GenBody *body, Scope *scope, ResultInfo info, AstNode *node)
 {
 	switch (node->kind) {
+	case AST_ARRAY_TYPE:
+		return rvalue(body, info, array_type(body, scope, AST_CAST(AstArrayType, node, AST_ARRAY_TYPE), false, 0), node->offset);
+	case AST_INIT_LIST:
+		return array_init(body, scope, info, AST_CAST(AstInitList, node, AST_INIT_LIST));
+	case AST_INDEX: {
+		AstIndex *index = AST_CAST(AstIndex, node, AST_INDEX);
+		IrRef base = expr(body, scope, result_none, index->lhs);
+		IrRef item = expr(body, scope, result_type(IR_REF_TYPE_USIZE), index->index);
+		return rvalue(body, info, emit_bin(body, IR_ARRAY_INDEX, node->offset, base, item), node->offset);
+	}
+	case AST_FIELD_ACCESS: {
+		AstFieldAccess *field = AST_CAST(AstFieldAccess, node, AST_FIELD_ACCESS);
+		IrRef base = expr(body, scope, result_none, field->lhs);
+		return rvalue(body, info, emit_name(body, IR_FIELD_VAL, node->offset, intern_span(body->gen, field->name), base), node->offset);
+	}
 	case AST_STRING_LITERAL:
 		return rvalue(body, info, string_literal(body, node), node->offset);
 	case AST_MULTILINE_STRING_LITERAL:
@@ -2370,6 +2452,17 @@ dump_inst(const IrDumper *dumper, IrInstIndex index, uint32_t depth)
 		IR_READ(ir, inst->data.payload, &payload);
 		fputc(' ', out);
 		dump_ref(dumper, payload.message);
+		break;
+	}
+	case IR_ARRAY_INIT: {
+		uint32_t payload = inst->data.payload;
+		fputc(' ', out);
+		dump_ref(dumper, ir->extra[payload]);
+		uint32_t count = ir->extra[payload + 1];
+		for (uint32_t i = 0; i < count; i++) {
+			fputs(", ", out);
+			dump_ref(dumper, ir->extra[payload + 2 + i]);
+		}
 		break;
 	}
 	case IR_FOR_LEN: {

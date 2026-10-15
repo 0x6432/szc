@@ -298,3 +298,26 @@ prints a file's IR.
 - No memory operation is needed for void/u0. Undefined stores use an arbitrary
   zero in szc, but no stable value/access-count guarantee is made for undefined
   values; actual Zig ReleaseFast may omit such a store.
+
+## Compile-time array types and values
+
+- IR_ARRAY_TYPE uses bin(length-ref, child-type-ref); length is known usize with full
+  64-bit range. IR_ARRAY_ELEM_TYPE extracts a child type for literal result locations.
+  `[_]T` receives the positional literal count during irgen, not a fake standalone type.
+- IR_ARRAY_INIT extra words are `[type_ref, count, element_refs...]`. Each element
+  receives the child result type, including nested anonymous literals and integer casts.
+  Sema checks exact count/coercion and requires known elements. VALUE_ARRAY interns
+  immutable, deep-copied ordered ValueIds, preserving undefined elements; zero-sentinel
+  arrays include their sentinel value after the ordinary elements.
+- IR_ARRAY_INDEX uses bin(base, usize-index), accepting arrays or single pointers to
+  arrays. Known indexing checks the ordinary/sentinel bounds and extracts a known
+  element; it does not create runtime aggregate storage or approximate element refs.
+  IR_FIELD_VAL uses name(field, base); array `.len` returns known usize from type alone.
+- IR_ARRAY_CAT uses bin(lhs, rhs), joining child types and checking length overflow.
+  Either zero sentinel is retained; either pointer operand makes the result a const
+  single pointer. Defined u8 pointer results reuse VALUE_BYTES, otherwise immutable
+  VALUE_ARRAY/VALUE_REF backing is used. Whole-array byte loads produce VALUE_ARRAY.
+- Dense array construction/copies share a 1,048,576 element-work budget per Sema.
+  This explicit NYI resource limit is separate from full-width type lengths. There
+  are no new TIR array instructions or aggregate ABI: runtime array variables/elements/
+  indices/storage and element addresses remain NYI until a real layout/memory design.

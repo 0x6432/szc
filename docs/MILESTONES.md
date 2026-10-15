@@ -85,7 +85,10 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
         - [x] **M5.1c2b3 Volatile pointer accesses** (supported scalar/bool/single-pointer values).
           - [x] **M5.1c2b3a Volatile pointer qualification/coercion**.
           - [x] **M5.1c2b3b Observable volatile loads/stores**.
-- [ ] **M5.2 Arrays, indexing, array literals, `++` at comptime** (0.17.0 has no `**`).
+- [~] **M5.2 Arrays, indexing, array literals, `++` at comptime** (0.17.0 has no `**`).
+  - [x] **M5.2a Array types and compile-time literals** (typed/inferred length, nested result types).
+  - [x] **M5.2b Compile-time indexing, `.len` and concatenation** (including literal byte backing).
+  - [ ] **M5.2c Runtime array storage, copies, indexing and element addresses** (checked bounds and aggregate ABI).
 - [ ] **M5.3 Slices, many-pointers, slicing, `.len`, `.ptr`, for over slices.**
 - [~] **M5.4 String literals, sentinels, `[*:0]const u8`.** Literal byte values landed in M4.5b; general string/memory operations and sentinel pointer syntax remain pending.
 - [ ] **M5.5 Casting builtins**: `@intCast`, `@truncate`, `@ptrCast`, `@intFromPtr`, `@ptrFromInt`, `@bitCast`, `@as`.
@@ -138,6 +141,55 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
 ## Completed milestone log
 
 (newest first; each entry: what, limitations, interactions)
+
+### M5.2a–b Compile-time array foundation
+- **What**: fixed-size array types with full 64-bit usize lengths, typed and inferred
+  `[_]` literals, expected-type/nested anonymous array initialization and child integer
+  cast result locations. Compile-time indexing, type-derived `.len`, and `++` fold
+  without runtime aggregate instructions. Readbacks of strings and mixed string/array
+  concatenation preserve the zero sentinel slot; whole-array string dereferences now
+  produce usable immutable aggregates. Arrays of supported integer/bool/void/type/
+  callback values, empty arrays and partly undefined elements are covered.
+- **Representation/interactions**: VALUE_ARRAY interns an immutable ordered sequence
+  of child ValueIds, deep-copying backing storage. TypeArray.length is uint64_t and both
+  words participate in type identity. New ARRAY_TYPE/ELEM_TYPE/INIT/INDEX/CAT and FIELD_VAL
+  IR operations preserve expected element types; no parser or aggregate backend shortcut
+  is added. Concatenation uses child peer types, retains zero sentinels when either
+  operand has one, and returns a const pointer if an operand is a pointer. Fully defined
+  u8 pointer results reuse VALUE_BYTES, including existing panic messages; undefined
+  elements stay undefined. Whole-array coercion does not integer-widen elements, and
+  pointer-to-array coercion retains existing mutable/const compatibility restrictions.
+- **Grounding**: actual Zig 0.17 Sema.zig array-type/init/element/concatenation routines
+  and real reference cases validate child restrictions, literal counts, sentinel bounds,
+  typed-undefined coercions and concatenation peer types. A huge undefined zero-bit
+  aggregate reference probe stalled, including a separate 15-second bounded check;
+  this is not a language rejection. Final executable fixtures use undefined pointers
+  to huge arrays instead: their type-derived lengths and 64-bit type identity compile
+  and run successfully with Zig without materializing those aggregate values.
+- **Tests**: fresh GCC/Clang -Werror ASan/UBSan pass 572 unit checks and 761
+  goldens; 60 ordinary/generated executable inputs pass, including actual Zig
+  emission/execution. GCC full executable/driver/storage/alignment/ABI/volatile/safety
+  suites pass with and without reference checks; final Clang executable/driver/storage/
+  volatile/safety subsets pass. Optimized GCC passes both array executables and all
+  15 physical storage checks. The new semantic array matrix matches all 212 real Zig
+  cases; 17 invalid fixtures reject with Zig and six explicit NYI fixtures are valid
+  reference programs. CI includes the matrix and generated width readbacks. Lifecycle
+  regressions pass 8 checks and adapter wiring passes 18. Broader pointer matrices are
+  being rechecked separately: one initial local pool failed to start szc while its
+  executable was being replaced (Permission denied), not on a semantic mismatch. The
+  entire affected allowzero matrix is rerunning against a stable binary, without
+  filtering, skipped cases or automatic retries. Final forced fuzz rebuilds pass all
+  four 60-second libFuzzer targets and 20,000 standalone mutations per stage
+  (35 irgen/85 sema retained corpus inputs).
+- **Limits/next**: dense constant construction has an explicit per-compilation budget
+  of 1,048,576 element work units, charged across literals, concatenation and aggregate
+  copies/byte loads. Exceeding it is NYI, not a Zig-invalid program or silently truncated
+  length. Type-only lengths and undefined-pointer `.len` do not allocate dense elements.
+  Runtime array elements/variables/indexing/storage/copies/by-value ABI and element
+  addresses, explicit array sentinel syntax, untyped anonymous tuple inference and
+  mixed bare-function/pointer element joins remain NYI. Do not turn an element address
+  into a reference to a copied value. Array/slice for integration and lazy/repeated
+  constant representations remain future work; M5.2 stays partial. Q6 remains M10.2.
 
 ### CI follow-up: uniform semantic compilation deadlines
 - **Evidence**: 967329f/run 38711782475 passed compiler/fuzz/native/reference safety

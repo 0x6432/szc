@@ -1,0 +1,3 @@
+tests/tir/errors/array_empty_count.zig:1:37: error: expected 1 array elements; found 0
+pub fn main() void { const a = [1]u8{}; _ = a; }
+                                    ^

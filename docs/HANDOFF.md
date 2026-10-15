@@ -50,10 +50,14 @@ Read this first when resuming work (the sandbox resets often).
   self/mutual address-only cycles, separate known initializer loads and real read-only
   storage. Local explicitly aligned bare-function aliases retain the verified upstream
   emission-crash NYI. All enclosing M5.1 alignment/integration milestones stay partial.
+- Done: M5.2a–b compile-time array types/literals, indexing, `.len` and `++`.
+  Runtime array memory/ABI and element addresses are not implemented; M5.2 is partial.
 - Current batching preference: group related straightforward milestones when practical;
   keep complex semantic changes independently tested/documented/committed. Do not return
   to an unconditional one-checkpoint policy. Select the next independently implementable
-  memory item without pretending the blocked function-alias case is complete.
+  memory item without pretending the blocked function-alias case is complete. Next is
+  M5.2c: design real aggregate layout/storage and checked runtime indexing, keeping
+  scalar codegen from treating an array as an ordinary scalar slot.
 - Run `PATH=/data/tools/bin:$PATH ZIG=/data/zig/zig-x86_64-linux-0.17.0/zig make e2e-test`
   locally. `tools/build_qbe.sh` builds the pinned QBE into `build/qbe-src` on CI.
 - Tools: `SZC_QBE`/`qbe`, `SZC_CC`/`cc`; pinned QBE revision
@@ -75,6 +79,48 @@ Read this first when resuming work (the sandbox resets often).
   GCC/Clang/fuzz/differential jobs, restoring green CI. M5.1c2b2a 8b1d3cf
   also passed all jobs (run 38590520673), as did M5.1c2b2b1 ecfb6ab
   (run 38593742928). Check each new push's run.
+
+## M5.2a–b compile-time arrays
+
+- TypeArray.length is uint64_t; hashing includes both words. IR_ARRAY_INIT carries
+  `[type_ref, count, element_refs...]`; child result types reach nested literals/casts.
+  VALUE_ARRAY owns deep-copied interned child IDs, including undefined elements and
+  optional zero sentinel storage. Strings retain compact VALUE_BYTES pointer backing.
+- Indexing resolves known aggregate elements only; `.len` uses the array type, including
+  undefined pointers, without dereferencing. Concatenation joins child types, preserves
+  either zero sentinel, and yields a const pointer if either input was a pointer.
+  Typed array coercions cannot use the generic undefined path to bypass shape/child
+  checks. Whole-array byte dereferences and sentinel stripping retain known values.
+- An explicit 1,048,576 dense-element work/storage budget bounds this interim
+  representation across construction and copies. Exceeding it reports NYI. Huge
+  type-only lengths are supported without allocating; repeated/lazy aggregate values
+  are not. General runtime aggregate storage/ABI, runtime indices/elements, element
+  addresses, explicit sentinel syntax, anonymous tuple inference and mixed bare-function
+  element joins remain unsupported. Runtime array variables reject before scalar
+  allocation/codegen; never implement element addresses as refs to copied elements.
+- Grounded in actual 0.17 Sema.zig zirArrayType/validateArrayElemType/zirArrayInit/
+  zirArrayInitElemType/elemValArray/zirArrayCat and reference compilations. A real huge
+  undefined zero-bit aggregate probe stalled (separate bounded check: 15 seconds);
+  do not call it invalid or count it as a passing comparison. Final huge-length fixture
+  uses undefined pointers and passes actual reference emission/execution.
+- Validation: final fresh GCC/Clang -Werror ASan/UBSan pass 572 unit checks and 761
+  goldens. Both pass 60 ordinary/generated programs; GCC full reference-enabled e2e
+  and final full native suite pass. Clang driver (16), storage (15), volatile (44) and
+  safety (166) subsets pass. Optimized GCC passes the two new executables and storage
+  suite. The 212-case actual array matrix passes; new invalid/NYI fixtures have been
+  classified with Zig, not mistaken for szc-only language rules. Process tests pass
+  8 checks and differential adapter wiring passes 18. Final forced fuzz rebuilds pass
+  four 60-second libFuzzer runs and 20,000 standalone mutations per stage; retained
+  irgen/sema corpus inputs are 35/85.
+- Broader matrices are still running. The initial local pool has a Permission denied
+  start failure for allowzero case 49 because build/asan/szc was relinked during that
+  run; the original pool is not a passing run. Rerun the entire 864-case allowzero
+  matrix on the stable binary and record its result separately. Do not rebuild an
+  executable while tests use it. Other matrix failures/timeouts must still be reported.
+- CI deadline follow-up 64c6130/run 38716130912 has passed GCC, Clang and fuzz;
+  differential is still running when checked. Check this array push independently.
+- Batch related easy milestones as requested, but keep runtime aggregate memory work
+  independently validated. No change to the M10.2 deferred build-strategy question.
 
 ## CI follow-up: uniform compilation deadlines
 

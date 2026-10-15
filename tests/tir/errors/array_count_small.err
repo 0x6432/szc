@@ -1,0 +1,3 @@
+tests/tir/errors/array_count_small.zig:1:37: error: expected 2 array elements; found 1
+pub fn main() void { const a = [2]u8{1}; _ = a; }
+                                    ^

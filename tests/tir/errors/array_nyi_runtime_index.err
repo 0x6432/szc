@@ -1,0 +1,3 @@
+tests/tir/errors/array_nyi_runtime_index.zig:1:54: error: not supported by szc yet: runtime array indexing
+fn read(n: usize) u8 { const a = [_]u8{7,9}; return a[n]; }
+                                                     ^

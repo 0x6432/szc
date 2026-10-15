@@ -537,6 +537,11 @@ value_hash(const Value *value)
 	case VALUE_REF:
 		hash = hash_mix(hash, value->as.object);
 		break;
+	case VALUE_ARRAY:
+		hash = hash_mix(hash, value->as.array.count);
+		for (uint32_t i = 0; i < value->as.array.count; i++)
+			hash = hash_mix(hash, value->as.array.items[i]);
+		break;
 	case VALUE_BYTES:
 		hash = hash_mix(hash, value->as.bytes.length);
 		for (uint32_t i = 0; i < value->as.bytes.length; i++)
@@ -568,6 +573,9 @@ value_equal(const Value *a, const Value *b)
 		return a->as.global == b->as.global;
 	case VALUE_REF:
 		return a->as.object == b->as.object;
+	case VALUE_ARRAY:
+		return a->as.array.count == b->as.array.count && (a->as.array.count == 0
+			|| memcmp(a->as.array.items, b->as.array.items, (size_t)a->as.array.count * sizeof(ValueId)) == 0);
 	case VALUE_BYTES:
 		return a->as.bytes.length == b->as.bytes.length && (a->as.bytes.length == 0 || memcmp(a->as.bytes.data, b->as.bytes.data, a->as.bytes.length) == 0);
 	case VALUE_FUNCTION:
@@ -626,6 +634,12 @@ value_intern(ValueTable *table, const Value *value)
 		table->values[id].as.integer = bigint_from_limbs(table->arena, value->as.integer.limbs, value->as.integer.limb_count);
 	if (value->kind == VALUE_INT)
 		table->values[id].as.integer.negative = value->as.integer.negative;
+	if (value->kind == VALUE_ARRAY) {
+		ValueId *copy = ARENA_ARRAY(table->arena, ValueId, value->as.array.count);
+		if (value->as.array.count != 0)
+			memcpy(copy, value->as.array.items, (size_t)value->as.array.count * sizeof(ValueId));
+		table->values[id].as.array.items = copy;
+	}
 	if (value->kind == VALUE_BYTES) {
 		uint8_t *copy = arena_zalloc(table->arena, (size_t)value->as.bytes.length + 1, 1);
 		if (value->as.bytes.length != 0)
@@ -706,6 +720,15 @@ value_int_u64(ValueTable *table, TypeId type, uint64_t integer)
 	big.limb_count = limbs[1] != 0 ? 2 : limbs[0] != 0 ? 1 : 0;
 	big.limbs = limbs;
 	return value_int(table, type, &big);
+}
+
+ValueId
+value_array(ValueTable *table, TypeId type, const ValueId *items, uint32_t count)
+{
+	Value value = make_value(VALUE_ARRAY, type);
+	value.as.array.items = items;
+	value.as.array.count = count;
+	return value_intern(table, &value);
 }
 
 ValueId

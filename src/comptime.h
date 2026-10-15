@@ -35,6 +35,7 @@ typedef enum ValueKind {
 	VALUE_FUNCTION,
 	VALUE_GLOBAL,	/* stable declaration address; contents resolve separately */
 	VALUE_REF,	/* immutable address of an interned value */
+	VALUE_ARRAY,	/* immutable aggregate of interned element IDs */
 	VALUE_BYTES,	/* immutable bytes; length excludes the zero sentinel */
 	VALUE_UNDEFINED,	/* `undefined` of any type */
 } ValueKind;
@@ -43,6 +44,11 @@ typedef struct ByteString {
 	const uint8_t *data;
 	uint32_t length;
 } ByteString;
+
+typedef struct ArrayValue {
+	const ValueId *items;
+	uint32_t count;
+} ArrayValue;
 
 typedef struct Value {
 	ValueKind kind;
@@ -54,6 +60,7 @@ typedef struct Value {
 		FuncId function;
 		GlobalId global;
 		ByteString bytes;
+		ArrayValue array;
 		ConstObjectId object;
 	} as;
 } Value;
@@ -86,6 +93,7 @@ const Value *value_get(const ValueTable *table, ValueId id);
 
 ValueId value_global(ValueTable *table, TypeId type, GlobalId global);
 ValueId value_ref(ValueTable *table, TypeId type, ValueId pointee, uint32_t identity, uint32_t alignment);
+ValueId value_array(ValueTable *table, TypeId type, const ValueId *items, uint32_t count);
 ValueId value_bytes(ValueTable *table, TypeId type, const uint8_t *data, uint32_t length);
 ValueId value_void(ValueTable *table, TypeId void_type);
 ValueId value_bool(ValueTable *table, TypeId bool_type, bool value);

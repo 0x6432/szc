@@ -82,6 +82,7 @@ struct Sema {
 	uint32_t   type_slot_count;
 
 	ValueTable values;
+	uint32_t array_elements;	/* work/storage charged by dense constant construction */
 
 	SemaFunc   **funcs;	/* funcs[0] is unused; each SemaFunc stays at its address */
 	uint32_t   func_count;
@@ -191,7 +192,8 @@ type_hash(const Type *type)
 		break;
 	case TYPE_ARRAY:
 		hash = hash_word(hash, type->as.array.child);
-		hash = hash_word(hash, type->as.array.length);
+		hash = hash_word(hash, (uint32_t)type->as.array.length);
+		hash = hash_word(hash, (uint32_t)(type->as.array.length >> 32));
 		hash = hash_word(hash, type->as.array.sentinel_zero ? 1u : 0u);
 		break;
 	case TYPE_POINTER:
@@ -520,7 +522,7 @@ sema_type_name(Sema *sema, TypeId type_id)
 	case TYPE_FLOAT:
 		return arena_sprintf(sema->arena, "f%u", (unsigned)type->as.floating.bits);
 	case TYPE_ARRAY:
-		return arena_sprintf(sema->arena, "[%u%s]%s", type->as.array.length, type->as.array.sentinel_zero ? ":0" : "", sema_type_name(sema, type->as.array.child));
+		return arena_sprintf(sema->arena, "[%" PRIu64 "%s]%s", type->as.array.length, type->as.array.sentinel_zero ? ":0" : "", sema_type_name(sema, type->as.array.child));
 	case TYPE_POINTER: {
 		const char *prefix = type->as.pointer.size == POINTER_ONE ? "*" : type->as.pointer.size == POINTER_MANY ? "[*]" : type->as.pointer.size == POINTER_SLICE ? "[]" : "[*c]";
 		const char *alignment = type->as.pointer.alignment == 0 ? "" : arena_sprintf(sema->arena, "align(%u) ", (unsigned)type->as.pointer.alignment);
@@ -975,6 +977,19 @@ static bool operand_to_type(Block *block, Operand operand, uint32_t src, TypeId 
 static bool require_runtime(Block *block, uint32_t src);
 static bool analyze_alignment(Block *block, IrBody body, uint32_t src, uint32_t *out);
 
+/* Until repeated/lazy aggregate values land, bound dense compile-time array work. */
+static bool
+reserve_array_elements(Block *block, uint32_t count, uint32_t src)
+{
+	enum { CONSTANT_ARRAY_ELEMENT_BUDGET = 1048576 };
+	if (count > CONSTANT_ARRAY_ELEMENT_BUDGET - block->sema->array_elements) {
+		sema_error(block, src, "not supported by szc yet: constant array element budget exceeded (1048576)");
+		return false;
+	}
+	block->sema->array_elements += count;
+	return true;
+}
+
 static bool
 global_type_allowed(Block *block, TypeId type, uint32_t src)
 {
@@ -1287,6 +1302,13 @@ memory_coercion_allowed(const Sema *sema, TypeId dest, TypeId source, bool dest_
 		return true;
 	if (sema->types[dest].kind == TYPE_INT && sema->types[source].kind == TYPE_INT)
 		return sema->types[dest].as.integer.bits == sema->types[source].as.integer.bits && sema->types[dest].as.integer.is_signed == sema->types[source].as.integer.is_signed;
+	if (sema->types[dest].kind == TYPE_ARRAY && sema->types[source].kind == TYPE_ARRAY) {
+		TypeArray to = sema->types[dest].as.array;
+		TypeArray from = sema->types[source].as.array;
+		return to.length == from.length && (!to.sentinel_zero || from.sentinel_zero)
+			&& (!dest_is_mut || to.sentinel_zero == from.sentinel_zero)
+			&& memory_coercion_allowed(sema, to.child, from.child, dest_is_mut);
+	}
 	if (sema->types[dest].kind == TYPE_FN && sema->types[source].kind == TYPE_FN) {
 		TypeFn to = sema->types[dest].as.fn;
 		TypeFn from = sema->types[source].as.fn;
@@ -1367,7 +1389,24 @@ coerce(Block *block, Operand operand, TypeId dest, uint32_t src)
 	}
 	if (operand.kind == OPERAND_COMPTIME) {
 		const Value *value = operand_value(block, operand);
-		if (value->kind == VALUE_UNDEFINED) {
+		if (dest_kind == TYPE_ARRAY && sema->types[operand.type].kind == TYPE_ARRAY) {
+			TypeArray target = sema->types[dest].as.array;
+			TypeArray source = sema->types[operand.type].as.array;
+			if (target.child == source.child && target.length == source.length
+				&& (!target.sentinel_zero || source.sentinel_zero)) {
+				if (value->kind == VALUE_UNDEFINED)
+					return comptime_operand(dest, value_undefined(&sema->values, dest));
+				if (value->kind == VALUE_ARRAY) {
+					ArrayValue array = value->as.array;
+					uint32_t count = array.count - (source.sentinel_zero && !target.sentinel_zero ? 1u : 0u);
+					if (!reserve_array_elements(block, count, src))
+						return operand_none;
+					return comptime_operand(dest, value_array(&sema->values, dest, array.items, count));
+				}
+			}
+		}
+		if (value->kind == VALUE_UNDEFINED && (operand.type == T_UNDEFINED
+			|| (dest_kind != TYPE_ARRAY && sema->types[operand.type].kind != TYPE_ARRAY))) {
 			bool pointer_conversion = dest_kind == TYPE_POINTER || sema->types[operand.type].kind == TYPE_POINTER;
 			if (!pointer_conversion || operand.type == type_id_of_well_known(IR_REF_TYPE_UNDEFINED) || memory_coercion_allowed(sema, dest, operand.type, false))
 				return comptime_operand(dest, value_undefined(&sema->values, dest));
@@ -2209,7 +2248,7 @@ analyze_panic(Block *block, const IrInst *inst)
 		sema_error(block, payload.argument_src, "expected type '[]const u8', found '%s'", sema_type_name(sema, message.type));
 		return INST_NORETURN;
 	}
-	uint32_t length = array->as.array.length;
+	uint64_t length = array->as.array.length;
 	if (block->is_comptime) {
 		if (message.kind != OPERAND_COMPTIME || operand_value(block, message)->kind != VALUE_BYTES)
 			sema_error(block, inst->src, "unable to evaluate comptime expression");
@@ -2805,7 +2844,7 @@ analyze_alloc(Block *block, const IrInst *inst)
 		sema_error(block, src, "variable of type '%s' must be const or comptime", sema_type_name(sema, type));
 		return operand_none;
 	}
-	if (sema->types[type].kind == TYPE_NORETURN || sema->types[type].kind == TYPE_STRUCT || sema->types[type].kind == TYPE_FN || sema->types[type].kind == TYPE_FLOAT) {
+	if (sema->types[type].kind == TYPE_NORETURN || sema->types[type].kind == TYPE_STRUCT || sema->types[type].kind == TYPE_FN || sema->types[type].kind == TYPE_FLOAT || sema->types[type].kind == TYPE_ARRAY) {
 		sema_error(block, src, "not supported by szc yet: variables of type '%s'", sema_type_name(sema, type));
 		return operand_none;
 	}
@@ -2870,6 +2909,21 @@ load_pointer(Block *block, Operand pointer, uint32_t src)
 		const Value *value = operand_value(block, pointer);
 		if (value->kind == VALUE_FUNCTION && sema->types[child].kind == TYPE_FN)
 			return comptime_operand(child, value_function(&sema->values, child, value->as.function));
+		if (value->kind == VALUE_BYTES && sema->types[child].kind == TYPE_ARRAY) {
+			ByteString bytes = value->as.bytes;
+			if (bytes.length == UINT32_MAX) {
+				sema_error(block, src, "not supported by szc yet: array constant with this many elements");
+				return operand_none;
+			}
+			uint32_t count = bytes.length + (sema->types[child].as.array.sentinel_zero ? 1u : 0u);
+			if (!reserve_array_elements(block, count, src))
+				return operand_none;
+			ValueId *items = ARENA_ARRAY(sema->arena, ValueId, count);
+			TypeId byte = sema->types[child].as.array.child;
+			for (uint32_t i = 0; i < count; i++)
+				items[i] = value_int_u64(&sema->values, byte, i < bytes.length ? bytes.data[i] : 0);
+			return comptime_operand(child, value_array(&sema->values, child, items, count));
+		}
 		if (value->kind == VALUE_REF) {
 			ValueId stored = sema->values.objects[value->as.object].value;
 			return coerce(block, comptime_operand(value_get(&sema->values, stored)->type, stored), child, src);
@@ -2971,6 +3025,238 @@ analyze_alignment(Block *block, IrBody body, uint32_t src, uint32_t *out)
 	return true;
 }
 
+/* ---------- Analysis: constant arrays ---------- */
+
+static TypeId
+array_type_id(Sema *sema, TypeId child, uint64_t length, bool sentinel_zero)
+{
+	Type type = make_type(TYPE_ARRAY);
+	type.as.array.child = child;
+	type.as.array.length = length;
+	type.as.array.sentinel_zero = sentinel_zero;
+	return type_intern(sema, &type);
+}
+
+/* Inspect a length without loading or evaluating the array's contents. */
+static TypeId
+indexable_array_type(Sema *sema, TypeId type)
+{
+	if (sema->types[type].kind == TYPE_POINTER) {
+		TypePointer pointer = sema->types[type].as.pointer;
+		if (pointer.size != POINTER_ONE)
+			return 0;
+		type = pointer.child;
+	}
+	return sema->types[type].kind == TYPE_ARRAY ? type : 0;
+}
+
+static Operand
+analyze_array_type(Block *block, const IrInst *inst)
+{
+	Sema *sema = block->sema;
+	Operand length = coerce(block, resolve_ref(block, inst->data.bin.lhs), T_USIZE, inst->src);
+	TypeId child;
+	if (length.kind == OPERAND_NONE || !operand_to_type(block, resolve_ref(block, inst->data.bin.rhs), inst->src, &child))
+		return operand_none;
+	if (length.kind != OPERAND_COMPTIME) {
+		sema_error(block, inst->src, "unable to resolve comptime value");
+		return operand_none;
+	}
+	if (!check_defined(block, length, inst->src))
+		return operand_none;
+	if (child == T_NORETURN || sema->types[child].kind == TYPE_ANYOPAQUE) {
+		sema_error(block, inst->src, child == T_NORETURN ? "array of '%s' not allowed" : "array of opaque type '%s' not allowed", sema_type_name(sema, child));
+		return operand_none;
+	}
+	uint64_t count = bigint_to_u64_bits(&operand_value(block, length)->as.integer);
+	return type_operand(sema, array_type_id(sema, child, count, false));
+}
+
+static Operand
+analyze_array_init(Block *block, const IrInst *inst)
+{
+	Sema *sema = block->sema;
+	uint32_t payload = inst->data.payload;
+	TypeId type;
+	if (!operand_to_type(block, resolve_ref(block, block->ir->extra[payload]), inst->src, &type))
+		return operand_none;
+	if (sema->types[type].kind != TYPE_ARRAY) {
+		sema_error(block, inst->src, "expected array type, found '%s'", sema_type_name(sema, type));
+		return operand_none;
+	}
+	TypeArray array = sema->types[type].as.array;
+	uint32_t count = block->ir->extra[payload + 1];
+	if (array.length != count) {
+		sema_error(block, inst->src, "expected %" PRIu64 " array elements; found %u", array.length, (unsigned)count);
+		return operand_none;
+	}
+	if (array.sentinel_zero && count == UINT32_MAX) {
+		sema_error(block, inst->src, "not supported by szc yet: array constant with this many elements");
+		return operand_none;
+	}
+	uint32_t total = count + (array.sentinel_zero ? 1u : 0u);
+	if (!reserve_array_elements(block, total, inst->src))
+		return operand_none;
+	ValueId *items = ARENA_ARRAY(sema->arena, ValueId, total);
+	bool failed = false;
+	for (uint32_t i = 0; i < count; i++) {
+		Operand element = coerce(block, resolve_ref(block, block->ir->extra[payload + 2 + i]), array.child, inst->src);
+		if (element.kind == OPERAND_NONE) {
+			failed = true;
+		} else if (element.kind != OPERAND_COMPTIME) {
+			sema_error(block, inst->src, "not supported by szc yet: runtime array elements");
+			failed = true;
+		} else {
+			items[i] = element.value;
+		}
+	}
+	if (failed)
+		return operand_none;
+	if (array.sentinel_zero)
+		items[count] = value_int_u64(&sema->values, array.child, 0);
+	return comptime_operand(type, value_array(&sema->values, type, items, total));
+}
+
+/* Indexing constant backing never materializes an aggregate in the scalar backend. */
+static Operand
+constant_array_element(Block *block, Operand base, TypeArray array, uint64_t index, uint32_t src)
+{
+	Sema *sema = block->sema;
+	if (base.kind != OPERAND_COMPTIME) {
+		sema_error(block, src, "not supported by szc yet: runtime array indexing");
+		return operand_none;
+	}
+	if (sema->types[base.type].kind == TYPE_POINTER) {
+		if (!check_defined(block, base, src))
+			return operand_none;
+		if (operand_value(block, base)->kind == VALUE_BYTES) {
+			ByteString bytes = operand_value(block, base)->as.bytes;
+			return comptime_operand(array.child, value_int_u64(&sema->values, array.child, index < bytes.length ? bytes.data[index] : 0));
+		}
+		base = load_pointer(block, base, src);
+		if (base.kind == OPERAND_NONE)
+			return operand_none;
+	}
+	if (base.kind != OPERAND_COMPTIME) {
+		sema_error(block, src, "not supported by szc yet: runtime array indexing");
+		return operand_none;
+	}
+	if (operand_is_undefined(block, base))
+		return comptime_operand(array.child, value_undefined(&sema->values, array.child));
+	const Value *value = operand_value(block, base);
+	if (value->kind != VALUE_ARRAY || index >= value->as.array.count) {
+		sema_error(block, src, "not supported by szc yet: this constant array backing");
+		return operand_none;
+	}
+	ValueId element = value->as.array.items[index];
+	return comptime_operand(array.child, element);
+}
+
+static Operand
+analyze_array_index(Block *block, const IrInst *inst)
+{
+	Sema *sema = block->sema;
+	Operand base = resolve_ref(block, inst->data.bin.lhs);
+	Operand index = coerce(block, resolve_ref(block, inst->data.bin.rhs), T_USIZE, inst->src);
+	if (base.kind == OPERAND_NONE || index.kind == OPERAND_NONE)
+		return operand_none;
+	TypeId type = indexable_array_type(sema, base.type);
+	if (type == 0) {
+		sema_error(block, inst->src, "expected array or pointer to array, found '%s'", sema_type_name(sema, base.type));
+		return operand_none;
+	}
+	if (index.kind != OPERAND_COMPTIME) {
+		sema_error(block, inst->src, "not supported by szc yet: runtime array indexing");
+		return operand_none;
+	}
+	if (!check_defined(block, index, inst->src))
+		return operand_none;
+	uint64_t item = bigint_to_u64_bits(&operand_value(block, index)->as.integer);
+	TypeArray array = sema->types[type].as.array;
+	if (item > array.length || (item == array.length && !array.sentinel_zero)) {
+		sema_error(block, inst->src, "index %" PRIu64 " outside array of length %" PRIu64 "%s", item, array.length, array.sentinel_zero ? " +1 (sentinel)" : "");
+		return operand_none;
+	}
+	return constant_array_element(block, base, array, item, inst->src);
+}
+
+static Operand
+analyze_array_cat(Block *block, const IrInst *inst)
+{
+	Sema *sema = block->sema;
+	Operand lhs = resolve_ref(block, inst->data.bin.lhs);
+	Operand rhs = resolve_ref(block, inst->data.bin.rhs);
+	if (lhs.kind == OPERAND_NONE || rhs.kind == OPERAND_NONE)
+		return operand_none;
+	TypeId a = indexable_array_type(sema, lhs.type);
+	TypeId b = indexable_array_type(sema, rhs.type);
+	if (a == 0 || b == 0) {
+		sema_error(block, inst->src, "expected indexable; found '%s'", sema_type_name(sema, a == 0 ? lhs.type : rhs.type));
+		return operand_none;
+	}
+	TypeArray left = sema->types[a].as.array;
+	TypeArray right = sema->types[b].as.array;
+	if (lhs.kind != OPERAND_COMPTIME || rhs.kind != OPERAND_COMPTIME) {
+		sema_error(block, inst->src, "not supported by szc yet: runtime array concatenation");
+		return operand_none;
+	}
+	TypeId child;
+	if (left.child != right.child && (sema->types[left.child].kind == TYPE_FN || sema->types[right.child].kind == TYPE_FN)) {
+		sema_error(block, inst->src, "not supported by szc yet: function-body element joins in array concatenation");
+		return operand_none;
+	}
+	/* Like Zig's type-only bitcasts, peer operands carry no known element value. */
+	if (!peer_type(block, runtime_operand(left.child, TIR_REF_NONE), runtime_operand(right.child, TIR_REF_NONE), inst->src, &child))
+		return operand_none;
+	bool sentinel = left.sentinel_zero || right.sentinel_zero;
+	if (right.length > UINT64_MAX - left.length) {
+		sema_error(block, inst->src, "concatenating arrays of length %" PRIu64 " and %" PRIu64 " produces an array too large for this compiler implementation to handle", left.length, right.length);
+		return operand_none;
+	}
+	uint64_t count = left.length + right.length;
+	if (count > UINT32_MAX - (sentinel ? 1u : 0u)) {
+		sema_error(block, inst->src, "not supported by szc yet: array constant with this many elements");
+		return operand_none;
+	}
+	uint32_t total = (uint32_t)count + (sentinel ? 1u : 0u);
+	if (!reserve_array_elements(block, total, inst->src))
+		return operand_none;
+	ValueId *items = ARENA_ARRAY(sema->arena, ValueId, total);
+	for (uint32_t i = 0; i < count; i++) {
+		Operand element = i < left.length
+			? constant_array_element(block, lhs, left, i, inst->src)
+			: constant_array_element(block, rhs, right, i - left.length, inst->src);
+		element = coerce(block, element, child, inst->src);
+		if (element.kind == OPERAND_NONE)
+			return operand_none;
+		items[i] = element.value;
+	}
+	if (sentinel)
+		items[count] = value_int_u64(&sema->values, child, 0);
+	TypeId type = array_type_id(sema, child, count, sentinel);
+	bool reference = sema->types[lhs.type].kind == TYPE_POINTER || sema->types[rhs.type].kind == TYPE_POINTER;
+	if (!reference)
+		return comptime_operand(type, value_array(&sema->values, type, items, total));
+	TypeId pointer = type_pointer(sema, type, POINTER_ONE, true, false, 0);
+	/* Byte arrays use the existing compact backing, including panic messages. */
+	if (child == type_id_of_well_known(IR_REF_TYPE_U8)) {
+		uint8_t *bytes = ARENA_ARRAY(sema->arena, uint8_t, (uint32_t)count);
+		bool defined = true;
+		for (uint32_t i = 0; i < count; i++) {
+			const Value *value = value_get(&sema->values, items[i]);
+			if (value->kind != VALUE_INT) {
+				defined = false;
+				break;
+			}
+			bytes[i] = (uint8_t)bigint_to_u64_bits(&value->as.integer);
+		}
+		if (defined)
+			return comptime_operand(pointer, value_bytes(&sema->values, pointer, bytes, (uint32_t)count));
+	}
+	ValueId value = value_array(&sema->values, type, items, total);
+	return comptime_operand(pointer, value_ref(&sema->values, pointer, value, 0, 0));
+}
+
 /* ---------- Analysis: instructions ---------- */
 
 static Operand
@@ -2988,6 +3274,39 @@ analyze_inst(Block *block, IrInstIndex index, Operand *break_value)
 	uint32_t src = inst->src;
 	Operand result = operand_none;
 	switch (inst->op) {
+	case IR_ARRAY_TYPE:
+		result = analyze_array_type(block, inst);
+		break;
+	case IR_ARRAY_ELEM_TYPE: {
+		TypeId type;
+		if (!operand_to_type(block, resolve_ref(block, inst->data.un.operand), src, &type))
+			break;
+		if (sema->types[type].kind != TYPE_ARRAY)
+			sema_error(block, src, "expected array type, found '%s'", sema_type_name(sema, type));
+		else
+			result = type_operand(sema, sema->types[type].as.array.child);
+		break;
+	}
+	case IR_ARRAY_INIT:
+		result = analyze_array_init(block, inst);
+		break;
+	case IR_ARRAY_INDEX:
+		result = analyze_array_index(block, inst);
+		break;
+	case IR_ARRAY_CAT:
+		result = analyze_array_cat(block, inst);
+		break;
+	case IR_FIELD_VAL: {
+		Operand base = resolve_ref(block, inst->data.name.operand);
+		if (base.kind == OPERAND_NONE)
+			break;
+		TypeId type = indexable_array_type(sema, base.type);
+		if (type != 0 && inst->data.name.name == intern_cstr(sema->interner, "len"))
+			result = comptime_operand(T_USIZE, value_int_u64(&sema->values, T_USIZE, sema->types[type].as.array.length));
+		else
+			result = unsupported_inst(block, inst);
+		break;
+	}
 	case IR_STRUCT_DECL: {
 		IrContainerHeader header;
 		IR_READ(block->ir, inst->data.payload, &header);
@@ -3613,6 +3932,8 @@ value_text(Sema *sema, ValueId id)
 		snprintf(text, 32, "ref(object.%u)", (unsigned)value->as.object);
 		return text;
 	}
+	case VALUE_ARRAY:
+		return arena_sprintf(sema->arena, "array(%u elements)", (unsigned)value->as.array.count);
 	case VALUE_BYTES: {
 		ByteString bytes = value->as.bytes;
 		char *text = arena_alloc(sema->arena, (size_t)bytes.length * 4 + 3, 1);

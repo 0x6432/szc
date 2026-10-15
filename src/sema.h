@@ -58,7 +58,7 @@ typedef struct TypePointer {
 
 typedef struct TypeArray {
 	TypeId child;
-	uint32_t length;
+	uint64_t length;
 	bool sentinel_zero;
 } TypeArray;
 

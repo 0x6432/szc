@@ -1,0 +1,3 @@
+tests/tir/errors/array_child_noreturn.zig:1:35: error: array of 'noreturn' not allowed
+pub fn main() void { const T = [0]noreturn; _ = T; }
+                                  ^

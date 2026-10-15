@@ -1,0 +1,3 @@
+tests/tir/errors/array_index_bool.zig:1:38: error: expected type 'usize', found 'bool'
+pub fn main() u8 { return ([_]u8{1})[true]; }
+                                     ^

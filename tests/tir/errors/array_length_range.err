@@ -1,0 +1,3 @@
+tests/tir/errors/array_length_range.zig:1:33: error: type 'usize' cannot represent integer value '18446744073709551616'
+pub fn main() void { const T = [18446744073709551616]u8; _ = T; }
+                                ^

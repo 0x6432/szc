@@ -1,0 +1,3 @@
+tests/tir/errors/array_cat_child.zig:1:43: error: incompatible types: 'u8' and 'bool'
+pub fn main() void { const a = ([_]u8{1}) ++ ([_]bool{true}); _ = a; }
+                                          ^

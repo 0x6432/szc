@@ -141,6 +141,12 @@ typedef enum IrDataKind {
 	X(INT_TYPE, "int_type", IR_DATA_INT)	/* bit 16 = signed, bits 0..15 = bit count */ \
 	X(ALIGN, "align", IR_DATA_PAYLOAD)	/* comptime u29 byte alignment body */ \
 	X(CONST_BIND, "const_bind", IR_DATA_BIN)	/* immutable value, declaration alignment ref */ \
+	X(ARRAY_TYPE, "array_type", IR_DATA_BIN)	/* length (usize), child type */ \
+	X(ARRAY_ELEM_TYPE, "array_elem_type", IR_DATA_UN)	/* array type -> child type */ \
+	X(ARRAY_INIT, "array_init", IR_DATA_PAYLOAD)	/* type ref, count, element refs */ \
+	X(ARRAY_INDEX, "array_index", IR_DATA_BIN)	/* array/pointer value, usize index */ \
+	X(ARRAY_CAT, "array_cat", IR_DATA_BIN)	/* concatenate indexable constants */ \
+	X(FIELD_VAL, "field_val", IR_DATA_NAME)	/* field name, base operand (array .len initially) */ \
 	X(PTR_TYPE, "ptr_type", IR_DATA_PAYLOAD)	/* IrPointerType */ \
 	/* Result types and coercion */ \
 	X(AS_RETURN, "as_return", IR_DATA_BIN)	/* direct return-value coercion */ \

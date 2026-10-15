@@ -403,6 +403,43 @@ test_global_references(void)
 }
 
 static void
+test_array_values(void)
+{
+	Arena arena;
+	arena_init(&arena);
+	ValueTable table;
+	value_table_init(&table, &arena);
+	ValueId first = value_int_u64(&table, 10, 7);
+	ValueId second = value_int_u64(&table, 10, 9);
+	ValueId items[] = {first, second};
+	ValueId array = value_array(&table, 20, items, 2);
+	CHECK(value_get(&table, array)->kind == VALUE_ARRAY);
+	CHECK(value_get(&table, array)->as.array.count == 2);
+	CHECK(value_get(&table, array)->as.array.items != items);
+	items[0] = second;
+	CHECK(value_get(&table, array)->as.array.items[0] == first);
+	CHECK(value_array(&table, 20, items, 2) != array);
+	items[0] = first;
+	CHECK(value_array(&table, 20, items, 2) == array);
+	CHECK(value_array(&table, 21, items, 2) != array);
+	CHECK(value_array(&table, 20, items, 1) != array);
+	ValueId empty = value_array(&table, 22, NULL, 0);
+	CHECK(value_array(&table, 22, NULL, 0) == empty);
+	CHECK(value_get(&table, empty)->as.array.count == 0);
+	ValueId nested_items[] = {array, empty};
+	ValueId nested = value_array(&table, 23, nested_items, 2);
+	CHECK(value_get(&table, nested)->as.array.items[0] == array);
+	ValueId missing_items[] = {value_undefined(&table, 10), first};
+	ValueId missing = value_array(&table, 20, missing_items, 2);
+	CHECK(value_get(&table, value_get(&table, missing)->as.array.items[0])->kind == VALUE_UNDEFINED);
+	for (uint32_t i = 0; i < 2048; i++)
+		value_int_u64(&table, 10, i);
+	CHECK(value_array(&table, 20, items, 2) == array);
+	CHECK(value_array(&table, 23, nested_items, 2) == nested);
+	arena_free(&arena);
+}
+
+static void
 test_binary_diagnostics(void)
 {
 	Arena arena;
@@ -447,6 +484,7 @@ main(void)
 	test_byte_values();
 	test_constant_references();
 	test_global_references();
+	test_array_values();
 	test_binary_diagnostics();
 
 	printf("unit: %u checks, %u failed\n", checks, failures);
