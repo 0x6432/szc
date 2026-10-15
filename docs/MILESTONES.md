@@ -13,6 +13,7 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
 - [x] **M0.3 Diagnostics**: collect errors (file, byte offset, message), print sorted with line:col and a caret.
 - [x] **M0.4 Source loading**: read file, NUL-terminate, file table for diagnostics.
 - [x] **M0.5 CI**: GitHub Actions: gcc + clang builds with `-Werror`, ASan/UBSan tests, short libFuzzer run, nightly long fuzz.
+  - [x] **M0.5a Bounded parallel reference CI**: independent semantic/native/parser suites and aggregate status.
 
 ## Phase 1: Lexer (`src/lexer.c`)
 
@@ -158,6 +159,27 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
 ## Completed milestone log
 
 (newest first; each entry: what, limitations, interactions)
+
+### M0.5a Bounded parallel reference CI
+- **What**: replace the long serial differential job with sixteen independent
+  suites: fourteen semantic tools, native/reference execution, and parser span/
+  mutation checks. Cap reference concurrency at four, disable fail-fast, and
+  retain a final `differential` success gate requiring every suite to pass.
+- **Why**: earlier runs repeatedly stalled or received runner shutdown during
+  reference native/safety checks, preventing later semantic/parser suites from
+  running. Separate jobs expose independent results promptly; this is not a
+  workaround that declares timeouts successful or weakens the checks.
+- **Validation**: YAML parses, matrix names exactly cover all fourteen repository
+  semantic differential tools plus native/parser, prior GCC/Clang and fuzz jobs
+  are identical, and the aggregate status cannot pass failed/skipped suites.
+  Pinned Zig/QBE, full native checks, parser corpus, 1000 mutants/run seed,
+  artifact upload and all existing process deadlines/budgets are preserved.
+  Local coverage verification is /data/ci-sharding-validation.log. Remote CI
+  remains asynchronous; static validation is not a claim that Actions is green.
+- **Interactions/limits**: each suite builds its own compiler/reference tools;
+  QBE is needed only for native tests and the span dumper only for parser tests.
+  Runner-level failures remain possible and must still be inspected, not retried
+  away or counted as semantic successes. Compiler implementation is unchanged.
 
 ### M5.3d2 Known slice dereference and borrowed array addresses
 - **What**: IR_DEREF/REF_DEREF accept known descriptors. `&s.*` preserves borrowed

@@ -19,6 +19,13 @@ Read this first when resuming work (the sandbox resets often).
 
 ## Current state
 
+- CI follow-on M0.5a: reference checks now run in sixteen independent suites
+  (14 semantic tools + native/parser), max four concurrent, fail-fast disabled.
+  The final `differential` status requires all matrix suites to succeed. GCC/Clang
+  and fuzz jobs, parser 1000-case/run-seed checks and process deadlines are
+  unchanged. /data/ci-sharding-validation.log verifies YAML, exact coverage and
+  aggregate status wiring. Inspect remote jobs; static validation is not green CI.
+
 - Latest follow-on: M5.3d2 known slice dereference/address cancellation complete.
   Corrected /data/slice-deref-guard-final GCC/Clang Werror ASan/UBSan snapshots
   match integrated compiler sources exactly: 632 units/920 goldens; full native
@@ -43,9 +50,8 @@ Read this first when resuming work (the sandbox resets often).
 - M5.3d1 was pushed as db49ca9; CI run 38775924855 has passed GCC/Clang/fuzz,
   with differential still running at last check. Next: sentinel descriptors/
   slicing and writable descriptor fields, then remaining memory integration;
-  no build-Zig question before M10.2. A separate bounded CI-sharding improvement
-  is prepared in /data/ci-sharded.yml; coverage validation is in
-  /data/ci-sharding-validation.log (all 14 semantic + native/parser suites).
+  no build-Zig question before M10.2. Bounded reference CI sharding follows
+  as M0.5a; coverage validation is /data/ci-sharding-validation.log.
 
 - Latest checkpoint: M5.3d1 borrowed slicing is complete. /data/slicing-final
   immutable GCC/Clang Werror ASan/UBSan snapshots match integrated compiler
