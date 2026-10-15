@@ -41,6 +41,13 @@ Read this first when resuming work (the sandbox resets often).
   undefined descriptor words may be initialized without loading the descriptor.
   Volatile field loads/stores are observable; address formation does no access.
   Whole-descriptor volatile copies and sentinel descriptors/slicing remain NYI.
+- CI follow-up: M0.5b pushed as dbe17c3 (run 38786103135 queued), M5.3e
+  is 7aeb3e5 (run 38786030355 queued). Previous 657b0d7/run 38778220976
+  completed with GCC/Clang/fuzz successful but serial differential failed:
+  check-run 116571298839 reports "hosted runner lost communication with the
+  server". Its job-log download redirects to a missing blob (HTTP404), so no
+  test-level cause is claimed. Do not call this green or a semantic regression.
+  The split suites retain all checks/deadlines; inspect their actual results.
 - CI run 38778400121 (8dfaab9): 18 jobs successful, native reference suite still
   running at last check; no aggregate success claimed. M5.3e pushed as 7aeb3e5.
   M0.5b splits native/storage/alignment/safety into independent reference suites,
