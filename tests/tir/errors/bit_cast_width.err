@@ -1,0 +1,3 @@
+tests/tir/errors/bit_cast_width.zig:1:37: error: @bitCast size mismatch: destination type 'u16' has 16 bits but source type 'u8' has 8 bits
+pub fn main() void { const n: u16 = @bitCast(@as(u8, 1)); _ = n; }
+                                    ^

@@ -1,0 +1,312 @@
+fn szc.main.1: fn () u8 {
+  %0: u5 = const 31
+  %1: i5 = call szc.signed5.2(%0)
+  %2: i5 = const -1
+  %3: bool = cmp_neq %1, %2
+  %4: bool = block {
+    %12: noreturn = condbr %3 then {
+      %10: bool = const true
+      %11: noreturn = br %4, %10
+    } else {
+      %5: u5 = const 16
+      %6: i5 = call szc.signed5.2(%5)
+      %7: i5 = const -16
+      %8: bool = cmp_neq %6, %7
+      %9: noreturn = br %4, %8
+    }
+  }
+  %13: bool = block {
+    %21: noreturn = condbr %4 then {
+      %19: bool = const true
+      %20: noreturn = br %13, %19
+    } else {
+      %14: u5 = const 15
+      %15: i5 = call szc.signed5.2(%14)
+      %16: i5 = const 15
+      %17: bool = cmp_neq %15, %16
+      %18: noreturn = br %13, %17
+    }
+  }
+  %22: void = block {
+    %26: noreturn = condbr %13 then {
+      %23: u8 = const 1
+      %24: noreturn = ret %23
+    } else {
+      %25: noreturn = br %22
+    }
+  }
+  %27: i5 = const -1
+  %28: u5 = call szc.unsigned5.3(%27)
+  %29: u5 = const 31
+  %30: bool = cmp_neq %28, %29
+  %31: bool = block {
+    %39: noreturn = condbr %30 then {
+      %37: bool = const true
+      %38: noreturn = br %31, %37
+    } else {
+      %32: i5 = const -16
+      %33: u5 = call szc.unsigned5.3(%32)
+      %34: u5 = const 16
+      %35: bool = cmp_neq %33, %34
+      %36: noreturn = br %31, %35
+    }
+  }
+  %40: void = block {
+    %44: noreturn = condbr %31 then {
+      %41: u8 = const 2
+      %42: noreturn = ret %41
+    } else {
+      %43: noreturn = br %40
+    }
+  }
+  %45: u33 = const 8589934591
+  %46: i33 = call szc.signed33.4(%45)
+  %47: i33 = const -1
+  %48: bool = cmp_neq %46, %47
+  %49: bool = block {
+    %57: noreturn = condbr %48 then {
+      %55: bool = const true
+      %56: noreturn = br %49, %55
+    } else {
+      %50: u33 = const 4294967296
+      %51: i33 = call szc.signed33.4(%50)
+      %52: i33 = const -4294967296
+      %53: bool = cmp_neq %51, %52
+      %54: noreturn = br %49, %53
+    }
+  }
+  %58: void = block {
+    %62: noreturn = condbr %49 then {
+      %59: u8 = const 3
+      %60: noreturn = ret %59
+    } else {
+      %61: noreturn = br %58
+    }
+  }
+  %63: i33 = const -1
+  %64: u33 = call szc.unsigned33.5(%63)
+  %65: u33 = const 8589934591
+  %66: bool = cmp_neq %64, %65
+  %67: void = block {
+    %71: noreturn = condbr %66 then {
+      %68: u8 = const 4
+      %69: noreturn = ret %68
+    } else {
+      %70: noreturn = br %67
+    }
+  }
+  %72: u64 = const 18446744073709551615
+  %73: i64 = call szc.signed64.6(%72)
+  %74: i64 = const -1
+  %75: bool = cmp_neq %73, %74
+  %76: bool = block {
+    %84: noreturn = condbr %75 then {
+      %82: bool = const true
+      %83: noreturn = br %76, %82
+    } else {
+      %77: i64 = const -1
+      %78: u64 = call szc.unsigned64.7(%77)
+      %79: u64 = const 18446744073709551615
+      %80: bool = cmp_neq %78, %79
+      %81: noreturn = br %76, %80
+    }
+  }
+  %85: void = block {
+    %89: noreturn = condbr %76 then {
+      %86: u8 = const 5
+      %87: noreturn = ret %86
+    } else {
+      %88: noreturn = br %85
+    }
+  }
+  %90: bool = const true
+  %91: i1 = call szc.signed_bool.8(%90)
+  %92: i1 = const -1
+  %93: bool = cmp_neq %91, %92
+  %94: bool = block {
+    %102: noreturn = condbr %93 then {
+      %100: bool = const true
+      %101: noreturn = br %94, %100
+    } else {
+      %95: bool = const false
+      %96: i1 = call szc.signed_bool.8(%95)
+      %97: i1 = const 0
+      %98: bool = cmp_neq %96, %97
+      %99: noreturn = br %94, %98
+    }
+  }
+  %103: void = block {
+    %107: noreturn = condbr %94 then {
+      %104: u8 = const 6
+      %105: noreturn = ret %104
+    } else {
+      %106: noreturn = br %103
+    }
+  }
+  %108: i1 = const -1
+  %109: bool = call szc.bool_signed.9(%108)
+  %110: bool = not %109
+  %111: bool = block {
+    %117: noreturn = condbr %110 then {
+      %115: bool = const true
+      %116: noreturn = br %111, %115
+    } else {
+      %112: i1 = const 0
+      %113: bool = call szc.bool_signed.9(%112)
+      %114: noreturn = br %111, %113
+    }
+  }
+  %118: bool = block {
+    %125: noreturn = condbr %111 then {
+      %123: bool = const true
+      %124: noreturn = br %118, %123
+    } else {
+      %119: u1 = const 1
+      %120: bool = call szc.bool_unsigned.10(%119)
+      %121: bool = not %120
+      %122: noreturn = br %118, %121
+    }
+  }
+  %126: bool = block {
+    %132: noreturn = condbr %118 then {
+      %130: bool = const true
+      %131: noreturn = br %126, %130
+    } else {
+      %127: u1 = const 0
+      %128: bool = call szc.bool_unsigned.10(%127)
+      %129: noreturn = br %126, %128
+    }
+  }
+  %133: void = block {
+    %137: noreturn = condbr %126 then {
+      %134: u8 = const 7
+      %135: noreturn = ret %134
+    } else {
+      %136: noreturn = br %133
+    }
+  }
+  %138: bool = const true
+  %139: u1 = call szc.unsigned_bool.11(%138)
+  %140: u1 = const 1
+  %141: bool = cmp_neq %139, %140
+  %142: bool = block {
+    %150: noreturn = condbr %141 then {
+      %148: bool = const true
+      %149: noreturn = br %142, %148
+    } else {
+      %143: bool = const false
+      %144: u1 = call szc.unsigned_bool.11(%143)
+      %145: u1 = const 0
+      %146: bool = cmp_neq %144, %145
+      %147: noreturn = br %142, %146
+    }
+  }
+  %151: void = block {
+    %155: noreturn = condbr %142 then {
+      %152: u8 = const 8
+      %153: noreturn = ret %152
+    } else {
+      %154: noreturn = br %151
+    }
+  }
+  %156: u5 = const 31
+  %157: u5 = call szc.nested.12(%156)
+  %158: u5 = const 31
+  %159: bool = cmp_neq %157, %158
+  %160: bool = block {
+    %168: noreturn = condbr %159 then {
+      %166: bool = const true
+      %167: noreturn = br %160, %166
+    } else {
+      %161: u5 = const 31
+      %162: i64 = call szc.extend.13(%161)
+      %163: i64 = const -1
+      %164: bool = cmp_neq %162, %163
+      %165: noreturn = br %160, %164
+    }
+  }
+  %169: void = block {
+    %173: noreturn = condbr %160 then {
+      %170: u8 = const 9
+      %171: noreturn = ret %170
+    } else {
+      %172: noreturn = br %169
+    }
+  }
+  %174: void = const {}
+  %175: u0 = call szc.zero.15(%174)
+  %176: void = call szc.empty.14(%175)
+  %177: u8 = const 0
+  %178: noreturn = ret %177
+}
+fn szc.signed5.2: fn (u5) i5 {
+  %0: u5 = arg 0
+  %1: i5 = bit_cast %0
+  %2: noreturn = ret %1
+}
+fn szc.unsigned5.3: fn (i5) u5 {
+  %0: i5 = arg 0
+  %1: u5 = bit_cast %0
+  %2: noreturn = ret %1
+}
+fn szc.signed33.4: fn (u33) i33 {
+  %0: u33 = arg 0
+  %1: i33 = bit_cast %0
+  %2: noreturn = ret %1
+}
+fn szc.unsigned33.5: fn (i33) u33 {
+  %0: i33 = arg 0
+  %1: u33 = bit_cast %0
+  %2: noreturn = ret %1
+}
+fn szc.signed64.6: fn (u64) i64 {
+  %0: u64 = arg 0
+  %1: i64 = bit_cast %0
+  %2: noreturn = ret %1
+}
+fn szc.unsigned64.7: fn (i64) u64 {
+  %0: i64 = arg 0
+  %1: u64 = bit_cast %0
+  %2: noreturn = ret %1
+}
+fn szc.signed_bool.8: fn (bool) i1 {
+  %0: bool = arg 0
+  %1: i1 = bit_cast %0
+  %2: noreturn = ret %1
+}
+fn szc.bool_signed.9: fn (i1) bool {
+  %0: i1 = arg 0
+  %1: bool = bit_cast %0
+  %2: noreturn = ret %1
+}
+fn szc.bool_unsigned.10: fn (u1) bool {
+  %0: u1 = arg 0
+  %1: bool = bit_cast %0
+  %2: noreturn = ret %1
+}
+fn szc.unsigned_bool.11: fn (bool) u1 {
+  %0: bool = arg 0
+  %1: u1 = bit_cast %0
+  %2: noreturn = ret %1
+}
+fn szc.nested.12: fn (u5) u5 {
+  %0: u5 = arg 0
+  %1: i5 = bit_cast %0
+  %2: u5 = bit_cast %1
+  %3: noreturn = ret %2
+}
+fn szc.extend.13: fn (u5) i64 {
+  %0: u5 = arg 0
+  %1: i5 = bit_cast %0
+  %2: i64 = int_cast %1
+  %3: noreturn = ret %2
+}
+fn szc.empty.14: fn (u0) void {
+  %0: u0 = arg 0
+  %1: noreturn = ret
+}
+fn szc.zero.15: fn (void) u0 {
+  %0: void = arg 0
+  %1: u0 = const 0
+  %2: noreturn = ret %1
+}

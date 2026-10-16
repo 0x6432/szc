@@ -1,0 +1,316 @@
+function w $szc.main.1() {
+@start
+	%t1 =w call $szc.signed5.2(w 31)
+	%t1 =w shl %t1, 27
+	%t1 =w sar %t1, 27
+	%t3 =w cnew %t1, -1
+	jnz %t3, @c12_then, @c12_else
+@c12_then
+	%t4 =w copy 1
+	jmp @b4
+@c12_else
+	%t6 =w call $szc.signed5.2(w 16)
+	%t6 =w shl %t6, 27
+	%t6 =w sar %t6, 27
+	%t8 =w cnew %t6, -16
+	%t4 =w copy %t8
+	jmp @b4
+@b4
+	jnz %t4, @c21_then, @c21_else
+@c21_then
+	%t13 =w copy 1
+	jmp @b13
+@c21_else
+	%t15 =w call $szc.signed5.2(w 15)
+	%t15 =w shl %t15, 27
+	%t15 =w sar %t15, 27
+	%t17 =w cnew %t15, 15
+	%t13 =w copy %t17
+	jmp @b13
+@b13
+	jnz %t13, @c26_then, @c26_else
+@c26_then
+	ret 1
+@c26_else
+	jmp @b22
+@b22
+	%t28 =w call $szc.unsigned5.3(w -1)
+	%t28 =w and %t28, 31
+	%t30 =w cnew %t28, 31
+	jnz %t30, @c39_then, @c39_else
+@c39_then
+	%t31 =w copy 1
+	jmp @b31
+@c39_else
+	%t33 =w call $szc.unsigned5.3(w -16)
+	%t33 =w and %t33, 31
+	%t35 =w cnew %t33, 16
+	%t31 =w copy %t35
+	jmp @b31
+@b31
+	jnz %t31, @c44_then, @c44_else
+@c44_then
+	ret 2
+@c44_else
+	jmp @b40
+@b40
+	%t46 =l call $szc.signed33.4(l 8589934591)
+	%t46 =l shl %t46, 31
+	%t46 =l sar %t46, 31
+	%t48 =w cnel %t46, -1
+	jnz %t48, @c57_then, @c57_else
+@c57_then
+	%t49 =w copy 1
+	jmp @b49
+@c57_else
+	%t51 =l call $szc.signed33.4(l 4294967296)
+	%t51 =l shl %t51, 31
+	%t51 =l sar %t51, 31
+	%t53 =w cnel %t51, -4294967296
+	%t49 =w copy %t53
+	jmp @b49
+@b49
+	jnz %t49, @c62_then, @c62_else
+@c62_then
+	ret 3
+@c62_else
+	jmp @b58
+@b58
+	%t64 =l call $szc.unsigned33.5(l -1)
+	%t64 =l and %t64, 8589934591
+	%t66 =w cnel %t64, 8589934591
+	jnz %t66, @c71_then, @c71_else
+@c71_then
+	ret 4
+@c71_else
+	jmp @b67
+@b67
+	%t73 =l call $szc.signed64.6(l -1)
+	%t75 =w cnel %t73, -1
+	jnz %t75, @c84_then, @c84_else
+@c84_then
+	%t76 =w copy 1
+	jmp @b76
+@c84_else
+	%t78 =l call $szc.unsigned64.7(l -1)
+	%t80 =w cnel %t78, -1
+	%t76 =w copy %t80
+	jmp @b76
+@b76
+	jnz %t76, @c89_then, @c89_else
+@c89_then
+	ret 5
+@c89_else
+	jmp @b85
+@b85
+	%t91 =w call $szc.signed_bool.8(w 1)
+	%t91 =w shl %t91, 31
+	%t91 =w sar %t91, 31
+	%t93 =w cnew %t91, -1
+	jnz %t93, @c102_then, @c102_else
+@c102_then
+	%t94 =w copy 1
+	jmp @b94
+@c102_else
+	%t96 =w call $szc.signed_bool.8(w 0)
+	%t96 =w shl %t96, 31
+	%t96 =w sar %t96, 31
+	%t98 =w cnew %t96, 0
+	%t94 =w copy %t98
+	jmp @b94
+@b94
+	jnz %t94, @c107_then, @c107_else
+@c107_then
+	ret 6
+@c107_else
+	jmp @b103
+@b103
+	%t109 =w call $szc.bool_signed.9(w -1)
+	%t109 =w and %t109, 1
+	%t110 =w xor %t109, 1
+	%t110 =w and %t110, 1
+	jnz %t110, @c117_then, @c117_else
+@c117_then
+	%t111 =w copy 1
+	jmp @b111
+@c117_else
+	%t113 =w call $szc.bool_signed.9(w 0)
+	%t113 =w and %t113, 1
+	%t111 =w copy %t113
+	jmp @b111
+@b111
+	jnz %t111, @c125_then, @c125_else
+@c125_then
+	%t118 =w copy 1
+	jmp @b118
+@c125_else
+	%t120 =w call $szc.bool_unsigned.10(w 1)
+	%t120 =w and %t120, 1
+	%t121 =w xor %t120, 1
+	%t121 =w and %t121, 1
+	%t118 =w copy %t121
+	jmp @b118
+@b118
+	jnz %t118, @c132_then, @c132_else
+@c132_then
+	%t126 =w copy 1
+	jmp @b126
+@c132_else
+	%t128 =w call $szc.bool_unsigned.10(w 0)
+	%t128 =w and %t128, 1
+	%t126 =w copy %t128
+	jmp @b126
+@b126
+	jnz %t126, @c137_then, @c137_else
+@c137_then
+	ret 7
+@c137_else
+	jmp @b133
+@b133
+	%t139 =w call $szc.unsigned_bool.11(w 1)
+	%t139 =w and %t139, 1
+	%t141 =w cnew %t139, 1
+	jnz %t141, @c150_then, @c150_else
+@c150_then
+	%t142 =w copy 1
+	jmp @b142
+@c150_else
+	%t144 =w call $szc.unsigned_bool.11(w 0)
+	%t144 =w and %t144, 1
+	%t146 =w cnew %t144, 0
+	%t142 =w copy %t146
+	jmp @b142
+@b142
+	jnz %t142, @c155_then, @c155_else
+@c155_then
+	ret 8
+@c155_else
+	jmp @b151
+@b151
+	%t157 =w call $szc.nested.12(w 31)
+	%t157 =w and %t157, 31
+	%t159 =w cnew %t157, 31
+	jnz %t159, @c168_then, @c168_else
+@c168_then
+	%t160 =w copy 1
+	jmp @b160
+@c168_else
+	%t162 =l call $szc.extend.13(w 31)
+	%t164 =w cnel %t162, -1
+	%t160 =w copy %t164
+	jmp @b160
+@b160
+	jnz %t160, @c173_then, @c173_else
+@c173_then
+	ret 9
+@c173_else
+	jmp @b169
+@b169
+	call $szc.zero.15()
+	call $szc.empty.14()
+	ret 0
+}
+
+function w $szc.signed5.2(w %t0) {
+@start
+	%t1 =w copy %t0
+	%t1 =w shl %t1, 27
+	%t1 =w sar %t1, 27
+	ret %t1
+}
+
+function w $szc.unsigned5.3(w %t0) {
+@start
+	%t1 =w copy %t0
+	%t1 =w and %t1, 31
+	ret %t1
+}
+
+function l $szc.signed33.4(l %t0) {
+@start
+	%t1 =l copy %t0
+	%t1 =l shl %t1, 31
+	%t1 =l sar %t1, 31
+	ret %t1
+}
+
+function l $szc.unsigned33.5(l %t0) {
+@start
+	%t1 =l copy %t0
+	%t1 =l and %t1, 8589934591
+	ret %t1
+}
+
+function l $szc.signed64.6(l %t0) {
+@start
+	%t1 =l copy %t0
+	ret %t1
+}
+
+function l $szc.unsigned64.7(l %t0) {
+@start
+	%t1 =l copy %t0
+	ret %t1
+}
+
+function w $szc.signed_bool.8(w %t0) {
+@start
+	%t1 =w copy %t0
+	%t1 =w shl %t1, 31
+	%t1 =w sar %t1, 31
+	ret %t1
+}
+
+function w $szc.bool_signed.9(w %t0) {
+@start
+	%t1 =w copy %t0
+	%t1 =w and %t1, 1
+	ret %t1
+}
+
+function w $szc.bool_unsigned.10(w %t0) {
+@start
+	%t1 =w copy %t0
+	ret %t1
+}
+
+function w $szc.unsigned_bool.11(w %t0) {
+@start
+	%t1 =w copy %t0
+	ret %t1
+}
+
+function w $szc.nested.12(w %t0) {
+@start
+	%t1 =w copy %t0
+	%t1 =w shl %t1, 27
+	%t1 =w sar %t1, 27
+	%t2 =w copy %t1
+	%t2 =w and %t2, 31
+	ret %t2
+}
+
+function l $szc.extend.13(w %t0) {
+@start
+	%t1 =w copy %t0
+	%t1 =w shl %t1, 27
+	%t1 =w sar %t1, 27
+	%t2 =l extsw %t1
+	ret %t2
+}
+
+function $szc.empty.14() {
+@start
+	ret
+}
+
+function $szc.zero.15() {
+@start
+	ret
+}
+
+export function w $main() {
+@start
+	%status =w call $szc.main.1()
+	ret %status
+}

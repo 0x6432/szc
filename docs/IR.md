@@ -783,3 +783,18 @@ unless exempt, using PANIC_ALIGNMENT. Only runtime slice-to-slice casts derive t
 exemption from a zero length; thin and array-pointer-to-slice casts never do.
 Known numeric empty slices are still checked during sema, matching Zig.
 General pointer reinterpretation and changed child types are not implemented here.
+
+
+## Scalar bit casts (M5.5e)
+
+IR_BIT_CAST is binary: destination type and an operand evaluated without numeric
+result coercion. Equal representation widths are required for integer/bool/void;
+comptime_int, pointer and untyped undefined operands are not implicit bit sources.
+Sema wraps known integer bits to destination signedness using BigInt, handles the
+single bool bit and zero-bit void/u0, and preserves typed undefined values.
+
+TIR_BIT_CAST is unary and uses scalar copies with destination canonicalization,
+never numeric range checks. Signed i1 true is -1; bool/u1 true is 1. Native widths
+1..64 work at runtime, while wider constants use arbitrary-precision values.
+Aggregates/floats/vectors/enums and physical memory casts are not implied by this
+operation; logical representation width is not an ABI-stride serialization rule.

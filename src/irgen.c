@@ -523,7 +523,7 @@ is_coerced_to(const GenBody *body, IrRef value, IrRef type)
 		return true;
 	if (type == IR_REF_TYPE_BOOL && inst->op >= IR_CMP_EQ && inst->op <= IR_CMP_GTE)
 		return true;
-	if ((inst->op == IR_INT_CAST || inst->op == IR_TRUNCATE || inst->op == IR_PTR_FROM_INT) && inst->data.bin.lhs == type)
+	if ((inst->op == IR_BIT_CAST || inst->op == IR_INT_CAST || inst->op == IR_TRUNCATE || inst->op == IR_PTR_FROM_INT) && inst->data.bin.lhs == type)
 		return true;
 	return false;
 }
@@ -1060,6 +1060,7 @@ call(GenBody *body, Scope *scope, ResultInfo info, AstNode *node)
 
 typedef enum Builtin {
 	BUILTIN_AS,
+	BUILTIN_BIT_CAST,
 	BUILTIN_INT_CAST,
 	BUILTIN_TRUNCATE,
 	BUILTIN_INT_FROM_BOOL,
@@ -1082,6 +1083,7 @@ typedef struct BuiltinInfo {
 static const BuiltinInfo builtin_table[] = {
 	{"panic", BUILTIN_PANIC, 1, IR_OP_COUNT},
 	{"as", BUILTIN_AS, 2, IR_OP_COUNT},
+	{"bitCast", BUILTIN_BIT_CAST, 1, IR_OP_COUNT},
 	{"intCast", BUILTIN_INT_CAST, 1, IR_OP_COUNT},
 	{"truncate", BUILTIN_TRUNCATE, 1, IR_OP_COUNT},
 	{"intFromBool", BUILTIN_INT_FROM_BOOL, 1, IR_OP_COUNT},
@@ -1243,6 +1245,7 @@ builtin_call(GenBody *body, Scope *scope, ResultInfo info, AstNode *node)
 		IrRef value = expr(body, scope, result_type(type), args[1]);
 		return rvalue(body, info, value, node->offset);
 	}
+	case BUILTIN_BIT_CAST:
 	case BUILTIN_PTR_FROM_INT:
 	case BUILTIN_INT_CAST:
 	case BUILTIN_TRUNCATE: {
@@ -1250,7 +1253,8 @@ builtin_call(GenBody *body, Scope *scope, ResultInfo info, AstNode *node)
 		IrRef operand = expr(body, scope, result_none, args[0]);
 		if (type == IR_REF_NONE)
 			return IR_REF_VOID_VALUE;
-		IrOp op = builtin->builtin == BUILTIN_PTR_FROM_INT ? IR_PTR_FROM_INT
+		IrOp op = builtin->builtin == BUILTIN_BIT_CAST ? IR_BIT_CAST
+			: builtin->builtin == BUILTIN_PTR_FROM_INT ? IR_PTR_FROM_INT
 			: builtin->builtin == BUILTIN_INT_CAST ? IR_INT_CAST : IR_TRUNCATE;
 		return emit_bin(body, op, node->offset, type, operand);
 	}

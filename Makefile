@@ -19,7 +19,7 @@ FUZZ_SECONDS ?= 60
 LIB_SOURCES = src/arena.c src/source.c src/diag.c src/intern.c src/lexer.c src/ast.c src/parser.c src/irgen.c src/comptime.c src/sema.c src/codegen.c src/driver.c
 HEADERS     = $(wildcard src/*.h)
 FUZZERS     = lexer parser irgen sema
-GENERATED_RUN_TESTS = build/integer-widths.zig build/conditional-widths.zig build/loop-widths.zig build/block-widths.zig build/for-widths.zig build/defer-widths.zig build/noreturn-widths.zig build/pointer-widths.zig build/global-widths.zig build/function-pointer-widths.zig build/array-widths.zig
+GENERATED_RUN_TESTS = build/integer-widths.zig build/conditional-widths.zig build/loop-widths.zig build/block-widths.zig build/for-widths.zig build/defer-widths.zig build/noreturn-widths.zig build/pointer-widths.zig build/global-widths.zig build/function-pointer-widths.zig build/array-widths.zig build/bitcast-widths.zig
 
 .PHONY: all release asan test unit-test golden-test e2e-test e2e-native-test e2e-storage-test e2e-alignment-test e2e-safety-test safety-test fuzz fuzz-run fuzz-standalone clean
 
@@ -81,6 +81,9 @@ build/function-pointer-widths.zig: tools/generate_function_pointer_tests.py
 	python3 $< $@
 
 build/array-widths.zig: tools/generate_array_tests.py
+	python3 $< $@
+
+build/bitcast-widths.zig: tools/generate_bitcast_tests.py
 	python3 $< $@
 
 # QBE must be on PATH (or SZC_QBE). ZIG enables reference-compiler checks.

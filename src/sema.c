@@ -1775,6 +1775,55 @@ coerce_return(Block *block, Operand operand, TypeId dest, uint32_t src)
 	return coerce(block, operand, dest, src);
 }
 
+/* Scalar bit casts preserve representation rather than numeric value. */
+static Operand
+analyze_bit_cast(Block *block, const IrInst *inst)
+{
+	Sema *sema = block->sema;
+	Operand dest = resolve_ref(block, inst->data.bin.lhs);
+	Operand operand = resolve_ref(block, inst->data.bin.rhs);
+	TypeId type;
+	if (operand.kind == OPERAND_NONE || !operand_to_type(block, dest, inst->src, &type))
+		return operand_none;
+	TypeKind to = sema->types[type].kind;
+	TypeKind from = sema->types[operand.type].kind;
+	if (to != TYPE_INT && to != TYPE_BOOL && to != TYPE_VOID) {
+		sema_error(block, inst->src, to == TYPE_ARRAY || to == TYPE_FLOAT
+			? "not supported by szc yet: @bitCast to '%s'" : "cannot @bitCast to '%s'", sema_type_name(sema, type));
+		return operand_none;
+	}
+	if (from != TYPE_INT && from != TYPE_BOOL && from != TYPE_VOID) {
+		sema_error(block, inst->src, from == TYPE_ARRAY || from == TYPE_FLOAT
+			? "not supported by szc yet: @bitCast from '%s'" : "cannot @bitCast from '%s'", sema_type_name(sema, operand.type));
+		return operand_none;
+	}
+	uint32_t to_bits = to == TYPE_INT ? sema->types[type].as.integer.bits : to == TYPE_BOOL ? 1u : 0u;
+	uint32_t from_bits = from == TYPE_INT ? sema->types[operand.type].as.integer.bits : from == TYPE_BOOL ? 1u : 0u;
+	if (to_bits != from_bits) {
+		sema_error(block, inst->src, "@bitCast size mismatch: destination type '%s' has %u bits but source type '%s' has %u bits",
+			sema_type_name(sema, type), (unsigned)to_bits, sema_type_name(sema, operand.type), (unsigned)from_bits);
+		return operand_none;
+	}
+	if (to == TYPE_VOID)
+		return void_operand(sema);
+	if (to_bits == 0)
+		return comptime_operand(type, value_int_u64(&sema->values, type, 0));
+	if (operand_is_undefined(block, operand))
+		return comptime_operand(type, value_undefined(&sema->values, type));
+	if (operand.kind == OPERAND_COMPTIME) {
+		const Value *value = operand_value(block, operand);
+		BigInt integer = from == TYPE_BOOL ? bigint_from_u64(sema->arena, value->as.boolean ? 1u : 0u) : value->as.integer;
+		bool is_signed = to == TYPE_INT && sema->types[type].as.integer.is_signed;
+		BigInt bits = bigint_wrap(sema->arena, &integer, is_signed, to_bits);
+		if (to == TYPE_BOOL)
+			return comptime_operand(type, value_bool(&sema->values, type, !bigint_is_zero(&bits)));
+		return comptime_operand(type, value_int(&sema->values, type, &bits));
+	}
+	if (!require_runtime(block, inst->src))
+		return operand_none;
+	return runtime_operand(type, emit_tir_un(block, TIR_BIT_CAST, type, inst->src, operand.inst));
+}
+
 /* Integer casts use a result type supplied by irgen. */
 static Operand
 analyze_cast(Block *block, const IrInst *inst)
@@ -5448,6 +5497,9 @@ analyze_inst(Block *block, IrInstIndex index, Operand *break_value)
 	case IR_FOR_LEN:
 		result = analyze_for_len(block, inst);
 		break;
+	case IR_BIT_CAST:
+		result = analyze_bit_cast(block, inst);
+		break;
 	case IR_INT_CAST:
 	case IR_TRUNCATE:
 		result = analyze_cast(block, inst);
@@ -6015,6 +6067,7 @@ dump_tir_inst(FILE *out, Sema *sema, const TirFunc *tir, TirRef ref, uint32_t de
 	case TIR_PTR_FROM_INT:
 	case TIR_PTR_TO_INT:
 	case TIR_PTR_CAST:
+	case TIR_BIT_CAST:
 	case TIR_INT_CAST:
 	case TIR_TRUNCATE:
 	case TIR_INT_FROM_BOOL:

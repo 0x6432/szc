@@ -1,0 +1,3 @@
+tests/tir/errors/bit_cast_arity.zig:1:36: error: expected 1 argument, found 2
+pub fn main() void { const n: u8 = @bitCast(@as(u8, 1), @as(u8, 2)); _ = n; }
+                                   ^

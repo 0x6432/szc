@@ -1,0 +1,3 @@
+tests/tir/errors/bit_cast_pointer_dest.zig:1:37: error: cannot @bitCast to '*u8'
+pub fn main() void { const n: *u8 = @bitCast(@as(usize, 16)); _ = n; }
+                                    ^

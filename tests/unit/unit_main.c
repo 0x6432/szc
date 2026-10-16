@@ -939,6 +939,52 @@ test_qualifier_cast_chains(void)
 }
 
 static void
+test_scalar_bit_casts(void)
+{
+	const struct {
+		const char *body;
+		const char *error;
+	} cases[] = {
+		{"const n: i5 = @bitCast(@as(u5,31)); const x: u8 = if(n == -1) 0 else 256; _ = x;", NULL},
+		{"const n: u5 = @bitCast(@as(i5,-1)); const x: u8 = if(n == 31) 0 else 256; _ = x;", NULL},
+		{"const n: i1 = @bitCast(true); const x: u8 = if(n == -1) 0 else 256; _ = x;", NULL},
+		{"const n: bool = @bitCast(@as(i1,-1)); const x: u8 = if(n) 0 else 256; _ = x;", NULL},
+		{"const n: bool = @bitCast(@as(u1,0)); const x: u8 = if(!n) 0 else 256; _ = x;", NULL},
+		{"const n: u0 = @bitCast(@as(void,{})); _ = n;", NULL},
+		{"const n: void = @bitCast(@as(u0,0)); _ = n;", NULL},
+		{"const n: u8 = @bitCast(@as(i8,undefined)); _ = n;", NULL},
+		{"const n: i128 = @bitCast(@as(u128,340282366920938463463374607431768211455)); const x: u8 = if(n == -1) 0 else 256; _ = x;", NULL},
+		{"const n: u8 = @bitCast(@as(u16,1)); _ = n;", "@bitCast size mismatch"},
+		{"const n: u8 = @bitCast(1); _ = n;", "cannot @bitCast from 'comptime_int'"},
+		{"const n: *u8 = @bitCast(@as(usize,16)); _ = n;", "cannot @bitCast to '*u8'"},
+	};
+	for (uint32_t i = 0; i < sizeof(cases) / sizeof(cases[0]); i++) {
+		Arena arena;
+		arena_init(&arena);
+		SourceTable sources;
+		source_table_init(&sources, &arena);
+		Diag diag;
+		diag_init(&diag, &arena, &sources);
+		Interner interner;
+		intern_init(&interner, &arena);
+		char source[1024];
+		int length = snprintf(source, sizeof(source), "pub fn main() void { %s }", cases[i].body);
+		CHECK(length > 0 && (size_t)length < sizeof(source));
+		FileId file = source_add_memory(&sources, "bit_casts.zig", source, (uint32_t)length);
+		AstContainerDecl *root = parse_file(&arena, &diag, &sources, file);
+		CHECK(!diag_has_errors(&diag));
+		IrFile *ir = irgen_file(&arena, &diag, &interner, source_get(&sources, file), file, root);
+		CHECK(!diag_has_errors(&diag));
+		Sema *sema = sema_create(&arena, &diag, &interner, &sources);
+		bool success = sema_analyze_executable(sema, file, ir);
+		CHECK(success == (cases[i].error == NULL));
+		if (cases[i].error != NULL)
+			CHECK(diag.count != 0 && strstr(diag.items[0].message, cases[i].error) != NULL);
+		arena_free(&arena);
+	}
+}
+
+static void
 test_binary_diagnostics(void)
 {
 	Arena arena;
@@ -996,6 +1042,7 @@ main(void)
 	test_qualifier_cast_types();
 	test_qualifier_cast_chains();
 	test_alignment_cast_types();
+	test_scalar_bit_casts();
 	test_binary_diagnostics();
 
 	printf("unit: %u checks, %u failed\n", checks, failures);

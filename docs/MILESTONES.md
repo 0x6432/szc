@@ -118,6 +118,7 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
   - [x] **M5.5b Integer-to-pointer conversion (`@ptrFromInt`)**: constant/numeric addresses and runtime guards (locally validated).
   - [x] **M5.5c Outer const/volatile casts**: shape/provenance preservation and observable access semantics.
   - [x] **M5.5d Alignment casts**: contextual alignment changes, combined qualifier permissions and guards.
+  - [x] **M5.5e Scalar bit casts**: equal-width integer/bool/void representations; native-width runtime and arbitrary-width constants.
 
 ## Phase 6: Aggregates and errors
 
@@ -169,6 +170,36 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
 ## Completed milestone log
 
 (newest first; each entry: what, limitations, interactions)
+
+### M5.5e Scalar bit casts
+
+- **What**: contextual `@bitCast` preserves equal-width scalar representations
+  rather than numeric values. Integer signedness changes wrap the same bits;
+  bool/u1/i1 conversions preserve the single bit; void/u0 share zero bits.
+  Typed undefined remains undefined (zero-bit results have their unique value).
+  Raw comptime_int/undefined sources, pointer casts, invalid destinations, width
+  mismatches, missing context and bad argument counts are diagnosed.
+- **Lowering**: IR_BIT_CAST carries destination type and uncoerced operand.
+  Sema uses existing arbitrary-precision wrap operations for constants, and
+  TIR_BIT_CAST reuses scalar copies plus canonical destination normalization.
+  No numeric-range or overflow guard is emitted for a representation change.
+  Runtime widths above 64 retain the existing explicit backend limitation.
+- **Validation**: 5480 source/test/config files match both frozen GCC/Clang
+  Werror ASan/UBSan trees. Both pass 864 units/1028 goldens, 95 ordinary/generated
+  plus three scoped native cases, 16 driver checks, all C/ABI/storage/alignment
+  suites, 60 volatile sequences and 255 safety cases. GCC full e2e uses actual
+  Zig; Clang separately compares both new native programs with Zig. Generated
+  signed/unsigned/extension checks cover every native width 1..64 (948 checks).
+  Fresh actual matrices: 499 scalar bit casts + 409 alignment + 326 qualifier +
+  225 numeric pointers (1459 total). Optimized GCC passes 95 native/255 safety.
+  Four 60s fuzzers execute 1448722/41200/45360/59209 inputs; both compilers replay
+  20000 mutations/stage (63 irgen/119 sema seeds). Every final wrapper exits zero.
+- **Tests/limits**: 51 additional unit checks, nine diagnostic/three positive
+  stage goldens, native signedness/bool/zero-width/wide-constant fixtures, a
+  generated runtime-width fixture, two fuzz seeds and the 31st CI comparison
+  suite. Arrays/structs/enums/vectors/floats and physical pointer reinterpretation
+  are separate work; no padding/relocation bytes are invented. M5.5 remains
+  partial. Evidence: /data/bit-casts-final-* and /data/bit-casts-widths2.log.
 
 ### M5.5d Alignment casts
 

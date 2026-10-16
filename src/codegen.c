@@ -819,6 +819,7 @@ emit_inst(Codegen *cg, TirRef ref)
 		print_operand(cg, inst->data.un.operand);
 		fputs("\n", out);
 		return;
+	case TIR_BIT_CAST:
 	case TIR_INT_CAST:
 	case TIR_TRUNCATE:
 	case TIR_INT_FROM_BOOL: {

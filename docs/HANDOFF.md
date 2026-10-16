@@ -44,12 +44,29 @@ Read this first when resuming work (the sandbox resets often).
   share explicit flags; repeated flags fail. Numeric addresses are checked;
   symbolic roots do not request stronger allocation alignment. Only runtime
   slice-to-slice casts bypass the alignment check when empty.
-- Next: scalar bitCast and general ptrCast. The latter needs physical comptime
-  views with ABI stride, undefined padding and relocation provenance; do not
-  reuse whole-root coercion as reinterpretation. Notes: /data/ptr-cast-next-notes.md.
-- Latest hosted runs 38859950177 and 38861433849 have not reported overall
-  completion; job-level inspection of 38861433849 previously showed 31 successful
-  jobs and one in progress. Recheck before claiming hosted CI green.
+- M5.5e scalar bit casts are complete. Frozen /data/bit-casts-final GCC/Clang
+  trees match 5480 source/test/config files: 864 units/1028 goldens, 95 ordinary/
+  generated + three scoped native, 16 driver, all C/ABI/storage/alignment,
+  60 volatile and 255 safety cases. GCC full e2e uses actual Zig; Clang separately
+  references the two new native programs. The generator covers all widths 1..64
+  with 948 signed/unsigned/extension checks. Fresh actual matrices total 1459:
+  499 scalar bit casts + 409 alignment + 326 qualifier + 225 numeric pointers.
+  Optimized GCC: 95 native/255 safety. Four 60s fuzzers: 1448722/41200/45360/59209; both compilers
+  replay 20000 mutations/stage (63 irgen/119 sema seeds). Every wrapper exits zero.
+  Logs: /data/bit-casts-final-*; source /data/bit-casts-next.
+- Scalar bitCast uses equal representation width, not numeric coercion. Bool/u1/
+  i1 and void/u0 work; undefined stays undefined. Runtime >64 bits and aggregate/
+  float/vector/enum forms remain separate. Never use this scalar wrap helper as
+  physical in-memory reinterpretation across ABI padding or pointer relocations.
+- Next: general ptrCast and aggregate bitCast. Pointer work needs physical
+  comptime views with ABI stride, undefined padding and relocation provenance;
+  do not reuse whole-root coercion as reinterpretation. Notes/probes:
+  /data/ptr-cast-next-notes.md and /data/thin-pointer-memory-reference.log.
+  Reconcile actual reference memory loads with language-level padding rules;
+  narrow acceptance probes alone do not establish a general padding guarantee.
+- Main 866504f hosted CI run 38861433849 completed successfully. Alignment-cast
+  run 38863898754 has had successful job-level progress without reported failures;
+  recheck its overall status and the new bit-cast run before claiming hosted green.
 
 ## Latest integrated checkpoint
 

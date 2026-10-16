@@ -52,6 +52,7 @@ typedef uint32_t TirBody;	/* extra index of a body, 0 = none */
 	X(NEGATE, "negate")	/* un: checked negation */ \
 	X(NEGATE_WRAP, "negate_wrap") \
 	X(PTR_CAST, "ptr_cast")	/* un: compatible pointer qualifier coercion */ \
+	X(BIT_CAST, "bit_cast")	/* un: equal-width scalar bit representation */ \
 	X(INT_CAST, "int_cast")	/* un: widen/narrow integer to `type` */ \
 	X(TRUNCATE, "truncate")	/* un: discard high integer bits */ \
 	X(INT_FROM_BOOL, "int_from_bool")	/* un: bool -> u1 */ \

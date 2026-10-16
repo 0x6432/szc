@@ -1,0 +1,3 @@
+tests/tir/errors/bit_cast_undefined_source.zig:1:36: error: cannot @bitCast from '@TypeOf(undefined)'
+pub fn main() void { const n: u8 = @bitCast(undefined); _ = n; }
+                                   ^

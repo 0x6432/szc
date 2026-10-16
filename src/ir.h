@@ -173,6 +173,7 @@ typedef enum IrDataKind {
 	X(RET_TYPE, "ret_type", IR_DATA_NONE)	/* return type of the function being analysed */ \
 	X(ARG_TYPE, "arg_type", IR_DATA_BIN)	/* type of parameter rhs (index) of the call instruction lhs */ \
 	/* Casts (builtins) */ \
+	X(BIT_CAST, "bit_cast", IR_DATA_BIN) \
 	X(INT_CAST, "int_cast", IR_DATA_BIN)	/* @intCast: integer rhs to type lhs, value must fit */ \
 	X(TRUNCATE, "truncate", IR_DATA_BIN)	/* @truncate: integer rhs to type lhs, dropping high bits */ \
 	X(BIT_SIZE_OF, "bit_size_of", IR_DATA_UN)	/* type -> comptime_int representation bits */ \
