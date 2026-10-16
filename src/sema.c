@@ -2222,8 +2222,8 @@ analyze_ptr_cast(Block *block, const IrInst *inst)
 	}
 	TypePointer from = sema->types[operand.type].as.pointer;
 	TypePointer to = sema->types[type].as.pointer;
-	if (from.size == POINTER_SLICE || to.size == POINTER_SLICE) {
-		sema_error(block, inst->src, "not supported by szc yet: slice @ptrCast");
+	if (to.size == POINTER_SLICE) {
+		sema_error(block, inst->src, "not supported by szc yet: slice destination @ptrCast");
 		return operand_none;
 	}
 	uint32_t source_alignment = pointer_alignment(sema, from);
@@ -2244,6 +2244,14 @@ analyze_ptr_cast(Block *block, const IrInst *inst)
 		if (!to.is_allowzero && !check_defined(block, operand, cast.operand_src))
 			return operand_none;
 		return comptime_operand(type, value_undefined(&sema->values, type));
+	}
+	/* A thin result borrows only the data address. Empty source slices do not
+	 * exempt null or alignment checks, and the source length is not consulted. */
+	if (from.size == POINTER_SLICE) {
+		operand = slice_field(block, operand, false, inst->src);
+		if (operand.kind == OPERAND_NONE)
+			return operand_none;
+		from.size = POINTER_MANY;
 	}
 	if (operand.kind == OPERAND_COMPTIME) {
 		if (integer_pointer(block, operand)) {

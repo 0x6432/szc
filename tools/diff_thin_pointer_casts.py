@@ -13,7 +13,7 @@ def cases():
     expressions = ('@ptrCast(p)', '@alignCast(@ptrCast(p))',
                    '@constCast(@ptrCast(p))',
                    '@volatileCast(@constCast(@alignCast(@ptrCast(p))))')
-    for source in types:
+    for source in types + ('[]u8', '[]const u8', '[]allowzero u8', '[:0]u8'):
         for destination in types:
             for expression in expressions:
                 yield (f'fn f(p: {source}) {destination} {{ return {expression}; }} '

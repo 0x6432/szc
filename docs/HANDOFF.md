@@ -19,6 +19,18 @@ Read this first when resuming work (the sandbox resets often).
 
 ## Latest follow-up checkpoint
 
+- M5.5i slice-source thin casts are integrated. GCC/Clang sanitized suites pass
+  1435 units/1049 goldens, 105+4 native programs, 16 driver checks, full storage/
+  ABI/alignment, 60 volatile sequences and 265 safety cases; GCC compares actual
+  Zig. Both 20000-mutation/stage replays pass with 256/256/67/123 seeds. Thin-cast
+  matrix: 744 matched/138 exact primary diagnostics; four 60s fuzzers:
+  1381650/30602/35725/44112. Optimized GCC native plus four new safety cases pass;
+  duplicate full optimized reference/safety run remains in progress at commit
+  (/data/slice-to-thin-final-gcc.log). Empty slice sources still check null and
+  alignment when cast to thin pointers. Slice destinations/symbolic changed-child
+  views remain NYI here. Next isolated work: symbolic pointer addresses, then
+  fixed-extent slice destinations. Logs: /data/slice-to-thin-*.log.
+- M5.5h was pushed as 11da731; hosted run 38901283117 is queued, not yet green.
 - M5.5h thin runtime/numeric ptrCast is complete. Frozen /data/thin-casts-final
   GCC/Clang trees pass 1392 units/1048 goldens, 104 ordinary/generated plus four
   scoped native programs, 16 driver checks, full C/ABI/storage/alignment, 60

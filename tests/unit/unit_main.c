@@ -1097,6 +1097,15 @@ test_thin_pointer_casts(void)
 		uint32_t null_checks;
 		uint32_t align_checks;
 	} cases[] = {
+		{"fn f(p:[]u8) *u16 {return @alignCast(@ptrCast(p));} pub fn main() void {_=f(undefined);}", NULL, 0, 1},
+		{"fn f(p:[]allowzero u8) *i8 {return @ptrCast(p);} pub fn main() void {_=f(undefined);}", NULL, 1, 0},
+		{"fn f(p:[]allowzero u8) *u16 {return @alignCast(@ptrCast(p));} pub fn main() void {_=f(undefined);}", NULL, 1, 1},
+		{"fn f(p:[]allowzero u8) *allowzero u16 {return @alignCast(@ptrCast(p));} pub fn main() void {_=f(undefined);}", NULL, 0, 1},
+		{"fn f(p:[]const volatile u8) *u16 {return @constCast(@volatileCast(@alignCast(@ptrCast(p))));} pub fn main() void {_=f(undefined);}", NULL, 0, 1},
+		{"pub fn main() void {const p:[*]allowzero u8=@ptrFromInt(0); const s:[]allowzero u8=p[0..0]; const q:*i8=@ptrCast(s); _=q;}", "null pointer casted to type", 0, 0},
+		{"pub fn main() void {const p:[*]u8=@ptrFromInt(17); const s:[]u8=p[0..0]; const q:*u16=@alignCast(@ptrCast(s)); _=q;}", "pointer address 0x11 is not aligned to 2 bytes", 0, 0},
+		{"pub fn main() void {const s:[]u8=undefined; const q:*allowzero i8=@ptrCast(s); _=q;}", NULL, 0, 0},
+		{"pub fn main() void {const s:[]u8=undefined; const q:*i8=@ptrCast(s); _=q;}", "use of undefined", 0, 0},
 		{"fn f(p:*u8) *i8 {return @ptrCast(p);} pub fn main() void {_=f(undefined);}", NULL, 0, 0},
 		{"fn f(p:*u8) *u16 {return @ptrCast(p);} pub fn main() void {_=f(undefined);}", "@ptrCast increases pointer alignment", 0, 0},
 		{"fn f(p:*u8) *u16 {return @alignCast(@ptrCast(p));} pub fn main() void {_=f(undefined);}", NULL, 0, 1},
@@ -1115,8 +1124,8 @@ test_thin_pointer_casts(void)
 		{"pub fn main() void {const p:*u8=@ptrFromInt(16); const q:[*:17]i8=@ptrCast(p); _=q;}", NULL, 0, 0},
 		{"pub fn main() void {const n:u16=258; const q:*const u8=@ptrCast(&n); _=q;}", "symbolic @ptrCast with changed child or pointer size", 0, 0},
 		{"pub fn main() void {const n:u16=258; const q:*const u16=@ptrCast(&n); _=q;}", NULL, 0, 0},
-		{"fn f(p:[]u8) *u8 {return @ptrCast(p);} pub fn main() void {_=f(undefined);}", "slice @ptrCast", 0, 0},
-		{"fn f(p:[*]u8) []u8 {return @ptrCast(p);} pub fn main() void {_=f(undefined);}", "slice @ptrCast", 0, 0},
+		{"fn f(p:[]u8) *u8 {return @ptrCast(p);} pub fn main() void {_=f(undefined);}", NULL, 0, 0},
+		{"fn f(p:[*]u8) []u8 {return @ptrCast(p);} pub fn main() void {_=f(undefined);}", "slice destination @ptrCast", 0, 0},
 	};
 	for (uint32_t i = 0; i < sizeof(cases) / sizeof(cases[0]); i++) {
 		Arena arena;

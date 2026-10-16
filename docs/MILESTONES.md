@@ -123,6 +123,7 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
   - [x] **M5.5f Constant aggregate bit casts**: logical nested arrays, sentinels and undefined/zero-bit representations.
   - [x] **M5.5g Native-width runtime aggregate bit casts**: typed element packing/unpacking up to 64 total logical bits.
   - [x] **M5.5h Thin runtime/numeric pointer casts**: child/shape/sentinel changes, combined qualifier/alignment permissions and non-null guards.
+  - [x] **M5.5i Slice-source thin pointer casts**: borrow the data address, retain original qualifiers/alignment, and check empty sources too.
 
 ## Phase 6: Aggregates and errors
 
@@ -174,6 +175,33 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
 ## Completed milestone log
 
 (newest first; each entry: what, limitations, interactions)
+
+### M5.5i Slice-source thin pointer casts
+
+- **What**: @ptrCast now accepts a slice as the source of a thin single/many
+  pointer. Only its data address is borrowed; descriptor length is not consulted.
+  Original alignment and const/volatile permissions remain authoritative. Known
+  numeric slices retain foreign backing; null and misalignment fail at comptime.
+- **Safety**: unlike slice-to-slice casts, an empty source does not exempt a thin
+  result from non-null or increased-alignment checks. Four regressions cover empty
+  null, single/many misalignment, and aligned nullable destinations. Guards remain
+  when the result is discarded; null precedes alignment.
+- **Validation**: frozen GCC/Clang Werror ASan/UBSan trees pass 1435 unit checks,
+  1049 goldens, 105 ordinary/generated plus four scoped native programs, 16 driver
+  checks, all C/ABI/storage/alignment suites, 60 volatile sequences and 265 safety
+  cases. GCC full sanitized e2e compares actual Zig 0.17.0. Both compilers replay
+  20000 mutations/stage with 256/256/67/123 seeds. Four 60s fuzzers execute
+  1381650/30602/35725/44112 inputs. The enlarged thin-cast reference matrix matches
+  all 744 cases, including 138 exact primary diagnostics. Optimized GCC native
+  programs and the four new safety regressions pass; an additional full optimized
+  safety run with duplicated reference execution is still in progress at commit.
+  Main-tree forced tests pass. Evidence: /data/slice-to-thin-final-*.log,
+  slice-to-thin-reference.log, slice-to-thin-main-test.log and
+  slice-to-thin-optimized-new-safety.log.
+- **Limits/interactions**: slice destinations and symbolic child/shape changes
+  remain explicit NYI here. Same-child symbolic retags retain earlier provenance.
+  No integer address becomes compiler-owned memory; no descriptor is reinterpreted
+  as its first word. New source inputs seed both irgen and sema fuzzers.
 
 ### M5.5h Thin runtime/numeric pointer casts
 

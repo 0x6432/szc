@@ -1,0 +1,178 @@
+global szc.g.1: [4]u8 align(16) = array(4 elements)
+fn szc.main.1: fn () u8 {
+  %0: *const []u8 = const ref(object.1)
+  %1: [*]u8 = call szc.many.2(%0)
+  %2: *const [*]u8 = alloc
+  %3: void = store %2, %1
+  %4: [*]u8 = load %2
+  %5: usize = const 1
+  %6: *u8 = ptr_elem_ptr %4, %5
+  %7: u8 = const 9
+  %8: void = store %6, %7
+  %9: *u8 = const elem(base.12, index.1, offset.1)
+  %10: u8 = load %9
+  %11: u8 = const 9
+  %12: bool = cmp_neq %10, %11
+  %13: bool = block {
+    %22: noreturn = condbr %12 then {
+      %20: bool = const true
+      %21: noreturn = br %13, %20
+    } else {
+      %14: *const []const u8 = const ref(object.2)
+      %15: *const u8 = call szc.scalar.3(%14)
+      %16: u8 = load %15
+      %17: u8 = const 1
+      %18: bool = cmp_neq %16, %17
+      %19: noreturn = br %13, %18
+    }
+  }
+  %23: void = block {
+    %27: noreturn = condbr %13 then {
+      %24: u8 = const 1
+      %25: noreturn = ret %24
+    } else {
+      %26: noreturn = br %23
+    }
+  }
+  %28: *const []u8 = const ref(object.1)
+  %29: *u16 = call szc.word.4(%28)
+  %30: u16 = load %29
+  %31: u16 = const 2305
+  %32: bool = cmp_neq %30, %31
+  %33: bool = block {
+    %42: noreturn = condbr %32 then {
+      %40: bool = const true
+      %41: noreturn = br %33, %40
+    } else {
+      %34: *const []const volatile u8 = const ref(object.3)
+      %35: *u16 = call szc.qualified.5(%34)
+      %36: u16 = load %35
+      %37: u16 = const 2305
+      %38: bool = cmp_neq %36, %37
+      %39: noreturn = br %33, %38
+    }
+  }
+  %43: void = block {
+    %47: noreturn = condbr %33 then {
+      %44: u8 = const 2
+      %45: noreturn = ret %44
+    } else {
+      %46: noreturn = br %43
+    }
+  }
+  %48: *const []u8 = const ref(object.5)
+  %49: [*]u8 = call szc.many.2(%48)
+  %50: usize = ptr_to_int %49
+  %51: usize = const 17
+  %52: bool = cmp_neq %50, %51
+  %53: void = block {
+    %57: noreturn = condbr %52 then {
+      %54: u8 = const 3
+      %55: noreturn = ret %54
+    } else {
+      %56: noreturn = br %53
+    }
+  }
+  %58: *const []allowzero u8 = const ref(object.7)
+  %59: *allowzero u16 = call szc.nullable.6(%58)
+  %60: usize = ptr_to_int %59
+  %61: usize = const 16
+  %62: bool = cmp_neq %60, %61
+  %63: bool = block {
+    %72: noreturn = condbr %62 then {
+      %70: bool = const true
+      %71: noreturn = br %63, %70
+    } else {
+      %64: *const []allowzero u8 = const ref(object.7)
+      %65: *i8 = call szc.nonnull.7(%64)
+      %66: usize = ptr_to_int %65
+      %67: usize = const 16
+      %68: bool = cmp_neq %66, %67
+      %69: noreturn = br %63, %68
+    }
+  }
+  %73: void = block {
+    %77: noreturn = condbr %63 then {
+      %74: u8 = const 4
+      %75: noreturn = ret %74
+    } else {
+      %76: noreturn = br %73
+    }
+  }
+  %78: *const []allowzero u8 = const ref(object.9)
+  %79: *allowzero u16 = call szc.nullable.6(%78)
+  %80: usize = ptr_to_int %79
+  %81: usize = const 0
+  %82: bool = cmp_neq %80, %81
+  %83: void = block {
+    %87: noreturn = condbr %82 then {
+      %84: u8 = const 5
+      %85: noreturn = ret %84
+    } else {
+      %86: noreturn = br %83
+    }
+  }
+  %88: u8 = const 0
+  %89: noreturn = ret %88
+}
+fn szc.many.2: fn ([]u8) [*]u8 {
+  %0: *align(1) const []u8 = arg 0
+  %1: *const []u8 = alloc
+  %2: void = array_copy %1, %0
+  %3: *const [*]u8 = ptr_cast %1
+  %4: [*]u8 = load %3
+  %5: [*]u8 = ptr_cast %4
+  %6: noreturn = ret %5
+}
+fn szc.scalar.3: fn ([]const u8) *const u8 {
+  %0: *align(1) const []const u8 = arg 0
+  %1: *const []const u8 = alloc
+  %2: void = array_copy %1, %0
+  %3: *const [*]const u8 = ptr_cast %1
+  %4: [*]const u8 = load %3
+  %5: *const u8 = ptr_cast %4
+  %6: noreturn = ret %5
+}
+fn szc.word.4: fn ([]u8) *u16 {
+  %0: *align(1) const []u8 = arg 0
+  %1: *const []u8 = alloc
+  %2: void = array_copy %1, %0
+  %3: *const [*]u8 = ptr_cast %1
+  %4: [*]u8 = load %3
+  %5: bool = const false
+  %6: *u16 = align_check %4, %5
+  %7: *u16 = ptr_cast %4
+  %8: noreturn = ret %7
+}
+fn szc.qualified.5: fn ([]const volatile u8) *u16 {
+  %0: *align(1) const []const volatile u8 = arg 0
+  %1: *const []const volatile u8 = alloc
+  %2: void = array_copy %1, %0
+  %3: *const [*]const volatile u8 = ptr_cast %1
+  %4: [*]const volatile u8 = load %3
+  %5: bool = const false
+  %6: *u16 = align_check %4, %5
+  %7: *u16 = ptr_cast %4
+  %8: noreturn = ret %7
+}
+fn szc.nullable.6: fn ([]allowzero u8) *allowzero u16 {
+  %0: *align(1) const []allowzero u8 = arg 0
+  %1: *const []allowzero u8 = alloc
+  %2: void = array_copy %1, %0
+  %3: *const [*]allowzero u8 = ptr_cast %1
+  %4: [*]allowzero u8 = load %3
+  %5: bool = const false
+  %6: *allowzero u16 = align_check %4, %5
+  %7: *allowzero u16 = ptr_cast %4
+  %8: noreturn = ret %7
+}
+fn szc.nonnull.7: fn ([]allowzero u8) *i8 {
+  %0: *align(1) const []allowzero u8 = arg 0
+  %1: *const []allowzero u8 = alloc
+  %2: void = array_copy %1, %0
+  %3: *const [*]allowzero u8 = ptr_cast %1
+  %4: [*]allowzero u8 = load %3
+  %5: void = null_check %4
+  %6: *i8 = ptr_cast %4
+  %7: noreturn = ret %6
+}
