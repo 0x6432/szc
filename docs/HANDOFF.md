@@ -17,23 +17,23 @@ Read this first when resuming work (the sandbox resets often).
    Push after every milestone (and more often during long ones).
    The GitHub token is **never** committed. Restore authenticated Git access if needed.
 
-## Latest isolated checkpoint and integration blocker
+## Latest integrated checkpoint
 
-- Main checkout /data/szc is clean at 51372be; its GitHub Actions run 38796715747
-  is successful. No later compiler checkpoint has been committed or pushed.
-- Four subsequent milestones are fully implemented and locally validated:
-  M5.4c sentinel slices (/data/sentinel-slices-next, frozen sentinel-slices-final2),
-  M5.4d explicit assertions (/data/sentinel-assertions-next, frozen sentinel-assertions-final),
-  M5.5b numeric pointers (/data/int-pointer-next, frozen int-pointer-final), and
-  M5.5c qualifier casts (/data/qualifier-casts-next, frozen qualifier-casts-final).
-- An environment safety reviewer blocked the main-checkout bulk integration.
-  The user was asked for approval; none has arrived. Do NOT retry that integration
-  or bypass it with another write/push path until approval. Work continued only
-  in independent checkouts. Review patches/manifests are preserved under
-  /data/validated-milestone-patches; regenerate after documentation changes.
-- Once approved, apply/review each milestone in order, git diff --check, commit
-  with the configured author, push using the authorized transient token (never
-  save it in repository/config/files), inspect actual CI, then continue.
+- The user approved the previously blocked integration by replying `continue`.
+  All four saved patches were verified against their SHA-256 manifests, applied
+  in order, checked with `git diff --check`, and retested in the main checkout
+  using GCC Werror + ASan/UBSan unit/golden checks before individual commits:
+  M5.4c 82f16a3 (718/961), M5.4d 99335f7 (726/972),
+  M5.5b 0a22870 (739/984), M5.5c c1c96de (767/995).
+- The earlier immutable GCC/Clang full-validation evidence below remains valid
+  for matching source/test/config files. The integration rechecks do not claim
+  another run of those entire reference/fuzz matrices.
+- Main 51372be's GitHub Actions run 38796715747 completed successfully.
+  Check the actual latest GitHub Actions status before claiming new CI green.
+- Independent validation trees remain in /data/sentinel-slices-final2,
+  /data/sentinel-assertions-final, /data/int-pointer-final and
+  /data/qualifier-casts-final. Saved sequential review patches/manifests are in
+  /data/validated-milestone-patches. No integration approval is outstanding.
 - Next language work: general ptrCast/alignCast/bitCast. Important source-based
   constraints are preserved in /data/ptr-cast-next-notes.md; numeric-pointer memory
   must not become invented comptime backing, and ABI padding is not defined data.
@@ -90,10 +90,7 @@ Read this first when resuming work (the sandbox resets often).
   oracle, not fresh Zig. Four 60s fuzzers: 1306173/33229/36889/42163; 20000
   mutations/stage on both builds, 57 irgen/113 sema seeds. Every final wrapper
   exits zero. Older final is superseded. Logs: /data/sentinel-slices-final2-*.
-- Integration into the main checkout is awaiting approval after an environment
-  safety block on the bulk-copy operation. No C changes are integrated or pushed.
-  Do not retry the blocked integration without user approval. Development is
-  preserved separately in /data/sentinel-slices-next.
+- M5.4c was subsequently integrated after user approval; see the latest checkpoint.
 - M5.4d explicit assertions is locally complete in /data/sentinel-assertions-next.
   Frozen /data/sentinel-assertions-final GCC/Clang source/test/config match:
   726 units/972 goldens; 89 ordinary/generated + three scoped native programs,
@@ -106,7 +103,7 @@ Read this first when resuming work (the sandbox resets often).
   oracle replays, not fresh Zig runs. Four 60s fuzzers:
   1592533/52095/49368/68597; both builds 20000 mutations/stage, 58 irgen/114 sema
   seeds. All final processes exit zero. Logs: /data/sentinel-assertions-final-*.
-  This milestone, like M5.4c, is not integrated or pushed while approval is pending.
+  This milestone was subsequently integrated after user approval; see above.
 - M5.5b integer-to-pointer conversion is locally complete in /data/int-pointer-next.
   /data/int-pointer-final GCC/Clang source/test/config match (5375 files).
   Werror ASan/UBSan: 739 units/984 goldens; 90 ordinary/generated + three scoped
@@ -120,7 +117,7 @@ Read this first when resuming work (the sandbox resets often).
   949 unchanged array/layout checks replay the source-hash-verified prior oracle.
   Four 60s fuzzers: 1589115/40732/38438/46299. Both builds replay 20000 mutations
   per stage, 59 irgen/115 sema seeds. Every final process exits zero. Logs:
-  /data/int-pointer-final-*. Integration remains blocked pending user approval.
+  /data/int-pointer-final-*. Integration was subsequently approved and completed.
   Known numeric-slice scalar dereference triggers a Zig genSetReg backend error
   in the C runtime fixture: compile-only comparisons test that semantic path;
   the shared native reference fixture does not pretend the backend bug passes.
