@@ -29,13 +29,27 @@ Read this first when resuming work (the sandbox resets often).
   both compilers replay 20000 mutations/stage (61 irgen/117 sema corpus files).
   All final wrappers exit zero. Evidence: /data/cast-chain-final-* and
   /data/cast-chain-differential.log. No old reference replay is counted fresh.
-- Next implementation is isolated in /data/align-casts-next: contextual alignCast
-  with combined qualifier flags, numeric checks and empty runtime-slice exemption.
-  Initial 22 actual acceptance probes and seven actual native/guard comparisons
-  pass; broader differential validation is running. It is NOT complete or
-  integrated. Reference probes: /data/align-cast-reference-probes.log;
-  runtime: /data/align-cast-runtime.log; broad matrix: /data/align-casts-differential.log.
-  General ptrCast/bitCast and known-memory reinterpretation remain separate work.
+- M5.5d alignment casts are complete and integrated from /data/align-casts-next.
+  Frozen /data/align-casts-final GCC/Clang trees match 5451 source/test/config files;
+  813 units/1016 goldens, 93 ordinary/generated + three scoped native, 16 driver,
+  all C/ABI/storage/alignment, 60 volatile and 255 safety checks pass. GCC full
+  e2e uses actual Zig; Clang separately references the new native. Six new
+  foreign-C descriptor layouts match Zig. Fresh cast matrices: 409+326+225=960.
+  Optimized GCC: 93 native/255 safety. Four 60s fuzzers:
+  1265226/32903/34588/60922. Both compilers replay 20000 mutations/stage,
+  with 62 irgen/118 sema seeds. All final wrappers exit zero.
+  Logs: /data/align-casts-final-*; /data/align-casts-storage.log.
+- Alignment casts preserve child/shape/sentinel/allowzero promises, apart from
+  the reference's array-pointer-to-slice conversion. Adjacent qualifier casts
+  share explicit flags; repeated flags fail. Numeric addresses are checked;
+  symbolic roots do not request stronger allocation alignment. Only runtime
+  slice-to-slice casts bypass the alignment check when empty.
+- Next: scalar bitCast and general ptrCast. The latter needs physical comptime
+  views with ABI stride, undefined padding and relocation provenance; do not
+  reuse whole-root coercion as reinterpretation. Notes: /data/ptr-cast-next-notes.md.
+- Latest hosted runs 38859950177 and 38861433849 have not reported overall
+  completion; job-level inspection of 38861433849 previously showed 31 successful
+  jobs and one in progress. Recheck before claiming hosted CI green.
 
 ## Latest integrated checkpoint
 
@@ -54,7 +68,7 @@ Read this first when resuming work (the sandbox resets often).
   /data/sentinel-assertions-final, /data/int-pointer-final and
   /data/qualifier-casts-final. Saved sequential review patches/manifests are in
   /data/validated-milestone-patches. No integration approval is outstanding.
-- Next language work: general ptrCast/alignCast/bitCast. Important source-based
+- Next language work: general ptrCast/bitCast. Important source-based
   constraints are preserved in /data/ptr-cast-next-notes.md; numeric-pointer memory
   must not become invented comptime backing, and ABI padding is not defined data.
   Q6 still waits until M10.2. No subagents.

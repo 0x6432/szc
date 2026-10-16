@@ -779,6 +779,20 @@ emit_inst(Codegen *cg, TirRef ref)
 		fputs("\n", out);
 		normalize(cg, ref, inst->type, cls);
 		return;
+	case TIR_ALIGN_CHECK: {
+		TypePointer pointer = sema_type(cg->sema, inst->type)->as.pointer;
+		uint32_t alignment = pointer.alignment != 0 ? pointer.alignment : sema_type_align(cg->sema, pointer.child);
+		fprintf(out, "\t%%g%u_align_bits =l and ", (unsigned)ref);
+		print_operand(cg, inst->data.bin.lhs);
+		fprintf(out, ", %u\n\t%%g%u_misaligned =w cnel %%g%u_align_bits, 0\n",
+			(unsigned)(alignment - 1), (unsigned)ref, (unsigned)ref);
+		fprintf(out, "\t%%g%u_nonempty =w ceqw ", (unsigned)ref);
+		print_operand(cg, inst->data.bin.rhs);
+		fprintf(out, ", 0\n\t%%g%u_alignment =w and %%g%u_misaligned, %%g%u_nonempty\n",
+			(unsigned)ref, (unsigned)ref, (unsigned)ref);
+		emit_guard(cg, ref, "alignment", PANIC_ALIGNMENT);
+		return;
+	}
 	case TIR_PTR_FROM_INT: {
 		TypePointer pointer = sema_type(cg->sema, inst->type)->as.pointer;
 		TirRef operand = inst->data.un.operand;

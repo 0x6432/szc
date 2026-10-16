@@ -36,6 +36,17 @@ def cases():
     ):
         yield "panic_slice_" + label, source + "\n", message
 
+    for label, source in (
+        ('thin', 'fn f(p: *u8) void { const q: *align(16) u8 = @alignCast(p); _ = q; } pub fn main() void { f(@ptrFromInt(17)); }'),
+        ('allowzero', 'fn f(p: *allowzero u8) void { const q: *align(16) allowzero u8 = @alignCast(p); _ = q; } pub fn main() void { f(@ptrFromInt(17)); }'),
+        ('many', 'fn f(p: [*]u8) void { const q: [*]align(16) u8 = @alignCast(p); _ = q; } pub fn main() void { f(@ptrFromInt(17)); }'),
+        ('array', 'fn f(p: *[2]u8) void { const q: *align(16) [2]u8 = @alignCast(p); _ = q; } pub fn main() void { f(@ptrFromInt(17)); }'),
+        ('slice', 'fn f(p: []u8) void { const q: []align(16) u8 = @alignCast(p); _ = q; } pub fn main() void { const p: [*]u8 = @ptrFromInt(17); f(p[0..1]); }'),
+        ('combined', 'fn f(p: *const volatile u8) void { const q: *align(16) u8 = @constCast(@alignCast(@volatileCast(p))); _ = q; } pub fn main() void { f(@ptrFromInt(17)); }'),
+        ('local_offset', 'var a: [2]u8 align(64) = .{7,9}; fn f(p: *u8) void { const q: *align(16) u8 = @alignCast(p); _ = q; } pub fn main() void { f(&a[1]); }'),
+    ):
+        yield 'align_cast_'+label, source+'\n', 'incorrect alignment'
+
     for label, ty, address, message in (
         ('null', '*u8', 0, 'cast causes pointer to be null'),
         ('aligned_null', '*u32', 0, 'cast causes pointer to be null'),

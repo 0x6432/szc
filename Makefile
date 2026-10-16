@@ -108,6 +108,7 @@ e2e-storage-test: build/asan/szc
 	python3 tests/run_slice_storage.py build/asan/szc
 	python3 tests/run_sentinel_slice_storage.py build/asan/szc
 	python3 tests/run_integer_pointer_storage.py build/asan/szc
+	python3 tests/run_alignment_cast_storage.py build/asan/szc
 	python3 tests/run_function_abi.py build/asan/szc
 
 e2e-alignment-test: build/asan/szc

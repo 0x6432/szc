@@ -843,6 +843,61 @@ test_sentinel_array_types(void)
 }
 
 static void
+test_alignment_cast_types(void)
+{
+	Arena arena;
+	arena_init(&arena);
+	SourceTable sources;
+	source_table_init(&sources, &arena);
+	Diag diag;
+	diag_init(&diag, &arena, &sources);
+	Interner interner;
+	intern_init(&interner, &arena);
+	static const char source[] =
+		"fn thin(p: *align(1) const volatile u16) *align(16) u16 { return @volatileCast(@alignCast(@constCast(p))); } "
+		"fn slice(p: [:17]align(1) u16) [:17]align(16) u16 { return @alignCast(p); } "
+		"fn array(p: *align(1) [3:17]u16) [:17]align(16) u16 { return @alignCast(p); } "
+		"pub fn main() void { _ = thin(undefined); _ = slice(undefined); _ = array(undefined); }";
+	FileId file = source_add_memory(&sources, "alignment_cast_types.zig", source, sizeof(source) - 1);
+	AstContainerDecl *root = parse_file(&arena, &diag, &sources, file);
+	CHECK(!diag_has_errors(&diag));
+	IrFile *ir = irgen_file(&arena, &diag, &interner, source_get(&sources, file), file, root);
+	CHECK(!diag_has_errors(&diag));
+	uint32_t casts = 0;
+	bool combined = false;
+	for (uint32_t i = 0; i < ir->inst_count; i++)
+		if (ir->insts[i].op == IR_ALIGN_CAST) {
+			IrPointerCast cast;
+			memcpy(&cast, &ir->extra[ir->insts[i].data.payload], sizeof(cast));
+			combined |= cast.flags == (IR_CAST_ALIGN | IR_CAST_CONST | IR_CAST_VOLATILE);
+			casts++;
+		}
+	CHECK(casts == 3 && combined);
+	Sema *sema = sema_create(&arena, &diag, &interner, &sources);
+	CHECK(sema_analyze_executable(sema, file, ir));
+	CHECK(sema_func_count(sema) == 5);
+	for (FuncId i = 2; i < 5; i++) {
+		const SemaFunc *func = sema_func(sema, i);
+		TypeFn fn = sema_type(sema, func->type)->as.fn;
+		TypePointer result = sema_type(sema, fn.ret)->as.pointer;
+		CHECK(result.alignment == 16);
+		CHECK(!result.is_const && !result.is_volatile && !result.is_allowzero);
+		CHECK((result.sentinel != VALUE_NONE) == (i != 2));
+		uint32_t guards = 0;
+		bool volatile_access = false;
+		for (TirRef j = 0; j < func->tir.inst_count; j++) {
+			TirOp op = func->tir.insts[j].op;
+			guards += op == TIR_ALIGN_CHECK;
+			volatile_access |= op == TIR_LOAD_VOLATILE || op == TIR_STORE_VOLATILE;
+		}
+		CHECK(guards == 1 && !volatile_access);
+		uint64_t size;
+		CHECK(sema_type_size(sema, fn.ret, &size) && size == (i == 2 ? 8u : 16u));
+	}
+	arena_free(&arena);
+}
+
+static void
 test_qualifier_cast_chains(void)
 {
 	const struct {
@@ -940,6 +995,7 @@ main(void)
 	test_integer_pointer_values();
 	test_qualifier_cast_types();
 	test_qualifier_cast_chains();
+	test_alignment_cast_types();
 	test_binary_diagnostics();
 
 	printf("unit: %u checks, %u failed\n", checks, failures);

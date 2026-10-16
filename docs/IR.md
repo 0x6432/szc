@@ -761,3 +761,25 @@ inside the same chain. An intervening `@as` expression or a named intermediate
 value starts a distinct chain and may legitimately restore a qualifier before
 another explicit cast removes it. Distinct qualifier flags remain independent;
 the existing typed pointer casts and owned slice descriptors are unchanged.
+
+
+## Alignment casts (M5.5d)
+
+IR_ALIGN_CAST uses IrPointerCast: destination type, operand, IrPointerCastFlags
+(ALIGN/CONST/VOLATILE) and operand source offset. Irgen folds adjacent casts and
+parentheses into one contextual operation, diagnosing repeated flags. Ordinary
+qualifier-only chains retain their inferred-type operations.
+
+Sema validates unchanged child memory representation, shape (or array-pointer to
+slice), sentinel, allowzero and explicit qualifier permissions, then retags the
+same borrowed address. Slice retagging rebuilds an owned descriptor with unchanged
+length; it does not access pointee memory. Constant numeric addresses are checked
+against the target alignment. Known symbolic roots remain relocations and do not
+silently strengthen allocation alignment. Allowzero undefined remains undefined.
+
+TIR_ALIGN_CHECK is binary: pointer plus boolean empty-slice exemption. Its type
+carries the required pointer alignment. Codegen guards masked low address bits
+unless exempt, using PANIC_ALIGNMENT. Only runtime slice-to-slice casts derive the
+exemption from a zero length; thin and array-pointer-to-slice casts never do.
+Known numeric empty slices are still checked during sema, matching Zig.
+General pointer reinterpretation and changed child types are not implemented here.

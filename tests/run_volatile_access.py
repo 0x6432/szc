@@ -101,6 +101,13 @@ def fixtures(safety=True):
             f'_ = cast_volatile_{offset}.*;',
             'if (!observe_finish(0, 0)) return 18;',
         ])
+    checks.extend([
+        'const align_only: *align(16) volatile u16 = @alignCast(memory_2(0));',
+        '_ = align_only;', 'if (!observe_finish(0, 0)) return 19;',
+        'const align_access: *align(16) volatile u16 = @alignCast(memory_2(0));',
+        'align_access.* = 7;', '_ = align_access.*;',
+        'if (!observe_finish(1, 1)) return 20;',
+    ])
     source = ('extern fn observe_finish(reads: u32, writes: u32) bool;\n'
               'extern fn observe_finish_compound() bool;\n'
               'var left: u8 = 1;\nvar right: u8 = 2;\n'
@@ -150,7 +157,7 @@ def main():
                      '-O' + mode, '-j2', '-lc', f'-femit-bin={executable}'])
                 result = run([str(executable)])
                 assert not result.stdout and not result.stderr
-    print(f'volatile accesses: {2 * (len(TYPES) + 12)} observed sequences, 0 failed', flush=True)
+    print(f'volatile accesses: {2 * (len(TYPES) + 13)} observed sequences, 0 failed', flush=True)
 
 
 if __name__ == '__main__':

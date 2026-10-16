@@ -84,6 +84,7 @@ jobs:
           - diff_sentinel_assertions
           - diff_ptr_from_int
           - diff_qualifier_casts
+          - diff_alignment_casts
           - diff_slice_fields
           - diff_slice_deref
           - diff_slicing

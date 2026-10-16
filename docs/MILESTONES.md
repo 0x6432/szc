@@ -105,7 +105,7 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
   - [x] **M5.3c1 Slice descriptor values, array coercions, indexing, storage and internal ABI.**
   - [x] **M5.3c2 Array/slice for iteration with value and pointer captures.**
   - [x] **M5.3c3 Inferred unsentinelled array-pointer/slice joins and comparison guards.**
-  - [x] **M5.3d1 Borrowed slicing expressions and bounds checks** (explicit/runtime sentinel slices remain NYI).
+  - [x] **M5.3d1 Borrowed slicing expressions and bounds checks** (sentinel assertions landed in M5.4d).
   - [x] **M5.3d2 Known slice dereference and borrowed array addresses.**
   - [x] **M5.3e Writable/addressable slice descriptor fields and volatile word access.**
 - [~] **M5.4 String literals, sentinels, `[*:0]const u8`.** Literal byte values landed in M4.5b; general string/memory operations and non-scalar sentinels remain pending.
@@ -116,7 +116,8 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
 - [~] **M5.5 Casting builtins**: `@intCast`, `@truncate`, `@ptrCast`, `@intFromPtr`, `@ptrFromInt`, `@bitCast`, `@as`.
   - [x] **M5.5a Pointer address conversion (`@intFromPtr`).**
   - [x] **M5.5b Integer-to-pointer conversion (`@ptrFromInt`)**: constant/numeric addresses and runtime guards (locally validated).
-  - [x] **M5.5c Outer const/volatile casts**: shape/provenance preservation and observable access semantics (locally validated).
+  - [x] **M5.5c Outer const/volatile casts**: shape/provenance preservation and observable access semantics.
+  - [x] **M5.5d Alignment casts**: contextual alignment changes, combined qualifier permissions and guards.
 
 ## Phase 6: Aggregates and errors
 
@@ -169,6 +170,40 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
 
 (newest first; each entry: what, limitations, interactions)
 
+### M5.5d Alignment casts
+
+- **What**: contextual `@alignCast` for supported single/many/slice pointers,
+  including array-pointer to slice coercion. Adjacent alignment/const/volatile
+  casts share one destination and explicit permission flags; duplicate flags are
+  diagnosed through parentheses. Child types, sentinels, allowzero and nested
+  qualifier promises remain checked. Unlike ordinary coercion, this operation
+  cannot turn an array pointer into a many-pointer or drop an array sentinel.
+- **Safety/identity**: known numeric misalignment is diagnosed; runtime alignment
+  increases use the existing incorrect-alignment panic. Runtime slice-to-slice
+  casts skip that guard when empty, but known numeric empty slices retain the
+  reference's constant check. Thin/array-to-slice casts have no empty exemption.
+  Known symbolic roots retain identity/offset and are trusted as in Zig; casting
+  never silently upgrades the backing allocation's alignment. Undefined pointers
+  require an allowzero destination and remain whole-value undefined.
+- **Validation**: frozen GCC/Clang Werror ASan/UBSan trees match all 5451 development
+  source/test/config files. Both pass 813 units/1016 goldens, 93 ordinary/generated
+  plus three scoped native cases, 16 driver checks, all C/ABI/storage/alignment
+  suites, 60 volatile sequences and 255 safety cases. GCC full e2e uses actual Zig;
+  Clang separately checks the new native fixture against Zig. Six foreign-C
+  descriptor layouts also match actual Zig. Fresh actual matrices: 409 alignment
+  casts + 326 qualifier casts + 225 numeric pointers (960 total). Optimized GCC
+  passes 93 native/255 safety cases. Four 60s fuzzers execute
+  1265226/32903/34588/60922 inputs. Both compilers replay 20000 mutations/stage
+  (62 irgen/118 sema corpus files). Every final wrapper exits zero.
+- **Interactions/limits**: IR_ALIGN_CAST carries type/operand/typed flags/source;
+  TIR_ALIGN_CHECK carries the pointer and empty-slice exemption, without loading
+  pointee memory. Existing pointer retagging and owned slice construction preserve
+  descriptors. Added 20 unit checks, 11 negative/three positive stage goldens,
+  native/C-storage/volatile/safety fixtures, fuzz seeds and the 30th CI comparison
+  suite. General ptrCast/bitCast, optional/vector/C/packed pointers and physical
+  comptime reinterpretation remain separate. Evidence: /data/align-casts-final-*
+  and /data/align-casts-storage.log. M5.5 remains partial.
+
 ### M5.5c follow-up: contiguous qualifier-cast diagnostics
 
 - Verified Zig 0.17.0 AstGen's pointer-cast-chain rules and reproduced an
@@ -216,7 +251,8 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
   oracle (not fresh Zig builds). Four 60s fuzzers execute
   1140332/32597/29994/36325 inputs; both builds replay 20000 mutations/stage
   (60 irgen/116 sema seeds). Logs: /data/qualifier-casts-final-*. CI adds the
-  qualifier-cast matrix (29 suites); integration/push remains approval-blocked.
+  qualifier-cast matrix (29 suites). Integrated after user approval as c1c96de;
+  the later contiguous-chain correction is 866504f.
 - **Interactions/limits**: IR_CONST_CAST/IR_VOLATILE_CAST are unary inferred-type
   operations. Unit checks assert qualifier isolation, layout, promises and no
   volatile load merely from casting. New observer cases retain volatile through
@@ -249,7 +285,7 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
   reference oracle, not fresh Zig compilations. Four 60s fuzzers execute
   1589115/40732/38438/46299 inputs; both builds replay 20000 mutations/stage
   (59 irgen/115 sema seeds). Logs: /data/int-pointer-final-*. CI adds the numeric
-  pointer matrix (28 suites). Integration/push remains approval-blocked.
+  pointer matrix (28 suites). Integrated after user approval as 0a22870.
 - **Interactions/limits**: IR_PTR_FROM_INT carries destination type/address;
   TIR_PTR_FROM_INT lowers to guards plus a long-word copy. Numeric pointers remain
   distinct from relocation roots. Existing borrowed-layout/zero-bit rules apply.

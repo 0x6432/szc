@@ -35,7 +35,10 @@ differences and `@intFromPtr` addresses. `@ptrFromInt` supports numeric scalar
 pointers with constant validation and runtime null/alignment guards; absolute
 addresses are not treated as compiler-owned memory. `@constCast` and
 `@volatileCast` remove the outer pointee qualifier without changing address,
-length, alignment, sentinel or nested pointer qualifiers. `@sizeOf`/`@alignOf`/`@bitSizeOf` query supported layouts and representations;
+length, alignment, sentinel or nested pointer qualifiers. `@alignCast` changes
+outer pointer alignment with constant numeric checks or runtime guards, preserving
+empty runtime-slice semantics; adjacent const/volatile casts share explicit
+permissions. It does not reinterpret child types or strengthen backing allocations. `@sizeOf`/`@alignOf`/`@bitSizeOf` query supported layouts and representations;
 integer/boolean-sentinel many-pointers preserve promises through arithmetic;
 integer/bool-sentinel and unsentinelled slices have pointer/length descriptors, writable/addressable `.ptr`/`.len`
 fields (including individual volatile word access), indexing,

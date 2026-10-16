@@ -1,0 +1,326 @@
+function w $szc.main.1() {
+@start
+	%t26 =l alloc8 16
+	%t71 =l alloc8 16
+	%t100 =l alloc8 16
+	%t1 =l call $szc.one.2(l $szc.g.1)
+	storeh 19, %t1
+	%t5 =w loaduh $szc.g.1
+	%t7 =w cnew %t5, 19
+	jnz %t7, @c19_then, @c19_else
+@c19_then
+	%t8 =w copy 1
+	jmp @b8
+@c19_else
+	%t10 =l call $szc.many.3(l $szc.g.1)
+	%e12_offset =l mul 1, 2
+	%t12 =l add %t10, %e12_offset
+	%t13 =w loaduh %t12
+	%t15 =w cnew %t13, 9
+	%t8 =w copy %t15
+	jmp @b8
+@b8
+	jnz %t8, @c24_then, @c24_else
+@c24_then
+	ret 1
+@c24_else
+	jmp @b20
+@b20
+	call $szc.slice.4(l $szc.const.1, l %t26)
+	%t28 =l copy %t26
+	%t29 =l add %t28, 8
+	%t30 =l loadl %t29
+	%t32 =w cnel %t30, 3
+	jnz %t32, @c48_then, @c48_else
+@c48_then
+	%t33 =w copy 1
+	jmp @b33
+@c48_else
+	%t34 =l add %t28, 8
+	%t35 =l loadl %t34
+	%t36 =l copy %t28
+	%t37 =l loadl %t36
+	%g39_slice =w cugtl 3, %t35
+	jnz %g39_slice, @g39_slice_panic, @g39_slice_ok
+@g39_slice_panic
+	call $szc.panic.7()
+	hlt
+@g39_slice_ok
+	%e41_offset =l mul 3, 2
+	%t41 =l add %t37, %e41_offset
+	%t42 =w loaduh %t41
+	%t44 =w cnew %t42, 17
+	%t33 =w copy %t44
+	jmp @b33
+@b33
+	jnz %t33, @c64_then, @c64_else
+@c64_then
+	%t49 =w copy 1
+	jmp @b49
+@c64_else
+	%t50 =l add %t28, 8
+	%t51 =l loadl %t50
+	%t52 =l copy %t28
+	%t53 =l loadl %t52
+	%g55_slice =w cugtl 0, %t51
+	jnz %g55_slice, @g55_slice_panic, @g55_slice_ok
+@g55_slice_panic
+	call $szc.panic.7()
+	hlt
+@g55_slice_ok
+	%e57_offset =l mul 0, 2
+	%t57 =l add %t53, %e57_offset
+	%t58 =w loaduh %t57
+	%t60 =w cnew %t58, 19
+	%t49 =w copy %t60
+	jmp @b49
+@b49
+	jnz %t49, @c69_then, @c69_else
+@c69_then
+	ret 2
+@c69_else
+	jmp @b65
+@b65
+	call $szc.array.5(l $szc.g.1, l %t71)
+	%t73 =l copy %t71
+	%t74 =l add %t73, 8
+	%t75 =l loadl %t74
+	%t77 =w cnel %t75, 3
+	jnz %t77, @c93_then, @c93_else
+@c93_then
+	%t78 =w copy 1
+	jmp @b78
+@c93_else
+	%t79 =l add %t73, 8
+	%t80 =l loadl %t79
+	%t81 =l copy %t73
+	%t82 =l loadl %t81
+	%g84_slice =w cugtl 3, %t80
+	jnz %g84_slice, @g84_slice_panic, @g84_slice_ok
+@g84_slice_panic
+	call $szc.panic.7()
+	hlt
+@g84_slice_ok
+	%e86_offset =l mul 3, 2
+	%t86 =l add %t82, %e86_offset
+	%t87 =w loaduh %t86
+	%t89 =w cnew %t87, 17
+	%t78 =w copy %t89
+	jmp @b78
+@b78
+	jnz %t78, @c98_then, @c98_else
+@c98_then
+	ret 3
+@c98_else
+	jmp @b94
+@b94
+	call $szc.empty.6(l $szc.const.3, l %t100)
+	%t102 =l copy %t100
+	%t103 =l add %t102, 8
+	%t104 =l loadl %t103
+	%t106 =w cnel %t104, 0
+	jnz %t106, @c116_then, @c116_else
+@c116_then
+	%t107 =w copy 1
+	jmp @b107
+@c116_else
+	%t108 =l copy %t102
+	%t109 =l loadl %t108
+	%t110 =l copy %t109
+	%t112 =w cnel %t110, 17
+	%t107 =w copy %t112
+	jmp @b107
+@b107
+	jnz %t107, @c121_then, @c121_else
+@c121_then
+	ret 4
+@c121_else
+	jmp @b117
+@b117
+	%t123 =w call $szc.address.7(l $szc.const.4)
+	%t123 =w and %t123, 255
+	%t125 =w cnew %t123, 0
+	jnz %t125, @c131_then, @c131_else
+@c131_then
+	%t126 =w copy 1
+	jmp @b126
+@c131_else
+	%t126 =w copy 0
+	jmp @b126
+@b126
+	jnz %t126, @c136_then, @c136_else
+@c136_then
+	ret 6
+@c136_else
+	jmp @b132
+@b132
+	ret 0
+}
+
+function l $szc.one.2(l %t0) {
+@start
+	%g2_align_bits =l and %t0, 15
+	%g2_misaligned =w cnel %g2_align_bits, 0
+	%g2_nonempty =w ceqw 0, 0
+	%g2_alignment =w and %g2_misaligned, %g2_nonempty
+	jnz %g2_alignment, @g2_alignment_panic, @g2_alignment_ok
+@g2_alignment_panic
+	call $szc.panic.11()
+	hlt
+@g2_alignment_ok
+	%t3 =l copy %t0
+	ret %t3
+}
+
+function l $szc.many.3(l %t0) {
+@start
+	%g2_align_bits =l and %t0, 15
+	%g2_misaligned =w cnel %g2_align_bits, 0
+	%g2_nonempty =w ceqw 0, 0
+	%g2_alignment =w and %g2_misaligned, %g2_nonempty
+	jnz %g2_alignment, @g2_alignment_panic, @g2_alignment_ok
+@g2_alignment_panic
+	call $szc.panic.11()
+	hlt
+@g2_alignment_ok
+	%t3 =l copy %t0
+	ret %t3
+}
+
+function $szc.slice.4(l %t0, l %t3) {
+@start
+	%t1 =l alloc8 16
+	%t16 =l alloc8 16
+	call $memmove(l %t1, l %t0, l 16)
+	%t4 =l copy %t1
+	%t5 =l loadl %t4
+	%t6 =l add %t1, 8
+	%t7 =l loadl %t6
+	%t9 =w ceql %t7, 0
+	%g10_align_bits =l and %t5, 15
+	%g10_misaligned =w cnel %g10_align_bits, 0
+	%g10_nonempty =w ceqw %t9, 0
+	%g10_alignment =w and %g10_misaligned, %g10_nonempty
+	jnz %g10_alignment, @g10_alignment_panic, @g10_alignment_ok
+@g10_alignment_panic
+	call $szc.panic.11()
+	hlt
+@g10_alignment_ok
+	%t11 =l copy %t1
+	%t12 =l loadl %t11
+	%t13 =l add %t1, 8
+	%t14 =l loadl %t13
+	%t15 =l copy %t12
+	%t17 =l copy %t16
+	%t18 =l add %t16, 8
+	storel %t15, %t17
+	storel %t14, %t18
+	call $memmove(l %t3, l %t16, l 16)
+	ret
+}
+
+function $szc.array.5(l %t0, l %t1) {
+@start
+	%t6 =l alloc8 16
+	%g3_align_bits =l and %t0, 15
+	%g3_misaligned =w cnel %g3_align_bits, 0
+	%g3_nonempty =w ceqw 0, 0
+	%g3_alignment =w and %g3_misaligned, %g3_nonempty
+	jnz %g3_alignment, @g3_alignment_panic, @g3_alignment_ok
+@g3_alignment_panic
+	call $szc.panic.11()
+	hlt
+@g3_alignment_ok
+	%t4 =l copy %t0
+	%t5 =l copy %t4
+	%t7 =l copy %t6
+	%t8 =l add %t6, 8
+	storel %t5, %t7
+	storel 3, %t8
+	call $memmove(l %t1, l %t6, l 16)
+	ret
+}
+
+function $szc.empty.6(l %t0, l %t3) {
+@start
+	%t1 =l alloc8 16
+	%t16 =l alloc8 16
+	call $memmove(l %t1, l %t0, l 16)
+	%t4 =l copy %t1
+	%t5 =l loadl %t4
+	%t6 =l add %t1, 8
+	%t7 =l loadl %t6
+	%t9 =w ceql %t7, 0
+	%g10_align_bits =l and %t5, 15
+	%g10_misaligned =w cnel %g10_align_bits, 0
+	%g10_nonempty =w ceqw %t9, 0
+	%g10_alignment =w and %g10_misaligned, %g10_nonempty
+	jnz %g10_alignment, @g10_alignment_panic, @g10_alignment_ok
+@g10_alignment_panic
+	call $szc.panic.11()
+	hlt
+@g10_alignment_ok
+	%t11 =l copy %t1
+	%t12 =l loadl %t11
+	%t13 =l add %t1, 8
+	%t14 =l loadl %t13
+	%t15 =l copy %t12
+	%t17 =l copy %t16
+	%t18 =l add %t16, 8
+	storel %t15, %t17
+	storel %t14, %t18
+	call $memmove(l %t3, l %t16, l 16)
+	ret
+}
+
+function w $szc.address.7(l %t0) {
+@start
+	%t1 =l copy %t0
+	%t3 =l and %t1, 15
+	%g4_high =w cugtl %t3, 255
+	jnz %g4_high, @g4_high_panic, @g4_high_ok
+@g4_high_panic
+	call $szc.panic.1()
+	hlt
+@g4_high_ok
+	%t4 =w copy %t3
+	%t4 =w and %t4, 255
+	ret %t4
+}
+
+section ".data.rel.ro"
+data $szc.const.1 = align 8 { l $szc.g.1, l 3 }
+section ".data.rel.ro"
+data $szc.const.3 = align 8 { l 17, l 0 }
+section ".rodata"
+data $szc.const.4 = align 16 { b 97, b 98, b 99, b 0 }
+data $szc.g.1 = align 16 { h 7, h 9, h 11, h 17 }
+data $szc.panic.msg.1 = { b "integer does not fit in destination type\n", b 0 }
+function $szc.panic.1() {
+@start
+	call $write(w 2, l $szc.panic.msg.1, l 41)
+	call $abort()
+	hlt
+}
+
+data $szc.panic.msg.7 = { b "index out of bounds\n", b 0 }
+function $szc.panic.7() {
+@start
+	call $write(w 2, l $szc.panic.msg.7, l 20)
+	call $abort()
+	hlt
+}
+
+data $szc.panic.msg.11 = { b "incorrect alignment\n", b 0 }
+function $szc.panic.11() {
+@start
+	call $write(w 2, l $szc.panic.msg.11, l 20)
+	call $abort()
+	hlt
+}
+
+export function w $main() {
+@start
+	%status =w call $szc.main.1()
+	ret %status
+}

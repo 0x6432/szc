@@ -1066,6 +1066,7 @@ typedef enum Builtin {
 	BUILTIN_INT_FROM_PTR,
 	BUILTIN_PTR_FROM_INT,
 	BUILTIN_QUALIFIER_CAST,
+	BUILTIN_ALIGN_CAST,
 	BUILTIN_LAYOUT,
 	BUILTIN_ARITH,
 	BUILTIN_PANIC,
@@ -1084,6 +1085,7 @@ static const BuiltinInfo builtin_table[] = {
 	{"intCast", BUILTIN_INT_CAST, 1, IR_OP_COUNT},
 	{"truncate", BUILTIN_TRUNCATE, 1, IR_OP_COUNT},
 	{"intFromBool", BUILTIN_INT_FROM_BOOL, 1, IR_OP_COUNT},
+	{"alignCast", BUILTIN_ALIGN_CAST, 1, IR_ALIGN_CAST},
 	{"constCast", BUILTIN_QUALIFIER_CAST, 1, IR_CONST_CAST},
 	{"volatileCast", BUILTIN_QUALIFIER_CAST, 1, IR_VOLATILE_CAST},
 	{"ptrFromInt", BUILTIN_PTR_FROM_INT, 1, IR_OP_COUNT},
@@ -1157,6 +1159,49 @@ cast_result_type(GenBody *body, ResultInfo info, AstNode *node, const char *name
 	return IR_REF_NONE;
 }
 
+/* Adjacent pointer casts share the result context and permission flags. */
+static IrRef
+alignment_cast_chain(GenBody *body, Scope *scope, ResultInfo info, AstNode *root, bool *handled)
+{
+	IrGen *gen = body->gen;
+	IrPointerCastFlags flags = 0;
+	AstNode *node = root;
+	for (;;) {
+		if (node->kind == AST_GROUPED) {
+			node = AST_CAST(AstWrap, node, AST_GROUPED)->operand;
+			continue;
+		}
+		if (node->kind != AST_BUILTIN_CALL)
+			break;
+		AstBuiltinCall *call_node = AST_CAST(AstBuiltinCall, node, AST_BUILTIN_CALL);
+		const BuiltinInfo *builtin = lookup_builtin(gen->source + call_node->name.start + 1,
+			call_node->name.end - call_node->name.start - 1);
+		if (builtin == NULL || call_node->args.count != 1
+			|| (builtin->builtin != BUILTIN_ALIGN_CAST && builtin->builtin != BUILTIN_QUALIFIER_CAST))
+			break;
+		IrPointerCastFlags flag = builtin->builtin == BUILTIN_ALIGN_CAST ? IR_CAST_ALIGN
+			: builtin->arith_op == IR_CONST_CAST ? IR_CAST_CONST : IR_CAST_VOLATILE;
+		if ((flags & flag) != 0) {
+			*handled = true;
+			error_at(gen, node->offset, "redundant @%s", builtin->name);
+			return IR_REF_VOID_VALUE;
+		}
+		flags = (IrPointerCastFlags)(flags | flag);
+		node = call_node->args.items[0];
+	}
+	*handled = (flags & IR_CAST_ALIGN) != 0;
+	if (!*handled)
+		return IR_REF_NONE;
+	IrPointerCast payload;
+	payload.type = cast_result_type(body, info, root, "alignCast");
+	payload.operand = expr(body, scope, result_none, node);
+	payload.flags = flags;
+	payload.operand_src = node->offset;
+	if (payload.type == IR_REF_NONE)
+		return IR_REF_VOID_VALUE;
+	return emit_payload(body, IR_ALIGN_CAST, root->offset, APPEND_EXTRA(gen, payload));
+}
+
 static IrRef
 builtin_call(GenBody *body, Scope *scope, ResultInfo info, AstNode *node)
 {
@@ -1176,7 +1221,15 @@ builtin_call(GenBody *body, Scope *scope, ResultInfo info, AstNode *node)
 		error_at(gen, node->offset, "%s", message);
 		return IR_REF_VOID_VALUE;
 	}
+	if (builtin->builtin == BUILTIN_ALIGN_CAST || builtin->builtin == BUILTIN_QUALIFIER_CAST) {
+		bool handled;
+		IrRef result = alignment_cast_chain(body, scope, info, node, &handled);
+		if (handled)
+			return result;
+	}
 	switch (builtin->builtin) {
+	case BUILTIN_ALIGN_CAST:
+		return IR_REF_VOID_VALUE;
 	case BUILTIN_PANIC: {
 		IrPanic payload;
 		IrPointerType slice = {IR_REF_TYPE_U8, IR_POINTER_SLICE | IR_POINTER_CONST, 0, 0, IR_REF_NONE, 0};
@@ -2722,6 +2775,16 @@ dump_inst(const IrDumper *dumper, IrInstIndex index, uint32_t depth)
 		fputs(", ", out);
 		dump_ref(dumper, payload.sentinel);
 		break;
+	}
+	case IR_ALIGN_CAST: {
+		IrPointerCast cast;
+		memcpy(&cast, &ir->extra[inst->data.payload], sizeof(cast));
+		fputc(' ', out);
+		dump_ref(dumper, cast.type);
+		fputs(", ", out);
+		dump_ref(dumper, cast.operand);
+		fprintf(out, ", flags=%u\n", (unsigned)cast.flags);
+		return;
 	}
 	case IR_PTR_TYPE: {
 		IrPointerType payload;

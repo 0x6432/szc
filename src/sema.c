@@ -1576,31 +1576,21 @@ slice_field(Block *block, Operand slice, bool length, uint32_t src)
 	return runtime_operand(type, emit_tir_un(block, TIR_LOAD, type, src, address));
 }
 
-/* Explicit qualifier casts remove only the pointee's outer qualifier. */
+/* Same-shape pointer changes preserve identity and never copy pointee memory. */
 static Operand
-cast_pointer_qualifier(Block *block, Operand operand, IrOp op, uint32_t src)
+retag_pointer(Block *block, Operand operand, TypeId type, uint32_t src)
 {
 	Sema *sema = block->sema;
-	Type result = sema->types[operand.type];
-	if (result.kind != TYPE_POINTER) {
-		sema_error(block, src, "expected pointer, found '%s'", sema_type_name(sema, operand.type));
-		return operand_none;
-	}
-	if (op == IR_CONST_CAST)
-		result.as.pointer.is_const = false;
-	else
-		result.as.pointer.is_volatile = false;
-	TypeId type = type_intern(sema, &result);
 	if (type == operand.type)
 		return operand;
 	if (operand_is_undefined(block, operand))
 		return comptime_operand(type, value_undefined(&sema->values, type));
-	if (result.as.pointer.size == POINTER_SLICE) {
+	if (sema->types[type].as.pointer.size == POINTER_SLICE) {
 		Operand data = slice_field(block, operand, false, src);
 		Operand length = slice_field(block, operand, true, src);
 		if (data.kind == OPERAND_NONE || length.kind == OPERAND_NONE)
 			return operand_none;
-		data = cast_pointer_qualifier(block, data, op, src);
+		data = retag_pointer(block, data, slice_pointer_type(sema, type), src);
 		return data.kind == OPERAND_NONE ? operand_none : make_slice(block, type, data, length, src);
 	}
 	if (operand.kind == OPERAND_COMPTIME) {
@@ -1615,6 +1605,23 @@ cast_pointer_qualifier(Block *block, Operand operand, IrOp op, uint32_t src)
 	if (!require_runtime(block, src))
 		return operand_none;
 	return runtime_operand(type, emit_tir_un(block, TIR_PTR_CAST, type, src, operand.inst));
+}
+
+/* Explicit qualifier casts remove only the pointee's outer qualifier. */
+static Operand
+cast_pointer_qualifier(Block *block, Operand operand, IrOp op, uint32_t src)
+{
+	Sema *sema = block->sema;
+	Type result = sema->types[operand.type];
+	if (result.kind != TYPE_POINTER) {
+		sema_error(block, src, "expected pointer, found '%s'", sema_type_name(sema, operand.type));
+		return operand_none;
+	}
+	if (op == IR_CONST_CAST)
+		result.as.pointer.is_const = false;
+	else
+		result.as.pointer.is_volatile = false;
+	return retag_pointer(block, operand, type_intern(sema, &result), src);
 }
 
 /* This shape-changing coercion is not an in-memory pointer compatibility rule. */
@@ -1910,6 +1917,107 @@ analyze_ptr_from_int(Block *block, const IrInst *inst)
 	if (!require_runtime(block, inst->src))
 		return operand_none;
 	return runtime_operand(type, emit_tir_un(block, TIR_PTR_FROM_INT, type, inst->src, operand.inst));
+}
+
+/* @alignCast changes only alignment; nested qualifier flags are explicit permissions. */
+static Operand
+analyze_align_cast(Block *block, const IrInst *inst)
+{
+	Sema *sema = block->sema;
+	IrPointerCast cast;
+	memcpy(&cast, &block->ir->extra[inst->data.payload], sizeof(cast));
+	TypeId type;
+	if (!operand_to_type(block, resolve_ref(block, cast.type), inst->src, &type))
+		return operand_none;
+	Operand operand = resolve_ref(block, cast.operand);
+	if (operand.kind == OPERAND_NONE)
+		return operand_none;
+	if (sema->types[type].kind != TYPE_POINTER || sema->types[operand.type].kind != TYPE_POINTER) {
+		sema_error(block, inst->src, "expected pointer, found '%s'",
+			sema_type_name(sema, sema->types[type].kind != TYPE_POINTER ? type : operand.type));
+		return operand_none;
+	}
+	TypePointer from = sema->types[operand.type].as.pointer;
+	TypePointer to = sema->types[type].as.pointer;
+	bool array_to_slice = from.size == POINTER_ONE && to.size == POINTER_SLICE
+		&& sema->types[from.child].kind == TYPE_ARRAY;
+	if (from.size != to.size && !array_to_slice) {
+		sema_error(block, inst->src, "expected type '%s', found '%s'", sema_type_name(sema, type), sema_type_name(sema, operand.type));
+		return operand_none;
+	}
+	TypeId source_child = array_to_slice ? sema->types[from.child].as.array.child : from.child;
+	if (!memory_coercion_allowed(sema, to.child, source_child, !to.is_const)) {
+		sema_error(block, inst->src, "pointer element type '%s' cannot coerce into element type '%s'",
+			sema_type_name(sema, source_child), sema_type_name(sema, to.child));
+		return operand_none;
+	}
+	if (from.is_const && !to.is_const && (cast.flags & IR_CAST_CONST) == 0) {
+		sema_error(block, inst->src, "@alignCast discards const qualifier");
+		return operand_none;
+	}
+	if (from.is_volatile && !to.is_volatile && (cast.flags & IR_CAST_VOLATILE) == 0) {
+		sema_error(block, inst->src, "@alignCast discards volatile qualifier");
+		return operand_none;
+	}
+	if (from.is_allowzero && !to.is_allowzero) {
+		sema_error(block, inst->src, "'%s' could have null values which are illegal in type '%s'",
+			sema_type_name(sema, operand.type), sema_type_name(sema, type));
+		return operand_none;
+	}
+	uint32_t source_alignment = pointer_alignment(sema, from);
+	uint32_t target_alignment = pointer_alignment(sema, to);
+	Type adjusted = sema->types[operand.type];
+	adjusted.as.pointer.alignment = target_alignment;
+	if ((cast.flags & IR_CAST_CONST) != 0)
+		adjusted.as.pointer.is_const = false;
+	if ((cast.flags & IR_CAST_VOLATILE) != 0)
+		adjusted.as.pointer.is_volatile = false;
+	TypeId adjusted_type = type_intern(sema, &adjusted);
+	if (!array_slice_allowed(sema, type, adjusted_type)
+		&& !memory_coercion_allowed(sema, type, adjusted_type, false)) {
+		sema_error(block, inst->src, "expected type '%s', found '%s'", sema_type_name(sema, type), sema_type_name(sema, operand.type));
+		return operand_none;
+	}
+	if (operand_is_undefined(block, operand)) {
+		if (!to.is_allowzero && !check_defined(block, operand, cast.operand_src))
+			return operand_none;
+		return comptime_operand(type, value_undefined(&sema->values, type));
+	}
+	if (target_alignment > source_alignment) {
+		Operand pointer = from.size == POINTER_SLICE ? slice_field(block, operand, false, inst->src) : operand;
+		if (pointer.kind == OPERAND_NONE)
+			return operand_none;
+		if (pointer.kind == OPERAND_COMPTIME) {
+			PointerAddress address = value_pointer_address(&sema->values, pointer.value);
+			if (value_get(&sema->values, address.root)->kind == VALUE_INT_PTR
+				&& (address.offset & (target_alignment - 1)) != 0) {
+				sema_error(block, cast.operand_src, "pointer address 0x%" PRIX64 " is not aligned to %u bytes",
+					address.offset, (unsigned)target_alignment);
+				return operand_none;
+			}
+		}
+		if (operand.kind != OPERAND_COMPTIME) {
+			if (!require_runtime(block, inst->src))
+				return operand_none;
+			Operand empty = comptime_operand(T_BOOL, value_bool(&sema->values, T_BOOL, false));
+			if (from.size == POINTER_SLICE && to.size == POINTER_SLICE) {
+				Operand length = slice_field(block, operand, true, inst->src);
+				if (length.kind == OPERAND_NONE)
+					return operand_none;
+				TirRef length_ref = materialize(block, length, inst->src);
+				Operand zero = comptime_operand(T_USIZE, value_int_u64(&sema->values, T_USIZE, 0));
+				TirRef zero_ref = materialize(block, zero, inst->src);
+				empty = runtime_operand(T_BOOL, emit_tir_bin(block, TIR_CMP_EQ, T_BOOL, inst->src, length_ref, zero_ref));
+			}
+			Type aligned_pointer = sema->types[pointer.type];
+			aligned_pointer.as.pointer.alignment = target_alignment;
+			TypeId checked_type = type_intern(sema, &aligned_pointer);
+			TirRef pointer_ref = materialize(block, pointer, inst->src);
+			TirRef empty_ref = materialize(block, empty, inst->src);
+			emit_tir_bin(block, TIR_ALIGN_CHECK, checked_type, inst->src, pointer_ref, empty_ref);
+		}
+	}
+	return coerce(block, retag_pointer(block, operand, adjusted_type, inst->src), type, inst->src);
 }
 
 /* Symbolic pointers have runtime addresses; undefined pointers retain undefined. */
@@ -5357,6 +5465,9 @@ analyze_inst(Block *block, IrInstIndex index, Operand *break_value)
 		result = operand.kind == OPERAND_NONE ? operand_none : cast_pointer_qualifier(block, operand, inst->op, inst->src);
 		break;
 	}
+	case IR_ALIGN_CAST:
+		result = analyze_align_cast(block, inst);
+		break;
 	case IR_PTR_FROM_INT:
 		result = analyze_ptr_from_int(block, inst);
 		break;

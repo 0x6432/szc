@@ -1,0 +1,3 @@
+tests/tir/errors/align_cast_nonpointer.zig:1:37: error: expected pointer, found 'comptime_int'
+pub fn main() void { const p: *u8 = @alignCast(1); _ = p; }
+                                    ^
