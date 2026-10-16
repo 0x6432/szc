@@ -1,0 +1,3 @@
+tests/tir/errors/qualifier_cast_allowzero.zig:1:79: error: expected type '*u8', found '*allowzero u8'
+pub fn main() void { const p: *allowzero const u8 = undefined; const q: *u8 = @constCast(p); _ = q; }
+                                                                              ^

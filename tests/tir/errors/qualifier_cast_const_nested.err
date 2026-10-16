@@ -1,0 +1,3 @@
+tests/tir/errors/qualifier_cast_const_nested.zig:1:77: error: expected type '**u8', found '**const u8'
+pub fn main() void { const p: *const *const u8 = undefined; const q: **u8 = @constCast(p); _ = q; }
+                                                                            ^

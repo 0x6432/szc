@@ -178,6 +178,8 @@ typedef enum IrDataKind {
 	X(BIT_SIZE_OF, "bit_size_of", IR_DATA_UN)	/* type -> comptime_int representation bits */ \
 	X(SIZE_OF, "size_of", IR_DATA_UN)	/* type -> comptime_int ABI bytes */ \
 	X(ALIGN_OF, "align_of", IR_DATA_UN)	/* type -> comptime_int ABI alignment */ \
+	X(CONST_CAST, "const_cast", IR_DATA_UN)	/* discard top-level const qualifier */ \
+	X(VOLATILE_CAST, "volatile_cast", IR_DATA_UN)	/* discard top-level volatile qualifier */ \
 	X(PTR_FROM_INT, "ptr_from_int", IR_DATA_BIN)	/* destination pointer type, usize address */ \
 	X(INT_FROM_PTR, "int_from_ptr", IR_DATA_UN)	/* @intFromPtr: usize address */ \
 	X(INT_FROM_BOOL, "int_from_bool", IR_DATA_UN)	/* @intFromBool: u1 */ \

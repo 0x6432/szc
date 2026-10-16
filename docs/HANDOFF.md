@@ -17,7 +17,29 @@ Read this first when resuming work (the sandbox resets often).
    Push after every milestone (and more often during long ones).
    The GitHub token is **never** committed. Restore authenticated Git access if needed.
 
-## Current state
+## Latest isolated checkpoint and integration blocker
+
+- Main checkout /data/szc is clean at 51372be; its GitHub Actions run 38796715747
+  is successful. No later compiler checkpoint has been committed or pushed.
+- Four subsequent milestones are fully implemented and locally validated:
+  M5.4c sentinel slices (/data/sentinel-slices-next, frozen sentinel-slices-final2),
+  M5.4d explicit assertions (/data/sentinel-assertions-next, frozen sentinel-assertions-final),
+  M5.5b numeric pointers (/data/int-pointer-next, frozen int-pointer-final), and
+  M5.5c qualifier casts (/data/qualifier-casts-next, frozen qualifier-casts-final).
+- An environment safety reviewer blocked the main-checkout bulk integration.
+  The user was asked for approval; none has arrived. Do NOT retry that integration
+  or bypass it with another write/push path until approval. Work continued only
+  in independent checkouts. Review patches/manifests are preserved under
+  /data/validated-milestone-patches; regenerate after documentation changes.
+- Once approved, apply/review each milestone in order, git diff --check, commit
+  with the configured author, push using the authorized transient token (never
+  save it in repository/config/files), inspect actual CI, then continue.
+- Next language work: general ptrCast/alignCast/bitCast. Important source-based
+  constraints are preserved in /data/ptr-cast-next-notes.md; numeric-pointer memory
+  must not become invented comptime backing, and ABI padding is not defined data.
+  Q6 still waits until M10.2. No subagents.
+
+## Earlier checkpoints and detailed evidence
 
 - Latest language checkpoint: M5.4a scalar-sentinel many-pointers is complete.
   `[*:value]T` supports defined comptime integer/bool sentinels. ValueId promises
@@ -102,6 +124,21 @@ Read this first when resuming work (the sandbox resets often).
   Known numeric-slice scalar dereference triggers a Zig genSetReg backend error
   in the C runtime fixture: compile-only comparisons test that semantic path;
   the shared native reference fixture does not pretend the backend bug passes.
+- M5.5c outer qualifier casts is locally complete in /data/qualifier-casts-next.
+  Frozen /data/qualifier-casts-final GCC/Clang source/test/config match (5401
+  files). Werror ASan/UBSan: 767 units/995 goldens; 91 ordinary/generated + three
+  scoped native programs, 16 driver checks, all C/ABI/alignment suites, 58 volatile
+  sequences and 248 safety cases. GCC full e2e runs actual Zig; both builds also
+  reference-check new native/four C descriptor variants/volatile Debug+ReleaseFast.
+  All twelve fresh matrices pass: 210 qualifiers + 225 numeric pointers + 178
+  assertions + 256 sentinel slices + 313 arrays + 209 sentinel pointers + 168
+  fields + 87 dereference + 204 slicing + 252 slices + 168 coercions + 240 volatile
+  pointers. Optimized GCC passes 91 native/248 safety; 949 old array/layout cases
+  replay the source-hash-verified prior actual-reference oracle. Four 60s fuzzers:
+  1140332/32597/29994/36325; both builds 20000 mutations/stage, 60 irgen/116 sema
+  seeds. All final processes exit zero. Logs: /data/qualifier-casts-final-*.
+  No pointer shape/promise or nested qualifier changes; descriptor casts preserve
+  owned pair semantics and thin casts preserve original symbolic/numeric roots.
 - CI 768cdb9/run 38790363308 completed failure in safety; its annotation reports
   hosted runner lost communication, not a proven semantic regression. M5.4b
   09e535e/run 38796178970 failed in the old safety job (annotation:

@@ -33,7 +33,9 @@ compatible coercions/concatenation. Single/many
 pointers support qualifiers, array-to-many coercion, borrowed indexing, element offsets,
 differences and `@intFromPtr` addresses. `@ptrFromInt` supports numeric scalar
 pointers with constant validation and runtime null/alignment guards; absolute
-addresses are not treated as compiler-owned memory. `@sizeOf`/`@alignOf`/`@bitSizeOf` query supported layouts and representations;
+addresses are not treated as compiler-owned memory. `@constCast` and
+`@volatileCast` remove the outer pointee qualifier without changing address,
+length, alignment, sentinel or nested pointer qualifiers. `@sizeOf`/`@alignOf`/`@bitSizeOf` query supported layouts and representations;
 integer/boolean-sentinel many-pointers preserve promises through arithmetic;
 integer/bool-sentinel and unsentinelled slices have pointer/length descriptors, writable/addressable `.ptr`/`.len`
 fields (including individual volatile word access), indexing,

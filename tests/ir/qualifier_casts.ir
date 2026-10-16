@@ -1,0 +1,272 @@
+%224 = struct_decl (flags=0) {
+  decl var "a" type {
+    %0 = int 3
+    %1 = as @type_usize, %0
+    %2 = int 17
+    %3 = as @type_u16, %2
+    %4 = array_type_sentinel %1, @type_u16, %3
+    %5 = as @type_type, %4
+    %6 = break_inline result, %5
+  } value {
+    %7 = decl_type
+    %8 = array_elem_type %7
+    %9 = int 7
+    %10 = as %8, %9
+    %11 = int 9
+    %12 = as %8, %11
+    %13 = int 11
+    %14 = as %8, %13
+    %15 = array_init %7, %10, %12, %14
+    %16 = as %7, %15
+    %17 = break_inline result, %16
+  }
+  decl const "borrowed" type {
+    %18 = int 17
+    %19 = as @type_u16, %18
+    %20 = ptr_type @type_u16, @true slice sentinel %19
+    %21 = as @type_type, %20
+    %22 = break_inline result, %21
+  } value {
+    %23 = decl_type
+    %24 = decl_ref "a"
+    %25 = as %23, %24
+    %26 = break_inline result, %25
+  }
+  decl const "writable" type {
+    %27 = int 17
+    %28 = as @type_u16, %27
+    %29 = ptr_type @type_u16, @false slice sentinel %28
+    %30 = as @type_type, %29
+    %31 = break_inline result, %30
+  } value {
+    %32 = decl_type
+    %33 = decl_val "borrowed"
+    %34 = const_cast %33
+    %35 = as %32, %34
+    %36 = break_inline result, %35
+  }
+  decl fn "mutate" value {
+    %52 = func "mutate" {
+      %42 = param "s" type {
+        %37 = int 17
+        %38 = as @type_u16, %37
+        %39 = ptr_type @type_u16, @true slice sentinel %38
+        %40 = as @type_type, %39
+        %41 = break_inline result, %40
+      }
+      ret type {
+        %43 = int 17
+        %44 = as @type_u16, %43
+        %45 = ptr_type @type_u16, @false slice sentinel %44
+        %46 = as @type_type, %45
+        %47 = break_inline result, %46
+      }
+      body insts {
+        %48 = ret_type
+        %49 = const_cast %42
+        %50 = as_return %48, %49
+        %51 = ret %50
+      }
+    }
+    %53 = break_inline result, %52
+  }
+  decl fn "seven" value {
+    %59 = func "seven" {
+      ret type {
+        %54 = break_inline result, @type_u8
+      }
+      body insts {
+        %55 = ret_type
+        %56 = int 7
+        %57 = as_return %55, %56
+        %58 = ret %57
+      }
+    }
+    %60 = break_inline result, %59
+  }
+  decl fn "main" pub value {
+    %222 = func "main" {
+      ret type {
+        %61 = break_inline result, @type_u8
+      }
+      body insts {
+        %62 = decl_ref "writable"
+        %63 = array_base_ptr %62
+        %64 = int 0
+        %65 = as @type_usize, %64
+        %66 = array_index_ptr %63, %65
+        %67 = int 13
+        %68 = elem_type %66
+        %69 = as %68, %67
+        %70 = store %66, %69
+        %71 = decl_ref "a"
+        %72 = array_base_ptr %71
+        %73 = int 0
+        %74 = as @type_usize, %73
+        %75 = array_index %72, %74
+        %76 = int 13
+        %77 = cmp_neq %75, %76
+        %86 = bool_or %77 rhs {
+          %78 = decl_ref "writable"
+          %79 = array_base_ptr %78
+          %80 = int 3
+          %81 = as @type_usize, %80
+          %82 = array_index %79, %81
+          %83 = int 17
+          %84 = cmp_neq %82, %83
+          %85 = break_inline result, %84
+        }
+        %92 = if %86 then {
+          %87 = ret_type
+          %88 = int 1
+          %89 = as_return %87, %88
+          %90 = ret %89
+        } else {
+          %91 = break_inline result, @void_value
+        }
+        %93 = decl_val "mutate"
+        %94 = call %93 arg0 {
+          %95 = arg_type %94, 0
+          %96 = decl_val "borrowed"
+          %97 = as %95, %96
+          %98 = break_inline result, %97
+        }
+        %99 = ref %94
+        %100 = array_base_ptr %99
+        %101 = int 1
+        %102 = as @type_usize, %101
+        %103 = array_index_ptr %100, %102
+        %104 = int 15
+        %105 = elem_type %103
+        %106 = as %105, %104
+        %107 = store %103, %106
+        %108 = decl_ref "a"
+        %109 = array_base_ptr %108
+        %110 = int 1
+        %111 = as @type_usize, %110
+        %112 = array_index %109, %111
+        %113 = int 15
+        %114 = cmp_neq %112, %113
+        %119 = bool_or %114 rhs {
+          %115 = field_val "len", %94
+          %116 = int 3
+          %117 = cmp_neq %115, %116
+          %118 = break_inline result, %117
+        }
+        %125 = if %119 then {
+          %120 = ret_type
+          %121 = int 2
+          %122 = as_return %120, %121
+          %123 = ret %122
+        } else {
+          %124 = break_inline result, @void_value
+        }
+        %126 = ptr_type @type_u16, @true volatile
+        %127 = as @type_type, %126
+        %128 = decl_ref "a"
+        %129 = array_base_ptr %128
+        %130 = int 2
+        %131 = as @type_usize, %130
+        %132 = array_index_ptr %129, %131
+        %133 = as %127, %132
+        %134 = ptr_type @type_u16, @false
+        %135 = as @type_type, %134
+        %136 = volatile_cast %133
+        %137 = const_cast %136
+        %138 = as %135, %137
+        %139 = ref_deref %138
+        %140 = int 19
+        %141 = elem_type %139
+        %142 = as %141, %140
+        %143 = store %139, %142
+        %144 = decl_ref "a"
+        %145 = array_base_ptr %144
+        %146 = int 2
+        %147 = as @type_usize, %146
+        %148 = array_index %145, %147
+        %149 = int 19
+        %150 = cmp_neq %148, %149
+        %160 = bool_or %150 rhs {
+          %151 = int_from_ptr %138
+          %152 = decl_ref "a"
+          %153 = array_base_ptr %152
+          %154 = int 2
+          %155 = as @type_usize, %154
+          %156 = array_index_ptr %153, %155
+          %157 = int_from_ptr %156
+          %158 = cmp_neq %151, %157
+          %159 = break_inline result, %158
+        }
+        %166 = if %160 then {
+          %161 = ret_type
+          %162 = int 3
+          %163 = as_return %161, %162
+          %164 = ret %163
+        } else {
+          %165 = break_inline result, @void_value
+        }
+        %167 = int 2
+        %168 = as @type_usize, %167
+        %169 = array_type %168, @type_u8
+        %170 = array_elem_type %169
+        %171 = int 1
+        %172 = as %170, %171
+        %173 = int 2
+        %174 = as %170, %173
+        %175 = array_init %169, %172, %174
+        %176 = alloc type=inferred init=%175
+        %177 = ptr_type @type_u8, @true slice
+        %178 = as @type_type, %177
+        %179 = as %178, %176
+        %180 = const_cast %179
+        %181 = ref %180
+        %182 = array_base_ptr %181
+        %183 = int 1
+        %184 = as @type_usize, %183
+        %185 = array_index_ptr %182, %184
+        %186 = int 5
+        %187 = elem_type %185
+        %188 = as %187, %186
+        %189 = store %185, %188
+        %190 = array_base_ptr %176
+        %191 = int 1
+        %192 = as @type_usize, %191
+        %193 = array_index %190, %192
+        %194 = int 5
+        %195 = cmp_neq %193, %194
+        %200 = bool_or %195 rhs {
+          %196 = field_val "len", %180
+          %197 = int 2
+          %198 = cmp_neq %196, %197
+          %199 = break_inline result, %198
+        }
+        %206 = if %200 then {
+          %201 = ret_type
+          %202 = int 4
+          %203 = as_return %201, %202
+          %204 = ret %203
+        } else {
+          %205 = break_inline result, @void_value
+        }
+        %207 = decl_ref "seven"
+        %208 = const_cast %207
+        %209 = call %208
+        %210 = int 7
+        %211 = cmp_neq %209, %210
+        %217 = if %211 then {
+          %212 = ret_type
+          %213 = int 5
+          %214 = as_return %212, %213
+          %215 = ret %214
+        } else {
+          %216 = break_inline result, @void_value
+        }
+        %218 = ret_type
+        %219 = int 0
+        %220 = as_return %218, %219
+        %221 = ret %220
+      }
+    }
+    %223 = break_inline result, %222
+  }
+}

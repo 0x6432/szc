@@ -677,6 +677,51 @@ test_sentinel_slice_types(void)
 }
 
 static void
+test_qualifier_cast_types(void)
+{
+	Arena arena;
+	arena_init(&arena);
+	SourceTable sources;
+	source_table_init(&sources, &arena);
+	Diag diag;
+	diag_init(&diag, &arena, &sources);
+	Interner interner;
+	intern_init(&interner, &arena);
+	static const char source[] =
+		"fn clear_const(p: *const volatile u32) *volatile u32 { return @constCast(p); } "
+		"fn clear_volatile(p: *const volatile u32) *const u32 { return @volatileCast(p); } "
+		"fn clear_slice(p: [:17]const u16) [:17]u16 { return @constCast(p); } "
+		"pub fn main() void { _ = clear_const(undefined); _ = clear_volatile(undefined); _ = clear_slice(undefined); }";
+	FileId file = source_add_memory(&sources, "qualifier_cast_types.zig", source, sizeof(source) - 1);
+	AstContainerDecl *root = parse_file(&arena, &diag, &sources, file);
+	CHECK(!diag_has_errors(&diag));
+	IrFile *ir = irgen_file(&arena, &diag, &interner, source_get(&sources, file), file, root);
+	CHECK(!diag_has_errors(&diag));
+	Sema *sema = sema_create(&arena, &diag, &interner, &sources);
+	CHECK(sema_analyze_executable(sema, file, ir));
+	CHECK(sema_func_count(sema) == 5);
+	for (FuncId i = 2; i < 5; i++) {
+		const SemaFunc *func = sema_func(sema, i);
+		TypeFn fn = sema_type(sema, func->type)->as.fn;
+		CHECK(fn.param_count == 1);
+		TypePointer before = sema_type(sema, fn.params[0])->as.pointer;
+		TypePointer after = sema_type(sema, fn.ret)->as.pointer;
+		CHECK(before.child == after.child && before.size == after.size);
+		CHECK(before.sentinel == after.sentinel && before.alignment == after.alignment);
+		CHECK(before.is_allowzero == after.is_allowzero);
+		CHECK(after.is_const == (i == 3));
+		CHECK(after.is_volatile == (i == 2));
+		uint64_t size;
+		CHECK(sema_type_size(sema, fn.ret, &size) && size == (i == 4 ? 16u : 8u));
+		bool volatile_load = false;
+		for (TirRef j = 0; j < func->tir.inst_count; j++)
+			volatile_load |= func->tir.insts[j].op == TIR_LOAD_VOLATILE;
+		CHECK(!volatile_load);
+	}
+	arena_free(&arena);
+}
+
+static void
 test_integer_pointer_values(void)
 {
 	Arena arena;
@@ -852,6 +897,7 @@ main(void)
 	test_sentinel_slice_types();
 	test_sentinel_assertion_order();
 	test_integer_pointer_values();
+	test_qualifier_cast_types();
 	test_binary_diagnostics();
 
 	printf("unit: %u checks, %u failed\n", checks, failures);

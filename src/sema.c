@@ -1576,6 +1576,47 @@ slice_field(Block *block, Operand slice, bool length, uint32_t src)
 	return runtime_operand(type, emit_tir_un(block, TIR_LOAD, type, src, address));
 }
 
+/* Explicit qualifier casts remove only the pointee's outer qualifier. */
+static Operand
+cast_pointer_qualifier(Block *block, Operand operand, IrOp op, uint32_t src)
+{
+	Sema *sema = block->sema;
+	Type result = sema->types[operand.type];
+	if (result.kind != TYPE_POINTER) {
+		sema_error(block, src, "expected pointer, found '%s'", sema_type_name(sema, operand.type));
+		return operand_none;
+	}
+	if (op == IR_CONST_CAST)
+		result.as.pointer.is_const = false;
+	else
+		result.as.pointer.is_volatile = false;
+	TypeId type = type_intern(sema, &result);
+	if (type == operand.type)
+		return operand;
+	if (operand_is_undefined(block, operand))
+		return comptime_operand(type, value_undefined(&sema->values, type));
+	if (result.as.pointer.size == POINTER_SLICE) {
+		Operand data = slice_field(block, operand, false, src);
+		Operand length = slice_field(block, operand, true, src);
+		if (data.kind == OPERAND_NONE || length.kind == OPERAND_NONE)
+			return operand_none;
+		data = cast_pointer_qualifier(block, data, op, src);
+		return data.kind == OPERAND_NONE ? operand_none : make_slice(block, type, data, length, src);
+	}
+	if (operand.kind == OPERAND_COMPTIME) {
+		const Value *value = operand_value(block, operand);
+		if (value->kind == VALUE_BYTES || value->kind == VALUE_PTR_CAST
+			|| value->kind == VALUE_ELEMENT_PTR || value->kind == VALUE_SLICE_FIELD_PTR)
+			return comptime_operand(type, value_pointer_cast(&sema->values, type, operand.value));
+		Value cast = *value;
+		cast.type = type;
+		return comptime_operand(type, value_intern(&sema->values, &cast));
+	}
+	if (!require_runtime(block, src))
+		return operand_none;
+	return runtime_operand(type, emit_tir_un(block, TIR_PTR_CAST, type, src, operand.inst));
+}
+
 /* This shape-changing coercion is not an in-memory pointer compatibility rule. */
 static bool
 array_slice_allowed(Sema *sema, TypeId dest, TypeId source)
@@ -5310,6 +5351,12 @@ analyze_inst(Block *block, IrInstIndex index, Operand *break_value)
 	case IR_ALIGN_OF:
 		result = analyze_type_layout(block, inst);
 		break;
+	case IR_CONST_CAST:
+	case IR_VOLATILE_CAST: {
+		Operand operand = resolve_ref(block, inst->data.un.operand);
+		result = operand.kind == OPERAND_NONE ? operand_none : cast_pointer_qualifier(block, operand, inst->op, inst->src);
+		break;
+	}
 	case IR_PTR_FROM_INT:
 		result = analyze_ptr_from_int(block, inst);
 		break;

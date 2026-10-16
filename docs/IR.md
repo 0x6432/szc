@@ -739,3 +739,15 @@ Numeric addition wraps at usize width; subtraction must not precede address zero
 Known absolute `@intFromPtr` values fold, while symbolic roots retain relocations
 and runtime address conversion. None of this implements general `@ptrCast` memory
 reinterpretation or optional/vector/C-pointer types.
+
+
+## Outer qualifier casts (M5.5c)
+
+IR_CONST_CAST and IR_VOLATILE_CAST infer a pointer type from their unary operand;
+result context applies an ordinary coercion afterward. The new type clears only
+its own is_const/is_volatile bit, preserving nested qualifiers and promises.
+Known thin values keep their address identity (byte/subobject casts preserve
+backing wrappers, numeric/function/object pointers retain their value kind).
+Runtime thin casts use TIR_PTR_CAST. Slices retag the borrowed element pointer
+and rebuild the same pointer/length pair with owned descriptor semantics; neither
+cast reads pointee memory or recursively alters pointee element types.

@@ -116,6 +116,7 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
 - [~] **M5.5 Casting builtins**: `@intCast`, `@truncate`, `@ptrCast`, `@intFromPtr`, `@ptrFromInt`, `@bitCast`, `@as`.
   - [x] **M5.5a Pointer address conversion (`@intFromPtr`).**
   - [x] **M5.5b Integer-to-pointer conversion (`@ptrFromInt`)**: constant/numeric addresses and runtime guards (locally validated).
+  - [x] **M5.5c Outer const/volatile casts**: shape/provenance preservation and observable access semantics (locally validated).
 
 ## Phase 6: Aggregates and errors
 
@@ -167,6 +168,40 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
 ## Completed milestone log
 
 (newest first; each entry: what, limitations, interactions)
+
+### M5.5c Outer pointer-qualifier casts
+- **What**: `@constCast`/`@volatileCast` infer the source pointer shape and remove
+  only its outer const/volatile qualifier. Nested pointee qualifiers, pointer
+  size, alignment, allowzero and sentinel are unchanged. Thin values preserve
+  existing symbolic/numeric provenance; slice values preserve pointer/length
+  and owned descriptor semantics, consistently retagging the element pointer.
+  Existing PTR_CAST and descriptor construction suffice; no backend special
+  case or pointee copy is introduced. Combined qualifier casts compose before
+  ordinary result-context coercion.
+- **Validation**: immutable /data/qualifier-casts-final GCC/Clang Werror
+  ASan/UBSan source/test/config match development (5401 checked files). Every
+  final wrapper, comparison matrix and fuzz process exits zero. 767 units/995
+  goldens, 91 ordinary/generated + three scoped native programs, 16 driver checks,
+  every C/ABI/alignment suite, 58 observed volatile sequences and 248 safety cases.
+  GCC full e2e runs actual Zig; both builds separately reference-check the new
+  native fixture, four C descriptor layouts and volatile Debug/ReleaseFast.
+  Fresh actual matrices: 210 qualifier casts + 225 numeric pointers + 178 sentinel
+  assertions + 256 sentinel slices + 313 arrays + 209 sentinel pointers + 168
+  fields + 87 dereference + 204 slicing + 252 slices + 168 coercions + 240 volatile
+  pointers (2510 total). Optimized GCC passes 91 native/248 safety; 949 unchanged
+  array/layout checks replay the source-hash-verified prior actual-reference
+  oracle (not fresh Zig builds). Four 60s fuzzers execute
+  1140332/32597/29994/36325 inputs; both builds replay 20000 mutations/stage
+  (60 irgen/116 sema seeds). Logs: /data/qualifier-casts-final-*. CI adds the
+  qualifier-cast matrix (29 suites); integration/push remains approval-blocked.
+- **Interactions/limits**: IR_CONST_CAST/IR_VOLATILE_CAST are unary inferred-type
+  operations. Unit checks assert qualifier isolation, layout, promises and no
+  volatile load merely from casting. New observer cases retain volatile through
+  constCast and remove the discarded ordinary read after volatileCast. Runtime
+  slice casts extract/rebuild descriptor values without traversing elements.
+  Explicit casts do not make immutable memory safe to mutate. Optional/vector/
+  C-pointer variants, packed pointers, general ptrCast, alignCast, bitCast and
+  nested multi-cast inference involving unimplemented operations remain separate.
 
 ### M5.5b Integer-to-pointer conversion
 - **What**: contextual scalar pointer destinations, usize coercion, rejection of

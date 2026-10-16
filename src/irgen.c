@@ -1065,6 +1065,7 @@ typedef enum Builtin {
 	BUILTIN_INT_FROM_BOOL,
 	BUILTIN_INT_FROM_PTR,
 	BUILTIN_PTR_FROM_INT,
+	BUILTIN_QUALIFIER_CAST,
 	BUILTIN_LAYOUT,
 	BUILTIN_ARITH,
 	BUILTIN_PANIC,
@@ -1083,6 +1084,8 @@ static const BuiltinInfo builtin_table[] = {
 	{"intCast", BUILTIN_INT_CAST, 1, IR_OP_COUNT},
 	{"truncate", BUILTIN_TRUNCATE, 1, IR_OP_COUNT},
 	{"intFromBool", BUILTIN_INT_FROM_BOOL, 1, IR_OP_COUNT},
+	{"constCast", BUILTIN_QUALIFIER_CAST, 1, IR_CONST_CAST},
+	{"volatileCast", BUILTIN_QUALIFIER_CAST, 1, IR_VOLATILE_CAST},
 	{"ptrFromInt", BUILTIN_PTR_FROM_INT, 1, IR_OP_COUNT},
 	{"intFromPtr", BUILTIN_INT_FROM_PTR, 1, IR_OP_COUNT},
 	{"sizeOf", BUILTIN_LAYOUT, 1, IR_SIZE_OF},
@@ -1173,6 +1176,10 @@ builtin_call(GenBody *body, Scope *scope, ResultInfo info, AstNode *node)
 		IrRef lhs = expr(body, scope, result_none, args[0]);
 		IrRef rhs = expr(body, scope, result_none, args[1]);
 		return rvalue(body, info, emit_bin(body, builtin->arith_op, node->offset, lhs, rhs), node->offset);
+	}
+	case BUILTIN_QUALIFIER_CAST: {
+		IrRef operand = expr(body, scope, result_none, args[0]);
+		return rvalue(body, info, emit_un(body, builtin->arith_op, node->offset, operand), node->offset);
 	}
 	case BUILTIN_LAYOUT: {
 		IrRef type = type_expr(body, scope, args[0]);
