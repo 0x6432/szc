@@ -122,6 +122,7 @@ jobs:
           - diff_aggregate_memset
           - diff_empty_array_storage
           - diff_struct_namespaces
+          - diff_has_decl
           - diff_quoted_identifiers
           - diff_bit_transforms
           - diff_bit_counts

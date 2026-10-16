@@ -1,0 +1,1 @@
+fn f(name:*const [1]u8) bool { return @hasDecl(@This(),name); } pub fn main() void { var a=[_]u8{120}; _=&a; _=f(&a); }

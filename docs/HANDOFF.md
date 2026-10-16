@@ -19,6 +19,62 @@ Read this first when resuming work (the sandbox resets often).
 
 ## Latest follow-up checkpoint
 
+- M7.6a public declaration membership is integrated: `@hasDecl` on the root
+  and existing fieldless namespaces, using contextual constant byte-slice names.
+  This supersedes older checkpoints saying hasDecl is not started. Zig 0.17
+  tests ONLY public declarations, even inside the same namespace; both official
+  source and a native binary probe verified this. Lookup does not resolve the
+  declaration's value/body, does not search parents, and handles decoded names,
+  constant arrays/slices/subranges/concatenation, aliases and self-presence.
+  Empty/NUL-containing lookup strings miss; identifier-token restrictions are
+  not incorrectly applied. The isolated name body cannot emit runtime TIR;
+  guards added to shared slice/coercion/reference paths prevent sanitizer
+  failures for runtime-backed names. Resolve type, then name, then validate
+  namespace kind. Empty ranges still require defined comptime-readable backing.
+  General comptime calls/variables, reinterpreted immutable memory, namespace
+  captures, other container kinds and runtime struct fields/layout/values remain
+  unsupported. @field/@hasField/typeInfo/Type/imports are still unimplemented.
+  Name decoding charges the shared constant-array budget and caps each name at
+  16 MiB; undefined aggregate elements reject, not guessed byte values.
+  Reference matrix: 126 comparisons through emit-qbe, 69 exact primary errors.
+  Twenty-four unit cases, IR/TIR/QBE and nine error goldens, three seeds each
+  irgen/sema, a native fixture and a hosted matrix. Official native Debug and
+  ReleaseFast pass. Final source copies: /data/hasdecl-final/{gcc,clang,optimized}.
+  Frozen GCC/Clang Werror ASan/UBSan pass 2111 units/1166 goldens, 123+4
+  native, 16 driver, 51 compiler-runner checks, full C/ABI/storage/alignment,
+  96 observed volatile sequences and 300 safety cases. Optimized GCC native/
+  safety pass. Both compilers pass 20000 standalone mutations per stage with
+  256/256/95/151 seeds. Four fresh 60s libFuzzer runs pass:
+  2091316/59174/41894/61886. Forced main unit/golden and focused native/reference
+  tests pass. Final frozen reference regressions pass: hasDecl 126/69,
+  namespaces 76/40, identifiers 89/29, slice fields 168. Full e2e is szc-only;
+  focused reference matrices/native fixtures are separate, not blanket official
+  differential coverage. Evidence: /data/hasdecl-final-{gcc,clang,optimized,fuzz}.log,
+  /data/hasdecl-final-reference-*.log, /data/hasdecl-main-final.log and
+  /data/hasdecl-main-native-final.log.
+  Hosted investigation: namespace 9fdd4fb GCC job 117095703788 reported only
+  native exact_remainder_i8 timing out at the unchanged 15s limit; 299 other
+  safety cases passed. Exact 9fdd4fb sources in /data/namespace-verified/gcc
+  replay the case 20 times successfully, with unchanged harness deadlines.
+  Evidence: /data/hasdecl-ci-namespace-gcc.log and
+  /data/hasdecl-ci-exact-safety-replay.log. Its targeted rerun is now confirmed
+  GREEN: all 62 namespace jobs succeeded. Empty-array ac01e39 is also confirmed
+  GREEN, all 61 jobs successful. Identifier 99e9d94 finished 61 successful/two
+  failed jobs: GCC and Clang report lost runner communication. Clang logs also
+  show four unchanged-deadline safety timeouts (exact_remainder_u64, shl_size_5,
+  shr_size_5, shr_size_33). Aggregate-fill e568da8 remains 58 successful/two
+  failed reruns: GCC lost communication/logs 404; Clang shows five safety
+  timeouts (exact_remainder_u64, exact_remainder_i8, shr_size_5, shl_size_33,
+  shr_size_33). No semantic mismatch/sanitizer report is shown. Exact-source
+  replay passes five repetitions of each of these nine cases (45 targeted runs)
+  with unchanged deadlines: /data/hasdecl-ci-new-safety-replays.log; hosted logs/annotations
+  are /data/hasdecl-ci-{identifiers,fill}-*. Repeatedly lost hosted runners are
+  not called green or retried blindly; scalar-copy remains 57 success/one failed.
+  Next natural scoped work is @field on existing namespaces and descriptor
+  fields, reusing constant-name resolution and existing field/address semantics;
+  inspect official lowering and ordering first. No @field code has started.
+  Q6 remains deferred until M10.2.
+
 - M5.4f canonical quoted identifiers is integrated. This supersedes the prior
   checkpoint's raw @"..." name limitation and isolated-development status.
   Names decode with the shared string escape helper before interning. Bare,

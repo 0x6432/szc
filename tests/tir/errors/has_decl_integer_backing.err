@@ -1,0 +1,3 @@
+tests/tir/errors/has_decl_integer_backing.zig:1:88: error: unable to resolve comptime value
+pub fn main() void { const p:*allowzero const [0]u8=@ptrFromInt(0); _=@hasDecl(@This(),p); }
+                                                                                       ^

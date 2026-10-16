@@ -154,6 +154,7 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
 - [ ] **M7.5 `inline for` / `inline while` / inline switch prongs.**
 - [~] **M7.6 `@typeInfo` / `@Type` / `@This` / `@hasDecl` / `@field` / `@hasField`.**
   - [x] Lexical `@This()` for the root and fieldless struct namespaces (M6.1a).
+  - [x] **M7.6a Public declaration membership**: `@hasDecl` on existing namespaces, with constant byte-slice names.
 - [ ] **M7.7 comptime_float (f64-backed for now; f16/f80/f128 = hard error).**
 
 ## Phase 8: Modules and std
@@ -193,6 +194,41 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
 ## Completed milestone log
 
 (newest first; each entry: what, limitations, interactions)
+
+### M7.6a Public declaration membership
+
+- **What**: `@hasDecl` accepts the root and existing fieldless struct namespaces
+  and resolves a contextual `[]const u8` name in an isolated comptime body.
+  Lookup is public-only, including from the same namespace, as verified against
+  Zig 0.17's `zirHasDecl` and binary. It does not evaluate the found declaration
+  or search parent namespaces. Canonical quoted/Unicode/byte names, constant
+  byte arrays, slices/subranges, concatenation, aliases and self-presence work.
+  Empty/NUL-containing names miss rather than undergoing identifier validation
+  or C-string truncation. Runtime, mutable-global, undefined and integer-address
+  backing reject, including empty ranges. Container resolution precedes name
+  resolution; namespace-kind validation follows it. Shared slice/aggregate
+  coercion and reference paths now guard runtime materialization in comptime
+  contexts instead of dereferencing a missing TIR builder. Array-to-slice and
+  contextual initialization diagnostics were checked and aligned with Zig.
+- **Validation**: 126 actual-Zig comparisons through QBE emission, 69 exact
+  primary diagnostics; native fixture passes official Zig Debug/ReleaseFast.
+  Twenty-four focused unit cases, IR/TIR/QBE and nine diagnostic goldens, three
+  seeds per irgen/sema stage, and a hosted differential matrix.
+  Frozen GCC/Clang Werror ASan/UBSan pass 2111 units/1166 goldens, 123+4
+  native, 16 driver, 51 compiler-runner checks, full C/ABI/storage/alignment,
+  96 volatile sequences and 300 safety cases. Optimized native/safety and forced
+  main tests pass. Both compilers pass 20000 standalone mutations/stage with
+  256/256/95/151 seeds. Four fresh 60s fuzz runs pass:
+  2091316/59174/41894/61886. Final frozen reference regressions: hasDecl 126/69,
+  namespaces 76/40, identifiers 89/29 and slice fields 168. Full e2e remains
+  szc-only; targeted official-Zig comparisons are separate.
+- **Interactions/limits**: M7.6/M6.1 remain partial. No `@field`, `@hasField`,
+  typeInfo/Type, runtime struct fields/layout/values, enums/unions, imports or
+  general comptime function calls/mutable-memory evaluation are added. Name
+  decoding is bounded by the shared constant-array work budget and a 16 MiB
+  per-name ceiling; existing immutable reinterpreted-memory limitations remain.
+  Undefined elements within aggregate backing are rejected rather than guessed.
+  Existing namespace capture and indirect-cycle diagnostic limitations remain.
 
 ### M5.4f Canonical quoted identifiers
 

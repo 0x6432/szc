@@ -1,0 +1,3 @@
+tests/tir/errors/has_decl_runtime_array.zig:1:65: error: unable to resolve comptime value
+pub fn main() void { var a=[_]u8{120}; _=&a; _=@hasDecl(@This(),&a); }
+                                                                ^

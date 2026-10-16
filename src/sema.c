@@ -137,6 +137,7 @@ typedef struct Block {
 	const IrFile  *ir;
 	InstMap       *map;
 	bool          is_comptime;
+	bool comptime_value_required;	/* a builtin argument must be resolved, not emitted */
 	StringId      decl_name;	/* declaration whose value is analysed (names structs) */
 	SemaFunc      *func;	/* function whose body is analysed, or NULL */
 	TirFunc       *tir;	/* where runtime instructions go, or NULL */
@@ -1572,6 +1573,8 @@ slice_field(Block *block, Operand slice, bool length, uint32_t src)
 		SliceValue pair = operand_value(block, slice)->as.slice;
 		return comptime_operand(type, length ? pair.length : pair.pointer);
 	}
+	if (!require_runtime(block, src))
+		return operand_none;
 	Operand backing = analyze_ref(block, slice, src, 0, 0);
 	if (backing.kind == OPERAND_NONE)
 		return operand_none;
@@ -1667,6 +1670,8 @@ coerce(Block *block, Operand operand, TypeId dest, uint32_t src)
 		if (target.child == source.child && target.length == source.length
 			&& (target.sentinel == VALUE_NONE || target.sentinel == source.sentinel)) {
 			TypeId pointer = type_pointer(sema, dest, POINTER_ONE, true, false, 0);
+			if (!require_runtime(block, src))
+				return operand_none;
 			operand.inst = emit_tir_un(block, TIR_PTR_CAST, pointer, src, operand.inst);
 			operand.type = dest;
 			return operand;
@@ -1690,8 +1695,11 @@ coerce(Block *block, Operand operand, TypeId dest, uint32_t src)
 				data = comptime_operand(data_type, value_undefined(&sema->values, data_type));
 			else if (operand.kind == OPERAND_COMPTIME)
 				data = comptime_operand(data_type, value_pointer_cast(&sema->values, data_type, operand.value));
-			else
+			else {
+				if (!require_runtime(block, src))
+					return operand_none;
 				data = runtime_operand(data_type, emit_tir_un(block, TIR_PTR_CAST, data_type, src, operand.inst));
+			}
 			Operand length = comptime_operand(T_USIZE, value_int_u64(&sema->values, T_USIZE, count));
 			return make_slice(block, dest, data, length, src);
 		}
@@ -1703,6 +1711,8 @@ coerce(Block *block, Operand operand, TypeId dest, uint32_t src)
 				return make_slice(block, dest, data, slice_field(block, operand, true, src), src);
 			}
 			TypeId pointer = type_pointer(sema, dest, POINTER_ONE, true, false, 0);
+			if (!require_runtime(block, src))
+				return operand_none;
 			operand.inst = emit_tir_un(block, TIR_PTR_CAST, pointer, src, operand.inst);
 			operand.type = dest;
 			return operand;
@@ -1765,7 +1775,11 @@ coerce(Block *block, Operand operand, TypeId dest, uint32_t src)
 			return operand_none;
 		return runtime_operand(dest, emit_tir_un(block, TIR_INT_CAST, dest, src, operand.inst));
 	}
-	sema_error(block, src, "expected type '%s', found '%s'", sema_type_name(sema, dest), sema_type_name(sema, operand.type));
+	if (dest_kind == TYPE_POINTER && sema->types[dest].as.pointer.size == POINTER_SLICE
+		&& sema->types[operand.type].kind == TYPE_ARRAY)
+		sema_error(block, src, "array literal requires address-of operator (&) to coerce to slice type '%s'", sema_type_name(sema, dest));
+	else
+		sema_error(block, src, "expected type '%s', found '%s'", sema_type_name(sema, dest), sema_type_name(sema, operand.type));
 	return operand_none;
 }
 
@@ -2839,7 +2853,7 @@ require_runtime(Block *block, uint32_t src)
 {
 	if (block->tir != NULL)
 		return true;
-	sema_error(block, src, "unable to evaluate comptime expression");
+	sema_error(block, src, block->comptime_value_required ? "unable to resolve comptime value" : "unable to evaluate comptime expression");
 	return false;
 }
 
@@ -4452,6 +4466,8 @@ analyze_ref(Block *block, Operand value, uint32_t src, uint32_t identity, uint32
 		return function_address(block, value, src);
 	TypeId pointer = type_pointer(sema, value.type, POINTER_ONE, true, false, alignment);
 	if (value.kind == OPERAND_AGGREGATE) {
+		if (!require_runtime(block, src))
+			return operand_none;
 		TypePointer backing = sema->types[block->tir->insts[value.inst].type].as.pointer;
 		if (alignment != 0 && alignment > pointer_alignment(sema, backing)) {
 			Operand copy = array_snapshot(block, runtime_operand(block->tir->insts[value.inst].type, value.inst), alignment, src);
@@ -4810,6 +4826,83 @@ namespace_member(Block *block, Operand base, StringId name, bool as_reference, u
 	}
 	*out = read_declaration(block, ns, decl, as_reference, src);
 	return true;
+}
+
+/* Resolve logical name bytes, not the sentinel or a C-string prefix. Even an
+ * empty name requires a defined pointer into comptime-readable backing. */
+static bool
+resolve_const_string(Block *block, Operand name, uint32_t src, StringId *out)
+{
+	Sema *sema = block->sema;
+	if (name.kind == OPERAND_NONE || !check_defined(block, name, src))
+		return false;
+	if (name.kind != OPERAND_COMPTIME) {
+		sema_error(block, src, "unable to resolve comptime value");
+		return false;
+	}
+	Operand data = slice_field(block, name, false, src);
+	Operand size = slice_field(block, name, true, src);
+	if (data.kind == OPERAND_NONE || size.kind == OPERAND_NONE
+		|| !check_defined(block, data, src) || !check_defined(block, size, src))
+		return false;
+	if (data.kind != OPERAND_COMPTIME || size.kind != OPERAND_COMPTIME
+		|| integer_pointer(block, data) || mutable_global_pointer(block, data)) {
+		sema_error(block, src, "unable to resolve comptime value");
+		return false;
+	}
+	uint64_t length = bigint_to_u64_bits(&operand_value(block, size)->as.integer);
+	if (length > 16777216) {
+		sema_error(block, src, "not supported by szc yet: comptime name exceeds 16777216 bytes");
+		return false;
+	}
+	if (!reserve_array_elements(block, (uint32_t)length, src))
+		return false;
+	char *text = arena_alloc(sema->arena, (size_t)length + 1, 1);
+	for (uint64_t i = 0; i < length; i++) {
+		Operand index = comptime_operand(T_USIZE, value_int_u64(&sema->values, T_USIZE, i));
+		Operand byte = analyze_many_index(block, data, index, src, false, false);
+		if (byte.kind == OPERAND_NONE || !check_defined(block, byte, src))
+			return false;
+		if (byte.kind != OPERAND_COMPTIME) {
+			sema_error(block, src, "unable to resolve comptime value");
+			return false;
+		}
+		text[i] = (char)bigint_to_u64_bits(&operand_value(block, byte)->as.integer);
+	}
+	text[length] = '\0';
+	*out = intern(sema->interner, text, (uint32_t)length);
+	return true;
+}
+
+/* Zig 0.17 hasDecl tests public declarations only, even in the same lexical
+ * namespace. Do not resolve the member value or search parent namespaces. */
+static Operand
+analyze_has_decl(Block *block, const IrInst *inst)
+{
+	Sema *sema = block->sema;
+	IrHasDecl payload;
+	IR_READ(block->ir, inst->data.payload, &payload);
+	Operand container = resolve_ref(block, payload.container);
+	TypeId type;
+	if (container.kind == OPERAND_NONE || !check_defined(block, container, payload.type_src)
+		|| !operand_to_type(block, container, payload.type_src, &type))
+		return operand_none;
+	InstMap map;
+	inst_map_init(&map, sema->arena);
+	map.parent = block->map;
+	Block inner;
+	block_init_comptime(&inner, sema, block->namespace_scope, &map, block->decl_name);
+	inner.comptime_value_required = true;
+	BodyResult result = analyze_body(&inner, payload.name_body);
+	StringId name;
+	if (result.end != BODY_BREAK_RESULT || !resolve_const_string(&inner, result.result, payload.name_src, &name))
+		return operand_none;
+	if (sema->types[type].kind != TYPE_STRUCT) {
+		sema_error(block, payload.type_src, "expected struct, enum, union, or opaque; found '%s'", sema_type_name(sema, type));
+		return operand_none;
+	}
+	SemaDecl *decl = namespace_find(sema->types[type].as.structure, name);
+	return bool_operand(sema, decl != NULL && (decl->ir.flags & IR_DECL_PUB) != 0);
 }
 
 /* Project a word of the original descriptor, never an owned descriptor copy. */
@@ -6085,7 +6178,7 @@ analyze_inst(Block *block, IrInstIndex index, Operand *break_value)
 		if (!operand_to_type(block, resolve_ref(block, inst->data.un.operand), src, &type))
 			break;
 		if (sema->types[type].kind != TYPE_ARRAY)
-			sema_error(block, src, "expected array type, found '%s'", sema_type_name(sema, type));
+			sema_error(block, src, "type '%s' does not support array initialization syntax", sema_type_name(sema, type));
 		else
 			result = type_operand(sema, sema->types[type].as.array.child);
 		break;
@@ -6223,6 +6316,9 @@ analyze_inst(Block *block, IrInstIndex index, Operand *break_value)
 	case IR_FUNC:
 	case IR_FN_TYPE:
 		result = analyze_func_inst(block, index);
+		break;
+	case IR_HAS_DECL:
+		result = analyze_has_decl(block, inst);
 		break;
 	case IR_THIS:
 		result = type_operand(sema, block->namespace_scope->type);

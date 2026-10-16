@@ -1,0 +1,3 @@
+tests/tir/errors/has_decl_type.zig:1:33: error: expected struct, enum, union, or opaque; found 'u8'
+pub fn main() void { _=@hasDecl(u8,"x"); }
+                                ^

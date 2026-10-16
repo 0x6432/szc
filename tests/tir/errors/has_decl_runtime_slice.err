@@ -1,0 +1,3 @@
+tests/tir/errors/has_decl_runtime_slice.zig:1:54: error: unable to resolve comptime value
+fn f(name:[]const u8) bool { return @hasDecl(@This(),name); }
+                                                     ^

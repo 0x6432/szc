@@ -1,3 +1,3 @@
-tests/tir/errors/slice_array_value.zig:1:49: error: expected type '[]const u8', found '[2]u8'
+tests/tir/errors/slice_array_value.zig:1:49: error: array literal requires address-of operator (&) to coerce to slice type '[]const u8'
 pub fn main() void { const s: []const u8 = [2]u8{7,9}; _ = s; }
                                                 ^

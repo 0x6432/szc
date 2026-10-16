@@ -1443,6 +1443,64 @@ test_struct_namespaces(void)
 }
 
 static void
+test_has_decl(void)
+{
+	const struct {
+		const char *source;
+		const char *error;
+	} cases[] = {
+		{"const N=struct { pub const x:u8=256; const private:u8=256; pub fn bad() u8 { return 256; } }; pub fn main() void { const n:u8=if(@hasDecl(N,\"x\"))0 else 256; _=n; }", NULL},
+		{"const N=struct { pub const x:u8=256; const private:u8=256; pub fn bad() u8 { return 256; } }; pub fn main() void { const n:u8=if(!@hasDecl(N,\"private\"))0 else 256; _=n; }", NULL},
+		{"const N=struct { pub const x:u8=256; const private:u8=256; pub fn bad() u8 { return 256; } }; pub fn main() void { const n:u8=if(@hasDecl(N,\"bad\"))0 else 256; _=n; }", NULL},
+		{"const N=struct { pub const x:u8=256; const private:u8=256; pub fn bad() u8 { return 256; } }; pub fn main() void { const n:u8=if(!@hasDecl(N,\"\") and !@hasDecl(N,\"x\\x00a\"))0 else 256; _=n; }", NULL},
+		{"const N=struct { pub const a=@hasDecl(@This(),\"a\"); }; pub fn main() void { const n:u8=if(N.a)0 else 256; _=n; }", NULL},
+		{"const N=struct { pub const x:u8=x; }; pub fn main() void { _=@hasDecl(N,\"x\"); }", NULL},
+		{"const N=struct { pub const x:u8=256; const private:u8=256; pub fn bad() u8 { return 256; } }; pub fn main() void { const n:u8=if(@hasDecl(N,\"x\"[0..]))0 else 256; _=n; }", NULL},
+		{"const N=struct { pub const x:u8=256; const private:u8=256; pub fn bad() u8 { return 256; } }; pub fn main() void { const n:u8=if(@hasDecl(N,\".x.\"[1..2]))0 else 256; _=n; }", NULL},
+		{"const N=struct { pub const x:u8=256; const private:u8=256; pub fn bad() u8 { return 256; } }; pub fn main() void { const n:u8=if(@hasDecl(N,\"\"++\"x\"))0 else 256; _=n; }", NULL},
+		{"const N=struct { pub const x:u8=256; const private:u8=256; pub fn bad() u8 { return 256; } }; pub fn main() void { const n:u8=if(@hasDecl(N,&[_]u8{120}))0 else 256; _=n; }", NULL},
+		{"const N=struct { pub const x:u8=256; const private:u8=256; pub fn bad() u8 { return 256; } }; pub fn main() void { const n:u8=if(@hasDecl(N,&[_:0]u8{120}))0 else 256; _=n; }", NULL},
+		{"const N=struct { pub const x:u8=256; const private:u8=256; pub fn bad() u8 { return 256; } }; pub fn main() void { const n:u8=if(@hasDecl(N,&.{120}))0 else 256; _=n; }", NULL},
+		{"const N=struct { pub const x:u8=256; const private:u8=256; pub fn bad() u8 { return 256; } }; pub fn main() void { _=@hasDecl(u8,\"x\"); }", "expected struct, enum, union, or opaque"},
+		{"const N=struct { pub const x:u8=256; const private:u8=256; pub fn bad() u8 { return 256; } }; pub fn main() void { _=@hasDecl(3,4); }", "expected type 'type'"},
+		{"const N=struct { pub const x:u8=256; const private:u8=256; pub fn bad() u8 { return 256; } }; pub fn main() void { _=@hasDecl(u8,3); }", "expected type '[]const u8'"},
+		{"const N=struct { pub const x:u8=256; const private:u8=256; pub fn bad() u8 { return 256; } }; pub fn main() void { _=@hasDecl(@as(type,undefined),3); }", "use of undefined"},
+		{"const N=struct { pub const x:u8=256; const private:u8=256; pub fn bad() u8 { return 256; } }; pub fn main() void { _=@hasDecl(N,undefined); }", "use of undefined"},
+		{"const N=struct { pub const x:u8=256; const private:u8=256; pub fn bad() u8 { return 256; } }; pub fn main() void { var a=[_]u8{120}; _=&a; _=@hasDecl(N,&a); }", "unable to resolve comptime value"},
+		{"const N=struct { pub const x:u8=256; const private:u8=256; pub fn bad() u8 { return 256; } }; pub fn main() void { var a=[_]u8{}; _=&a; _=@hasDecl(N,&a); }", "unable to resolve comptime value"},
+		{"const N=struct { pub const x:u8=256; const private:u8=256; pub fn bad() u8 { return 256; } }; pub fn main() void { const p:*const [0]u8=undefined; _=@hasDecl(N,p); }", "use of undefined"},
+		{"const N=struct { pub const x:u8=256; const private:u8=256; pub fn bad() u8 { return 256; } }; pub fn main() void { const p:*allowzero const [0]u8=@ptrFromInt(0); _=@hasDecl(N,p); }", "unable to resolve comptime value"},
+		{"const N=struct { pub const x:u8=256; const private:u8=256; pub fn bad() u8 { return 256; } }; pub fn main() void { _=@hasDecl(N); }", "expected 2 arguments"},
+		{"const N=struct { pub const x:u8=256; const private:u8=256; pub fn bad() u8 { return 256; } }; fn f(s:[]const u8) bool { return @hasDecl(N,s); } pub fn main() void { _=f(\"x\"); }", "unable to resolve comptime value"},
+		{"const N=struct { pub const x:u8=256; const private:u8=256; pub fn bad() u8 { return 256; } }; fn f() []const u8 { return \"x\"; } pub fn main() void { _=@hasDecl(N,f()); }", "comptime function calls"},
+	};
+	for (uint32_t i = 0; i < sizeof(cases) / sizeof(cases[0]); i++) {
+		Arena arena;
+		arena_init(&arena);
+		SourceTable sources;
+		source_table_init(&sources, &arena);
+		Diag diag;
+		diag_init(&diag, &arena, &sources);
+		Interner interner;
+		intern_init(&interner, &arena);
+		const char *source = cases[i].source;
+		FileId file = source_add_memory(&sources, "has_decl.zig", source, (uint32_t)strlen(source));
+		AstContainerDecl *root = parse_file(&arena, &diag, &sources, file);
+		CHECK(!diag_has_errors(&diag));
+		IrFile *ir = irgen_file(&arena, &diag, &interner, source_get(&sources, file), file, root);
+		bool success = false;
+		if (!diag_has_errors(&diag)) {
+			Sema *sema = sema_create(&arena, &diag, &interner, &sources);
+			success = sema_analyze_executable(sema, file, ir);
+		}
+		CHECK(success == (cases[i].error == NULL));
+		if (cases[i].error != NULL)
+			CHECK(diag.count != 0 && strstr(diag.items[0].message, cases[i].error) != NULL);
+		arena_free(&arena);
+	}
+}
+
+static void
 test_quoted_identifiers(void)
 {
 	const struct {
@@ -1810,6 +1868,7 @@ main(void)
 	test_empty_array_storage();
 	test_struct_namespaces();
 	test_quoted_identifiers();
+	test_has_decl();
 	test_scalar_memcpy();
 	test_aggregate_memcpy();
 	test_packed_bits();

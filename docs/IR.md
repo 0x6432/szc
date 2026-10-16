@@ -93,6 +93,23 @@ binding; unused namespaces and their non-exported declarations remain lazy.
 There are no new runtime namespace or `this` instructions. Field-bearing struct
 values, initialization, instance fields and layouts remain unsupported.
 
+`has_decl` carries `IrHasDecl { container, name_body, type_src, name_src }`.
+The name body has a contextual `[]const u8` result and is generated/analyzed in
+an isolated comptime context, with an operand-map parent for outer constants.
+Sema resolves the container type, then all logical name bytes, then validates
+that the type has namespace semantics. Lookup tests only `pub` declarations in
+the selected namespace: Zig 0.17 returns false for private declarations even
+inside the same namespace. It never resolves a found member's initializer or
+function body. Empty/NUL-containing lookup strings are valid and miss; they
+are not identifier tokens and are not truncated as C strings. Constant strings,
+byte arrays, subranges and concatenations use the existing pointer provenance.
+Runtime backing, undefined descriptors/pointers and integer-address backing
+cannot supply names, even for empty ranges. Name decoding charges the shared
+constant-array work budget and has an explicit 16 MiB per-name ceiling.
+No runtime TIR instruction or backend lowering is needed. General comptime
+function calls/mutable-memory evaluation, field-bearing structs, other container
+kinds and imports retain their existing unsupported diagnostics.
+
 ## Control flow
 
 - `block` has a body; `break block, value` leaves it with a value. Source labeled

@@ -1,0 +1,1 @@
+const N=struct { pub const a=@hasDecl(@This(),"a"); pub const bad:u8=bad; const hidden:u8=256; }; pub fn main() void { _=N.a; _=@hasDecl(N,"bad"); _=@hasDecl(N,"hidden"); }

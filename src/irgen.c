@@ -1230,6 +1230,7 @@ typedef enum Builtin {
 	BUILTIN_PTR_CAST,
 	BUILTIN_LAYOUT,
 	BUILTIN_THIS,
+	BUILTIN_HAS_DECL,
 	BUILTIN_ARITH,
 	BUILTIN_INT_BITS,
 	BUILTIN_MEMCPY,
@@ -1246,6 +1247,7 @@ typedef struct BuiltinInfo {
 
 static const BuiltinInfo builtin_table[] = {
 	{"This", BUILTIN_THIS, 0, IR_THIS},
+	{"hasDecl", BUILTIN_HAS_DECL, 2, IR_HAS_DECL},
 	{"panic", BUILTIN_PANIC, 1, IR_OP_COUNT},
 	{"as", BUILTIN_AS, 2, IR_OP_COUNT},
 	{"bitCast", BUILTIN_BIT_CAST, 1, IR_OP_COUNT},
@@ -1411,6 +1413,20 @@ builtin_call(GenBody *body, Scope *scope, ResultInfo info, AstNode *node)
 	case BUILTIN_ALIGN_CAST:
 	case BUILTIN_PTR_CAST:
 		return IR_REF_VOID_VALUE;
+	case BUILTIN_HAS_DECL: {
+		IrHasDecl payload;
+		payload.container = type_expr(body, scope, args[0]);
+		payload.type_src = args[0]->offset;
+		payload.name_src = args[1]->offset;
+		GenBody name_body;
+		body_init(&name_body, gen, scope, true);
+		IrPointerType slice = {IR_REF_TYPE_U8, IR_POINTER_SLICE | IR_POINTER_CONST, 0, 0, IR_REF_NONE, 0};
+		IrRef type = emit_payload(&name_body, IR_PTR_TYPE, args[1]->offset, APPEND_EXTRA(gen, slice));
+		IrRef name_ref = expr(&name_body, &name_body.base, result_type(type), args[1]);
+		emit_break(&name_body, IR_BREAK_INLINE, args[1]->offset, IR_BODY_RESULT, name_ref);
+		payload.name_body = body_finish(&name_body);
+		return rvalue(body, info, emit_payload(body, IR_HAS_DECL, node->offset, APPEND_EXTRA(gen, payload)), node->offset);
+	}
 	case BUILTIN_THIS:
 		return rvalue(body, info, emit_none(body, IR_THIS, node->offset), node->offset);
 	case BUILTIN_PANIC: {
@@ -2887,6 +2903,14 @@ dump_inst(const IrDumper *dumper, IrInstIndex index, uint32_t depth)
 			fputs(" sentinel ", out);
 			dump_ref(dumper, slice.sentinel);
 		}
+		break;
+	}
+	case IR_HAS_DECL: {
+		IrHasDecl payload;
+		IR_READ(ir, inst->data.payload, &payload);
+		fputc(' ', out);
+		dump_ref(dumper, payload.container);
+		dump_labeled_body(dumper, "name", payload.name_body, depth);
 		break;
 	}
 	case IR_PANIC: {
