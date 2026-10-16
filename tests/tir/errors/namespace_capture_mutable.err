@@ -1,0 +1,3 @@
+tests/tir/errors/namespace_capture_mutable.zig:3:38: error: mutable 'x' not accessible from here
+	const N=struct { fn read() void { _=x; } };
+	                                    ^

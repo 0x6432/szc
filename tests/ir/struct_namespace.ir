@@ -1,0 +1,122 @@
+%81 = struct_decl (flags=0) {
+  decl const "Root" value {
+    %0 = this
+    %1 = break_inline result, %0
+  }
+  decl const "Namespace" value {
+    %45 = struct_decl (flags=0) {
+      decl const "Self" value {
+        %2 = this
+        %3 = break_inline result, %2
+      }
+      decl const "value" type {
+        %4 = break_inline result, @type_u8
+      } value {
+        %5 = decl_type
+        %6 = int 7
+        %7 = as %5, %6
+        %8 = break_inline result, %7
+      }
+      decl var "counter" type {
+        %9 = break_inline result, @type_u8
+      } value {
+        %10 = decl_type
+        %11 = int 1
+        %12 = as %10, %11
+        %13 = break_inline result, %12
+      }
+      decl fn "add" value {
+        %29 = func "add" {
+          %15 = param "n" type {
+            %14 = break_inline result, @type_u8
+          }
+          ret type {
+            %16 = break_inline result, @type_u8
+          }
+          body insts {
+            %17 = decl_ref "counter"
+            %18 = load %17
+            %19 = add_sub_rhs_type %18
+            %20 = as %19, %15
+            %21 = add %18, %20
+            %22 = elem_type %17
+            %23 = as %22, %21
+            %24 = store %17, %23
+            %25 = ret_type
+            %26 = decl_val "counter"
+            %27 = as_return %25, %26
+            %28 = ret %27
+          }
+        }
+        %30 = break_inline result, %29
+      }
+      decl fn "same" value {
+        %43 = func "same" {
+          ret type {
+            %31 = break_inline result, @type_bool
+          }
+          body insts {
+            %32 = ret_type
+            %33 = decl_val "Self"
+            %34 = this
+            %35 = cmp_eq %33, %34
+            %40 = bool_and %35 rhs {
+              %36 = decl_val "Self"
+              %37 = decl_val "Root"
+              %38 = cmp_neq %36, %37
+              %39 = break_inline result, %38
+            }
+            %41 = as_return %32, %40
+            %42 = ret %41
+          }
+        }
+        %44 = break_inline result, %43
+      }
+    }
+    %46 = break_inline result, %45
+  }
+  decl fn "main" pub value {
+    %79 = func "main" {
+      ret type {
+        %47 = break_inline result, @type_u8
+      }
+      body insts {
+        %48 = decl_ref "Namespace"
+        %49 = field_ptr "counter", %48
+        %50 = ref_deref %49
+        %51 = decl_val "Namespace"
+        %52 = field_val "value", %51
+        %53 = elem_type %50
+        %54 = as %53, %52
+        %55 = store %50, %54
+        %56 = decl_val "Namespace"
+        %57 = field_val "same", %56
+        %58 = call %57
+        %59 = as @type_bool, %58
+        %60 = bool_not %59
+        %66 = if %60 then {
+          %61 = ret_type
+          %62 = int 1
+          %63 = as_return %61, %62
+          %64 = ret %63
+        } else {
+          %65 = break_inline result, @void_value
+        }
+        %67 = ret_type
+        %68 = decl_val "Namespace"
+        %69 = field_val "add", %68
+        %70 = call %69 arg0 {
+          %71 = arg_type %70, 0
+          %72 = int 2
+          %73 = as %71, %72
+          %74 = break_inline result, %73
+        }
+        %75 = int 9
+        %76 = sub %70, %75
+        %77 = as_return %67, %76
+        %78 = ret %77
+      }
+    }
+    %80 = break_inline result, %79
+  }
+}

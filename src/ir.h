@@ -129,6 +129,7 @@ typedef enum IrDataKind {
 	X(FUNC, "func", IR_DATA_PAYLOAD)	/* IrFuncHeader, params, bodies */ \
 	X(PARAM, "param", IR_DATA_PAYLOAD)	/* name, flags, type body */ \
 	X(PARAM_ANYTYPE, "param_anytype", IR_DATA_NAME)	/* name */ \
+	X(THIS, "this", IR_DATA_NONE)	/* nearest lexical container type */ \
 	X(DECL_TYPE, "decl_type", IR_DATA_NONE)	/* explicit mutable global initializer result type */ \
 	X(DECL_VAL, "decl_val", IR_DATA_NAME)	/* value of the declaration `name` */ \
 	X(DECL_REF, "decl_ref", IR_DATA_NAME)	/* pointer to the declaration `name` */ \

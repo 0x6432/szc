@@ -134,7 +134,9 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
 
 ## Phase 6: Aggregates and errors
 
-- [ ] **M6.1 Structs**: fields, init, field access, methods, default values.
+- [~] **M6.1 Structs**: fields, init, field access, methods, default values.
+  - [x] **M6.1a Fieldless namespaces**: qualified declarations, lexical `@This()`, lazy nested exports.
+  - Runtime fields, layout, values, initializers and instance methods remain unimplemented.
 - [ ] **M6.2 Enums**: tag values, `@intFromEnum`, `@enumFromInt`, enum literals.
 - [ ] **M6.3 switch** on ints/enums with ranges.
 - [ ] **M6.4 Optionals**: `?T`, `orelse`, `.?`, if-payloads, optional pointers.
@@ -149,7 +151,8 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
 - [ ] **M7.3 Types as values**: `type`, `@TypeOf`, returning types from functions.
 - [ ] **M7.4 Generic functions**: comptime params, `anytype`, monomorphization + memoization.
 - [ ] **M7.5 `inline for` / `inline while` / inline switch prongs.**
-- [ ] **M7.6 `@typeInfo` / `@Type` / `@This` / `@hasDecl` / `@field` / `@hasField`.**
+- [~] **M7.6 `@typeInfo` / `@Type` / `@This` / `@hasDecl` / `@field` / `@hasField`.**
+  - [x] Lexical `@This()` for the root and fieldless struct namespaces (M6.1a).
 - [ ] **M7.7 comptime_float (f64-backed for now; f16/f80/f128 = hard error).**
 
 ## Phase 8: Modules and std
@@ -189,6 +192,40 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
 ## Completed milestone log
 
 (newest first; each entry: what, limitations, interactions)
+
+### M6.1a Fieldless struct namespaces and lexical @This()
+
+- **What**: qualified namespace declarations now reuse lazy declaration reads,
+  mutable-global storage, immutable declaration address identity/alignment and
+  function ownership. Supports nested namespaces, type/function aliases,
+  callbacks, mutable arrays/slice descriptors and explicit pointers to type
+  bindings. Namespace names such as `len` are not confused with array/slice
+  fields. Unqualified references check all enclosing namespaces for ambiguity;
+  qualified lookup never inherits a missing member from its parent. `this` IR
+  resolves the nearest lexical namespace, including inside blocks and aliased
+  functions. Nested exports enter the worklist only when the container type is
+  resolved, after publishing its binding; unused containers stay lazy.
+- **Validation**: 76 actual-Zig comparisons through QBE emission, including 40
+  exact primary diagnostics; native fixture passes official Debug/ReleaseFast.
+  Includes namespace/type/missing-member/ambiguity/const/arity/self-dependency
+  diagnostics and lazy invalid declarations/exports. Twenty-six focused unit
+  cases, IR/TIR/QBE and eleven error goldens, six seeds per irgen/sema stage,
+  and an independent hosted differential matrix.
+  Frozen GCC/Clang Werror ASan/UBSan pass 2006 units/1143 goldens, 121+4
+  native, 16 driver, full C/ABI/storage/alignment, 96 volatile sequences and 300
+  safety cases. Optimized GCC native/safety, forced main unit/golden tests and
+  both 20000 standalone mutations/stage pass (256/256/89/145 seeds). Five memory
+  builtin/storage reference matrices pass again on the final frozen compiler.
+  Four fresh 60s libFuzzer runs pass: 2051965/52624/50390/53661.
+- **Interactions/limits**: M6.1 and M7.6 remain partial. Field-bearing structs,
+  runtime struct values/layout/initialization/defaults, instance method binding,
+  extern/packed layout, generics/closures and imports/std are NOT implemented by
+  this milestone. Other reflection builtins remain unsupported. General indirect
+  dependency cycles retain the existing generic diagnostic, not Zig's full
+  dependency graph; typed direct self-value cycles now name the declaration.
+  Enclosing local captures are explicitly NYI rather than silently accepted;
+  mutable crossings match Zig's accessibility diagnostic for reads/writes/addresses.
+  Anonymous/function-local type diagnostic naming remains incomplete.
 
 ### M5.2c5 Empty runtime array storage
 

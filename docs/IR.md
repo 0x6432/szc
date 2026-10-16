@@ -36,7 +36,9 @@ irgen resolves every identifier lexically:
   sema looks the name up in the namespace of the body being analysed and its
   parents;
 - anything else is reported as "use of undeclared identifier".
-Shadowing is an error, as in Zig.
+Shadowing is an error, as in Zig. Matching declarations in two enclosing
+namespace scopes make an unqualified reference ambiguous; qualified member
+lookup checks only the selected namespace, not its parents.
 
 ## Result types
 
@@ -62,6 +64,26 @@ parameters are `param` instructions (name, comptime flag, type body); the
 function body refers to them, and sema binds them to arguments (runtime
 parameters) or values (comptime parameters of a generic instantiation). The
 return type is a body too, so it may depend on comptime parameters.
+
+## Fieldless struct namespaces
+
+`this` has no payload and returns the current lexical namespace's nominal type.
+Blocks and function aliases do not change that owner. Captured enclosing locals
+are not supported: immutable captures report an explicit NYI, and mutable
+cross-namespace references report Zig's accessibility error instead of leaking
+foreign instruction refs into a declaration's operand map. `field_val` / `field_ref`
+on a type value, and `field_ptr` on its address-oriented binding, resolve a
+namespace declaration through the same lazy path as `decl_val` / `decl_ref`.
+Mutable globals retain their original storage; constants retain declaration
+address identity and alignment; function values retain their lexical namespace.
+A pointer to a type binding can be loaded for namespace member lookup.
+
+Root exports are reachable immediately. A nested namespace's exports become
+reachable when its nominal type is resolved. Sema scans new namespace types
+alongside the function/global worklists, after publishing the containing type
+binding; unused namespaces and their non-exported declarations remain lazy.
+There are no new runtime namespace or `this` instructions. Field-bearing struct
+values, initialization, instance fields and layouts remain unsupported.
 
 ## Control flow
 

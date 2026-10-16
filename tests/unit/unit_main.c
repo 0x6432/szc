@@ -1383,6 +1383,66 @@ test_empty_array_storage(void)
 }
 
 static void
+test_struct_namespaces(void)
+{
+	const struct {
+		const char *source;
+		const char *error;
+	} cases[] = {
+		{"const R=@This(); pub fn main() void { const n:u8=if(R==@This())0 else 256; _=n; }", NULL},
+		{"const N=struct { const Byte=u8; const n:Byte=7; }; pub fn main() void { const n:u8=N.n; _=n; }", NULL},
+		{"const N=struct { var n:u8=7; }; pub fn main() void { N.n=8; const p=&N.n; p.*+=1; }", NULL},
+		{"const N=struct { const len:u8=7; const ptr:u8=8; }; pub fn main() void { _=N.len; _=N.ptr; }", NULL},
+		{"const N=struct { const Self=@This(); fn same() bool { return Self==@This(); } }; pub fn main() void { _=N.same(); }", NULL},
+		{"const N=struct { const Self=@This(); const Child=struct { const Self=@This(); fn same() bool { return @This()==@This().Self; } }; }; pub fn main() void { _=N.Child.same(); }", NULL},
+		{"const N=struct { const bad:u8=256; }; pub fn main() void { _=N; }", NULL},
+		{"const N=struct { export fn exported() u8 { return @This().n; } const n:u8=7; }; pub fn main() void { _=N; }", NULL},
+		{"const N=struct { export fn exported() u8 { return 256; } }; pub fn main() void {}", NULL},
+		{"const N=struct { export fn exported() u8 { return 256; } }; pub fn main() void { _=N; }", "cannot represent"},
+		{"const N=struct { const x:u8=N.x; }; pub fn main() void { _=N.x; }", "depends on itself"},
+		{"const N=struct { const x:u8=y; const y:u8=x; }; pub fn main() void { _=N.x; }", "dependency loop"},
+		{"const N=struct {}; pub fn main() void { _=N.missing; }", "has no member named"},
+		{"pub fn main() void { _=@This().missing; }", "root source file"},
+		{"const N=struct { const value:u8=7; const C=struct {}; }; pub fn main() void { _=N.C.value; }", "has no member named"},
+		{"const T=u8; pub fn main() void { _=T.missing; }", "type 'u8' has no members"},
+		{"const N=struct { value:u8, }; pub fn main() void { _=N; }", "struct_decl"},
+		{"var n:u8=1; const N=struct { var n:u8=2; fn read() u8 { return n; } }; pub fn main() void { _=N.read(); }", "ambiguous reference"},
+		{"var n:u8=1; const N=struct { var n:u8=2; fn read() void { n=3; } }; pub fn main() void { N.read(); }", "ambiguous reference"},
+		{"var n:u8=1; const N=struct { var n:u8=2; fn read() void { _=&n; } }; pub fn main() void { N.read(); }", "ambiguous reference"},
+		{"pub fn main() void { _=@This(1); }", "expected 0 argument"},
+		{"pub fn main() void { const x:u8=7; const N=struct { const y=x; }; _=N.y; }", "capturing local"},
+		{"pub fn main() void { const x:u8=7; const N=struct { fn read() u8 { return x; } }; _=N.read(); }", "capturing local"},
+		{"pub fn main() void { var x:u8=7; _=&x; const N=struct { const y=x; }; _=N.y; }", "not accessible from here"},
+		{"pub fn main() void { var x:u8=7; _=&x; const N=struct { fn read() void { x=3; } }; N.read(); }", "not accessible from here"},
+		{"pub fn main() void { var x:u8=7; _=&x; const N=struct { fn read() void { _=&x; } }; N.read(); }", "not accessible from here"},
+	};
+	for (uint32_t i = 0; i < sizeof(cases) / sizeof(cases[0]); i++) {
+		Arena arena;
+		arena_init(&arena);
+		SourceTable sources;
+		source_table_init(&sources, &arena);
+		Diag diag;
+		diag_init(&diag, &arena, &sources);
+		Interner interner;
+		intern_init(&interner, &arena);
+		const char *source = cases[i].source;
+		FileId file = source_add_memory(&sources, "struct_namespaces.zig", source, (uint32_t)strlen(source));
+		AstContainerDecl *root = parse_file(&arena, &diag, &sources, file);
+		CHECK(!diag_has_errors(&diag));
+		IrFile *ir = irgen_file(&arena, &diag, &interner, source_get(&sources, file), file, root);
+		bool success = false;
+		if (!diag_has_errors(&diag)) {
+			Sema *sema = sema_create(&arena, &diag, &interner, &sources);
+			success = sema_analyze_executable(sema, file, ir);
+		}
+		CHECK(success == (cases[i].error == NULL));
+		if (cases[i].error != NULL)
+			CHECK(diag.count != 0 && strstr(diag.items[0].message, cases[i].error) != NULL);
+		arena_free(&arena);
+	}
+}
+
+static void
 test_constant_aggregate_bit_casts(void)
 {
 	const struct {
@@ -1696,6 +1756,7 @@ main(void)
 	test_scalar_memset();
 	test_aggregate_memset();
 	test_empty_array_storage();
+	test_struct_namespaces();
 	test_scalar_memcpy();
 	test_aggregate_memcpy();
 	test_packed_bits();

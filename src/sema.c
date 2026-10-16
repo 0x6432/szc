@@ -60,6 +60,7 @@ struct SemaNamespace {
 	TypeId        type;
 	SemaDecl      *decls;
 	uint32_t      decl_count;
+	bool					exports_resolved;
 };
 
 /* Stable output and private initializer ownership for each addressable global declaration. */
@@ -1186,6 +1187,8 @@ constant_decl_address(Block *user, SemaNamespace *ns, SemaDecl *decl)
 	return comptime_operand(pointer, value_global(&sema->values, pointer, decl->global));
 }
 
+static const char *namespace_name(Sema *sema, SemaNamespace *ns);
+
 /* Analyses the value of a container-level declaration (once). */
 static Operand
 resolve_decl(Block *user, uint32_t src, SemaNamespace *ns, SemaDecl *decl, bool as_reference)
@@ -1204,10 +1207,11 @@ resolve_decl(Block *user, uint32_t src, SemaNamespace *ns, SemaDecl *decl, bool 
 	case DECL_FAILED:
 		return operand_none;
 	case DECL_IN_PROGRESS:
-		if (decl->ir.kind == IR_DECL_VAR) {
+		if (decl->ir.kind == IR_DECL_VAR || (decl->declared_type != 0
+			&& user->namespace_scope == ns && user->decl_name == decl->ir.name)) {
 			if (as_reference && decl->global != 0)
 				return decl->value;
-			sema_error(user, src, "value of declaration '%s.%s' depends on itself here", sema_type_name(sema, ns->type), intern_text(sema->interner, decl->ir.name));
+			sema_error(user, src, "value of declaration '%s.%s' depends on itself here", namespace_name(sema, ns), intern_text(sema->interner, decl->ir.name));
 		} else {
 			sema_error(user, src, "dependency loop detected");
 		}
@@ -4726,6 +4730,88 @@ load_pointer(Block *block, Operand pointer, uint32_t src)
 	return runtime_operand(child, emit_tir_un(block, pointer_type.is_volatile ? TIR_LOAD_VOLATILE : TIR_LOAD, child, src, materialize(block, pointer, src)));
 }
 
+/* Named namespace members and unqualified declarations share address identity,
+ * lazy initialization and mutable-global loads. */
+static Operand
+read_declaration(Block *block, SemaNamespace *ns, SemaDecl *decl, bool as_reference, uint32_t src)
+{
+	Operand result = resolve_decl(block, src, ns, decl, as_reference);
+	if (result.kind == OPERAND_NONE)
+		return operand_none;
+	if (decl->ir.kind == IR_DECL_VAR)
+		return as_reference ? result : load_pointer(block, result, src);
+	if (as_reference && decl->global == 0) {
+		if (decl->address_identity == 0)
+			decl->address_identity = ++block->sema->next_address_identity;
+		return analyze_ref(block, result, src, decl->address_identity, decl->alignment);
+	}
+	return result;
+}
+
+/* Merely naming a container makes its exports reachable; an unused container
+ * remains lazy. Defer nested exports until its type binding has been published. */
+static void
+resolve_namespace_exports(Block *block, SemaNamespace *ns)
+{
+	if (ns->exports_resolved)
+		return;
+	ns->exports_resolved = true;
+	for (uint32_t i = 0; i < ns->decl_count; i++) {
+		SemaDecl *decl = &ns->decls[i];
+		if ((decl->ir.flags & IR_DECL_EXPORT) != 0)
+			resolve_decl(block, decl->ir.src, ns, decl, false);
+	}
+}
+
+/* The namespace chain is stable even when resolving a member grows type tables. */
+static const char *
+namespace_name(Sema *sema, SemaNamespace *ns)
+{
+	const char *name = sema_type_name(sema, ns->type);
+	if (ns->parent == NULL)
+		return name;
+	return arena_sprintf(sema->arena, "%s.%s", namespace_name(sema, ns->parent), name);
+}
+
+/* Address-oriented IR passes a pointer to the type binding. Do not confuse
+ * namespace declarations with instance fields or an array value's .len. */
+static bool
+namespace_member(Block *block, Operand base, StringId name, bool as_reference, uint32_t src, Operand *out)
+{
+	Sema *sema = block->sema;
+	if (sema->types[base.type].kind == TYPE_POINTER) {
+		TypePointer pointer = sema->types[base.type].as.pointer;
+		if (pointer.size != POINTER_ONE || pointer.child != T_TYPE)
+			return false;
+		base = load_pointer(block, base, src);
+		if (base.kind == OPERAND_NONE) {
+			*out = operand_none;
+			return true;
+		}
+	} else if (base.type != T_TYPE) {
+		return false;
+	}
+	*out = operand_none;
+	if (!check_defined(block, base, src))
+		return true;
+	TypeId type;
+	if (!operand_to_type(block, base, src, &type))
+		return true;
+	if (sema->types[type].kind != TYPE_STRUCT) {
+		sema_error(block, src, "type '%s' has no members", sema_type_name(sema, type));
+		return true;
+	}
+	SemaNamespace *ns = sema->types[type].as.structure;
+	SemaDecl *decl = namespace_find(ns, name);
+	if (decl == NULL) {
+		sema_error(block, src, "%sstruct '%s' has no member named '%s'",
+			ns->parent == NULL ? "root source file " : "", namespace_name(sema, ns), intern_text(sema->interner, name));
+		return true;
+	}
+	*out = read_declaration(block, ns, decl, as_reference, src);
+	return true;
+}
+
 /* Project a word of the original descriptor, never an owned descriptor copy. */
 static Operand
 slice_field_address(Block *block, Operand storage, bool length, uint32_t src)
@@ -4766,6 +4852,11 @@ static Operand
 analyze_field_pointer(Block *block, Operand base, StringId name, uint32_t src)
 {
 	Sema *sema = block->sema;
+	if (base.kind == OPERAND_NONE)
+		return operand_none;
+	Operand member;
+	if (namespace_member(block, base, name, true, src, &member))
+		return member;
 	if (!pointer_type_operand(block, base, src))
 		return operand_none;
 	TypeId child = sema->types[base.type].as.pointer.child;
@@ -6078,6 +6169,8 @@ analyze_inst(Block *block, IrInstIndex index, Operand *break_value)
 		Operand base = resolve_ref(block, inst->data.name.operand);
 		if (base.kind == OPERAND_NONE)
 			break;
+		if (namespace_member(block, base, inst->data.name.name, false, src, &result))
+			break;
 		TypeId base_type = base.type;
 		if (inst->op == IR_FIELD_REF) {
 			if (!pointer_type_operand(block, base, src))
@@ -6131,6 +6224,9 @@ analyze_inst(Block *block, IrInstIndex index, Operand *break_value)
 	case IR_FN_TYPE:
 		result = analyze_func_inst(block, index);
 		break;
+	case IR_THIS:
+		result = type_operand(sema, block->namespace_scope->type);
+		break;
 	case IR_DECL_TYPE:
 		if (block->declaration_type != 0)
 			result = type_operand(sema, block->declaration_type);
@@ -6149,15 +6245,7 @@ analyze_inst(Block *block, IrInstIndex index, Operand *break_value)
 			sema_error(block, src, "use of undeclared identifier '%s'", intern_text(sema->interner, name));
 			break;
 		}
-		result = resolve_decl(block, src, ns, decl, inst->op == IR_DECL_REF);
-		if (decl->ir.kind == IR_DECL_VAR) {
-			if (inst->op == IR_DECL_VAL)
-				result = load_pointer(block, result, src);
-		} else if (inst->op == IR_DECL_REF && decl->global == 0) {
-			if (decl->address_identity == 0)
-				decl->address_identity = ++sema->next_address_identity;
-			result = analyze_ref(block, result, src, decl->address_identity, decl->alignment);
-		}
+		result = read_declaration(block, ns, decl, inst->op == IR_DECL_REF, src);
 		break;
 	}
 	case IR_INT:
@@ -6744,11 +6832,8 @@ sema_analyze_executable(Sema *sema, FileId file, const IrFile *ir)
 	block_init_comptime(&block, sema, root, &map, root_name);
 	uint32_t root_src = ir->insts[ir->root].src;
 
-	/* Exported declarations are analysed even if nothing references them. */
-	for (uint32_t i = 0; i < root->decl_count; i++) {
-		if (root->decls[i].ir.flags & IR_DECL_EXPORT)
-			resolve_decl(&block, root->decls[i].ir.src, root, &root->decls[i], false);
-	}
+	/* Root exports are reachable even before main is resolved. */
+	resolve_namespace_exports(&block, root);
 
 	StringId main_name = intern_cstr(sema->interner, "main");
 	SemaDecl *main_decl = namespace_find(root, main_name);
@@ -6777,7 +6862,14 @@ sema_analyze_executable(Sema *sema, FileId file, const IrFile *ir)
 
 	uint32_t function_index = 0;
 	GlobalId global_index = 1;
-	while (function_index < sema->queue_count || global_index < sema->global_count) {
+	TypeId namespace_index = 1;
+	while (function_index < sema->queue_count || global_index < sema->global_count
+		|| namespace_index < sema->type_count) {
+		while (namespace_index < sema->type_count) {
+			Type type = sema->types[namespace_index++];
+			if (type.kind == TYPE_STRUCT)
+				resolve_namespace_exports(&block, type.as.structure);
+		}
 		while (function_index < sema->queue_count)
 			analyze_func_body(sema, sema->queue[function_index++]);
 		while (global_index < sema->global_count) {

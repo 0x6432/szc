@@ -19,6 +19,59 @@ Read this first when resuming work (the sandbox resets often).
 
 ## Latest follow-up checkpoint
 
+- M6.1a fieldless struct namespaces and lexical `@This()` are implemented.
+  Qualified reads/addresses reuse lazy declaration resolution, original global
+  storage and constant identity/alignment. Nested types/functions/aliases,
+  callbacks, mutable arrays/descriptors, `.len` namespace declarations and
+  explicit pointers to type bindings work. Unqualified inner/outer declaration
+  collisions are ambiguous; qualified lookup never searches parents. Functions
+  and blocks keep their lexical namespace. Nested exports become reachable only
+  when their type is named, after its binding is published.
+  A capture audit found silently accepted foreign local refs; these now reject:
+  immutable local/parameter captures are explicit NYI, while mutable crossings
+  match Zig's accessibility error for reads/writes/addresses. Runtime struct
+  fields/layout/values/defaults/instance methods and general reflection/imports
+  remain unsupported; M6.1 and M7.6 are partial, not complete. Anonymous/local
+  diagnostic type names and indirect cycle graphs remain incomplete.
+  Reference matrix: 76 comparisons through emit-qbe, 40 exact primary errors.
+  Native fixture passes official Zig Debug/ReleaseFast. Twenty-six focused unit
+  cases, IR/TIR/QBE, eleven error goldens and six seeds per irgen/sema stage.
+  Final validation uses /data/namespace-verified/{gcc,clang,optimized}.
+  Frozen GCC/Clang Werror ASan/UBSan pass 2006 units/1143 goldens, 121+4
+  native, 16 driver, 49 compiler-runner checks, full C/ABI/storage/alignment,
+  96 observed volatile sequences and 300 safety cases. Optimized GCC native/
+  safety passes. Both compilers pass 20000 standalone mutations/stage with
+  256/256/89/145 seeds. Four fresh 60s libFuzzer runs pass:
+  2051965/52624/50390/53661. Forced main unit/golden tests pass. Five memory matrices
+  pass on the final frozen Clang executable: aggregate memset 154/44, scalar
+  memset 158/69, aggregate memcpy 127/26, scalar memcpy 312/138 and empty array
+  storage 112/24. Final evidence: /data/namespace-reference-v3.log,
+  /data/namespace-native-guard-final.log, /data/namespace-fast-reference.log,
+  /data/namespace-main-final.log, /data/namespace-guard-*.log and
+  /data/namespace-verified-{gcc,clang,optimized,fuzz}.log.
+  Next scoped work is canonical quoted identifier names, before @hasDecl.
+  Actual Zig accepts unquoted/escaped aliases of the same name; current
+  intern_span retains raw @"..." spelling. An isolated /data/identifiers-next
+  development copy exists but is not integrated or final evidence.
+  /data/namespace-final predates the capture guard; its validation was stopped
+  and is NOT final evidence. Source and frozen builds must not be mixed.
+- Hosted investigation during M6.1a: ac01e39 GCC job 117077017998 times out on
+  five safety cases (three native 15s and two compiler 120s), then receives a
+  runner shutdown/exit 143. No semantic mismatch or sanitizer failure is shown.
+  All five cases replay five times on each exact ac01e39 GCC/Clang source build
+  with unchanged deadlines: 50 targeted case runs pass (plus harness sanity
+  cases); /data/ci-empty-safety-repro.log. Its Clang job remains unverified here.
+  e568da8 GCC job 117066560190 similarly times out on native shl_size_5 then
+  shuts down; exact-source replay passes 20 repetitions unchanged. Its Clang job
+  117066560278 reports lost runner communication; logs return 404. A targeted
+  failed-jobs rerun returned 201 after completion; not yet green.
+  Scalar-copy 6c3ea34's diagnosed Clang rerun returned 201 and is now successful
+  (57 successful jobs total), but its GCC rerun again reports lost communication
+  and downloadable logs return 404, so the workflow is not green. Do not hide
+  these failures by raising deadlines or claim the hosted cause is proven.
+  Evidence: /data/ci-empty-gcc-failure.log, /data/ci-fill-gcc-failure.log,
+  /data/ci-fill-gcc-repro.log, /data/ci-fill-clang-annotations.json and
+  /data/namespace-ci-final-*.json. Previously confirmed bedaf69 stays green.
 - **Development resumed at the user's explicit request on 2026-10-16.** The
   earlier pause is superseded. Continue coherent implementation, validation,
   documentation, commit/push and subsequent milestones; Q6 remains M10.2.

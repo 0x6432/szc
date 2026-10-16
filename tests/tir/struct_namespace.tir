@@ -1,0 +1,36 @@
+global szc.g.1: u8 = 1
+fn szc.main.1: fn () u8 {
+  %0: *u8 = const szc.g.1
+  %1: u8 = const 7
+  %2: void = store %0, %1
+  %3: bool = call szc.same.2()
+  %4: bool = not %3
+  %5: void = block {
+    %9: noreturn = condbr %4 then {
+      %6: u8 = const 1
+      %7: noreturn = ret %6
+    } else {
+      %8: noreturn = br %5
+    }
+  }
+  %10: u8 = const 2
+  %11: u8 = call szc.add.3(%10)
+  %12: u8 = const 9
+  %13: u8 = sub %11, %12
+  %14: noreturn = ret %13
+}
+fn szc.same.2: fn () bool {
+  %0: bool = const true
+  %1: noreturn = ret %0
+}
+fn szc.add.3: fn (u8) u8 {
+  %0: u8 = arg 0
+  %1: *u8 = const szc.g.1
+  %2: u8 = load %1
+  %3: u8 = add %2, %0
+  %4: *u8 = const szc.g.1
+  %5: void = store %4, %3
+  %6: *u8 = const szc.g.1
+  %7: u8 = load %6
+  %8: noreturn = ret %7
+}

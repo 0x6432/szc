@@ -438,7 +438,9 @@ namespace_has(const NamespaceScope *namespace_scope, StringId name)
 typedef enum LookupKind {
 	LOOKUP_NOT_FOUND,
 	LOOKUP_LOCAL,
+	LOOKUP_CAPTURED_LOCAL,
 	LOOKUP_DECL,
+	LOOKUP_AMBIGUOUS,
 } LookupKind;
 
 typedef struct Lookup {
@@ -452,23 +454,42 @@ lookup_name(Scope *scope, StringId name)
 	Lookup result;
 	result.kind = LOOKUP_NOT_FOUND;
 	result.local = NULL;
+	bool crossed_namespace = false;
 	for (; scope != NULL; scope = scope->parent) {
 		if (scope->kind == SCOPE_LOCAL) {
 			LocalScope *local = (LocalScope *)scope;
 			if (local->name == name) {
-				result.kind = LOOKUP_LOCAL;
+				result.kind = crossed_namespace ? LOOKUP_CAPTURED_LOCAL : LOOKUP_LOCAL;
 				result.local = local;
 				return result;
 			}
 		} else if (scope->kind == SCOPE_NAMESPACE) {
 			if (namespace_has((NamespaceScope *)scope, name)) {
+				if (result.kind == LOOKUP_DECL) {
+					result.kind = LOOKUP_AMBIGUOUS;
+					return result;
+				}
+				/* Namespace declarations do not shadow outer declarations. */
 				result.kind = LOOKUP_DECL;
-				return result;
 			}
-			/* TODO(M7.3): locals of an enclosing function are captured by nested containers. */
+			crossed_namespace = true;
 		}
 	}
 	return result;
+}
+
+/* Do not leak a ref from an enclosing function into an unrelated operand map.
+ * Capturing immutable values needs closure IR; mutable crossings are invalid Zig. */
+static bool
+check_capture(IrGen *gen, Lookup found, uint32_t src)
+{
+	if (found.kind != LOOKUP_CAPTURED_LOCAL)
+		return false;
+	const char *format = found.local->local_kind == LOCAL_VAR
+		? "mutable '%s' not accessible from here"
+		: "not supported by szc yet: capturing local '%s' across a namespace";
+	error_at(gen, src, format, intern_text(gen->interner, found.local->name));
+	return true;
 }
 
 /* Reports `name` if it shadows a local or declaration in scope. */
@@ -476,9 +497,9 @@ static void
 check_shadowing(IrGen *gen, Scope *scope, StringId name, uint32_t src)
 {
 	Lookup found = lookup_name(scope, name);
-	if (found.kind == LOOKUP_LOCAL)
+	if (found.kind == LOOKUP_LOCAL || found.kind == LOOKUP_CAPTURED_LOCAL)
 		error_at(gen, src, "local '%s' shadows an earlier local", intern_text(gen->interner, name));
-	else if (found.kind == LOOKUP_DECL)
+	else if (found.kind == LOOKUP_DECL || found.kind == LOOKUP_AMBIGUOUS)
 		error_at(gen, src, "local '%s' shadows a declaration", intern_text(gen->interner, name));
 }
 
@@ -848,6 +869,8 @@ identifier(GenBody *body, Scope *scope, ResultInfo info, AstNode *node)
 	}
 	StringId name = intern_span(gen, identifier_node->name);
 	Lookup found = lookup_name(scope, name);
+	if (check_capture(gen, found, node->offset))
+		return IR_REF_VOID_VALUE;
 	if (found.kind == LOOKUP_LOCAL) {
 		LocalScope *local = found.local;
 		if (local->local_kind == LOCAL_VAR)
@@ -857,6 +880,10 @@ identifier(GenBody *body, Scope *scope, ResultInfo info, AstNode *node)
 	if (found.kind == LOOKUP_DECL)
 		return rvalue(body, info, emit_name(body, IR_DECL_VAL, node->offset, name, IR_REF_NONE), node->offset);
 
+	if (found.kind == LOOKUP_AMBIGUOUS) {
+		error_at(gen, node->offset, "%s", "ambiguous reference");
+		return IR_REF_VOID_VALUE;
+	}
 	IrRef ref;
 	if (lookup_primitive(body, node->offset, text, length, &ref))
 		return rvalue(body, info, ref, node->offset);
@@ -875,6 +902,8 @@ lvalue(GenBody *body, Scope *scope, AstNode *node)
 		AstIdentifier *identifier_node = AST_CAST(AstIdentifier, node, AST_IDENTIFIER);
 		StringId name = intern_span(gen, identifier_node->name);
 		Lookup found = lookup_name(scope, name);
+		if (check_capture(gen, found, node->offset))
+			return IR_REF_VOID_VALUE;
 		if (found.kind == LOOKUP_LOCAL) {
 			if (found.local->local_kind == LOCAL_VAR)
 				return found.local->ref;
@@ -883,6 +912,10 @@ lvalue(GenBody *body, Scope *scope, AstNode *node)
 		}
 		if (found.kind == LOOKUP_DECL)
 			return emit_name(body, IR_DECL_REF, node->offset, name, IR_REF_NONE);
+		if (found.kind == LOOKUP_AMBIGUOUS) {
+			error_at(gen, node->offset, "%s", "ambiguous reference");
+			return IR_REF_VOID_VALUE;
+		}
 		error_at(gen, node->offset, "use of undeclared identifier '%s'", intern_text(gen->interner, name));
 		return IR_REF_VOID_VALUE;
 	}
@@ -916,6 +949,8 @@ address_of(GenBody *body, Scope *scope, ResultInfo info, AstNode *node)
 	if (node->kind == AST_IDENTIFIER) {
 		StringId name = intern_span(body->gen, AST_CAST(AstIdentifier, node, AST_IDENTIFIER)->name);
 		Lookup found = lookup_name(scope, name);
+		if (check_capture(body->gen, found, node->offset))
+			return IR_REF_VOID_VALUE;
 		if (found.kind == LOOKUP_LOCAL)
 			return found.local->local_kind == LOCAL_VAR ? found.local->ref : reference_value(body, found.local->ref, node->offset);
 		if (found.kind == LOOKUP_DECL)
@@ -1138,6 +1173,7 @@ typedef enum Builtin {
 	BUILTIN_ALIGN_CAST,
 	BUILTIN_PTR_CAST,
 	BUILTIN_LAYOUT,
+	BUILTIN_THIS,
 	BUILTIN_ARITH,
 	BUILTIN_INT_BITS,
 	BUILTIN_MEMCPY,
@@ -1153,6 +1189,7 @@ typedef struct BuiltinInfo {
 } BuiltinInfo;
 
 static const BuiltinInfo builtin_table[] = {
+	{"This", BUILTIN_THIS, 0, IR_THIS},
 	{"panic", BUILTIN_PANIC, 1, IR_OP_COUNT},
 	{"as", BUILTIN_AS, 2, IR_OP_COUNT},
 	{"bitCast", BUILTIN_BIT_CAST, 1, IR_OP_COUNT},
@@ -1318,6 +1355,8 @@ builtin_call(GenBody *body, Scope *scope, ResultInfo info, AstNode *node)
 	case BUILTIN_ALIGN_CAST:
 	case BUILTIN_PTR_CAST:
 		return IR_REF_VOID_VALUE;
+	case BUILTIN_THIS:
+		return rvalue(body, info, emit_none(body, IR_THIS, node->offset), node->offset);
 	case BUILTIN_PANIC: {
 		IrPanic payload;
 		IrPointerType slice = {IR_REF_TYPE_U8, IR_POINTER_SLICE | IR_POINTER_CONST, 0, 0, IR_REF_NONE, 0};

@@ -1,0 +1,3 @@
+tests/tir/errors/namespace_dependency.zig:1:34: error: value of declaration 'namespace_dependency.N.value' depends on itself here
+const N=struct { const value:u8=N.value; };
+                                 ^

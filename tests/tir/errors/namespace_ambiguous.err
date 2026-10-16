@@ -1,0 +1,3 @@
+tests/tir/errors/namespace_ambiguous.zig:2:58: error: ambiguous reference
+const N=struct { const value:u8=2; fn read() u8 { return value; } };
+                                                         ^
