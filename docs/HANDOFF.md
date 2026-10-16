@@ -19,6 +19,49 @@ Read this first when resuming work (the sandbox resets often).
 
 ## Latest follow-up checkpoint
 
+- M5.4f canonical quoted identifiers is integrated. This supersedes the prior
+  checkpoint's raw @"..." name limitation and isolated-development status.
+  Names decode with the shared string escape helper before interning. Bare,
+  quoted, byte-/Unicode-escaped spellings identify the same declaration/local/
+  parameter/capture/label or namespace member. Empty/NUL names reject; invalid
+  string escapes and surrogate encodings retain their existing diagnostics.
+  Unquoted primitive lookup stays independent of quoted primitive-name bindings
+  for reads, addresses and assignment. Container declaration name/source metadata
+  is decoded once, preventing duplicate invalid-name diagnostics.
+  Reference: 89 comparisons through emit-qbe, 29 exact primary diagnostics.
+  Eighteen unit cases, IR/TIR/QBE and eight error goldens, three irgen/sema seeds,
+  and a hosted matrix. Final source copies are /data/identifiers-final/{gcc,clang,
+  optimized}; /data/identifiers-verified predates decode-once metadata and was
+  stopped, so it is NOT final evidence. /data/identifiers-next is integrated;
+  do not copy its older docs over main. Main remains authoritative.
+  M5.4/M6.1/M7.6 remain partial. @hasDecl/@field/reflection and runtime struct
+  fields/layout/values are not implemented. Other existing primitive-declaration
+  validation/local-shadowing diagnostic gaps and namespace capture restrictions
+  remain. Non-plain extern/export symbol quoting is not covered here; backend
+  symbol-name handling still needs its own scoped audit; do not infer a complete language phase from this fix.
+  Frozen GCC/Clang Werror ASan/UBSan pass 2051 units/1154 goldens, 122+4
+  native, 16 driver, 50 compiler-runner checks, full C/ABI/storage/alignment,
+  96 observed volatile sequences and 300 safety cases. Optimized GCC native/
+  safety and both 20000 standalone mutations/stage pass (256/256/92/148 seeds).
+  Four fresh 60s libFuzzer runs pass: 2483191/47533/49292/54416.
+  Forced main unit/golden tests pass. The final reference matrices pass:
+  identifiers 89/29, namespaces 76/40 and character literals 149/12. Focused
+  native Zig Debug/ReleaseFast pass; full e2e remains szc-only, not a blanket
+  official-Zig differential claim. Evidence: /data/identifiers-final-*.log,
+  /data/identifiers-native-final.log, /data/identifiers-fast-reference.log and
+  /data/identifiers-main-final.log.
+  Hosted snapshot: namespace 9fdd4fb has 36 success/five running/20 queued and
+  no failures. Empty-array ac01e39 finished 59 success/two failures. Newly failed
+  Clang job 117077018330 reports lost runner communication; logs return 404.
+  Together with the already investigated GCC failure, targeted failed-jobs rerun
+  returned 201 after completion. Its unchanged-deadline exact-source replay is
+  recorded below; neither hosted rerun is yet confirmed green. Aggregate-fill
+  reruns remain active; scalar-copy is 57 successful/one failed GCC. New evidence:
+  /data/ci-empty-clang-annotations.json and /data/identifiers-ci-*.json.
+  The next natural dependency-sized step is @hasDecl on existing namespaces,
+  including constant byte-slice names; inspect Zig's resolveConstStringIntern
+  and checkNamespaceType ordering before implementation. No @hasDecl code has
+  been started. Q6 remains deferred to M10.2.
 - M6.1a fieldless struct namespaces and lexical `@This()` are implemented.
   Qualified reads/addresses reuse lazy declaration resolution, original global
   storage and constant identity/alignment. Nested types/functions/aliases,

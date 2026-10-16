@@ -36,6 +36,14 @@ irgen resolves every identifier lexically:
   sema looks the name up in the namespace of the body being analysed and its
   parents;
 - anything else is reported as "use of undeclared identifier".
+Quoted identifier tokens are decoded through the shared string-literal escape
+decoder before interning: bare, quoted, byte-escaped and Unicode-escaped names
+identify the same binding. Empty/NUL-containing names are diagnosed. Declaration
+name/source metadata is collected once and reused when lowering bodies.
+Unquoted primitives retain priority over declarations with quoted primitive
+names, for value, address and assignment paths; quoted tokens do not implicitly
+name primitives.
+
 Shadowing is an error, as in Zig. Matching declarations in two enclosing
 namespace scopes make an unqualified reference ambiguous; qualified member
 lookup checks only the selected namespace, not its parents.

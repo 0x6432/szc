@@ -1,0 +1,3 @@
+tests/tir/errors/quoted_escape.zig:1:10: error: invalid escape character: 'q'
+const @"\q":u8=7; pub fn main() void {}
+         ^

@@ -1,0 +1,3 @@
+tests/tir/errors/quoted_surrogate.zig:1:11: error: unicode escape does not correspond to a valid unicode scalar value
+const @"\u{d800}":u8=7; pub fn main() void {}
+          ^

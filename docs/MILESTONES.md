@@ -116,6 +116,7 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
   - [x] **M5.4c Scalar-sentinel slices**: descriptors, inference, inherited slicing and element bounds.
   - [x] **M5.4d Explicit sentinel assertions**: contextual typing, constant checks and ordered runtime guards (validated in isolated checkout).
   - [x] **M5.4e Character literals**: comptime Unicode code points, byte/Unicode escapes and strict raw UTF-8 decoding.
+  - [x] **M5.4f Canonical quoted identifiers**: shared string escapes, namespace/local/label aliases and quoted primitive bindings.
 - [~] **M5.5 Casting builtins**: `@intCast`, `@truncate`, `@ptrCast`, `@intFromPtr`, `@ptrFromInt`, `@bitCast`, `@as`.
   - [x] **M5.5a Pointer address conversion (`@intFromPtr`).**
   - [x] **M5.5b Integer-to-pointer conversion (`@ptrFromInt`)**: constant/numeric addresses and runtime guards (locally validated).
@@ -192,6 +193,39 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
 ## Completed milestone log
 
 (newest first; each entry: what, limitations, interactions)
+
+### M5.4f Canonical quoted identifiers
+
+- **What**: quoted identifier tokens use the same escape/UTF-8 encoding helper as
+  string literals before names are interned. Bare/quoted/byte-/Unicode-escaped
+  spellings share binding identity across declarations, references, namespace
+  members, locals, parameters, captures and labels. Empty/NUL-containing names
+  and invalid string escapes reject. Quoted primitive-name bindings coexist with
+  unquoted primitive types: primitive reads/addresses bypass named declarations,
+  while assignment to an unquoted primitive rejects. Quoted primitive tokens do
+  not implicitly resolve primitive types. Duplicate declarations and declaration
+  shadowing diagnostics use canonical names; container name/source metadata is
+  decoded once and reused when lowering bodies, avoiding duplicate diagnostics.
+- **Validation**: 89 actual-Zig comparisons through QBE emission, including 29
+  exact primary diagnostics; native callback/storage/Unicode/label/primitive
+  fixture passes official Zig Debug/ReleaseFast. Eighteen focused unit cases,
+  IR/TIR/QBE and eight error goldens, three seeds per irgen/sema stage, and a
+  hosted differential matrix. Existing character and namespace matrices are
+  regression coverage for shared decoding and lexical declaration lookup.
+  Frozen GCC/Clang Werror ASan/UBSan pass 2051 units/1154 goldens, 122+4
+  native, 16 driver, full C/ABI/storage/alignment, 96 volatile sequences and 300
+  safety cases. Optimized native/safety, forced main unit/golden tests and both
+  20000 standalone mutations/stage pass (256/256/92/148 seeds). Final namespace
+  76/40 and character-literal 149/12 reference regressions pass.
+  Four fresh 60s libFuzzer runs pass: 2483191/47533/49292/54416.
+- **Interactions/limits**: M5.4 remains partial; this is canonical naming, not
+  reflection, dynamic field access, imports or runtime Unicode processing.
+  Namespace local captures, field-bearing struct values/layout, general
+  comptime/generic interpretation and indirect-cycle diagnostic graphs remain
+  unsupported as recorded in M6.1a. Broader pre-existing primitive declaration
+  validation and local-shadowing diagnostic gaps are not claimed fixed here.
+  Non-plain extern/export symbol quoting is not covered; internal names are
+  safely mangled, but external symbol-name handling needs a separate audit.
 
 ### M6.1a Fieldless struct namespaces and lexical @This()
 

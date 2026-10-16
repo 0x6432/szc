@@ -1,0 +1,3 @@
+tests/tir/errors/quoted_shadow.zig:1:47: error: local constant shadows declaration of 'answer'
+const answer:u8=7; pub fn main() void { const @"\x61nswer":u8=8; _=answer; }
+                                              ^

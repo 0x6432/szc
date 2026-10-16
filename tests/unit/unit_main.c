@@ -1443,6 +1443,58 @@ test_struct_namespaces(void)
 }
 
 static void
+test_quoted_identifiers(void)
+{
+	const struct {
+		const char *source;
+		const char *error;
+	} cases[] = {
+		{"const @\"answer\":u8=7; pub fn main() void { _=answer; }", NULL},
+		{"const answer:u8=7; pub fn main() void { _=@\"\\x61nswer\"; }", NULL},
+		{"const @\"\\u{e9}\":u8=7; pub fn main() void { _=@\"é\"; }", NULL},
+		{"const N=struct { var @\"\\x76alue\":u8=7; }; pub fn main() void { N.value+=1; }", NULL},
+		{"fn @\"space name\"(@\"\\x6e\":u8) u8 { return n; } pub fn main() void { _=@\"space\\x20name\"(7); }", NULL},
+		{"pub fn @\"\\x6dain\"() void {}", NULL},
+		{"pub fn main() void { @\"\\x6cab\": { break :lab; } }", NULL},
+		{"const @\"u8\":u8=7; pub fn main() void { _=@\"u8\"; _=@sizeOf(u8); }", NULL},
+		{"var @\"bool\":u8=7; pub fn main() void { @\"bool\"+=1; const p:*const type=&bool; _=p; }", NULL},
+		{"var @\"u8\":u8=7; pub fn main() void { u8=3; }", "cannot assign to constant"},
+		{"pub fn main() void { _=@\"u8\"; }", "use of undeclared identifier 'u8'"},
+		{"const @\"\":u8=7; pub fn main() void {}", "identifier cannot be empty"},
+		{"const @\"a\\x00b\":u8=7; pub fn main() void {}", "identifier cannot contain null bytes"},
+		{"const @\"\\u{0}\":u8=7; pub fn main() void {}", "identifier cannot contain null bytes"},
+		{"const @\"\\q\":u8=7; pub fn main() void {}", "invalid escape character"},
+		{"const @\"\\u{d800}\":u8=7; pub fn main() void {}", "valid unicode scalar"},
+		{"const answer:u8=7; const @\"\\x61nswer\":u8=8; pub fn main() void { _=answer; }", "duplicate struct member name"},
+		{"const answer:u8=7; pub fn main() void { const @\"\\x61nswer\":u8=8; _=answer; }", "local constant shadows declaration"},
+	};
+	for (uint32_t i = 0; i < sizeof(cases) / sizeof(cases[0]); i++) {
+		Arena arena;
+		arena_init(&arena);
+		SourceTable sources;
+		source_table_init(&sources, &arena);
+		Diag diag;
+		diag_init(&diag, &arena, &sources);
+		Interner interner;
+		intern_init(&interner, &arena);
+		const char *source = cases[i].source;
+		FileId file = source_add_memory(&sources, "quoted_identifiers.zig", source, (uint32_t)strlen(source));
+		AstContainerDecl *root = parse_file(&arena, &diag, &sources, file);
+		CHECK(!diag_has_errors(&diag));
+		IrFile *ir = irgen_file(&arena, &diag, &interner, source_get(&sources, file), file, root);
+		bool success = false;
+		if (!diag_has_errors(&diag)) {
+			Sema *sema = sema_create(&arena, &diag, &interner, &sources);
+			success = sema_analyze_executable(sema, file, ir);
+		}
+		CHECK(success == (cases[i].error == NULL));
+		if (cases[i].error != NULL)
+			CHECK(diag.count != 0 && strstr(diag.items[0].message, cases[i].error) != NULL);
+		arena_free(&arena);
+	}
+}
+
+static void
 test_constant_aggregate_bit_casts(void)
 {
 	const struct {
@@ -1757,6 +1809,7 @@ main(void)
 	test_aggregate_memset();
 	test_empty_array_storage();
 	test_struct_namespaces();
+	test_quoted_identifiers();
 	test_scalar_memcpy();
 	test_aggregate_memcpy();
 	test_packed_bits();

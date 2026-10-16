@@ -1,0 +1,3 @@
+tests/tir/errors/quoted_nul.zig:1:7: error: identifier cannot contain null bytes
+const @"a\x00b":u8=7; pub fn main() void {}
+      ^

@@ -1,0 +1,43 @@
+function w $szc.main.1() {
+@start
+	jmp @b0
+@b0
+	%t4 =w call $szc.fn.2(w 7)
+	%t4 =w and %t4, 255
+	%t6 =w sub %t4, 8
+	%t6 =w and %t6, 255
+	%g6_overflow =w cultw %t4, 8
+	jnz %g6_overflow, @g6_overflow_panic, @g6_overflow_ok
+@g6_overflow_panic
+	call $szc.panic.0()
+	hlt
+@g6_overflow_ok
+	ret %t6
+}
+
+function w $szc.fn.2(w %t0) {
+@start
+	%t2 =w add %t0, 1
+	%t2 =w and %t2, 255
+	%g2_overflow =w cultw %t2, %t0
+	jnz %g2_overflow, @g2_overflow_panic, @g2_overflow_ok
+@g2_overflow_panic
+	call $szc.panic.0()
+	hlt
+@g2_overflow_ok
+	ret %t2
+}
+
+data $szc.panic.msg.0 = { b "integer overflow\n", b 0 }
+function $szc.panic.0() {
+@start
+	call $write(w 2, l $szc.panic.msg.0, l 17)
+	call $abort()
+	hlt
+}
+
+export function w $main() {
+@start
+	%status =w call $szc.main.1()
+	ret %status
+}

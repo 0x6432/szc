@@ -1,0 +1,59 @@
+%34 = struct_decl (flags=0) {
+  decl const "answer" type {
+    %0 = break_inline result, @type_u8
+  } value {
+    %1 = decl_type
+    %2 = int 7
+    %3 = as %1, %2
+    %4 = break_inline result, %3
+  }
+  decl const "N" value {
+    %15 = struct_decl (flags=0) {
+      decl fn "space name" value {
+        %13 = func "space name" {
+          %6 = param "n" type {
+            %5 = break_inline result, @type_u8
+          }
+          ret type {
+            %7 = break_inline result, @type_u8
+          }
+          body insts {
+            %8 = ret_type
+            %9 = int 1
+            %10 = add %6, %9
+            %11 = as_return %8, %10
+            %12 = ret %11
+          }
+        }
+        %14 = break_inline result, %13
+      }
+    }
+    %16 = break_inline result, %15
+  }
+  decl fn "main" pub value {
+    %32 = func "main" {
+      ret type {
+        %17 = break_inline result, @type_u8
+      }
+      body insts {
+        %18 = block  {
+          %19 = break %18, @void_value
+        }
+        %20 = ret_type
+        %21 = decl_val "N"
+        %22 = field_val "space name", %21
+        %23 = call %22 arg0 {
+          %24 = arg_type %23, 0
+          %25 = decl_val "answer"
+          %26 = as %24, %25
+          %27 = break_inline result, %26
+        }
+        %28 = int 8
+        %29 = sub %23, %28
+        %30 = as_return %20, %29
+        %31 = ret %30
+      }
+    }
+    %33 = break_inline result, %32
+  }
+}

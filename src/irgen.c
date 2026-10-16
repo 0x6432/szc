@@ -124,9 +124,14 @@ error_at(IrGen *gen, uint32_t offset, const char *format, const char *argument)
 	diag_report(gen->diag, DIAG_ERROR, gen->file, offset, format, argument);
 }
 
+static StringId quoted_identifier(IrGen *gen, Span span);
+
 static StringId
 intern_span(IrGen *gen, Span span)
 {
+	if (span.end - span.start >= 2 && gen->source[span.start] == '@'
+		&& gen->source[span.start + 1] == '"')
+		return quoted_identifier(gen, span);
 	return intern(gen->interner, gen->source + span.start, span.end - span.start);
 }
 
@@ -402,17 +407,34 @@ parse_int_type_name(const char *text, uint32_t length, bool *is_signed, uint32_t
 	return true;
 }
 
+/* A well-known primitive does not require a new IR instruction. */
+static IrRef
+primitive_ref(const char *text, uint32_t length)
+{
+	for (size_t i = 0; i < sizeof(primitives) / sizeof(primitives[0]); i++) {
+		const char *spelling = primitives[i].spelling;
+		if (spelling != NULL && strlen(spelling) == length && memcmp(spelling, text, length) == 0)
+			return primitives[i].ref;
+	}
+	return IR_REF_NONE;
+}
+
+static bool
+is_primitive_name(const char *text, uint32_t length)
+{
+	bool is_signed;
+	uint32_t bits;
+	return primitive_ref(text, length) != IR_REF_NONE
+		|| parse_int_type_name(text, length, &is_signed, &bits);
+}
+
 /* Returns true and sets *ref if `text` names a primitive value or type. */
 static bool
 lookup_primitive(GenBody *body, uint32_t src, const char *text, uint32_t length, IrRef *ref)
 {
-	for (size_t i = 0; i < sizeof(primitives) / sizeof(primitives[0]); i++) {
-		const char *spelling = primitives[i].spelling;
-		if (spelling != NULL && strlen(spelling) == length && memcmp(spelling, text, length) == 0) {
-			*ref = primitives[i].ref;
-			return true;
-		}
-	}
+	*ref = primitive_ref(text, length);
+	if (*ref != IR_REF_NONE)
+		return true;
 	bool is_signed;
 	uint32_t bits;
 	if (parse_int_type_name(text, length, &is_signed, &bits)) {
@@ -494,13 +516,13 @@ check_capture(IrGen *gen, Lookup found, uint32_t src)
 
 /* Reports `name` if it shadows a local or declaration in scope. */
 static void
-check_shadowing(IrGen *gen, Scope *scope, StringId name, uint32_t src)
+check_shadowing(IrGen *gen, Scope *scope, StringId name, uint32_t src, const char *category)
 {
 	Lookup found = lookup_name(scope, name);
 	if (found.kind == LOOKUP_LOCAL || found.kind == LOOKUP_CAPTURED_LOCAL)
 		error_at(gen, src, "local '%s' shadows an earlier local", intern_text(gen->interner, name));
 	else if (found.kind == LOOKUP_DECL || found.kind == LOOKUP_AMBIGUOUS)
-		error_at(gen, src, "local '%s' shadows a declaration", intern_text(gen->interner, name));
+		diag_report(gen->diag, DIAG_ERROR, gen->file, src, "%s shadows declaration of '%s'", category, intern_text(gen->interner, name));
 }
 
 static void
@@ -679,26 +701,26 @@ hex_digit(uint8_t c)
 }
 
 static IrRef
-literal_error(GenBody *body, uint32_t start, uint32_t index, const char *message, uint8_t c)
+literal_error(IrGen *gen, uint32_t start, uint32_t index, const char *message, uint8_t c)
 {
-	const char *text = arena_sprintf(body->gen->arena, message, (unsigned)c);
-	error_at(body->gen, start + index, "%s", text);
+	const char *text = arena_sprintf(gen->arena, message, (unsigned)c);
+	error_at(gen, start + index, "%s", text);
 	return IR_REF_VOID_VALUE;
 }
 
 /* Escapes yield a code point; string encoding separately rejects surrogates.
  * Zig 0.17 parseCharLiteral accepts escaped surrogate values as integers. */
 static bool
-literal_escape_error(GenBody *body, Span span, uint32_t index, const char *message, uint8_t c)
+literal_escape_error(IrGen *gen, Span span, uint32_t index, const char *message, uint8_t c)
 {
-	(void)literal_error(body, span.start, index, message, c);
+	(void)literal_error(gen, span.start, index, message, c);
 	return false;
 }
 
 static bool
-literal_escape(GenBody *body, Span span, uint32_t *index, uint32_t *result)
+literal_escape(IrGen *gen, Span span, uint32_t *index, uint32_t *result)
 {
-	const uint8_t *text = (const uint8_t *)body->gen->source + span.start;
+	const uint8_t *text = (const uint8_t *)gen->source + span.start;
 	uint32_t length = span.end - span.start;
 	uint32_t i = *index + 1;
 	uint32_t escape = i;
@@ -716,32 +738,32 @@ literal_escape(GenBody *body, Span span, uint32_t *index, uint32_t *result)
 		for (uint32_t j = 0; j < 2; j++, i++) {
 			uint32_t digit = i < length ? hex_digit(text[i]) : UINT32_MAX;
 			if (digit == UINT32_MAX)
-				return literal_escape_error(body, span, i, "expected hex digit, found '%c'", i < length ? text[i] : 0);
+				return literal_escape_error(gen, span, i, "expected hex digit, found '%c'", i < length ? text[i] : 0);
 			value = value * 16 + digit;
 		}
 		break;
 	case 'u':
 		if (i >= length || text[i] != '{')
-			return literal_escape_error(body, span, i, "expected '{', found '%c'", i < length ? text[i] : 0);
+			return literal_escape_error(gen, span, i, "expected '{', found '%c'", i < length ? text[i] : 0);
 		i++;
 		if (i < length && text[i] == '}')
-			return literal_escape_error(body, span, i, "empty unicode escape sequence", 0);
+			return literal_escape_error(gen, span, i, "empty unicode escape sequence", 0);
 		value = 0;
 		while (i < length && text[i] != '}') {
 			uint32_t digit = hex_digit(text[i]);
 			if (digit == UINT32_MAX)
-				return literal_escape_error(body, span, i, "expected hex digit or '}', found '%c'", text[i]);
+				return literal_escape_error(gen, span, i, "expected hex digit or '}', found '%c'", text[i]);
 			value = value * 16 + digit;
 			if (value > 0x10ffff)
-				return literal_escape_error(body, span, i, "unicode escape does not correspond to a valid unicode scalar value", 0);
+				return literal_escape_error(gen, span, i, "unicode escape does not correspond to a valid unicode scalar value", 0);
 			i++;
 		}
 		if (i >= length)
-			return literal_escape_error(body, span, i, "expected '}', found '%c'", 0);
+			return literal_escape_error(gen, span, i, "expected '}', found '%c'", 0);
 		i++;
 		break;
 	default:
-		return literal_escape_error(body, span, escape, "invalid escape character: '%c'", c);
+		return literal_escape_error(gen, span, escape, "invalid escape character: '%c'", c);
 	}
 	*index = i;
 	*result = value;
@@ -749,12 +771,9 @@ literal_escape(GenBody *body, Span span, uint32_t *index, uint32_t *result)
 }
 
 /* Same escapes and UTF-8 encoding as 0.17 std.zig.string_literal.parseWrite. */
-static IrRef
-string_literal(GenBody *body, AstNode *node)
+static StringId
+string_literal_text(IrGen *gen, Span span)
 {
-	IrGen *gen = body->gen;
-	AstLiteral *literal = AST_CAST(AstLiteral, node, AST_STRING_LITERAL);
-	Span span = literal->text;
 	const uint8_t *text = (const uint8_t *)gen->source + span.start;
 	uint32_t length = span.end - span.start;
 	uint8_t *bytes = ARENA_ARRAY(gen->arena, uint8_t, length);
@@ -768,8 +787,8 @@ string_literal(GenBody *body, AstNode *node)
 		}
 		uint32_t escape = i;
 		uint32_t value;
-		if (!literal_escape(body, span, &i, &value))
-			return IR_REF_VOID_VALUE;
+		if (!literal_escape(gen, span, &i, &value))
+			return STRING_NONE;
 		/* Byte escapes are not Unicode escapes: \xff remains one raw byte. */
 		if (text[escape + 1] != 'u' || value <= 0x7f) {
 			bytes[count++] = (uint8_t)value;
@@ -777,7 +796,8 @@ string_literal(GenBody *body, AstNode *node)
 			bytes[count++] = (uint8_t)(0xc0 | value >> 6);
 			bytes[count++] = (uint8_t)(0x80 | (value & 0x3f));
 		} else if (value >= 0xd800 && value <= 0xdfff) {
-			return literal_error(body, span.start, escape + 2, "unicode escape does not correspond to a valid unicode scalar value", 0);
+			(void)literal_error(gen, span.start, escape + 2, "unicode escape does not correspond to a valid unicode scalar value", 0);
+			return STRING_NONE;
 		} else if (value <= 0xffff) {
 			bytes[count++] = (uint8_t)(0xe0 | value >> 12);
 			bytes[count++] = (uint8_t)(0x80 | (value >> 6 & 0x3f));
@@ -789,7 +809,37 @@ string_literal(GenBody *body, AstNode *node)
 			bytes[count++] = (uint8_t)(0x80 | (value & 0x3f));
 		}
 	}
-	return emit_name(body, IR_STR, node->offset, intern(gen->interner, (const char *)bytes, count), IR_REF_NONE);
+	return intern(gen->interner, (const char *)bytes, count);
+}
+
+static StringId
+quoted_identifier(IrGen *gen, Span span)
+{
+	Span text = span;
+	text.start++;
+	StringId name = string_literal_text(gen, text);
+	if (name == STRING_NONE)
+		return STRING_NONE;
+	uint32_t length = intern_length(gen->interner, name);
+	if (memchr(intern_text(gen->interner, name), 0, length) != NULL) {
+		error_at(gen, span.start, "%s", "identifier cannot contain null bytes");
+		return STRING_NONE;
+	}
+	if (length == 0) {
+		error_at(gen, span.start, "%s", "identifier cannot be empty");
+		return STRING_NONE;
+	}
+	return name;
+}
+
+static IrRef
+string_literal(GenBody *body, AstNode *node)
+{
+	Span span = AST_CAST(AstLiteral, node, AST_STRING_LITERAL)->text;
+	StringId text = string_literal_text(body->gen, span);
+	if (text == STRING_NONE)
+		return IR_REF_VOID_VALUE;
+	return emit_name(body, IR_STR, node->offset, text, IR_REF_NONE);
 }
 
 /* Character literals are comptime integers, not UTF-8 byte strings. */
@@ -801,36 +851,36 @@ character_literal(GenBody *body, AstNode *node)
 	const uint8_t *text = (const uint8_t *)body->gen->source + span.start;
 	uint32_t length = span.end - span.start;
 	if (length < 3)
-		return literal_error(body, span.start, 0, "empty character literal", 0);
+		return literal_error(body->gen, span.start, 0, "empty character literal", 0);
 	uint32_t value;
 	uint32_t i = 1;
 	if (text[i] == '\\') {
-		if (!literal_escape(body, span, &i, &value))
+		if (!literal_escape(body->gen, span, &i, &value))
 			return IR_REF_VOID_VALUE;
 	} else {
 		uint8_t first = text[i];
 		uint32_t count = first < 0x80 ? 1 : (first & 0xe0) == 0xc0 ? 2
 			: (first & 0xf0) == 0xe0 ? 3 : (first & 0xf8) == 0xf0 ? 4 : 0;
 		if (first == 0)
-			return literal_error(body, span.start, i, "invalid byte in string or character literal: '%c'", 0);
+			return literal_error(body->gen, span.start, i, "invalid byte in string or character literal: '%c'", 0);
 		if (count == 0 || length - 2 < count)
-			return literal_error(body, span.start, i, "unicode escape does not correspond to a valid unicode scalar value", 0);
+			return literal_error(body->gen, span.start, i, "unicode escape does not correspond to a valid unicode scalar value", 0);
 		if (length - 2 > count)
-			return literal_error(body, span.start, i + count, "expected single quote ('), found '%c'", text[i + count]);
+			return literal_error(body->gen, span.start, i + count, "expected single quote ('), found '%c'", text[i + count]);
 		value = count == 1 ? first : first & ((1u << (7 - count)) - 1);
 		for (uint32_t j = 1; j < count; j++) {
 			if ((text[i + j] & 0xc0) != 0x80)
-				return literal_error(body, span.start, i, "unicode escape does not correspond to a valid unicode scalar value", 0);
+				return literal_error(body->gen, span.start, i, "unicode escape does not correspond to a valid unicode scalar value", 0);
 			value = (value << 6) | (text[i + j] & 0x3f);
 		}
 		if ((count == 2 && value < 0x80) || (count == 3 && value < 0x800)
 			|| (count == 4 && value < 0x10000) || value > 0x10ffff
 			|| (value >= 0xd800 && value <= 0xdfff))
-			return literal_error(body, span.start, i, "unicode escape does not correspond to a valid unicode scalar value", 0);
+			return literal_error(body->gen, span.start, i, "unicode escape does not correspond to a valid unicode scalar value", 0);
 		i += count;
 	}
 	if (i != length - 1 || text[i] != '\'')
-		return literal_error(body, span.start, i, "expected single quote ('), found '%c'", i < length ? text[i] : 0);
+		return literal_error(body->gen, span.start, i, "expected single quote ('), found '%c'", i < length ? text[i] : 0);
 	IrData data = {0};
 	data.integer = value;
 	return emit(body, IR_INT, node->offset, data);
@@ -867,6 +917,9 @@ identifier(GenBody *body, Scope *scope, ResultInfo info, AstNode *node)
 		error_at(gen, node->offset, "%s", "'_' used as an identifier without @\"_\" syntax");
 		return IR_REF_VOID_VALUE;
 	}
+	IrRef ref;
+	if (lookup_primitive(body, node->offset, text, length, &ref))
+		return rvalue(body, info, ref, node->offset);
 	StringId name = intern_span(gen, identifier_node->name);
 	Lookup found = lookup_name(scope, name);
 	if (check_capture(gen, found, node->offset))
@@ -884,9 +937,6 @@ identifier(GenBody *body, Scope *scope, ResultInfo info, AstNode *node)
 		error_at(gen, node->offset, "%s", "ambiguous reference");
 		return IR_REF_VOID_VALUE;
 	}
-	IrRef ref;
-	if (lookup_primitive(body, node->offset, text, length, &ref))
-		return rvalue(body, info, ref, node->offset);
 	error_at(gen, node->offset, "use of undeclared identifier '%s'", intern_text(gen->interner, name));
 	return IR_REF_VOID_VALUE;
 }
@@ -900,6 +950,11 @@ lvalue(GenBody *body, Scope *scope, AstNode *node)
 		return lvalue(body, scope, AST_CAST(AstWrap, node, AST_GROUPED)->operand);
 	if (node->kind == AST_IDENTIFIER) {
 		AstIdentifier *identifier_node = AST_CAST(AstIdentifier, node, AST_IDENTIFIER);
+		Span span = identifier_node->name;
+		if (is_primitive_name(gen->source + span.start, span.end - span.start)) {
+			error_at(gen, node->offset, "%s", "cannot assign to constant");
+			return IR_REF_VOID_VALUE;
+		}
 		StringId name = intern_span(gen, identifier_node->name);
 		Lookup found = lookup_name(scope, name);
 		if (check_capture(gen, found, node->offset))
@@ -946,7 +1001,8 @@ address_of(GenBody *body, Scope *scope, ResultInfo info, AstNode *node)
 		IrRef base = address_of(body, scope, result_none, field->lhs);
 		return emit_name(body, IR_FIELD_PTR, node->offset, intern_span(body->gen, field->name), base);
 	}
-	if (node->kind == AST_IDENTIFIER) {
+	if (node->kind == AST_IDENTIFIER
+		&& !is_primitive_name(body->gen->source + node->offset, node->end - node->offset)) {
 		StringId name = intern_span(body->gen, AST_CAST(AstIdentifier, node, AST_IDENTIFIER)->name);
 		Lookup found = lookup_name(scope, name);
 		if (check_capture(body->gen, found, node->offset))
@@ -1732,7 +1788,7 @@ for_expr(GenBody *body, Scope *scope, ResultInfo info, AstNode *node)
 		if (capture_is_discard(gen, capture))
 			continue;
 		StringId name = intern_span(gen, capture.name);
-		check_shadowing(gen, capture_scope, name, capture.name.start);
+		check_shadowing(gen, capture_scope, name, capture.name.start, "capture");
 		IrRef value = emit_bin(&iteration, loop->inputs[i].is_range ? IR_ADD : capture.by_pointer ? IR_ARRAY_INDEX_PTR : IR_ARRAY_INDEX,
 			capture.name.start, starts[i], index);
 		LocalScope *local = ARENA_NEW(gen->arena, LocalScope);
@@ -2018,7 +2074,7 @@ local_var_decl(GenBody *body, Scope *scope, AstVarDecl *decl)
 {
 	IrGen *gen = body->gen;
 	StringId name = intern_span(gen, decl->name);
-	check_shadowing(gen, scope, name, decl->base.offset);
+	check_shadowing(gen, scope, name, decl->name.start, decl->is_const ? "local constant" : "local variable");
 	if (decl->addrspace != NULL || decl->linksection != NULL)
 		unsupported(body, &decl->base, "align/addrspace/linksection on locals");
 
@@ -2232,7 +2288,7 @@ function_proto(GenBody *body, Scope *scope, AstFnProto *proto, StringId name, ui
 		}
 		params[i] = index;
 		if (param_name != STRING_NONE) {
-			check_shadowing(gen, param_scope, param_name, src);
+			check_shadowing(gen, param_scope, param_name, src, "function parameter");
 			LocalScope *local = ARENA_NEW(gen->arena, LocalScope);
 			local_init(local, param_scope, param_name, LOCAL_PARAM, ir_ref_of_inst(index), src);
 			param_scope = &local->base;
@@ -2381,6 +2437,17 @@ container_decl(GenBody *body, Scope *scope, AstContainerDecl *decl, StringId nam
 		return IR_REF_VOID_VALUE;
 	}
 
+	uint32_t field_count = 0;
+	uint32_t decl_count = 0;
+	for (uint32_t i = 0; i < decl->members.count; i++) {
+		if (decl->members.items[i]->kind == AST_CONTAINER_FIELD)
+			field_count++;
+		else
+			decl_count++;
+	}
+	IrDecl *decls = arena_zalloc(gen->arena, (decl_count + 1) * sizeof(IrDecl), alignof(IrDecl));
+	uint32_t decl_index = 0;
+
 	/* Collect the declaration names first: members may refer to later ones. */
 	NamespaceScope namespace_scope;
 	namespace_scope.base.kind = SCOPE_NAMESPACE;
@@ -2388,22 +2455,20 @@ container_decl(GenBody *body, Scope *scope, AstContainerDecl *decl, StringId nam
 	namespace_scope.names = arena_alloc(gen->arena, (decl->members.count + 1) * sizeof(StringId), alignof(StringId));
 	namespace_scope.name_srcs = arena_alloc(gen->arena, (decl->members.count + 1) * sizeof(uint32_t), alignof(uint32_t));
 	namespace_scope.name_count = 0;
-	uint32_t field_count = 0;
-	uint32_t decl_count = 0;
 	for (uint32_t i = 0; i < decl->members.count; i++) {
 		AstNode *member = decl->members.items[i];
-		if (member->kind == AST_CONTAINER_FIELD) {
-			field_count = field_count + 1;
+		if (member->kind == AST_CONTAINER_FIELD)
 			continue;
-		}
-		decl_count = decl_count + 1;
+		IrDecl *out = &decls[decl_index++];
 		uint32_t src;
 		StringId member_name_id = member_name(gen, member, &src);
+		out->name = member_name_id;
+		out->src = src;
 		if (member_name_id == STRING_NONE)
 			continue;
 		for (uint32_t j = 0; j < namespace_scope.name_count; j++) {
 			if (namespace_scope.names[j] == member_name_id) {
-				error_at(gen, src, "duplicate declaration '%s'", intern_text(gen->interner, member_name_id));
+				error_at(gen, namespace_scope.name_srcs[j], "duplicate struct member name '%s'", intern_text(gen->interner, member_name_id));
 				break;
 			}
 		}
@@ -2413,9 +2478,8 @@ container_decl(GenBody *body, Scope *scope, AstContainerDecl *decl, StringId nam
 	}
 
 	IrField *fields = arena_zalloc(gen->arena, (field_count + 1) * sizeof(IrField), alignof(IrField));
-	IrDecl *decls = arena_zalloc(gen->arena, (decl_count + 1) * sizeof(IrDecl), alignof(IrDecl));
 	uint32_t field_index = 0;
-	uint32_t decl_index = 0;
+	decl_index = 0;
 	Scope *member_scope = &namespace_scope.base;
 
 	for (uint32_t i = 0; i < decl->members.count; i++) {
@@ -2446,9 +2510,6 @@ container_decl(GenBody *body, Scope *scope, AstContainerDecl *decl, StringId nam
 
 		IrDecl *out = &decls[decl_index];
 		decl_index = decl_index + 1;
-		uint32_t src;
-		out->name = member_name(gen, member, &src);
-		out->src = src;
 		switch (member->kind) {
 		case AST_VAR_DECL: {
 			AstVarDecl *var = AST_CAST(AstVarDecl, member, AST_VAR_DECL);
