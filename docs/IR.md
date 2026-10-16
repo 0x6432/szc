@@ -798,3 +798,18 @@ never numeric range checks. Signed i1 true is -1; bool/u1 true is 1. Native widt
 1..64 work at runtime, while wider constants use arbitrary-precision values.
 Aggregates/floats/vectors/enums and physical memory casts are not implied by this
 operation; logical representation width is not an ABI-stride serialization rule.
+
+
+## Constant aggregate bit casts (M5.5f)
+
+IR_BIT_CAST still carries destination type and uncoerced source. Sema computes
+logical widths recursively through integer/bool/void arrays, including scalar
+sentinels, and uses comptime.c PackedBits buffers to serialize low element first.
+This is not ABI-memory serialization: e.g. [2]u5 has ten packed bits, not two
+storage bytes. Constant destination sentinels come from the declared type.
+
+All-undefined aggregates canonicalize only when every stored element, including
+any sentinel, is undefined. Whole undefined is preserved; partial undefined is
+zero in the packed writer. Zero-bit results have their unique defined value.
+Packed buffer capacity and dense array construction are separately budgeted.
+Runtime aggregate bit casts still have an explicit limitation at this milestone.

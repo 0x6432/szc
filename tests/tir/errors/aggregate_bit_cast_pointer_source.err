@@ -1,0 +1,3 @@
+tests/tir/errors/aggregate_bit_cast_pointer_source.zig:1:34: error: cannot @bitCast from '[1]*const u8'
+pub fn main() void { const n:u64=@bitCast(@as([1]*const u8,.{@ptrFromInt(16)})); _=n; }
+                                 ^

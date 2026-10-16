@@ -58,12 +58,28 @@ Read this first when resuming work (the sandbox resets often).
   i1 and void/u0 work; undefined stays undefined. Runtime >64 bits and aggregate/
   float/vector/enum forms remain separate. Never use this scalar wrap helper as
   physical in-memory reinterpretation across ABI padding or pointer relocations.
-- Next: general ptrCast and aggregate bitCast. Pointer work needs physical
-  comptime views with ABI stride, undefined padding and relocation provenance;
-  do not reuse whole-root coercion as reinterpretation. Notes/probes:
-  /data/ptr-cast-next-notes.md and /data/thin-pointer-memory-reference.log.
-  Reconcile actual reference memory loads with language-level padding rules;
-  narrow acceptance probes alone do not establish a general padding guarantee.
+- M5.5f constant aggregate bit casts are complete. Corrected frozen
+  /data/aggregate-bitcasts-final2 GCC/Clang trees match 5509 source/test/config
+  files; 1243 units/1040 goldens, 96 ordinary/generated plus three scoped native,
+  16 driver, all C/ABI/storage/alignment, 60 volatile and 255 safety checks pass.
+  GCC full e2e references actual Zig; Clang separately references the new native.
+  Fresh actual matrices total 1796: 337 aggregate+499 scalar+409 alignment+326
+  qualifier+225 numeric pointers. Optimized GCC: 96 native/255 safety. Four 60s
+  fuzz runs: 897170/22359/26140/37082; both compilers replay 20000 mutations/stage, with
+  64 irgen/120 sema seeds. All wrappers exit zero. Logs: final2-*; source:
+  /data/aggregate-bitcasts-next. Earlier pre-fix snapshots are not final evidence.
+- Packed constants use logical bits, not ABI bytes. Defined source sentinels count
+  even when all declared payload elements are undefined; wholly undefined sources
+  remain undefined, except zero-bit destinations have their unique value. Packed
+  buffers have a cumulative 1048576-word budget; dense values retain their element
+  budget. Runtime aggregate bit casts remain pending on main.
+- Next isolated work: /data/runtime-bitcasts-next implements bounded runtime
+  aggregate packing through typed loads/stores and existing integer TIR. Its
+  corrected /data/runtime-bitcasts-final3 wrapper validation is separate and must
+  complete before integration; final2 matrices/fuzz use identical code/tools/seeds.
+  Official generic AIR packing omits sentinel elements; the bool-sentinel native
+  case is explicitly scoped in tests/run_szc rather than copying that upstream bug. General ptrCast still needs physical memory/provenance rules;
+  never reuse whole-root coercion or logical packed bitCast as reinterpretation.
 - Standalone fuzz replay now sorts corpus filenames bytewise, making its seeded
   mutations independent of filesystem directory order. Optional -save-input saves
   each current input before compiler entry; CI captures stage inputs on failure
@@ -71,12 +87,12 @@ Read this first when resuming work (the sandbox resets often).
   of make test. Fresh independent GCC/Clang Werror sanitizer trees pass 864 units,
   1028 goldens, harness checks, and 20000 mutations/stage (63 irgen/119 sema seeds).
   Logs: /data/fuzz-driver-{gcc,clang}-{tests,replay}.log.
-- Hosted alignment run 38863898754 initially lost its GCC runner during standalone
-  replay (shutdown signal, exit 143; no sanitizer diagnostic). Failed-job rerun
-  requested. Latest check: 33 successes, GCC still running. Scalar run 38866600907:
-  32 successes, two jobs running; Clang build/test is successful. Neither run is
-  claimed green. Sorted local replay completes under both compilers; diagnostic
-  capture improves future failures, not evidence that a compiler hang was fixed.
+- Hosted alignment run 38863898754 (failed-job rerun) and scalar run 38866600907
+  are now completed successfully. The earlier GCC failure was runner shutdown/143,
+  with no sanitizer diagnostic. Harness run 38868786280 lost its GCC runner during
+  standalone replay (shutdown, no sanitizer diagnostic); Clang remains in progress.
+  Failed-job rerun is rejected while the workflow is running; retry after completion.
+  Do not claim newer commits green until checking their runs.
 
 ## Latest integrated checkpoint
 

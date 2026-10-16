@@ -119,6 +119,7 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
   - [x] **M5.5c Outer const/volatile casts**: shape/provenance preservation and observable access semantics.
   - [x] **M5.5d Alignment casts**: contextual alignment changes, combined qualifier permissions and guards.
   - [x] **M5.5e Scalar bit casts**: equal-width integer/bool/void representations; native-width runtime and arbitrary-width constants.
+  - [x] **M5.5f Constant aggregate bit casts**: logical nested arrays, sentinels and undefined/zero-bit representations.
 
 ## Phase 6: Aggregates and errors
 
@@ -170,6 +171,41 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
 ## Completed milestone log
 
 (newest first; each entry: what, limitations, interactions)
+
+### M5.5f Constant aggregate bit casts
+
+- **What**: equal-logical-width constant casts between nested integer/bool/void
+  arrays and scalars, independent of ABI stride. The first element occupies low
+  bits; signed fields preserve two's-complement bits. Source scalar sentinels
+  contribute their stored bits; destination constant arrays restore their declared
+  sentinel, as Zig's packed constant reader does. Whole undefined stays undefined;
+  undefined fields in otherwise defined representations choose zero. A defined
+  sentinel prevents an all-undefined payload from becoming wholly undefined.
+  Zero-bit destinations have their unique value, even for undefined input.
+- **Implementation**: bounds-checked PackedBits read/write helpers in comptime.c
+  use fixed-width limbs, crossing word boundaries without quadratic concatenation
+  or shifts by the host width. Sema recursively validates width and constructs
+  interned values. Cumulative packed-buffer capacity is limited to 1048576 words
+  (4 MiB of buffers, not a total process-memory bound); the existing dense array
+  element budget also applies. Representation bit counts are bounded to uint32_t.
+- **Validation**: 5509 source/test/config files match both corrected frozen
+  GCC/Clang Werror sanitizer trees. Each passes 1243 units/1040 goldens, 96 ordinary/
+  generated plus three scoped native cases, 16 driver checks, all C/ABI/storage/
+  alignment suites, 60 volatile sequences and 255 safety cases. GCC full e2e uses
+  actual Zig; Clang separately references the new native. Optimized GCC passes
+  96 native/255 safety. Fresh actual matrices: 337 aggregate + 499 scalar + 409
+  alignment + 326 qualifier + 225 numeric pointer comparisons (1796 total).
+  Four 60s fuzz runs: 897170/22359/26140/37082; both compilers replay 20000 mutations/stage
+  (64 irgen/120 sema seeds), with deterministic corpus ordering and checkpoints.
+- **Regressions/limits**: nine negative and three positive stage goldens, native
+  nested/signed/bool/sentinel/wide/undefined/zero-bit cases, 379 added unit checks,
+  two seeds and the 32nd CI comparison suite. An independent Python-integer
+  model additionally passes 5000 randomized 256-bit overwrites and signed/unsigned
+  reads, including zero widths and unaligned boundaries. Reference audits caught defined
+  sentinel and zero-bit undefined edge cases before integration; corrected final2
+  trees were fully revalidated. Runtime aggregate casts, floats/vectors/enums,
+  relocations and physical-memory reinterpretation remain separate work.
+  Evidence: /data/aggregate-bitcasts-final2-*; source /data/aggregate-bitcasts-next.
 
 ### Standalone fuzz reproducibility follow-up
 

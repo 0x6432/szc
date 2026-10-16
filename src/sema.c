@@ -86,6 +86,7 @@ struct Sema {
 	bool *queued_values;	/* immutable value DAG reachability, visited once */
 	uint32_t queued_value_capacity;
 	uint32_t array_elements;	/* work/storage charged by dense constant construction */
+	uint32_t bit_cast_words;	/* bounded packed constant work/storage */
 
 	SemaFunc   **funcs;	/* funcs[0] is unused; each SemaFunc stays at its address */
 	uint32_t   func_count;
@@ -1775,7 +1776,140 @@ coerce_return(Block *block, Operand operand, TypeId dest, uint32_t src)
 	return coerce(block, operand, dest, src);
 }
 
-/* Scalar bit casts preserve representation rather than numeric value. */
+/* Packed bit representations use logical element order, never ABI padding. */
+static bool
+bit_cast_width(Block *block, TypeId type, bool destination, uint32_t src, uint32_t *out)
+{
+	Sema *sema = block->sema;
+	TypeId leaf = type;
+	bool empty = false;
+	while (sema->types[leaf].kind == TYPE_ARRAY) {
+		TypeArray array = sema->types[leaf].as.array;
+		empty |= array.length == 0 && array.sentinel == VALUE_NONE;
+		leaf = array.child;
+	}
+	TypeKind kind = sema->types[leaf].kind;
+	if (kind != TYPE_INT && kind != TYPE_BOOL && kind != TYPE_VOID) {
+		const char *message = destination ? "cannot @bitCast to '%s'" : "cannot @bitCast from '%s'";
+		if (kind == TYPE_FLOAT)
+			message = destination ? "not supported by szc yet: @bitCast to '%s'" : "not supported by szc yet: @bitCast from '%s'";
+		sema_error(block, src, message, sema_type_name(sema, type));
+		return false;
+	}
+	uint32_t bits = empty ? 0u : kind == TYPE_INT ? sema->types[leaf].as.integer.bits : kind == TYPE_BOOL ? 1u : 0u;
+	for (TypeId current = type; sema->types[current].kind == TYPE_ARRAY; current = sema->types[current].as.array.child) {
+		TypeArray array = sema->types[current].as.array;
+		if (bits == 0)
+			break;
+		if ((array.sentinel != VALUE_NONE && array.length == UINT64_MAX)
+			|| array.length + (array.sentinel != VALUE_NONE ? 1u : 0u) > UINT32_MAX / bits) {
+			sema_error(block, src, "not supported by szc yet: @bitCast representation exceeds 32-bit bit count");
+			return false;
+		}
+		bits *= (uint32_t)(array.length + (array.sentinel != VALUE_NONE ? 1u : 0u));
+	}
+	*out = bits;
+	return true;
+}
+
+/* Canonicalize all-undefined aggregates, including any stored sentinel. */
+static bool
+bit_cast_value_undefined(Sema *sema, ValueId id)
+{
+	const Value *value = value_get(&sema->values, id);
+	if (value->kind == VALUE_UNDEFINED)
+		return true;
+	if (value->kind != VALUE_ARRAY)
+		return false;
+	uint32_t length = value->as.array.count;
+	if (length == 0)
+		return false;
+	for (uint32_t i = 0; i < length; i++)
+		if (!bit_cast_value_undefined(sema, value->as.array.items[i]))
+			return false;
+	return true;
+}
+
+/* Zig's packed constant writer chooses zero for undefined subvalues. A whole
+ * undefined source is preserved before this helper is entered. */
+static bool
+pack_bit_cast(Block *block, ValueId id, PackedBits *bits, uint32_t offset, uint32_t src)
+{
+	Sema *sema = block->sema;
+	const Value *value = value_get(&sema->values, id);
+	TypeId type = value->type;
+	TypeKind kind = sema->types[type].kind;
+	if (bit_cast_value_undefined(sema, id) || kind == TYPE_VOID)
+		return true;
+	if (kind == TYPE_BOOL || kind == TYPE_INT) {
+		uint32_t width = kind == TYPE_BOOL ? 1u : sema->types[type].as.integer.bits;
+		BigInt integer = kind == TYPE_BOOL ? bigint_from_u64(sema->arena, value->as.boolean ? 1u : 0u) : value->as.integer;
+		if (packed_bits_write(sema->arena, bits, offset, width, &integer))
+			return true;
+		sema_error(block, src, "internal error: invalid @bitCast packed write bounds");
+		return false;
+	}
+	if (value->kind != VALUE_ARRAY) {
+		sema_error(block, src, "not supported by szc yet: this @bitCast constant backing");
+		return false;
+	}
+	ArrayValue items = value->as.array;
+	if (items.count == 0)
+		return true;
+	TypeArray array = sema->types[type].as.array;
+	uint32_t element_bits;
+	if (!bit_cast_width(block, array.child, false, src, &element_bits))
+		return false;
+	for (uint32_t i = 0; i < items.count; i++)
+		if (!pack_bit_cast(block, items.items[i], bits, offset + i * element_bits, src))
+			return false;
+	return true;
+}
+
+static ValueId
+unpack_bit_cast(Block *block, TypeId type, const PackedBits *bits, uint32_t offset, uint32_t src)
+{
+	Sema *sema = block->sema;
+	TypeKind kind = sema->types[type].kind;
+	if (kind == TYPE_VOID)
+		return value_void(&sema->values, T_VOID);
+	if (kind != TYPE_ARRAY) {
+		uint32_t width = kind == TYPE_BOOL ? 1u : sema->types[type].as.integer.bits;
+		bool is_signed = kind == TYPE_INT && sema->types[type].as.integer.is_signed;
+		BigInt result;
+		if (!packed_bits_read(sema->arena, bits, offset, width, is_signed, &result)) {
+			sema_error(block, src, "internal error: invalid @bitCast packed read bounds");
+			return VALUE_NONE;
+		}
+		return kind == TYPE_BOOL ? value_bool(&sema->values, type, !bigint_is_zero(&result))
+			: value_int(&sema->values, type, &result);
+	}
+	TypeArray array = sema->types[type].as.array;
+	uint32_t extra = array.sentinel != VALUE_NONE ? 1u : 0u;
+	if (array.length > UINT32_MAX - extra) {
+		sema_error(block, src, "not supported by szc yet: @bitCast array with this many elements");
+		return VALUE_NONE;
+	}
+	uint32_t count = (uint32_t)array.length + extra;
+	if (count == 0)
+		return value_array(&sema->values, type, NULL, 0);
+	if (!reserve_array_elements(block, count, src))
+		return VALUE_NONE;
+	uint32_t element_bits;
+	if (!bit_cast_width(block, array.child, true, src, &element_bits))
+		return VALUE_NONE;
+	ValueId *items = ARENA_ARRAY(sema->arena, ValueId, count);
+	for (uint32_t i = 0; i < (uint32_t)array.length; i++) {
+		items[i] = unpack_bit_cast(block, array.child, bits, offset + i * element_bits, src);
+		if (items[i] == VALUE_NONE)
+			return VALUE_NONE;
+	}
+	if (extra != 0)
+		items[count - 1] = array.sentinel;
+	return value_array(&sema->values, type, items, count);
+}
+
+/* Scalar runtime casts preserve representation; aggregate casts are comptime. */
 static Operand
 analyze_bit_cast(Block *block, const IrInst *inst)
 {
@@ -1785,39 +1919,44 @@ analyze_bit_cast(Block *block, const IrInst *inst)
 	TypeId type;
 	if (operand.kind == OPERAND_NONE || !operand_to_type(block, dest, inst->src, &type))
 		return operand_none;
-	TypeKind to = sema->types[type].kind;
-	TypeKind from = sema->types[operand.type].kind;
-	if (to != TYPE_INT && to != TYPE_BOOL && to != TYPE_VOID) {
-		sema_error(block, inst->src, to == TYPE_ARRAY || to == TYPE_FLOAT
-			? "not supported by szc yet: @bitCast to '%s'" : "cannot @bitCast to '%s'", sema_type_name(sema, type));
+	uint32_t to_bits;
+	uint32_t from_bits;
+	if (!bit_cast_width(block, type, true, inst->src, &to_bits)
+		|| !bit_cast_width(block, operand.type, false, inst->src, &from_bits))
 		return operand_none;
-	}
-	if (from != TYPE_INT && from != TYPE_BOOL && from != TYPE_VOID) {
-		sema_error(block, inst->src, from == TYPE_ARRAY || from == TYPE_FLOAT
-			? "not supported by szc yet: @bitCast from '%s'" : "cannot @bitCast from '%s'", sema_type_name(sema, operand.type));
-		return operand_none;
-	}
-	uint32_t to_bits = to == TYPE_INT ? sema->types[type].as.integer.bits : to == TYPE_BOOL ? 1u : 0u;
-	uint32_t from_bits = from == TYPE_INT ? sema->types[operand.type].as.integer.bits : from == TYPE_BOOL ? 1u : 0u;
 	if (to_bits != from_bits) {
 		sema_error(block, inst->src, "@bitCast size mismatch: destination type '%s' has %u bits but source type '%s' has %u bits",
 			sema_type_name(sema, type), (unsigned)to_bits, sema_type_name(sema, operand.type), (unsigned)from_bits);
 		return operand_none;
 	}
-	if (to == TYPE_VOID)
+	if (sema->types[type].kind == TYPE_VOID)
 		return void_operand(sema);
-	if (to_bits == 0)
+	if (to_bits == 0 && sema->types[type].kind == TYPE_INT)
 		return comptime_operand(type, value_int_u64(&sema->values, type, 0));
-	if (operand_is_undefined(block, operand))
+	if (to_bits == 0) {
+		PackedBits bits = packed_bits_init(sema->arena, 0);
+		ValueId value = unpack_bit_cast(block, type, &bits, 0, inst->src);
+		return value == VALUE_NONE ? operand_none : comptime_operand(type, value);
+	}
+	if (operand.kind == OPERAND_COMPTIME && bit_cast_value_undefined(sema, operand.value))
 		return comptime_operand(type, value_undefined(&sema->values, type));
 	if (operand.kind == OPERAND_COMPTIME) {
-		const Value *value = operand_value(block, operand);
-		BigInt integer = from == TYPE_BOOL ? bigint_from_u64(sema->arena, value->as.boolean ? 1u : 0u) : value->as.integer;
-		bool is_signed = to == TYPE_INT && sema->types[type].as.integer.is_signed;
-		BigInt bits = bigint_wrap(sema->arena, &integer, is_signed, to_bits);
-		if (to == TYPE_BOOL)
-			return comptime_operand(type, value_bool(&sema->values, type, !bigint_is_zero(&bits)));
-		return comptime_operand(type, value_int(&sema->values, type, &bits));
+		enum { BIT_CAST_WORD_BUDGET = 1048576 };
+		uint32_t words = to_bits / 32 + (to_bits % 32 != 0 ? 1u : 0u);
+		if (words > BIT_CAST_WORD_BUDGET - sema->bit_cast_words) {
+			sema_error(block, inst->src, "not supported by szc yet: packed constant word budget exceeded (1048576)");
+			return operand_none;
+		}
+		sema->bit_cast_words += words;
+		PackedBits bits = packed_bits_init(sema->arena, to_bits);
+		if (!pack_bit_cast(block, operand.value, &bits, 0, inst->src))
+			return operand_none;
+		ValueId result = unpack_bit_cast(block, type, &bits, 0, inst->src);
+		return result == VALUE_NONE ? operand_none : comptime_operand(type, result);
+	}
+	if (sema->types[type].kind == TYPE_ARRAY || sema->types[operand.type].kind == TYPE_ARRAY) {
+		sema_error(block, inst->src, "not supported by szc yet: runtime aggregate @bitCast");
+		return operand_none;
 	}
 	if (!require_runtime(block, inst->src))
 		return operand_none;

@@ -1,0 +1,3 @@
+tests/tir/errors/aggregate_bit_cast_bit_count.zig:1:47: error: not supported by szc yet: @bitCast representation exceeds 32-bit bit count
+pub fn main() void { const n:[1][536870912]u8=@bitCast(@as([1][536870912]u8,undefined)); _=n; }
+                                              ^

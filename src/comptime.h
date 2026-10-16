@@ -186,4 +186,15 @@ uint64_t bigint_to_u64_bits(const BigInt *a);
 /* Decimal text (for diagnostics and dumps). */
 char  *bigint_to_string(Arena *arena, const BigInt *a);
 
+/* Logical packed representations, independent of ABI padding and relocations. */
+typedef struct PackedBits {
+	uint32_t *words;
+	uint32_t bit_count;
+} PackedBits;
+
+PackedBits packed_bits_init(Arena *arena, uint32_t bit_count);
+/* Read/write exactly width bits; invalid bounds leave the destination untouched. */
+bool packed_bits_write(Arena *arena, PackedBits *bits, uint32_t offset, uint32_t width, const BigInt *value);
+bool packed_bits_read(Arena *arena, const PackedBits *bits, uint32_t offset, uint32_t width, bool is_signed, BigInt *out);
+
 #endif

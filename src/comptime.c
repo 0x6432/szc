@@ -944,3 +944,60 @@ value_bytes(ValueTable *table, TypeId type, const uint8_t *data, uint32_t length
 	value.as.bytes.length = length;
 	return value_intern(table, &value);
 }
+
+
+/* ---------- Packed logical representations ---------- */
+
+PackedBits
+packed_bits_init(Arena *arena, uint32_t bit_count)
+{
+	uint32_t count = bit_count / 32 + (bit_count % 32 != 0 ? 1u : 0u);
+	PackedBits bits = {ARENA_ARRAY(arena, uint32_t, count), bit_count};
+	if (count != 0)
+		memset(bits.words, 0, (size_t)count * sizeof(uint32_t));
+	return bits;
+}
+
+bool
+packed_bits_write(Arena *arena, PackedBits *bits, uint32_t offset, uint32_t width, const BigInt *value)
+{
+	if (offset > bits->bit_count || width > bits->bit_count - offset)
+		return false;
+	BigInt unsigned_value = bigint_wrap(arena, value, false, width);
+	uint32_t done = 0;
+	while (done < width) {
+		uint32_t position = offset + done;
+		uint32_t shift = position % 32;
+		uint32_t take = width - done < 32 - shift ? width - done : 32 - shift;
+		uint32_t source = done / 32;
+		uint32_t source_shift = done % 32;
+		uint32_t piece = source < unsigned_value.limb_count ? unsigned_value.limbs[source] >> source_shift : 0;
+		if (source_shift != 0 && source + 1 < unsigned_value.limb_count)
+			piece |= unsigned_value.limbs[source + 1] << (32 - source_shift);
+		uint32_t mask = take == 32 ? UINT32_MAX : (UINT32_C(1) << take) - 1;
+		bits->words[position / 32] = (bits->words[position / 32] & ~(mask << shift)) | ((piece & mask) << shift);
+		done += take;
+	}
+	return true;
+}
+
+bool
+packed_bits_read(Arena *arena, const PackedBits *bits, uint32_t offset, uint32_t width, bool is_signed, BigInt *out)
+{
+	if (offset > bits->bit_count || width > bits->bit_count - offset)
+		return false;
+	uint32_t count = width / 32 + (width % 32 != 0 ? 1u : 0u);
+	uint32_t available = bits->bit_count / 32 + (bits->bit_count % 32 != 0 ? 1u : 0u);
+	BigInt value = bigint_alloc(arena, count);
+	for (uint32_t i = 0; i < count; i++) {
+		uint32_t position = offset + i * 32;
+		uint32_t word = position / 32;
+		uint32_t shift = position % 32;
+		value.limbs[i] = bits->words[word] >> shift;
+		if (shift != 0 && word + 1 < available)
+			value.limbs[i] |= bits->words[word + 1] << (32 - shift);
+	}
+	bigint_normalize(&value);
+	*out = bigint_wrap(arena, &value, is_signed, width);
+	return true;
+}

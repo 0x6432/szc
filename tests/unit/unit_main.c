@@ -967,7 +967,7 @@ test_scalar_bit_casts(void)
 		diag_init(&diag, &arena, &sources);
 		Interner interner;
 		intern_init(&interner, &arena);
-		char source[1024];
+		char source[4096];
 		int length = snprintf(source, sizeof(source), "pub fn main() void { %s }", cases[i].body);
 		CHECK(length > 0 && (size_t)length < sizeof(source));
 		FileId file = source_add_memory(&sources, "bit_casts.zig", source, (uint32_t)length);
@@ -982,6 +982,106 @@ test_scalar_bit_casts(void)
 			CHECK(diag.count != 0 && strstr(diag.items[0].message, cases[i].error) != NULL);
 		arena_free(&arena);
 	}
+}
+
+static void
+test_constant_aggregate_bit_casts(void)
+{
+	const struct {
+		const char *body;
+		const char *error;
+	} cases[] = {
+		{"const n:u10=@bitCast(@as([2]u5,.{1,2})); const x:u8=if(n==65)0 else 256; _=x;", NULL},
+		{"const n:[2]i5=@bitCast(@as(u10,63)); const x:u8=if(n[0]==-1 and n[1]==1)0 else 256; _=x;", NULL},
+		{"const n:u3=@bitCast(@as([3]bool,.{true,false,true})); const x:u8=if(n==5)0 else 256; _=x;", NULL},
+		{"const n:u20=@bitCast(@as([2][2]u5,.{.{1,2},.{3,4}})); const x:u8=if(n==134209)0 else 256; _=x;", NULL},
+		{"const n:[2:17]u8=@bitCast(@as(u24,0xff0201)); const x:u8=if(n[0]==1 and n[1]==2 and n[2]==17)0 else 256; _=x;", NULL},
+		{"const n:u24=@bitCast(@as([2:17]u8,.{1,2})); const x:u8=if(n==0x110201)0 else 256; _=x;", NULL},
+		{"const n:u24=@bitCast(@as([2:17]u8,.{undefined,undefined})); const x:u8=if(n==0x110000)0 else 256; _=x;", NULL},
+		{"const n:u48=@bitCast(@as([2][2:17]u8,.{.{undefined,undefined},.{1,2}})); const x:u8=if(n==0x110201110000)0 else 256; _=x;", NULL},
+		{"const n:u16=@bitCast(@as([2]u8,.{undefined,undefined})); const x:u8=if(n==0)0 else 256; _=x;", "use of undefined"},
+		{"const n:u16=@bitCast(@as([2]u8,.{1,undefined})); const x:u8=if(n==1)0 else 256; _=x;", NULL},
+		{"const n:[2]u0=@bitCast(@as([2]u0,.{undefined,undefined})); const x:u8=if(n[0]==0 and n[1]==0)0 else 256; _=x;", NULL},
+		{"const n:[2]u0=@bitCast(@as(u0,undefined)); const x:u8=if(n[0]==0 and n[1]==0)0 else 256; _=x;", NULL},
+		{"const n:[2]u0=@bitCast(@as([2]u0,undefined)); const x:u8=if(n[0]==0 and n[1]==0)0 else 256; _=x;", NULL},
+		{"const n:[2]u0=@bitCast(@as(void,{})); const x:u8=if(n[0]==0 and n[1]==0)0 else 256; _=x;", NULL},
+		{"const n:[0]u8=@bitCast(@as([0][5000000000]u8,.{})); _=n;", NULL},
+		{"const n:[2]u8=@bitCast(@as(u16,undefined)); _=n;", NULL},
+		{"const n:[0]*u8=@bitCast(@as([0]u8,.{})); _=n;", "cannot @bitCast to"},
+		{"const n:u8=@bitCast(@as([2]u5,.{1,2})); _=n;", "@bitCast size mismatch"},
+		{"const n:[513]u65535=@bitCast(@as([513]u65535,.{1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1})); _=n;", "packed constant word budget exceeded"},
+		{"const n:[1][536870912]u8=@bitCast(@as([1][536870912]u8,undefined)); _=n;", "representation exceeds 32-bit bit count"},
+		{"const n:[1048577]u0=@bitCast(@as(void,{})); _=n;", "constant array element budget exceeded"},
+	};
+	for (uint32_t i = 0; i < sizeof(cases) / sizeof(cases[0]); i++) {
+		Arena arena;
+		arena_init(&arena);
+		SourceTable sources;
+		source_table_init(&sources, &arena);
+		Diag diag;
+		diag_init(&diag, &arena, &sources);
+		Interner interner;
+		intern_init(&interner, &arena);
+		char source[4096];
+		int length = snprintf(source, sizeof(source), "pub fn main() void { %s }", cases[i].body);
+		CHECK(length > 0 && (size_t)length < sizeof(source));
+		FileId file = source_add_memory(&sources, "bit_casts.zig", source, (uint32_t)length);
+		AstContainerDecl *root = parse_file(&arena, &diag, &sources, file);
+		CHECK(!diag_has_errors(&diag));
+		IrFile *ir = irgen_file(&arena, &diag, &interner, source_get(&sources, file), file, root);
+		CHECK(!diag_has_errors(&diag));
+		Sema *sema = sema_create(&arena, &diag, &interner, &sources);
+		bool success = sema_analyze_executable(sema, file, ir);
+		CHECK(success == (cases[i].error == NULL));
+		if (cases[i].error != NULL)
+			CHECK(diag.count != 0 && strstr(diag.items[0].message, cases[i].error) != NULL);
+		arena_free(&arena);
+	}
+}
+
+static void
+test_packed_bits(void)
+{
+	Arena arena;
+	arena_init(&arena);
+	static const uint32_t widths[] = {0,1,5,8,31,32,33,63,64};
+	static const uint32_t offsets[] = {0,1,7,15,31,32,33,63,64,65};
+	for (uint32_t i = 0; i < sizeof(widths) / sizeof(widths[0]); i++)
+		for (uint32_t j = 0; j < sizeof(offsets) / sizeof(offsets[0]); j++) {
+			PackedBits bits = packed_bits_init(&arena, 160);
+			uint64_t raw = UINT64_C(0xfedcba9876543210);
+			BigInt value = bigint_from_u64(&arena, raw);
+			CHECK(packed_bits_write(&arena, &bits, offsets[j], widths[i], &value));
+			BigInt result;
+			CHECK(packed_bits_read(&arena, &bits, offsets[j], widths[i], false, &result));
+			uint64_t mask = widths[i] == 64 ? UINT64_MAX : (UINT64_C(1) << widths[i]) - 1;
+			CHECK(bigint_to_u64_bits(&result) == (raw & mask));
+		}
+	PackedBits bits = packed_bits_init(&arena, 128);
+	BigInt negative = bigint_from_i64(&arena, -1);
+	CHECK(packed_bits_write(&arena, &bits, 0, 128, &negative));
+	BigInt zero = bigint_from_u64(&arena, 0);
+	CHECK(packed_bits_write(&arena, &bits, 29, 38, &zero));
+	BigInt result;
+	CHECK(packed_bits_read(&arena, &bits, 0, 29, false, &result));
+	CHECK(bigint_to_u64_bits(&result) == (UINT64_C(1) << 29) - 1);
+	CHECK(packed_bits_read(&arena, &bits, 29, 38, false, &result));
+	CHECK(bigint_is_zero(&result));
+	CHECK(packed_bits_read(&arena, &bits, 67, 61, false, &result));
+	CHECK(bigint_to_u64_bits(&result) == (UINT64_C(1) << 61) - 1);
+	CHECK(packed_bits_write(&arena, &bits, 3, 65, &negative));
+	CHECK(packed_bits_read(&arena, &bits, 3, 65, true, &result));
+	CHECK(bigint_compare(&result, &negative) == 0);
+	CHECK(!packed_bits_write(&arena, &bits, 129, 0, &zero));
+	CHECK(!packed_bits_write(&arena, &bits, 0, 129, &zero));
+	CHECK(!packed_bits_read(&arena, &bits, 129, 0, false, &result));
+	CHECK(!packed_bits_read(&arena, &bits, 0, 129, false, &result));
+	CHECK(bigint_compare(&result, &negative) == 0);
+	bits = packed_bits_init(&arena, 0);
+	CHECK(packed_bits_write(&arena, &bits, 0, 0, &zero));
+	CHECK(packed_bits_read(&arena, &bits, 0, 0, false, &result));
+	CHECK(bigint_is_zero(&result));
+	arena_free(&arena);
 }
 
 static void
@@ -1043,6 +1143,8 @@ main(void)
 	test_qualifier_cast_chains();
 	test_alignment_cast_types();
 	test_scalar_bit_casts();
+	test_packed_bits();
+	test_constant_aggregate_bit_casts();
 	test_binary_diagnostics();
 
 	printf("unit: %u checks, %u failed\n", checks, failures);

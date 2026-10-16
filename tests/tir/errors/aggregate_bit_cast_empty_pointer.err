@@ -1,0 +1,3 @@
+tests/tir/errors/aggregate_bit_cast_empty_pointer.zig:1:37: error: cannot @bitCast to '[0]*u8'
+pub fn main() void { const n:[0]*u8=@bitCast(@as([0]u8,.{})); _=n; }
+                                    ^

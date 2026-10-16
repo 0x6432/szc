@@ -24,7 +24,7 @@ The IR between irgen and sema is described in `docs/IR.md`.
 
 | Topic | Decision |
 |---|---|
-| Language | C99, with C11/C23 features only where they make code much simpler |
+| Language | C11 (`-std=c11`) |
 | Lexer | Hand-written state machine. The parser pulls one token at a time (`lexer_next`). Tokens are `{kind, start, end}`: no copied text |
 | Keywords | Recognized once, in the lexer (switch on length, then a compare). Parser only compares `TokenKind` values, e.g. `TK_PUB`; it never compares strings |
 | AST | Separate struct per node kind (`AstFnDecl`, `AstBinary`, …), all with a common `AstNode` header holding the kind and token. Children are typed pointers |
