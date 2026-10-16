@@ -24,6 +24,12 @@ def binary_case(name, integer_type, operator, lhs, rhs, message="integer overflo
 
 
 def cases():
+    for leaf in ('type', 'u128'):
+        yield 'memcpy_empty_array_length_'+leaf, (
+            f'fn operation(d:[][0]{leaf},s:[]const [0]{leaf}) void {{ @memcpy(d,s); }} '
+            f'pub fn main() void {{ var a:[2][0]{leaf}=undefined; '
+            f'const b:[1][0]{leaf}=.{{.{{}}}}; operation(&a,&b); }}\n'), (
+            'source and destination arguments have non-equal lengths')
     yield 'memset_aggregate_destination_bounds', (
         'fn operation(d:[][2]u8,n:usize) void { @memset(d[0..n],.{1,2}); } '
         'pub fn main() void { var a:[2][2]u8=undefined; operation(&a,3); }\n'), 'index out of bounds'

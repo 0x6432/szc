@@ -1,0 +1,3 @@
+tests/tir/errors/empty_type_pointer_index.zig:1:53: error: cannot index into empty array
+pub fn main() void { const p:*[0]type=undefined; _=p[@as(usize,undefined)]; }
+                                                    ^

@@ -1,0 +1,23 @@
+function $szc.main.1() {
+@start
+	%t0 =l alloc4 1
+	%t4 =l alloc4 1
+	call $szc.identity.2(l $szc.const.1, l %t4)
+	%t6 =l copy %t4
+	ret
+}
+
+function $szc.identity.2(l %t0, l %t3) {
+@start
+	%t1 =l alloc4 1
+	ret
+}
+
+section ".rodata"
+data $szc.const.1 = align 1 { b 0 }
+data $szc.g.1 = align 1 { z 1 }
+export function w $main() {
+@start
+	call $szc.main.1()
+	ret 0
+}

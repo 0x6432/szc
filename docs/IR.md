@@ -884,3 +884,21 @@ runtime layouts remain explicit errors. Const/unknown-length checks and fill
 coercion precede empty/one-value elision. Known zero lengths do not require defined
 destination data; nonzero-bit nonempty fills do. Nonvolatile undefined fills may
 leave prior memory representations; no Debug poisoning behavior is promised.
+
+
+## Empty runtime array storage (M5.2c5)
+
+The shared sema_type_array_storage_allowed predicate tracks unsentinelled empty
+array dimensions before inspecting the leaf. Such a dimension removes all leaf
+values, including nested comptime-only, wide integer and f32/f64 leaves, but
+retains their known ABI alignment. Locals, globals, snapshots, internal aggregate
+calls/returns and constant backing use the same storage decision. Codegen still
+uses the existing minimal address anchor for zero-byte objects; no unsupported
+leaf value is emitted or lowered.
+
+A zero reported by the partial size helper is not enough. Unresolved layouts
+(such as anyerror), occupied wide/float/comptime-only leaves and f16/f80/f128
+storage remain rejected. A zero-length array with a sentinel is not empty for
+this proof. Logical slice lengths remain meaningful: zero-byte memcpy still
+checks their equality. Empty array indexing rejects before inspecting a defined
+index or undefined pointer, using the reference's distinct value/pointer messages.

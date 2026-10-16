@@ -1328,6 +1328,61 @@ test_aggregate_memset(void)
 }
 
 static void
+test_empty_array_storage(void)
+{
+	const struct {
+		const char *body;
+		const char *error;
+	} cases[] = {
+		{"var a:[0]type=undefined; _=&a;", NULL},
+		{"const a:[0]type=.{}; _=a[0];", "indexing into empty array is not allowed"},
+		{"const a:[0]type=.{}; _=a[@as(usize,undefined)];", "indexing into empty array is not allowed"},
+		{"const p:*[0]type=undefined; _=p[0];", "cannot index into empty array"},
+		{"const p:*[0]type=undefined; _=p[@as(usize,undefined)];", "cannot index into empty array"},
+		{"var a:[3][0]type=.{.{},.{},.{}}; @memset(&a,.{});", NULL},
+		{"var a:[0][3]type=undefined; _=&a;", NULL},
+		{"var a:[2][0]comptime_int=undefined; _=&a;", NULL},
+		{"var a:[2][0]fn() void=undefined; _=&a;", NULL},
+		{"var a:[2][0]u128=undefined; @memset(&a,.{});", NULL},
+		{"var a:[2][0]f32=undefined; @memset(&a,.{});", NULL},
+		{"var a:[1]type=undefined; _=&a;", "runtime array storage layout"},
+		{"var a:[1]comptime_int=undefined; _=&a;", "runtime array storage layout"},
+		{"var a:[1]u128=undefined; _=&a;", "runtime array storage layout"},
+		{"var a:[0:0]u128=undefined; _=&a;", "runtime array storage layout"},
+		{"var a:[0]anyerror=undefined; _=&a;", "runtime array storage layout"},
+		{"var a:[0]f16=undefined; _=&a;", "runtime array storage layout"},
+		{"var a:[0]f80=undefined; _=&a;", "runtime array storage layout"},
+		{"var a:[0]f128=undefined; _=&a;", "runtime array storage layout"},
+		{"var a:[1]f32=undefined; _=&a;", "runtime array storage layout"},
+
+	};
+	for (uint32_t i = 0; i < sizeof(cases) / sizeof(cases[0]); i++) {
+		Arena arena;
+		arena_init(&arena);
+		SourceTable sources;
+		source_table_init(&sources, &arena);
+		Diag diag;
+		diag_init(&diag, &arena, &sources);
+		Interner interner;
+		intern_init(&interner, &arena);
+		char source[4096];
+		int length = snprintf(source, sizeof(source), "pub fn main() void { %s }", cases[i].body);
+		CHECK(length > 0 && (size_t)length < sizeof(source));
+		FileId file = source_add_memory(&sources, "empty_array_storage.zig", source, (uint32_t)length);
+		AstContainerDecl *root = parse_file(&arena, &diag, &sources, file);
+		CHECK(!diag_has_errors(&diag));
+		IrFile *ir = irgen_file(&arena, &diag, &interner, source_get(&sources, file), file, root);
+		CHECK(!diag_has_errors(&diag));
+		Sema *sema = sema_create(&arena, &diag, &interner, &sources);
+		bool success = sema_analyze_executable(sema, file, ir);
+		CHECK(success == (cases[i].error == NULL));
+		if (cases[i].error != NULL)
+			CHECK(diag.count != 0 && strstr(diag.items[0].message, cases[i].error) != NULL);
+		arena_free(&arena);
+	}
+}
+
+static void
 test_constant_aggregate_bit_casts(void)
 {
 	const struct {
@@ -1640,6 +1695,7 @@ main(void)
 	test_character_literals();
 	test_scalar_memset();
 	test_aggregate_memset();
+	test_empty_array_storage();
 	test_scalar_memcpy();
 	test_aggregate_memcpy();
 	test_packed_bits();

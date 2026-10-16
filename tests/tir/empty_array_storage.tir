@@ -1,0 +1,23 @@
+global szc.g.1: [2][0]type = undefined
+fn szc.main.1: fn () void {
+  %0: *[2][0]type = alloc
+  %1: *const [2][0]type = const ref(object.1)
+  %2: void = array_copy %0, %1
+  %3: *const [2][0]type = const ref(object.1)
+  %4: *[2][0]type = alloc
+  %5: void = call szc.identity.2(%3, %4)
+  %6: *const [2][0]type = ptr_cast %4
+  %7: void = array_copy %0, %6
+  %8: *[2][0]type = const szc.g.1
+  %9: *const [2][0]type = const ref(object.1)
+  %10: void = array_copy %8, %9
+  %11: noreturn = ret
+}
+fn szc.identity.2: fn ([2][0]type) [2][0]type {
+  %0: *align(1) const [2][0]type = arg 0
+  %1: *const [2][0]type = alloc
+  %2: void = array_copy %1, %0
+  %3: *[2][0]type = arg 1
+  %4: void = array_copy %3, %1
+  %5: noreturn = ret
+}

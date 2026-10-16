@@ -22,6 +22,52 @@ Read this first when resuming work (the sandbox resets often).
 - **Development resumed at the user's explicit request on 2026-10-16.** The
   earlier pause is superseded. Continue coherent implementation, validation,
   documentation, commit/push and subsequent milestones; Q6 remains M10.2.
+- M5.2c5 empty runtime array storage is integrated. The shared sema/codegen
+  predicate recognizes empty dimensions while retaining known leaf alignment.
+  Empty type/function/comptime-number, wide integer and f32/f64 arrays can have
+  local/global storage, immutable backing, snapshots and internal aggregate ABI.
+  Nonempty unsupported leaves, unresolved anyerror layouts, f16/f80/f128 and
+  sentinel-bearing zero-length arrays with unsupported occupied leaves still
+  reject. Zero-bit memcpy still checks logical lengths. Empty array indexing now
+  uses Zig's value/pointer diagnostics before defined-index/undefined-pointer
+  checks. The new differential matrix checks emit-qbe, not only typed IR; the
+  adapter harness explicitly validates this declared stage.
+  Fresh /data/empty-final/{gcc,clang,optimized} sources: GCC/Clang Werror
+  ASan/UBSan pass 1937 units/1129 goldens, 120+4 native, 16 driver, full C/ABI/
+  storage/alignment suites, 96 observed volatile sequences and 300 safety cases.
+  Optimized GCC native/safety passes. Both compilers pass 20000 standalone
+  mutations/stage with 256/256/83/139 seeds.
+  /data/empty-verified predates the diagnostic/adapter fixes and is NOT final
+  evidence: those old e2e runs stopped at the adapter's old tir-only assertion.
+  Focused native Zig Debug/ReleaseFast and two new safety comparisons pass.
+  The final matrix has 112 comparisons/24 exact primary diagnostics (including
+  eight prohibited noreturn-array cases). Current main unit/golden counts are
+  1937/1129. Forced main unit/golden tests pass. The four original memory
+  builtin matrices pass again: aggregate memset 154/44, scalar memset 158/69,
+  aggregate memcpy 127/26 and scalar memcpy 312/138. These final regressions
+  use the frozen Clang executable; an earlier main-executable attempt raced a
+  forced rebuild (Permission denied), preserved in /data/empty-fill-reference-raced.log
+  and not counted. Final evidence uses /data/empty-{fill,scalar-fill,copy,scalar-copy}-reference.log.
+  Four fresh 60s libFuzzer runs pass: 2471857/59011/46339/48493.
+  Next dependency-sized work should come from the current roadmap; M6.1 structs
+  remain entirely unchecked and no struct implementation was started here.
+  Evidence: /data/empty-reference-v3.log, /data/empty-native-final.log,
+  /data/empty-fast-reference.log, /data/empty-safety-reference.log,
+  /data/empty-main-final.log and /data/empty-final-{gcc,clang,optimized,fuzz}.log.
+- Hosted recheck during M5.2c5: bedaf69 is confirmed green (59 successful jobs).
+  e568da8 most recently has 47 success/six running/six queued, no failures. The
+  scalar-copy run now shows 56 success/GCC rerun running/one Clang failure.
+  The latest cloned Clang job 117064705552 has no annotations, but its logs are
+  now downloadable: four safety timeouts (exact_remainder_i64 native 15s;
+  shl_size_5, shl_size_33, shr_size_33 compiler 120s), followed by runner shutdown.
+  No sanitizer or semantic-mismatch diagnostic appeared. Reproduced all four on
+  the exact 6c3ea34 source in /data/ci-copy-repro/{gcc,clang}, five repetitions
+  each with unchanged deadlines: all 40 case runs pass, total 0.94s/0.86s.
+  This does not prove a hosted cause, but no source hang is reproduced. Do not
+  raise deadlines or claim the rerun green. Retry the failed Clang job only after
+  the containing GCC rerun completes and GitHub permits it. Evidence:
+  /data/ci-copy-clang-latest.log, /data/ci-copy-repro-{gcc,clang}.log and
+  /data/reproduce-copy-ci.sh. Older runner-loss annotations remain recorded below.
 - M9.4i nonvolatile aggregate @memset is integrated. Supported array and slice
   descriptor fills reuse one owned runtime snapshot/immutable backing value.
   ABI-stride element copies cannot reload an aliased source after earlier stores;

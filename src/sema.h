@@ -161,6 +161,8 @@ bool sema_analyze_executable(Sema *sema, FileId file, const IrFile *ir);
 
 /* Results for codegen. */
 bool sema_type_is_aggregate(const Sema *sema, TypeId type);
+/* Runtime array layouts, including proven empty dimensions with known alignment. */
+bool sema_type_array_storage_allowed(const Sema *sema, TypeId type);
 const Type       *sema_type(const Sema *sema, TypeId type);
 TypeId            sema_void_type(const Sema *sema);
 uint32_t          sema_global_count(const Sema *sema);

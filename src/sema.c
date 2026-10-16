@@ -1092,7 +1092,6 @@ static TirRef array_slot(Block *block, TypeId pointer, uint32_t src);
 static Operand array_snapshot(Block *block, Operand source, uint32_t alignment, uint32_t src);
 static Operand analyze_ref(Block *block, Operand value, uint32_t src, uint32_t identity, uint32_t alignment);
 static bool store_array(Block *block, Operand pointer, Operand value, uint32_t src);
-static bool array_storage_allowed(Sema *sema, TypeId type);
 
 /* Until repeated/lazy aggregate values land, bound dense compile-time array work. */
 static bool
@@ -1117,7 +1116,7 @@ global_type_allowed(Block *block, TypeId type, uint32_t src)
 	}
 	TypeKind kind = sema->types[type].kind;
 	if (kind == TYPE_ARRAY) {
-		if (!array_storage_allowed(sema, type)) {
+		if (!sema_type_array_storage_allowed(sema, type)) {
 			sema_error(block, src, "not supported by szc yet: global array storage layout");
 			return false;
 		}
@@ -4332,14 +4331,25 @@ analyze_call(Block *block, IrInstIndex index, Operand *out)
 
 /* Aggregate values never enter scalar QBE temporaries. Every runtime value owns
  * a snapshot; borrowed lvalues are represented only by ordinary pointer operands. */
-static bool
-array_storage_allowed(Sema *sema, TypeId type)
+bool
+sema_type_array_storage_allowed(const Sema *sema, TypeId type)
 {
-	while (sema->types[type].kind == TYPE_ARRAY)
-		type = sema->types[type].as.array.child;
+	bool empty = false;
+	while (sema->types[type].kind == TYPE_ARRAY) {
+		TypeArray array = sema->types[type].as.array;
+		if (array.length == 0 && array.sentinel == VALUE_NONE)
+			empty = true;
+		type = array.child;
+	}
 	TypeKind kind = sema->types[type].kind;
+	/* An empty dimension removes every leaf value, but not its ABI alignment.
+	 * Admit only leaves whose layout is known, not unresolved structs/errors. */
+	if (empty && (is_comptime_only_type(sema, type) || kind == TYPE_NORETURN))
+		return true;
+	if (empty && kind == TYPE_FLOAT)
+		return sema->types[type].as.floating.bits == 32 || sema->types[type].as.floating.bits == 64;
 	return kind == TYPE_BOOL || kind == TYPE_POINTER || kind == TYPE_VOID
-		|| (kind == TYPE_INT && sema->types[type].as.integer.bits <= 64);
+		|| (kind == TYPE_INT && (empty || sema->types[type].as.integer.bits <= 64));
 }
 
 static TirRef
@@ -4349,7 +4359,7 @@ array_slot(Block *block, TypeId pointer, uint32_t src)
 	TypePointer shape = sema->types[pointer].as.pointer;
 	uint64_t size;
 	uint32_t alignment = pointer_alignment(sema, shape);
-	if (!array_storage_allowed(sema, shape.child) || !sema_type_size(sema, shape.child, &size)) {
+	if (!sema_type_array_storage_allowed(sema, shape.child) || !sema_type_size(sema, shape.child, &size)) {
 		sema_error(block, src, "not supported by szc yet: runtime array storage layout");
 		return TIR_REF_NONE;
 	}
@@ -4380,7 +4390,7 @@ store_array(Block *block, Operand pointer, Operand value, uint32_t src)
 		sema_error(block, src, "not supported by szc yet: volatile whole-array copies");
 		return false;
 	}
-	if (!array_storage_allowed(sema, shape.child)) {
+	if (!sema_type_array_storage_allowed(sema, shape.child)) {
 		sema_error(block, src, "not supported by szc yet: runtime array storage layout");
 		return false;
 	}
@@ -5105,7 +5115,7 @@ analyze_memcpy(Block *block, const IrInst *inst)
 		return void_operand(sema);
 	TypeKind kind = sema->types[child].kind;
 	bool aggregate = sema_type_is_aggregate(sema, child);
-	if ((aggregate && !array_storage_allowed(sema, child))
+	if ((aggregate && !sema_type_array_storage_allowed(sema, child))
 		|| (!aggregate && kind != TYPE_INT && kind != TYPE_BOOL && kind != TYPE_POINTER)) {
 		sema_error(block, inst->src, "not supported by szc yet: @memcpy element type '%s'", sema_type_name(sema, child));
 		return operand_none;
@@ -5188,7 +5198,7 @@ analyze_memset(Block *block, const IrInst *inst)
 		return operand_none;
 	TypeKind kind = sema->types[child].kind;
 	bool aggregate = sema_type_is_aggregate(sema, child);
-	if ((aggregate && !array_storage_allowed(sema, child))
+	if ((aggregate && !sema_type_array_storage_allowed(sema, child))
 		|| (!aggregate && kind != TYPE_INT && kind != TYPE_BOOL && kind != TYPE_POINTER)) {
 		sema_error(block, inst->src, "not supported by szc yet: @memset element type '%s'", sema_type_name(sema, child));
 		return operand_none;
@@ -5527,7 +5537,7 @@ analyze_many_index(Block *block, Operand base, Operand index, uint32_t src, bool
 	} else {
 		if (!require_runtime(block, src))
 			return operand_none;
-		if (logical || !array_storage_allowed(sema, shape.child)) {
+		if (logical || !sema_type_array_storage_allowed(sema, shape.child)) {
 			sema_error(block, src, "not supported by szc yet: runtime many-pointer element type '%s'", sema_type_name(sema, shape.child));
 			return operand_none;
 		}
@@ -5801,7 +5811,8 @@ analyze_array_index(Block *block, const IrInst *inst, bool address_only, bool bo
 		return operand_none;
 	}
 	TypeArray array = sema->types[type].as.array;
-	if (array.length == UINT64_MAX && array.sentinel != VALUE_NONE) {
+	if ((array.length == 0 && array.sentinel == VALUE_NONE)
+		|| (array.length == UINT64_MAX && array.sentinel != VALUE_NONE)) {
 		sema_error(block, inst->src, sema->types[base.type].kind == TYPE_POINTER
 			? "cannot index into empty array" : "indexing into empty array is not allowed");
 		return operand_none;
@@ -5823,10 +5834,6 @@ analyze_array_index(Block *block, const IrInst *inst, bool address_only, bool bo
 			}
 			return constant_array_element(block, base, array, item, inst->src);
 		}
-	} else if (array.length == 0 && array.sentinel == VALUE_NONE) {
-		sema_error(block, inst->src, sema->types[base.type].kind == TYPE_POINTER
-			? "cannot index into empty array" : "indexing into empty array is not allowed");
-		return operand_none;
 	}
 	/* Zig folds known one-possible/wholly undefined array values before a dynamic
 	 * bounds guard. Pointer-based accesses must still keep their guard. */

@@ -1,0 +1,3 @@
+tests/tir/errors/empty_type_array_index.zig:1:46: error: indexing into empty array is not allowed
+pub fn main() void { const a:[0]type=.{}; _=a[0]; }
+                                             ^

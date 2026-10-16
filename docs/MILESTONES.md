@@ -100,6 +100,7 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
       - [x] **M5.2c3a Internal array calls/returns and runtime aggregate joins**.
       - [x] **M5.2c3b General comptime element-pointer provenance** (root/subobject identity, checked offsets and loads).
     - [x] **M5.2c4 Mutable array globals** (lazy initialization, borrowed element accesses and runtime snapshots).
+    - [x] **M5.2c5 Empty runtime array storage** (known leaf alignment, zero-byte snapshots/ABI and comptime-only children).
 - [~] **M5.3 Slices, many-pointers, slicing, `.len`, `.ptr`, for over slices.**
   - [x] **M5.3a Many-pointer types, array coercions and borrowed indexing.**
   - [x] **M5.3b Pointer arithmetic and differences.**
@@ -189,6 +190,37 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
 
 (newest first; each entry: what, limitations, interactions)
 
+### M5.2c5 Empty runtime array storage
+
+- **What**: shares the runtime-array storage predicate between sema and constant
+  emission. An unsentinelled empty dimension removes every leaf value without
+  discarding known ABI alignment. Supports local/global arrays, immutable backing,
+  owned snapshots and internal calls/returns with empty comptime-only, wide
+  integer or f32/f64 leaves. No unsupported scalar is physically emitted. A
+  diagnostic audit also moves the empty-array index check before index-value
+  resolution, matching Zig's value/pointer messages for known/undefined indices.
+  The differential CLI harness now validates a declared emit-qbe stage, so the
+  new empty-layout matrix exercises backing emission as well as sema.
+- **Validation**: 112 actual-Zig comparisons through QBE emission, including
+  24 exact primary diagnostics. Native storage/ABI/alignment/descriptor fixture
+  passes Zig Debug/ReleaseFast; two zero-bit length-mismatch safety comparisons
+  pass. Includes internal/global/immutable backing, retained alignments, overlap
+  no-ops, empty-index/const/length diagnostics and prohibited noreturn arrays.
+  Sixteen storage-limit unit cases plus four index-order regressions, IR/TIR/QBE
+  and two error goldens, two fuzz seeds and an independent hosted matrix.
+  Fresh frozen GCC/Clang Werror ASan/UBSan pass 1937 units/1129 goldens,
+  120+4 native, 16 driver, full C/ABI/storage/alignment, 96 volatile sequences and
+  300 safety cases; optimized GCC native/safety passes. Both compilers pass 20000
+  standalone mutations/stage (256/256/83/139 seeds). Original four memory matrices
+  pass again on the frozen Clang executable. Four fresh 60s libFuzzer runs pass
+  (2471857/59011/46339/48493); forced main unit/golden tests pass.
+- **Interactions/limits**: this is not nonempty u128/float/comptime-value support.
+  Sentinel-bearing zero-length arrays still require their leaf representation.
+  Unresolved child layouts (including anyerror) and f16/f80/f128 remain hard
+  errors. Slice lengths and zero-byte memcpy length checks are preserved. Existing
+  bounded dense constant construction and stack/static budgets still apply.
+  Phase 5 parents remain partial.
+
 ### M9.4i Nonvolatile aggregate memory fills
 
 - **What**: accepts the existing supported runtime array and slice-descriptor
@@ -218,8 +250,8 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
   Nonvolatile undefined fills may leave prior representations. Aggregate-valued
   sentinels remain unsupported; scalar sentinel storage inside array elements
   is supported. Existing local storage for empty arrays of comptime-only children
-  is still a separate limitation, despite memory builtins accepting their OPV
-  no-ops without materializing storage. M9.4 and Phase 5 parents remain partial.
+  was still a separate limitation at this checkpoint, despite memory builtins
+  accepting their OPV no-ops; M5.2c5 subsequently supports their storage. M9.4 and Phase 5 parents remain partial.
 
 ### M9.4h Nonvolatile aggregate memory copies
 

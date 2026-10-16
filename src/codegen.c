@@ -1422,8 +1422,11 @@ static bool
 data_type_allowed(Codegen *cg, TypeId type_id, uint32_t src)
 {
 	const Type *type = sema_type(cg->sema, type_id);
-	if (type->kind == TYPE_ARRAY)
+	if (type->kind == TYPE_ARRAY) {
+		if (sema_type_array_storage_allowed(cg->sema, type_id))
+			return true;
 		return data_type_allowed(cg, type->as.array.child, src);
+	}
 	if (type->kind != TYPE_VOID && type->kind != TYPE_BOOL && type->kind != TYPE_POINTER && type->kind != TYPE_INT) {
 		codegen_error(cg, src, "not supported by szc yet: runtime storage of this constant type");
 		return false;

@@ -1,0 +1,93 @@
+%72 = struct_decl (flags=0) {
+  decl var "global" type {
+    %0 = int 2
+    %1 = as @type_usize, %0
+    %2 = int 0
+    %3 = as @type_usize, %2
+    %4 = array_type %3, @type_type
+    %5 = as @type_type, %4
+    %6 = array_type %1, %5
+    %7 = as @type_type, %6
+    %8 = break_inline result, %7
+  } value {
+    %9 = decl_type
+    %10 = as %9, @undefined
+    %11 = break_inline result, %10
+  }
+  decl fn "identity" value {
+    %34 = func "identity" {
+      %21 = param "a" type {
+        %12 = int 2
+        %13 = as @type_usize, %12
+        %14 = int 0
+        %15 = as @type_usize, %14
+        %16 = array_type %15, @type_type
+        %17 = as @type_type, %16
+        %18 = array_type %13, %17
+        %19 = as @type_type, %18
+        %20 = break_inline result, %19
+      }
+      ret type {
+        %22 = int 2
+        %23 = as @type_usize, %22
+        %24 = int 0
+        %25 = as @type_usize, %24
+        %26 = array_type %25, @type_type
+        %27 = as @type_type, %26
+        %28 = array_type %23, %27
+        %29 = as @type_type, %28
+        %30 = break_inline result, %29
+      }
+      body insts {
+        %31 = ret_type
+        %32 = as_return %31, %21
+        %33 = ret %32
+      }
+    }
+    %35 = break_inline result, %34
+  }
+  decl fn "main" pub value {
+    %70 = func "main" {
+      ret type {
+        %36 = break_inline result, @type_void
+      }
+      body insts {
+        %37 = int 2
+        %38 = as @type_usize, %37
+        %39 = int 0
+        %40 = as @type_usize, %39
+        %41 = array_type %40, @type_type
+        %42 = as @type_type, %41
+        %43 = array_type %38, %42
+        %44 = as @type_type, %43
+        %45 = array_elem_type %44
+        %46 = array_elem_type %45
+        %47 = array_init %45
+        %48 = as %45, %47
+        %49 = array_elem_type %45
+        %50 = array_init %45
+        %51 = as %45, %50
+        %52 = array_init %44, %48, %51
+        %53 = as %44, %52
+        %54 = alloc type=%44 init=%53
+        %55 = decl_val "identity"
+        %56 = call %55 arg0 {
+          %57 = arg_type %56, 0
+          %58 = load %54
+          %59 = as %57, %58
+          %60 = break_inline result, %59
+        }
+        %61 = elem_type %54
+        %62 = as %61, %56
+        %63 = store %54, %62
+        %64 = decl_ref "global"
+        %65 = load %54
+        %66 = elem_type %64
+        %67 = as %66, %65
+        %68 = store %64, %67
+        %69 = ret_implicit
+      }
+    }
+    %71 = break_inline result, %70
+  }
+}

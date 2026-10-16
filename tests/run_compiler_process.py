@@ -86,7 +86,9 @@ def main():
             assert timeout == 120
             assert Path(command[2]).read_text() == text
             if actor == "szc":
-                assert command == ["compiler", "tir", command[2]]
+                mode = getattr(module, "SZC_MODE", "tir")
+                assert mode in ("tir", "emit-qbe")
+                assert command == ["compiler", mode, command[2]]
             else:
                 assert command == ["reference", "build-exe", command[2], "-fno-emit-bin", "-j2"]
             calls += 1
