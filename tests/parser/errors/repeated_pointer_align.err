@@ -1,0 +1,3 @@
+tests/parser/errors/repeated_pointer_align.zig:1:21: error: duplicate align qualifier
+const T = *align(4) align(8) u8;
+                    ^

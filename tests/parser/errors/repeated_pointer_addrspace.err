@@ -1,0 +1,3 @@
+tests/parser/errors/repeated_pointer_addrspace.zig:1:27: error: duplicate addrspace qualifier
+const T = *addrspace(.gs) addrspace(.gs) u8;
+                          ^

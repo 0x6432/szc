@@ -1,0 +1,45 @@
+container_decl struct
+  var_decl const A
+    init: pointer_type one const
+      identifier u8
+  var_decl const B
+    init: pointer_type one volatile
+      identifier u8
+  var_decl const C
+    init: pointer_type one allowzero
+      identifier u8
+  var_decl const D
+    init: pointer_type many const volatile allowzero
+      identifier u8
+  var_decl const E
+    init: pointer_type slice const volatile allowzero
+      identifier u8
+  var_decl const F
+    init: pointer_type c const volatile
+      identifier u8
+  var_decl const G
+    init: pointer_type one const volatile allowzero
+      align: number_literal 4
+      identifier u32
+  fn_decl
+    proto: fn_proto mempcpy
+      param noalias dst
+        type: pointer_type one
+          identifier anyopaque
+      param noalias src
+        type: pointer_type one const
+          identifier anyopaque
+      param len
+        type: identifier usize
+      callconv: enum_literal c
+      return: pointer_type one
+        identifier anyopaque
+    body: block
+      assign =
+        identifier _
+        identifier src
+      assign =
+        identifier _
+        identifier len
+      return
+        identifier dst

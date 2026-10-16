@@ -181,6 +181,29 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
 
 (newest first; each entry: what, limitations, interactions)
 
+### M2.14 Repeated pointer modifier grammar correction
+
+- **Found in CI**: hosted run 38904938840 parser mutation m00770 introduced
+  `*const const anyopaque`; std.zig.Parse accepts it but szc reported a duplicate
+  qualifier. This was a real pre-existing grammar mismatch, not an infrastructure
+  timeout, and was fixed rather than rerun away.
+- **What**: repeated const/volatile/allowzero modifiers are idempotent syntax,
+  matching actual Parse.zig parsePtrModifiers. Repeated align/addrspace modifiers
+  still report errors; two negative goldens preserve those distinctions. Added
+  a minimized reproducer, mixed-order single/many/slice/C parser variants and a
+  parser fuzzer seed. This does not add semantic C-pointer support.
+- **Validation**: exact AST spans match for the original CI artifact and the new
+  fixture, all 885 official library files, and 10000/10000 parser mutations agree
+  (seed 38904938840). Independent M5.5m-based frozen GCC/Clang Werror ASan/UBSan
+  suites pass 1543 units/1058 goldens, 109+4 native, 16 driver, all C/ABI/storage/
+  alignment, 60 volatile and 280 safety checks; optimized GCC native/safety and
+  both 20000-mutation/stage replays pass (256/256/71/127 seeds). Four 60s fuzzers:
+  1904618/54219/76977/96154 inputs. Integrated M5.5n main forced tests pass 1561
+  units/1059 goldens; the separate full parser-fix snapshot does not claim to
+  contain M5.5n's later restoration changes.
+- **Evidence**: /data/parser-qualifier-final-{gcc,clang,fuzz}.log,
+  /data/parser-qualifier-{spans,lib-spans,mutants,main-tests}.log.
+
 ### M5.5n Exact constant pointer round trips
 
 - **What**: a symbolic cast-only chain can recover an original pointer with the

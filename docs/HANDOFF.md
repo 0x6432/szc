@@ -19,6 +19,18 @@ Read this first when resuming work (the sandbox resets often).
 
 ## Latest follow-up checkpoint
 
+- M2.14 fixes hosted parser mutation m00770: repeated const/volatile/allowzero
+  pointer modifiers are accepted, while repeated align/addrspace stay errors.
+  New mixed-order parser fixture/negative goldens/fuzz seed preserve the grammar.
+  Actual AST spans match the original CI artifact, fixture and all 885 library
+  files; 10000/10000 mutants agree (seed 38904938840). Frozen M5.5m-based full
+  GCC/Clang suites: 1543 units/1058 goldens, 109+4 native, 16 driver, full C/ABI/
+  storage/alignment, 60 volatile, 280 safety; optimized GCC native/safety and
+  both 20000 mutations/stage pass. Four 60s fuzz counts:
+  1904618/54219/76977/96154. Integrated M5.5n main forced tests pass 1561 units/
+  1059 goldens. This fixes the source mismatch; older hosted runs stay red until
+  their own results say otherwise. Next work: character literal code points.
+
 - M5.5n exact constant pointer round trips are integrated: cast-only wrappers can
   recover an original exact typed subobject with sufficient alignment. Index/
   descriptor projections stop the search; arbitrary physical byte views remain

@@ -874,20 +874,14 @@ parse_pointer_modifiers(Parser *parser, AstPointerType *pointer, bool allow_bit_
 		switch (token.kind) {
 		case TK_CONST:
 			advance(parser);
-			if (pointer->is_const)
-				warn_at(parser, token.start, "duplicate const qualifier");
 			pointer->is_const = true;
 			break;
 		case TK_VOLATILE:
 			advance(parser);
-			if (pointer->is_volatile)
-				warn_at(parser, token.start, "duplicate volatile qualifier");
 			pointer->is_volatile = true;
 			break;
 		case TK_ALLOWZERO:
 			advance(parser);
-			if (pointer->is_allowzero)
-				warn_at(parser, token.start, "duplicate allowzero qualifier");
 			pointer->is_allowzero = true;
 			break;
 		case TK_ALIGN:
