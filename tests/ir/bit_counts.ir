@@ -1,0 +1,3155 @@
+%2452 = struct_decl (flags=0) {
+  decl fn "check_byte" value {
+    %128 = func "check_byte" {
+      %1 = param "n" type {
+        %0 = break_inline result, @type_u8
+      }
+      ret type {
+        %2 = break_inline result, @type_bool
+      }
+      body insts {
+        %3 = alloc type=inferred init=%1
+        %4 = int 0
+        %5 = as @type_u8, %4
+        %6 = alloc type=@type_u8 init=%5
+        %7 = int 0
+        %8 = as @type_u8, %7
+        %9 = alloc type=@type_u8 init=%8
+        %10 = block  {
+          %11 = loop  {
+            %12 = load %3
+            %13 = int 0
+            %14 = cmp_neq %12, %13
+            %46 = condbr %14 then {
+              %15 = block  {
+                %16 = load %6
+                %17 = add_sub_rhs_type %16
+                %18 = load %3
+                %19 = int 1
+                %20 = bit_and %18, %19
+                %21 = as %17, %20
+                %22 = add %16, %21
+                %23 = elem_type %6
+                %24 = as %23, %22
+                %25 = store %6, %24
+                %26 = load %9
+                %27 = add_sub_rhs_type %26
+                %28 = int 1
+                %29 = as %27, %28
+                %30 = add %26, %29
+                %31 = elem_type %9
+                %32 = as %31, %30
+                %33 = store %9, %32
+                %34 = load %3
+                %35 = log2_int_type %34
+                %36 = int 1
+                %37 = as %35, %36
+                %38 = shr %34, %37
+                %39 = elem_type %3
+                %40 = as %39, %38
+                %41 = store %3, %40
+                %42 = as @type_void, @void_value
+                %43 = break %15, @void_value
+              }
+              %44 = repeat %11
+            } else {
+              %45 = break %10, @void_value
+            }
+          }
+        }
+        %47 = elem_type %3
+        %48 = as %47, %1
+        %49 = store %3, %48
+        %50 = int 0
+        %51 = as @type_u8, %50
+        %52 = alloc type=@type_u8 init=%51
+        %53 = load %3
+        %54 = int 0
+        %55 = cmp_eq %53, %54
+        %91 = if %55 then {
+          %56 = int 8
+          %57 = elem_type %52
+          %58 = as %57, %56
+          %59 = store %52, %58
+          %60 = break_inline result, @void_value
+        } else {
+          %61 = block  {
+            %62 = loop  {
+              %63 = load %3
+              %64 = int 1
+              %65 = bit_and %63, %64
+              %66 = int 0
+              %67 = cmp_eq %65, %66
+              %89 = condbr %67 then {
+                %68 = block  {
+                  %69 = load %52
+                  %70 = add_sub_rhs_type %69
+                  %71 = int 1
+                  %72 = as %70, %71
+                  %73 = add %69, %72
+                  %74 = elem_type %52
+                  %75 = as %74, %73
+                  %76 = store %52, %75
+                  %77 = load %3
+                  %78 = log2_int_type %77
+                  %79 = int 1
+                  %80 = as %78, %79
+                  %81 = shr %77, %80
+                  %82 = elem_type %3
+                  %83 = as %82, %81
+                  %84 = store %3, %83
+                  %85 = as @type_void, @void_value
+                  %86 = break %68, @void_value
+                }
+                %87 = repeat %62
+              } else {
+                %88 = break %61, @void_value
+              }
+            }
+          }
+          %90 = break_inline result, @void_value
+        }
+        %92 = bit_cast @type_i8, %1
+        %93 = ret_type
+        %94 = pop_count %1
+        %95 = load %6
+        %96 = cmp_eq %94, %95
+        %103 = bool_and %96 rhs {
+          %97 = clz %1
+          %98 = int 8
+          %99 = load %9
+          %100 = sub %98, %99
+          %101 = cmp_eq %97, %100
+          %102 = break_inline result, %101
+        }
+        %108 = bool_and %103 rhs {
+          %104 = ctz %1
+          %105 = load %52
+          %106 = cmp_eq %104, %105
+          %107 = break_inline result, %106
+        }
+        %113 = bool_and %108 rhs {
+          %109 = pop_count %92
+          %110 = load %6
+          %111 = cmp_eq %109, %110
+          %112 = break_inline result, %111
+        }
+        %120 = bool_and %113 rhs {
+          %114 = clz %92
+          %115 = int 8
+          %116 = load %9
+          %117 = sub %115, %116
+          %118 = cmp_eq %114, %117
+          %119 = break_inline result, %118
+        }
+        %125 = bool_and %120 rhs {
+          %121 = ctz %92
+          %122 = load %52
+          %123 = cmp_eq %121, %122
+          %124 = break_inline result, %123
+        }
+        %126 = as_return %93, %125
+        %127 = ret %126
+      }
+    }
+    %129 = break_inline result, %128
+  }
+  decl fn "count_u0" value {
+    %153 = func "count_u0" {
+      %132 = param "n" type {
+        %130 = int_type u0
+        %131 = break_inline result, %130
+      }
+      %134 = param "a" type {
+        %133 = break_inline result, @type_u8
+      }
+      %136 = param "b" type {
+        %135 = break_inline result, @type_u8
+      }
+      %138 = param "c" type {
+        %137 = break_inline result, @type_u8
+      }
+      ret type {
+        %139 = break_inline result, @type_bool
+      }
+      body insts {
+        %140 = ret_type
+        %141 = clz %132
+        %142 = cmp_eq %141, %134
+        %146 = bool_and %142 rhs {
+          %143 = ctz %132
+          %144 = cmp_eq %143, %136
+          %145 = break_inline result, %144
+        }
+        %150 = bool_and %146 rhs {
+          %147 = pop_count %132
+          %148 = cmp_eq %147, %138
+          %149 = break_inline result, %148
+        }
+        %151 = as_return %140, %150
+        %152 = ret %151
+      }
+    }
+    %154 = break_inline result, %153
+  }
+  decl fn "count_u1" value {
+    %177 = func "count_u1" {
+      %156 = param "n" type {
+        %155 = break_inline result, @type_u1
+      }
+      %158 = param "a" type {
+        %157 = break_inline result, @type_u8
+      }
+      %160 = param "b" type {
+        %159 = break_inline result, @type_u8
+      }
+      %162 = param "c" type {
+        %161 = break_inline result, @type_u8
+      }
+      ret type {
+        %163 = break_inline result, @type_bool
+      }
+      body insts {
+        %164 = ret_type
+        %165 = clz %156
+        %166 = cmp_eq %165, %158
+        %170 = bool_and %166 rhs {
+          %167 = ctz %156
+          %168 = cmp_eq %167, %160
+          %169 = break_inline result, %168
+        }
+        %174 = bool_and %170 rhs {
+          %171 = pop_count %156
+          %172 = cmp_eq %171, %162
+          %173 = break_inline result, %172
+        }
+        %175 = as_return %164, %174
+        %176 = ret %175
+      }
+    }
+    %178 = break_inline result, %177
+  }
+  decl fn "count_i1" value {
+    %202 = func "count_i1" {
+      %181 = param "n" type {
+        %179 = int_type i1
+        %180 = break_inline result, %179
+      }
+      %183 = param "a" type {
+        %182 = break_inline result, @type_u8
+      }
+      %185 = param "b" type {
+        %184 = break_inline result, @type_u8
+      }
+      %187 = param "c" type {
+        %186 = break_inline result, @type_u8
+      }
+      ret type {
+        %188 = break_inline result, @type_bool
+      }
+      body insts {
+        %189 = ret_type
+        %190 = clz %181
+        %191 = cmp_eq %190, %183
+        %195 = bool_and %191 rhs {
+          %192 = ctz %181
+          %193 = cmp_eq %192, %185
+          %194 = break_inline result, %193
+        }
+        %199 = bool_and %195 rhs {
+          %196 = pop_count %181
+          %197 = cmp_eq %196, %187
+          %198 = break_inline result, %197
+        }
+        %200 = as_return %189, %199
+        %201 = ret %200
+      }
+    }
+    %203 = break_inline result, %202
+  }
+  decl fn "count_u5" value {
+    %227 = func "count_u5" {
+      %206 = param "n" type {
+        %204 = int_type u5
+        %205 = break_inline result, %204
+      }
+      %208 = param "a" type {
+        %207 = break_inline result, @type_u8
+      }
+      %210 = param "b" type {
+        %209 = break_inline result, @type_u8
+      }
+      %212 = param "c" type {
+        %211 = break_inline result, @type_u8
+      }
+      ret type {
+        %213 = break_inline result, @type_bool
+      }
+      body insts {
+        %214 = ret_type
+        %215 = clz %206
+        %216 = cmp_eq %215, %208
+        %220 = bool_and %216 rhs {
+          %217 = ctz %206
+          %218 = cmp_eq %217, %210
+          %219 = break_inline result, %218
+        }
+        %224 = bool_and %220 rhs {
+          %221 = pop_count %206
+          %222 = cmp_eq %221, %212
+          %223 = break_inline result, %222
+        }
+        %225 = as_return %214, %224
+        %226 = ret %225
+      }
+    }
+    %228 = break_inline result, %227
+  }
+  decl fn "count_i5" value {
+    %252 = func "count_i5" {
+      %231 = param "n" type {
+        %229 = int_type i5
+        %230 = break_inline result, %229
+      }
+      %233 = param "a" type {
+        %232 = break_inline result, @type_u8
+      }
+      %235 = param "b" type {
+        %234 = break_inline result, @type_u8
+      }
+      %237 = param "c" type {
+        %236 = break_inline result, @type_u8
+      }
+      ret type {
+        %238 = break_inline result, @type_bool
+      }
+      body insts {
+        %239 = ret_type
+        %240 = clz %231
+        %241 = cmp_eq %240, %233
+        %245 = bool_and %241 rhs {
+          %242 = ctz %231
+          %243 = cmp_eq %242, %235
+          %244 = break_inline result, %243
+        }
+        %249 = bool_and %245 rhs {
+          %246 = pop_count %231
+          %247 = cmp_eq %246, %237
+          %248 = break_inline result, %247
+        }
+        %250 = as_return %239, %249
+        %251 = ret %250
+      }
+    }
+    %253 = break_inline result, %252
+  }
+  decl fn "count_u8" value {
+    %276 = func "count_u8" {
+      %255 = param "n" type {
+        %254 = break_inline result, @type_u8
+      }
+      %257 = param "a" type {
+        %256 = break_inline result, @type_u8
+      }
+      %259 = param "b" type {
+        %258 = break_inline result, @type_u8
+      }
+      %261 = param "c" type {
+        %260 = break_inline result, @type_u8
+      }
+      ret type {
+        %262 = break_inline result, @type_bool
+      }
+      body insts {
+        %263 = ret_type
+        %264 = clz %255
+        %265 = cmp_eq %264, %257
+        %269 = bool_and %265 rhs {
+          %266 = ctz %255
+          %267 = cmp_eq %266, %259
+          %268 = break_inline result, %267
+        }
+        %273 = bool_and %269 rhs {
+          %270 = pop_count %255
+          %271 = cmp_eq %270, %261
+          %272 = break_inline result, %271
+        }
+        %274 = as_return %263, %273
+        %275 = ret %274
+      }
+    }
+    %277 = break_inline result, %276
+  }
+  decl fn "count_i8" value {
+    %300 = func "count_i8" {
+      %279 = param "n" type {
+        %278 = break_inline result, @type_i8
+      }
+      %281 = param "a" type {
+        %280 = break_inline result, @type_u8
+      }
+      %283 = param "b" type {
+        %282 = break_inline result, @type_u8
+      }
+      %285 = param "c" type {
+        %284 = break_inline result, @type_u8
+      }
+      ret type {
+        %286 = break_inline result, @type_bool
+      }
+      body insts {
+        %287 = ret_type
+        %288 = clz %279
+        %289 = cmp_eq %288, %281
+        %293 = bool_and %289 rhs {
+          %290 = ctz %279
+          %291 = cmp_eq %290, %283
+          %292 = break_inline result, %291
+        }
+        %297 = bool_and %293 rhs {
+          %294 = pop_count %279
+          %295 = cmp_eq %294, %285
+          %296 = break_inline result, %295
+        }
+        %298 = as_return %287, %297
+        %299 = ret %298
+      }
+    }
+    %301 = break_inline result, %300
+  }
+  decl fn "count_u29" value {
+    %324 = func "count_u29" {
+      %303 = param "n" type {
+        %302 = break_inline result, @type_u29
+      }
+      %305 = param "a" type {
+        %304 = break_inline result, @type_u8
+      }
+      %307 = param "b" type {
+        %306 = break_inline result, @type_u8
+      }
+      %309 = param "c" type {
+        %308 = break_inline result, @type_u8
+      }
+      ret type {
+        %310 = break_inline result, @type_bool
+      }
+      body insts {
+        %311 = ret_type
+        %312 = clz %303
+        %313 = cmp_eq %312, %305
+        %317 = bool_and %313 rhs {
+          %314 = ctz %303
+          %315 = cmp_eq %314, %307
+          %316 = break_inline result, %315
+        }
+        %321 = bool_and %317 rhs {
+          %318 = pop_count %303
+          %319 = cmp_eq %318, %309
+          %320 = break_inline result, %319
+        }
+        %322 = as_return %311, %321
+        %323 = ret %322
+      }
+    }
+    %325 = break_inline result, %324
+  }
+  decl fn "count_i29" value {
+    %349 = func "count_i29" {
+      %328 = param "n" type {
+        %326 = int_type i29
+        %327 = break_inline result, %326
+      }
+      %330 = param "a" type {
+        %329 = break_inline result, @type_u8
+      }
+      %332 = param "b" type {
+        %331 = break_inline result, @type_u8
+      }
+      %334 = param "c" type {
+        %333 = break_inline result, @type_u8
+      }
+      ret type {
+        %335 = break_inline result, @type_bool
+      }
+      body insts {
+        %336 = ret_type
+        %337 = clz %328
+        %338 = cmp_eq %337, %330
+        %342 = bool_and %338 rhs {
+          %339 = ctz %328
+          %340 = cmp_eq %339, %332
+          %341 = break_inline result, %340
+        }
+        %346 = bool_and %342 rhs {
+          %343 = pop_count %328
+          %344 = cmp_eq %343, %334
+          %345 = break_inline result, %344
+        }
+        %347 = as_return %336, %346
+        %348 = ret %347
+      }
+    }
+    %350 = break_inline result, %349
+  }
+  decl fn "count_u32" value {
+    %373 = func "count_u32" {
+      %352 = param "n" type {
+        %351 = break_inline result, @type_u32
+      }
+      %354 = param "a" type {
+        %353 = break_inline result, @type_u8
+      }
+      %356 = param "b" type {
+        %355 = break_inline result, @type_u8
+      }
+      %358 = param "c" type {
+        %357 = break_inline result, @type_u8
+      }
+      ret type {
+        %359 = break_inline result, @type_bool
+      }
+      body insts {
+        %360 = ret_type
+        %361 = clz %352
+        %362 = cmp_eq %361, %354
+        %366 = bool_and %362 rhs {
+          %363 = ctz %352
+          %364 = cmp_eq %363, %356
+          %365 = break_inline result, %364
+        }
+        %370 = bool_and %366 rhs {
+          %367 = pop_count %352
+          %368 = cmp_eq %367, %358
+          %369 = break_inline result, %368
+        }
+        %371 = as_return %360, %370
+        %372 = ret %371
+      }
+    }
+    %374 = break_inline result, %373
+  }
+  decl fn "count_i32" value {
+    %397 = func "count_i32" {
+      %376 = param "n" type {
+        %375 = break_inline result, @type_i32
+      }
+      %378 = param "a" type {
+        %377 = break_inline result, @type_u8
+      }
+      %380 = param "b" type {
+        %379 = break_inline result, @type_u8
+      }
+      %382 = param "c" type {
+        %381 = break_inline result, @type_u8
+      }
+      ret type {
+        %383 = break_inline result, @type_bool
+      }
+      body insts {
+        %384 = ret_type
+        %385 = clz %376
+        %386 = cmp_eq %385, %378
+        %390 = bool_and %386 rhs {
+          %387 = ctz %376
+          %388 = cmp_eq %387, %380
+          %389 = break_inline result, %388
+        }
+        %394 = bool_and %390 rhs {
+          %391 = pop_count %376
+          %392 = cmp_eq %391, %382
+          %393 = break_inline result, %392
+        }
+        %395 = as_return %384, %394
+        %396 = ret %395
+      }
+    }
+    %398 = break_inline result, %397
+  }
+  decl fn "count_u33" value {
+    %422 = func "count_u33" {
+      %401 = param "n" type {
+        %399 = int_type u33
+        %400 = break_inline result, %399
+      }
+      %403 = param "a" type {
+        %402 = break_inline result, @type_u8
+      }
+      %405 = param "b" type {
+        %404 = break_inline result, @type_u8
+      }
+      %407 = param "c" type {
+        %406 = break_inline result, @type_u8
+      }
+      ret type {
+        %408 = break_inline result, @type_bool
+      }
+      body insts {
+        %409 = ret_type
+        %410 = clz %401
+        %411 = cmp_eq %410, %403
+        %415 = bool_and %411 rhs {
+          %412 = ctz %401
+          %413 = cmp_eq %412, %405
+          %414 = break_inline result, %413
+        }
+        %419 = bool_and %415 rhs {
+          %416 = pop_count %401
+          %417 = cmp_eq %416, %407
+          %418 = break_inline result, %417
+        }
+        %420 = as_return %409, %419
+        %421 = ret %420
+      }
+    }
+    %423 = break_inline result, %422
+  }
+  decl fn "count_i33" value {
+    %447 = func "count_i33" {
+      %426 = param "n" type {
+        %424 = int_type i33
+        %425 = break_inline result, %424
+      }
+      %428 = param "a" type {
+        %427 = break_inline result, @type_u8
+      }
+      %430 = param "b" type {
+        %429 = break_inline result, @type_u8
+      }
+      %432 = param "c" type {
+        %431 = break_inline result, @type_u8
+      }
+      ret type {
+        %433 = break_inline result, @type_bool
+      }
+      body insts {
+        %434 = ret_type
+        %435 = clz %426
+        %436 = cmp_eq %435, %428
+        %440 = bool_and %436 rhs {
+          %437 = ctz %426
+          %438 = cmp_eq %437, %430
+          %439 = break_inline result, %438
+        }
+        %444 = bool_and %440 rhs {
+          %441 = pop_count %426
+          %442 = cmp_eq %441, %432
+          %443 = break_inline result, %442
+        }
+        %445 = as_return %434, %444
+        %446 = ret %445
+      }
+    }
+    %448 = break_inline result, %447
+  }
+  decl fn "count_u40" value {
+    %472 = func "count_u40" {
+      %451 = param "n" type {
+        %449 = int_type u40
+        %450 = break_inline result, %449
+      }
+      %453 = param "a" type {
+        %452 = break_inline result, @type_u8
+      }
+      %455 = param "b" type {
+        %454 = break_inline result, @type_u8
+      }
+      %457 = param "c" type {
+        %456 = break_inline result, @type_u8
+      }
+      ret type {
+        %458 = break_inline result, @type_bool
+      }
+      body insts {
+        %459 = ret_type
+        %460 = clz %451
+        %461 = cmp_eq %460, %453
+        %465 = bool_and %461 rhs {
+          %462 = ctz %451
+          %463 = cmp_eq %462, %455
+          %464 = break_inline result, %463
+        }
+        %469 = bool_and %465 rhs {
+          %466 = pop_count %451
+          %467 = cmp_eq %466, %457
+          %468 = break_inline result, %467
+        }
+        %470 = as_return %459, %469
+        %471 = ret %470
+      }
+    }
+    %473 = break_inline result, %472
+  }
+  decl fn "count_i40" value {
+    %497 = func "count_i40" {
+      %476 = param "n" type {
+        %474 = int_type i40
+        %475 = break_inline result, %474
+      }
+      %478 = param "a" type {
+        %477 = break_inline result, @type_u8
+      }
+      %480 = param "b" type {
+        %479 = break_inline result, @type_u8
+      }
+      %482 = param "c" type {
+        %481 = break_inline result, @type_u8
+      }
+      ret type {
+        %483 = break_inline result, @type_bool
+      }
+      body insts {
+        %484 = ret_type
+        %485 = clz %476
+        %486 = cmp_eq %485, %478
+        %490 = bool_and %486 rhs {
+          %487 = ctz %476
+          %488 = cmp_eq %487, %480
+          %489 = break_inline result, %488
+        }
+        %494 = bool_and %490 rhs {
+          %491 = pop_count %476
+          %492 = cmp_eq %491, %482
+          %493 = break_inline result, %492
+        }
+        %495 = as_return %484, %494
+        %496 = ret %495
+      }
+    }
+    %498 = break_inline result, %497
+  }
+  decl fn "count_u63" value {
+    %522 = func "count_u63" {
+      %501 = param "n" type {
+        %499 = int_type u63
+        %500 = break_inline result, %499
+      }
+      %503 = param "a" type {
+        %502 = break_inline result, @type_u8
+      }
+      %505 = param "b" type {
+        %504 = break_inline result, @type_u8
+      }
+      %507 = param "c" type {
+        %506 = break_inline result, @type_u8
+      }
+      ret type {
+        %508 = break_inline result, @type_bool
+      }
+      body insts {
+        %509 = ret_type
+        %510 = clz %501
+        %511 = cmp_eq %510, %503
+        %515 = bool_and %511 rhs {
+          %512 = ctz %501
+          %513 = cmp_eq %512, %505
+          %514 = break_inline result, %513
+        }
+        %519 = bool_and %515 rhs {
+          %516 = pop_count %501
+          %517 = cmp_eq %516, %507
+          %518 = break_inline result, %517
+        }
+        %520 = as_return %509, %519
+        %521 = ret %520
+      }
+    }
+    %523 = break_inline result, %522
+  }
+  decl fn "count_i63" value {
+    %547 = func "count_i63" {
+      %526 = param "n" type {
+        %524 = int_type i63
+        %525 = break_inline result, %524
+      }
+      %528 = param "a" type {
+        %527 = break_inline result, @type_u8
+      }
+      %530 = param "b" type {
+        %529 = break_inline result, @type_u8
+      }
+      %532 = param "c" type {
+        %531 = break_inline result, @type_u8
+      }
+      ret type {
+        %533 = break_inline result, @type_bool
+      }
+      body insts {
+        %534 = ret_type
+        %535 = clz %526
+        %536 = cmp_eq %535, %528
+        %540 = bool_and %536 rhs {
+          %537 = ctz %526
+          %538 = cmp_eq %537, %530
+          %539 = break_inline result, %538
+        }
+        %544 = bool_and %540 rhs {
+          %541 = pop_count %526
+          %542 = cmp_eq %541, %532
+          %543 = break_inline result, %542
+        }
+        %545 = as_return %534, %544
+        %546 = ret %545
+      }
+    }
+    %548 = break_inline result, %547
+  }
+  decl fn "count_u64" value {
+    %571 = func "count_u64" {
+      %550 = param "n" type {
+        %549 = break_inline result, @type_u64
+      }
+      %552 = param "a" type {
+        %551 = break_inline result, @type_u8
+      }
+      %554 = param "b" type {
+        %553 = break_inline result, @type_u8
+      }
+      %556 = param "c" type {
+        %555 = break_inline result, @type_u8
+      }
+      ret type {
+        %557 = break_inline result, @type_bool
+      }
+      body insts {
+        %558 = ret_type
+        %559 = clz %550
+        %560 = cmp_eq %559, %552
+        %564 = bool_and %560 rhs {
+          %561 = ctz %550
+          %562 = cmp_eq %561, %554
+          %563 = break_inline result, %562
+        }
+        %568 = bool_and %564 rhs {
+          %565 = pop_count %550
+          %566 = cmp_eq %565, %556
+          %567 = break_inline result, %566
+        }
+        %569 = as_return %558, %568
+        %570 = ret %569
+      }
+    }
+    %572 = break_inline result, %571
+  }
+  decl fn "count_i64" value {
+    %595 = func "count_i64" {
+      %574 = param "n" type {
+        %573 = break_inline result, @type_i64
+      }
+      %576 = param "a" type {
+        %575 = break_inline result, @type_u8
+      }
+      %578 = param "b" type {
+        %577 = break_inline result, @type_u8
+      }
+      %580 = param "c" type {
+        %579 = break_inline result, @type_u8
+      }
+      ret type {
+        %581 = break_inline result, @type_bool
+      }
+      body insts {
+        %582 = ret_type
+        %583 = clz %574
+        %584 = cmp_eq %583, %576
+        %588 = bool_and %584 rhs {
+          %585 = ctz %574
+          %586 = cmp_eq %585, %578
+          %587 = break_inline result, %586
+        }
+        %592 = bool_and %588 rhs {
+          %589 = pop_count %574
+          %590 = cmp_eq %589, %580
+          %591 = break_inline result, %590
+        }
+        %593 = as_return %582, %592
+        %594 = ret %593
+      }
+    }
+    %596 = break_inline result, %595
+  }
+  decl fn "main" pub value {
+    %2450 = func "main" {
+      ret type {
+        %597 = break_inline result, @type_u8
+      }
+      body insts {
+        %598 = int 0
+        %599 = as @type_u16, %598
+        %600 = alloc type=@type_u16 init=%599
+        %601 = block  {
+          %602 = loop  {
+            %603 = load %600
+            %604 = int 256
+            %605 = cmp_lt %603, %604
+            %634 = condbr %605 then {
+              %606 = block  {
+                %607 = decl_val "check_byte"
+                %608 = call %607 arg0 {
+                  %609 = arg_type %608, 0
+                  %610 = load %600
+                  %611 = int_cast %609, %610
+                  %612 = break_inline result, %611
+                }
+                %613 = as @type_bool, %608
+                %614 = bool_not %613
+                %621 = if %614 then {
+                  %615 = ret_type
+                  %616 = int 1
+                  %617 = as_return %615, %616
+                  %618 = ret %617
+                } else {
+                  %619 = as @type_void, @void_value
+                  %620 = break_inline result, %619
+                }
+                %622 = break %606, @void_value
+              }
+              %623 = load %600
+              %624 = add_sub_rhs_type %623
+              %625 = int 1
+              %626 = as %624, %625
+              %627 = add %623, %626
+              %628 = elem_type %600
+              %629 = as %628, %627
+              %630 = store %600, %629
+              %631 = as @type_void, @void_value
+              %632 = repeat %602
+            } else {
+              %633 = break %601, @void_value
+            }
+          }
+        }
+        %635 = decl_val "count_u0"
+        %636 = call %635 arg0 {
+          %637 = arg_type %636, 0
+          %638 = int 0
+          %639 = as %637, %638
+          %640 = break_inline result, %639
+        } arg1 {
+          %641 = arg_type %636, 1
+          %642 = int 0
+          %643 = as %641, %642
+          %644 = break_inline result, %643
+        } arg2 {
+          %645 = arg_type %636, 2
+          %646 = int 0
+          %647 = as %645, %646
+          %648 = break_inline result, %647
+        } arg3 {
+          %649 = arg_type %636, 3
+          %650 = int 0
+          %651 = as %649, %650
+          %652 = break_inline result, %651
+        }
+        %653 = as @type_bool, %636
+        %654 = bool_not %653
+        %660 = if %654 then {
+          %655 = ret_type
+          %656 = int 2
+          %657 = as_return %655, %656
+          %658 = ret %657
+        } else {
+          %659 = break_inline result, @void_value
+        }
+        %661 = decl_val "count_u1"
+        %662 = call %661 arg0 {
+          %663 = arg_type %662, 0
+          %664 = int 0
+          %665 = as %663, %664
+          %666 = break_inline result, %665
+        } arg1 {
+          %667 = arg_type %662, 1
+          %668 = int 1
+          %669 = as %667, %668
+          %670 = break_inline result, %669
+        } arg2 {
+          %671 = arg_type %662, 2
+          %672 = int 1
+          %673 = as %671, %672
+          %674 = break_inline result, %673
+        } arg3 {
+          %675 = arg_type %662, 3
+          %676 = int 0
+          %677 = as %675, %676
+          %678 = break_inline result, %677
+        }
+        %679 = as @type_bool, %662
+        %680 = bool_not %679
+        %686 = if %680 then {
+          %681 = ret_type
+          %682 = int 2
+          %683 = as_return %681, %682
+          %684 = ret %683
+        } else {
+          %685 = break_inline result, @void_value
+        }
+        %687 = decl_val "count_u1"
+        %688 = call %687 arg0 {
+          %689 = arg_type %688, 0
+          %690 = int 1
+          %691 = as %689, %690
+          %692 = break_inline result, %691
+        } arg1 {
+          %693 = arg_type %688, 1
+          %694 = int 0
+          %695 = as %693, %694
+          %696 = break_inline result, %695
+        } arg2 {
+          %697 = arg_type %688, 2
+          %698 = int 0
+          %699 = as %697, %698
+          %700 = break_inline result, %699
+        } arg3 {
+          %701 = arg_type %688, 3
+          %702 = int 1
+          %703 = as %701, %702
+          %704 = break_inline result, %703
+        }
+        %705 = as @type_bool, %688
+        %706 = bool_not %705
+        %712 = if %706 then {
+          %707 = ret_type
+          %708 = int 2
+          %709 = as_return %707, %708
+          %710 = ret %709
+        } else {
+          %711 = break_inline result, @void_value
+        }
+        %713 = decl_val "count_i1"
+        %714 = call %713 arg0 {
+          %715 = arg_type %714, 0
+          %716 = int 0
+          %717 = as %715, %716
+          %718 = break_inline result, %717
+        } arg1 {
+          %719 = arg_type %714, 1
+          %720 = int 1
+          %721 = as %719, %720
+          %722 = break_inline result, %721
+        } arg2 {
+          %723 = arg_type %714, 2
+          %724 = int 1
+          %725 = as %723, %724
+          %726 = break_inline result, %725
+        } arg3 {
+          %727 = arg_type %714, 3
+          %728 = int 0
+          %729 = as %727, %728
+          %730 = break_inline result, %729
+        }
+        %731 = as @type_bool, %714
+        %732 = bool_not %731
+        %738 = if %732 then {
+          %733 = ret_type
+          %734 = int 2
+          %735 = as_return %733, %734
+          %736 = ret %735
+        } else {
+          %737 = break_inline result, @void_value
+        }
+        %739 = decl_val "count_i1"
+        %740 = call %739 arg0 {
+          %741 = arg_type %740, 0
+          %742 = int 1
+          %743 = negate %742
+          %744 = as %741, %743
+          %745 = break_inline result, %744
+        } arg1 {
+          %746 = arg_type %740, 1
+          %747 = int 0
+          %748 = as %746, %747
+          %749 = break_inline result, %748
+        } arg2 {
+          %750 = arg_type %740, 2
+          %751 = int 0
+          %752 = as %750, %751
+          %753 = break_inline result, %752
+        } arg3 {
+          %754 = arg_type %740, 3
+          %755 = int 1
+          %756 = as %754, %755
+          %757 = break_inline result, %756
+        }
+        %758 = as @type_bool, %740
+        %759 = bool_not %758
+        %765 = if %759 then {
+          %760 = ret_type
+          %761 = int 2
+          %762 = as_return %760, %761
+          %763 = ret %762
+        } else {
+          %764 = break_inline result, @void_value
+        }
+        %766 = decl_val "count_u5"
+        %767 = call %766 arg0 {
+          %768 = arg_type %767, 0
+          %769 = int 0
+          %770 = as %768, %769
+          %771 = break_inline result, %770
+        } arg1 {
+          %772 = arg_type %767, 1
+          %773 = int 5
+          %774 = as %772, %773
+          %775 = break_inline result, %774
+        } arg2 {
+          %776 = arg_type %767, 2
+          %777 = int 5
+          %778 = as %776, %777
+          %779 = break_inline result, %778
+        } arg3 {
+          %780 = arg_type %767, 3
+          %781 = int 0
+          %782 = as %780, %781
+          %783 = break_inline result, %782
+        }
+        %784 = as @type_bool, %767
+        %785 = bool_not %784
+        %791 = if %785 then {
+          %786 = ret_type
+          %787 = int 2
+          %788 = as_return %786, %787
+          %789 = ret %788
+        } else {
+          %790 = break_inline result, @void_value
+        }
+        %792 = decl_val "count_u5"
+        %793 = call %792 arg0 {
+          %794 = arg_type %793, 0
+          %795 = int 1
+          %796 = as %794, %795
+          %797 = break_inline result, %796
+        } arg1 {
+          %798 = arg_type %793, 1
+          %799 = int 4
+          %800 = as %798, %799
+          %801 = break_inline result, %800
+        } arg2 {
+          %802 = arg_type %793, 2
+          %803 = int 0
+          %804 = as %802, %803
+          %805 = break_inline result, %804
+        } arg3 {
+          %806 = arg_type %793, 3
+          %807 = int 1
+          %808 = as %806, %807
+          %809 = break_inline result, %808
+        }
+        %810 = as @type_bool, %793
+        %811 = bool_not %810
+        %817 = if %811 then {
+          %812 = ret_type
+          %813 = int 2
+          %814 = as_return %812, %813
+          %815 = ret %814
+        } else {
+          %816 = break_inline result, @void_value
+        }
+        %818 = decl_val "count_u5"
+        %819 = call %818 arg0 {
+          %820 = arg_type %819, 0
+          %821 = int 31
+          %822 = as %820, %821
+          %823 = break_inline result, %822
+        } arg1 {
+          %824 = arg_type %819, 1
+          %825 = int 0
+          %826 = as %824, %825
+          %827 = break_inline result, %826
+        } arg2 {
+          %828 = arg_type %819, 2
+          %829 = int 0
+          %830 = as %828, %829
+          %831 = break_inline result, %830
+        } arg3 {
+          %832 = arg_type %819, 3
+          %833 = int 5
+          %834 = as %832, %833
+          %835 = break_inline result, %834
+        }
+        %836 = as @type_bool, %819
+        %837 = bool_not %836
+        %843 = if %837 then {
+          %838 = ret_type
+          %839 = int 2
+          %840 = as_return %838, %839
+          %841 = ret %840
+        } else {
+          %842 = break_inline result, @void_value
+        }
+        %844 = decl_val "count_u5"
+        %845 = call %844 arg0 {
+          %846 = arg_type %845, 0
+          %847 = int 16
+          %848 = as %846, %847
+          %849 = break_inline result, %848
+        } arg1 {
+          %850 = arg_type %845, 1
+          %851 = int 0
+          %852 = as %850, %851
+          %853 = break_inline result, %852
+        } arg2 {
+          %854 = arg_type %845, 2
+          %855 = int 4
+          %856 = as %854, %855
+          %857 = break_inline result, %856
+        } arg3 {
+          %858 = arg_type %845, 3
+          %859 = int 1
+          %860 = as %858, %859
+          %861 = break_inline result, %860
+        }
+        %862 = as @type_bool, %845
+        %863 = bool_not %862
+        %869 = if %863 then {
+          %864 = ret_type
+          %865 = int 2
+          %866 = as_return %864, %865
+          %867 = ret %866
+        } else {
+          %868 = break_inline result, @void_value
+        }
+        %870 = decl_val "count_i5"
+        %871 = call %870 arg0 {
+          %872 = arg_type %871, 0
+          %873 = int 0
+          %874 = as %872, %873
+          %875 = break_inline result, %874
+        } arg1 {
+          %876 = arg_type %871, 1
+          %877 = int 5
+          %878 = as %876, %877
+          %879 = break_inline result, %878
+        } arg2 {
+          %880 = arg_type %871, 2
+          %881 = int 5
+          %882 = as %880, %881
+          %883 = break_inline result, %882
+        } arg3 {
+          %884 = arg_type %871, 3
+          %885 = int 0
+          %886 = as %884, %885
+          %887 = break_inline result, %886
+        }
+        %888 = as @type_bool, %871
+        %889 = bool_not %888
+        %895 = if %889 then {
+          %890 = ret_type
+          %891 = int 2
+          %892 = as_return %890, %891
+          %893 = ret %892
+        } else {
+          %894 = break_inline result, @void_value
+        }
+        %896 = decl_val "count_i5"
+        %897 = call %896 arg0 {
+          %898 = arg_type %897, 0
+          %899 = int 1
+          %900 = as %898, %899
+          %901 = break_inline result, %900
+        } arg1 {
+          %902 = arg_type %897, 1
+          %903 = int 4
+          %904 = as %902, %903
+          %905 = break_inline result, %904
+        } arg2 {
+          %906 = arg_type %897, 2
+          %907 = int 0
+          %908 = as %906, %907
+          %909 = break_inline result, %908
+        } arg3 {
+          %910 = arg_type %897, 3
+          %911 = int 1
+          %912 = as %910, %911
+          %913 = break_inline result, %912
+        }
+        %914 = as @type_bool, %897
+        %915 = bool_not %914
+        %921 = if %915 then {
+          %916 = ret_type
+          %917 = int 2
+          %918 = as_return %916, %917
+          %919 = ret %918
+        } else {
+          %920 = break_inline result, @void_value
+        }
+        %922 = decl_val "count_i5"
+        %923 = call %922 arg0 {
+          %924 = arg_type %923, 0
+          %925 = int 1
+          %926 = negate %925
+          %927 = as %924, %926
+          %928 = break_inline result, %927
+        } arg1 {
+          %929 = arg_type %923, 1
+          %930 = int 0
+          %931 = as %929, %930
+          %932 = break_inline result, %931
+        } arg2 {
+          %933 = arg_type %923, 2
+          %934 = int 0
+          %935 = as %933, %934
+          %936 = break_inline result, %935
+        } arg3 {
+          %937 = arg_type %923, 3
+          %938 = int 5
+          %939 = as %937, %938
+          %940 = break_inline result, %939
+        }
+        %941 = as @type_bool, %923
+        %942 = bool_not %941
+        %948 = if %942 then {
+          %943 = ret_type
+          %944 = int 2
+          %945 = as_return %943, %944
+          %946 = ret %945
+        } else {
+          %947 = break_inline result, @void_value
+        }
+        %949 = decl_val "count_i5"
+        %950 = call %949 arg0 {
+          %951 = arg_type %950, 0
+          %952 = int 16
+          %953 = negate %952
+          %954 = as %951, %953
+          %955 = break_inline result, %954
+        } arg1 {
+          %956 = arg_type %950, 1
+          %957 = int 0
+          %958 = as %956, %957
+          %959 = break_inline result, %958
+        } arg2 {
+          %960 = arg_type %950, 2
+          %961 = int 4
+          %962 = as %960, %961
+          %963 = break_inline result, %962
+        } arg3 {
+          %964 = arg_type %950, 3
+          %965 = int 1
+          %966 = as %964, %965
+          %967 = break_inline result, %966
+        }
+        %968 = as @type_bool, %950
+        %969 = bool_not %968
+        %975 = if %969 then {
+          %970 = ret_type
+          %971 = int 2
+          %972 = as_return %970, %971
+          %973 = ret %972
+        } else {
+          %974 = break_inline result, @void_value
+        }
+        %976 = decl_val "count_u8"
+        %977 = call %976 arg0 {
+          %978 = arg_type %977, 0
+          %979 = int 0
+          %980 = as %978, %979
+          %981 = break_inline result, %980
+        } arg1 {
+          %982 = arg_type %977, 1
+          %983 = int 8
+          %984 = as %982, %983
+          %985 = break_inline result, %984
+        } arg2 {
+          %986 = arg_type %977, 2
+          %987 = int 8
+          %988 = as %986, %987
+          %989 = break_inline result, %988
+        } arg3 {
+          %990 = arg_type %977, 3
+          %991 = int 0
+          %992 = as %990, %991
+          %993 = break_inline result, %992
+        }
+        %994 = as @type_bool, %977
+        %995 = bool_not %994
+        %1001 = if %995 then {
+          %996 = ret_type
+          %997 = int 2
+          %998 = as_return %996, %997
+          %999 = ret %998
+        } else {
+          %1000 = break_inline result, @void_value
+        }
+        %1002 = decl_val "count_u8"
+        %1003 = call %1002 arg0 {
+          %1004 = arg_type %1003, 0
+          %1005 = int 1
+          %1006 = as %1004, %1005
+          %1007 = break_inline result, %1006
+        } arg1 {
+          %1008 = arg_type %1003, 1
+          %1009 = int 7
+          %1010 = as %1008, %1009
+          %1011 = break_inline result, %1010
+        } arg2 {
+          %1012 = arg_type %1003, 2
+          %1013 = int 0
+          %1014 = as %1012, %1013
+          %1015 = break_inline result, %1014
+        } arg3 {
+          %1016 = arg_type %1003, 3
+          %1017 = int 1
+          %1018 = as %1016, %1017
+          %1019 = break_inline result, %1018
+        }
+        %1020 = as @type_bool, %1003
+        %1021 = bool_not %1020
+        %1027 = if %1021 then {
+          %1022 = ret_type
+          %1023 = int 2
+          %1024 = as_return %1022, %1023
+          %1025 = ret %1024
+        } else {
+          %1026 = break_inline result, @void_value
+        }
+        %1028 = decl_val "count_u8"
+        %1029 = call %1028 arg0 {
+          %1030 = arg_type %1029, 0
+          %1031 = int 255
+          %1032 = as %1030, %1031
+          %1033 = break_inline result, %1032
+        } arg1 {
+          %1034 = arg_type %1029, 1
+          %1035 = int 0
+          %1036 = as %1034, %1035
+          %1037 = break_inline result, %1036
+        } arg2 {
+          %1038 = arg_type %1029, 2
+          %1039 = int 0
+          %1040 = as %1038, %1039
+          %1041 = break_inline result, %1040
+        } arg3 {
+          %1042 = arg_type %1029, 3
+          %1043 = int 8
+          %1044 = as %1042, %1043
+          %1045 = break_inline result, %1044
+        }
+        %1046 = as @type_bool, %1029
+        %1047 = bool_not %1046
+        %1053 = if %1047 then {
+          %1048 = ret_type
+          %1049 = int 2
+          %1050 = as_return %1048, %1049
+          %1051 = ret %1050
+        } else {
+          %1052 = break_inline result, @void_value
+        }
+        %1054 = decl_val "count_u8"
+        %1055 = call %1054 arg0 {
+          %1056 = arg_type %1055, 0
+          %1057 = int 128
+          %1058 = as %1056, %1057
+          %1059 = break_inline result, %1058
+        } arg1 {
+          %1060 = arg_type %1055, 1
+          %1061 = int 0
+          %1062 = as %1060, %1061
+          %1063 = break_inline result, %1062
+        } arg2 {
+          %1064 = arg_type %1055, 2
+          %1065 = int 7
+          %1066 = as %1064, %1065
+          %1067 = break_inline result, %1066
+        } arg3 {
+          %1068 = arg_type %1055, 3
+          %1069 = int 1
+          %1070 = as %1068, %1069
+          %1071 = break_inline result, %1070
+        }
+        %1072 = as @type_bool, %1055
+        %1073 = bool_not %1072
+        %1079 = if %1073 then {
+          %1074 = ret_type
+          %1075 = int 2
+          %1076 = as_return %1074, %1075
+          %1077 = ret %1076
+        } else {
+          %1078 = break_inline result, @void_value
+        }
+        %1080 = decl_val "count_i8"
+        %1081 = call %1080 arg0 {
+          %1082 = arg_type %1081, 0
+          %1083 = int 0
+          %1084 = as %1082, %1083
+          %1085 = break_inline result, %1084
+        } arg1 {
+          %1086 = arg_type %1081, 1
+          %1087 = int 8
+          %1088 = as %1086, %1087
+          %1089 = break_inline result, %1088
+        } arg2 {
+          %1090 = arg_type %1081, 2
+          %1091 = int 8
+          %1092 = as %1090, %1091
+          %1093 = break_inline result, %1092
+        } arg3 {
+          %1094 = arg_type %1081, 3
+          %1095 = int 0
+          %1096 = as %1094, %1095
+          %1097 = break_inline result, %1096
+        }
+        %1098 = as @type_bool, %1081
+        %1099 = bool_not %1098
+        %1105 = if %1099 then {
+          %1100 = ret_type
+          %1101 = int 2
+          %1102 = as_return %1100, %1101
+          %1103 = ret %1102
+        } else {
+          %1104 = break_inline result, @void_value
+        }
+        %1106 = decl_val "count_i8"
+        %1107 = call %1106 arg0 {
+          %1108 = arg_type %1107, 0
+          %1109 = int 1
+          %1110 = as %1108, %1109
+          %1111 = break_inline result, %1110
+        } arg1 {
+          %1112 = arg_type %1107, 1
+          %1113 = int 7
+          %1114 = as %1112, %1113
+          %1115 = break_inline result, %1114
+        } arg2 {
+          %1116 = arg_type %1107, 2
+          %1117 = int 0
+          %1118 = as %1116, %1117
+          %1119 = break_inline result, %1118
+        } arg3 {
+          %1120 = arg_type %1107, 3
+          %1121 = int 1
+          %1122 = as %1120, %1121
+          %1123 = break_inline result, %1122
+        }
+        %1124 = as @type_bool, %1107
+        %1125 = bool_not %1124
+        %1131 = if %1125 then {
+          %1126 = ret_type
+          %1127 = int 2
+          %1128 = as_return %1126, %1127
+          %1129 = ret %1128
+        } else {
+          %1130 = break_inline result, @void_value
+        }
+        %1132 = decl_val "count_i8"
+        %1133 = call %1132 arg0 {
+          %1134 = arg_type %1133, 0
+          %1135 = int 1
+          %1136 = negate %1135
+          %1137 = as %1134, %1136
+          %1138 = break_inline result, %1137
+        } arg1 {
+          %1139 = arg_type %1133, 1
+          %1140 = int 0
+          %1141 = as %1139, %1140
+          %1142 = break_inline result, %1141
+        } arg2 {
+          %1143 = arg_type %1133, 2
+          %1144 = int 0
+          %1145 = as %1143, %1144
+          %1146 = break_inline result, %1145
+        } arg3 {
+          %1147 = arg_type %1133, 3
+          %1148 = int 8
+          %1149 = as %1147, %1148
+          %1150 = break_inline result, %1149
+        }
+        %1151 = as @type_bool, %1133
+        %1152 = bool_not %1151
+        %1158 = if %1152 then {
+          %1153 = ret_type
+          %1154 = int 2
+          %1155 = as_return %1153, %1154
+          %1156 = ret %1155
+        } else {
+          %1157 = break_inline result, @void_value
+        }
+        %1159 = decl_val "count_i8"
+        %1160 = call %1159 arg0 {
+          %1161 = arg_type %1160, 0
+          %1162 = int 128
+          %1163 = negate %1162
+          %1164 = as %1161, %1163
+          %1165 = break_inline result, %1164
+        } arg1 {
+          %1166 = arg_type %1160, 1
+          %1167 = int 0
+          %1168 = as %1166, %1167
+          %1169 = break_inline result, %1168
+        } arg2 {
+          %1170 = arg_type %1160, 2
+          %1171 = int 7
+          %1172 = as %1170, %1171
+          %1173 = break_inline result, %1172
+        } arg3 {
+          %1174 = arg_type %1160, 3
+          %1175 = int 1
+          %1176 = as %1174, %1175
+          %1177 = break_inline result, %1176
+        }
+        %1178 = as @type_bool, %1160
+        %1179 = bool_not %1178
+        %1185 = if %1179 then {
+          %1180 = ret_type
+          %1181 = int 2
+          %1182 = as_return %1180, %1181
+          %1183 = ret %1182
+        } else {
+          %1184 = break_inline result, @void_value
+        }
+        %1186 = decl_val "count_u29"
+        %1187 = call %1186 arg0 {
+          %1188 = arg_type %1187, 0
+          %1189 = int 0
+          %1190 = as %1188, %1189
+          %1191 = break_inline result, %1190
+        } arg1 {
+          %1192 = arg_type %1187, 1
+          %1193 = int 29
+          %1194 = as %1192, %1193
+          %1195 = break_inline result, %1194
+        } arg2 {
+          %1196 = arg_type %1187, 2
+          %1197 = int 29
+          %1198 = as %1196, %1197
+          %1199 = break_inline result, %1198
+        } arg3 {
+          %1200 = arg_type %1187, 3
+          %1201 = int 0
+          %1202 = as %1200, %1201
+          %1203 = break_inline result, %1202
+        }
+        %1204 = as @type_bool, %1187
+        %1205 = bool_not %1204
+        %1211 = if %1205 then {
+          %1206 = ret_type
+          %1207 = int 2
+          %1208 = as_return %1206, %1207
+          %1209 = ret %1208
+        } else {
+          %1210 = break_inline result, @void_value
+        }
+        %1212 = decl_val "count_u29"
+        %1213 = call %1212 arg0 {
+          %1214 = arg_type %1213, 0
+          %1215 = int 1
+          %1216 = as %1214, %1215
+          %1217 = break_inline result, %1216
+        } arg1 {
+          %1218 = arg_type %1213, 1
+          %1219 = int 28
+          %1220 = as %1218, %1219
+          %1221 = break_inline result, %1220
+        } arg2 {
+          %1222 = arg_type %1213, 2
+          %1223 = int 0
+          %1224 = as %1222, %1223
+          %1225 = break_inline result, %1224
+        } arg3 {
+          %1226 = arg_type %1213, 3
+          %1227 = int 1
+          %1228 = as %1226, %1227
+          %1229 = break_inline result, %1228
+        }
+        %1230 = as @type_bool, %1213
+        %1231 = bool_not %1230
+        %1237 = if %1231 then {
+          %1232 = ret_type
+          %1233 = int 2
+          %1234 = as_return %1232, %1233
+          %1235 = ret %1234
+        } else {
+          %1236 = break_inline result, @void_value
+        }
+        %1238 = decl_val "count_u29"
+        %1239 = call %1238 arg0 {
+          %1240 = arg_type %1239, 0
+          %1241 = int 536870911
+          %1242 = as %1240, %1241
+          %1243 = break_inline result, %1242
+        } arg1 {
+          %1244 = arg_type %1239, 1
+          %1245 = int 0
+          %1246 = as %1244, %1245
+          %1247 = break_inline result, %1246
+        } arg2 {
+          %1248 = arg_type %1239, 2
+          %1249 = int 0
+          %1250 = as %1248, %1249
+          %1251 = break_inline result, %1250
+        } arg3 {
+          %1252 = arg_type %1239, 3
+          %1253 = int 29
+          %1254 = as %1252, %1253
+          %1255 = break_inline result, %1254
+        }
+        %1256 = as @type_bool, %1239
+        %1257 = bool_not %1256
+        %1263 = if %1257 then {
+          %1258 = ret_type
+          %1259 = int 2
+          %1260 = as_return %1258, %1259
+          %1261 = ret %1260
+        } else {
+          %1262 = break_inline result, @void_value
+        }
+        %1264 = decl_val "count_u29"
+        %1265 = call %1264 arg0 {
+          %1266 = arg_type %1265, 0
+          %1267 = int 268435456
+          %1268 = as %1266, %1267
+          %1269 = break_inline result, %1268
+        } arg1 {
+          %1270 = arg_type %1265, 1
+          %1271 = int 0
+          %1272 = as %1270, %1271
+          %1273 = break_inline result, %1272
+        } arg2 {
+          %1274 = arg_type %1265, 2
+          %1275 = int 28
+          %1276 = as %1274, %1275
+          %1277 = break_inline result, %1276
+        } arg3 {
+          %1278 = arg_type %1265, 3
+          %1279 = int 1
+          %1280 = as %1278, %1279
+          %1281 = break_inline result, %1280
+        }
+        %1282 = as @type_bool, %1265
+        %1283 = bool_not %1282
+        %1289 = if %1283 then {
+          %1284 = ret_type
+          %1285 = int 2
+          %1286 = as_return %1284, %1285
+          %1287 = ret %1286
+        } else {
+          %1288 = break_inline result, @void_value
+        }
+        %1290 = decl_val "count_i29"
+        %1291 = call %1290 arg0 {
+          %1292 = arg_type %1291, 0
+          %1293 = int 0
+          %1294 = as %1292, %1293
+          %1295 = break_inline result, %1294
+        } arg1 {
+          %1296 = arg_type %1291, 1
+          %1297 = int 29
+          %1298 = as %1296, %1297
+          %1299 = break_inline result, %1298
+        } arg2 {
+          %1300 = arg_type %1291, 2
+          %1301 = int 29
+          %1302 = as %1300, %1301
+          %1303 = break_inline result, %1302
+        } arg3 {
+          %1304 = arg_type %1291, 3
+          %1305 = int 0
+          %1306 = as %1304, %1305
+          %1307 = break_inline result, %1306
+        }
+        %1308 = as @type_bool, %1291
+        %1309 = bool_not %1308
+        %1315 = if %1309 then {
+          %1310 = ret_type
+          %1311 = int 2
+          %1312 = as_return %1310, %1311
+          %1313 = ret %1312
+        } else {
+          %1314 = break_inline result, @void_value
+        }
+        %1316 = decl_val "count_i29"
+        %1317 = call %1316 arg0 {
+          %1318 = arg_type %1317, 0
+          %1319 = int 1
+          %1320 = as %1318, %1319
+          %1321 = break_inline result, %1320
+        } arg1 {
+          %1322 = arg_type %1317, 1
+          %1323 = int 28
+          %1324 = as %1322, %1323
+          %1325 = break_inline result, %1324
+        } arg2 {
+          %1326 = arg_type %1317, 2
+          %1327 = int 0
+          %1328 = as %1326, %1327
+          %1329 = break_inline result, %1328
+        } arg3 {
+          %1330 = arg_type %1317, 3
+          %1331 = int 1
+          %1332 = as %1330, %1331
+          %1333 = break_inline result, %1332
+        }
+        %1334 = as @type_bool, %1317
+        %1335 = bool_not %1334
+        %1341 = if %1335 then {
+          %1336 = ret_type
+          %1337 = int 2
+          %1338 = as_return %1336, %1337
+          %1339 = ret %1338
+        } else {
+          %1340 = break_inline result, @void_value
+        }
+        %1342 = decl_val "count_i29"
+        %1343 = call %1342 arg0 {
+          %1344 = arg_type %1343, 0
+          %1345 = int 1
+          %1346 = negate %1345
+          %1347 = as %1344, %1346
+          %1348 = break_inline result, %1347
+        } arg1 {
+          %1349 = arg_type %1343, 1
+          %1350 = int 0
+          %1351 = as %1349, %1350
+          %1352 = break_inline result, %1351
+        } arg2 {
+          %1353 = arg_type %1343, 2
+          %1354 = int 0
+          %1355 = as %1353, %1354
+          %1356 = break_inline result, %1355
+        } arg3 {
+          %1357 = arg_type %1343, 3
+          %1358 = int 29
+          %1359 = as %1357, %1358
+          %1360 = break_inline result, %1359
+        }
+        %1361 = as @type_bool, %1343
+        %1362 = bool_not %1361
+        %1368 = if %1362 then {
+          %1363 = ret_type
+          %1364 = int 2
+          %1365 = as_return %1363, %1364
+          %1366 = ret %1365
+        } else {
+          %1367 = break_inline result, @void_value
+        }
+        %1369 = decl_val "count_i29"
+        %1370 = call %1369 arg0 {
+          %1371 = arg_type %1370, 0
+          %1372 = int 268435456
+          %1373 = negate %1372
+          %1374 = as %1371, %1373
+          %1375 = break_inline result, %1374
+        } arg1 {
+          %1376 = arg_type %1370, 1
+          %1377 = int 0
+          %1378 = as %1376, %1377
+          %1379 = break_inline result, %1378
+        } arg2 {
+          %1380 = arg_type %1370, 2
+          %1381 = int 28
+          %1382 = as %1380, %1381
+          %1383 = break_inline result, %1382
+        } arg3 {
+          %1384 = arg_type %1370, 3
+          %1385 = int 1
+          %1386 = as %1384, %1385
+          %1387 = break_inline result, %1386
+        }
+        %1388 = as @type_bool, %1370
+        %1389 = bool_not %1388
+        %1395 = if %1389 then {
+          %1390 = ret_type
+          %1391 = int 2
+          %1392 = as_return %1390, %1391
+          %1393 = ret %1392
+        } else {
+          %1394 = break_inline result, @void_value
+        }
+        %1396 = decl_val "count_u32"
+        %1397 = call %1396 arg0 {
+          %1398 = arg_type %1397, 0
+          %1399 = int 0
+          %1400 = as %1398, %1399
+          %1401 = break_inline result, %1400
+        } arg1 {
+          %1402 = arg_type %1397, 1
+          %1403 = int 32
+          %1404 = as %1402, %1403
+          %1405 = break_inline result, %1404
+        } arg2 {
+          %1406 = arg_type %1397, 2
+          %1407 = int 32
+          %1408 = as %1406, %1407
+          %1409 = break_inline result, %1408
+        } arg3 {
+          %1410 = arg_type %1397, 3
+          %1411 = int 0
+          %1412 = as %1410, %1411
+          %1413 = break_inline result, %1412
+        }
+        %1414 = as @type_bool, %1397
+        %1415 = bool_not %1414
+        %1421 = if %1415 then {
+          %1416 = ret_type
+          %1417 = int 2
+          %1418 = as_return %1416, %1417
+          %1419 = ret %1418
+        } else {
+          %1420 = break_inline result, @void_value
+        }
+        %1422 = decl_val "count_u32"
+        %1423 = call %1422 arg0 {
+          %1424 = arg_type %1423, 0
+          %1425 = int 1
+          %1426 = as %1424, %1425
+          %1427 = break_inline result, %1426
+        } arg1 {
+          %1428 = arg_type %1423, 1
+          %1429 = int 31
+          %1430 = as %1428, %1429
+          %1431 = break_inline result, %1430
+        } arg2 {
+          %1432 = arg_type %1423, 2
+          %1433 = int 0
+          %1434 = as %1432, %1433
+          %1435 = break_inline result, %1434
+        } arg3 {
+          %1436 = arg_type %1423, 3
+          %1437 = int 1
+          %1438 = as %1436, %1437
+          %1439 = break_inline result, %1438
+        }
+        %1440 = as @type_bool, %1423
+        %1441 = bool_not %1440
+        %1447 = if %1441 then {
+          %1442 = ret_type
+          %1443 = int 2
+          %1444 = as_return %1442, %1443
+          %1445 = ret %1444
+        } else {
+          %1446 = break_inline result, @void_value
+        }
+        %1448 = decl_val "count_u32"
+        %1449 = call %1448 arg0 {
+          %1450 = arg_type %1449, 0
+          %1451 = int 4294967295
+          %1452 = as %1450, %1451
+          %1453 = break_inline result, %1452
+        } arg1 {
+          %1454 = arg_type %1449, 1
+          %1455 = int 0
+          %1456 = as %1454, %1455
+          %1457 = break_inline result, %1456
+        } arg2 {
+          %1458 = arg_type %1449, 2
+          %1459 = int 0
+          %1460 = as %1458, %1459
+          %1461 = break_inline result, %1460
+        } arg3 {
+          %1462 = arg_type %1449, 3
+          %1463 = int 32
+          %1464 = as %1462, %1463
+          %1465 = break_inline result, %1464
+        }
+        %1466 = as @type_bool, %1449
+        %1467 = bool_not %1466
+        %1473 = if %1467 then {
+          %1468 = ret_type
+          %1469 = int 2
+          %1470 = as_return %1468, %1469
+          %1471 = ret %1470
+        } else {
+          %1472 = break_inline result, @void_value
+        }
+        %1474 = decl_val "count_u32"
+        %1475 = call %1474 arg0 {
+          %1476 = arg_type %1475, 0
+          %1477 = int 2147483648
+          %1478 = as %1476, %1477
+          %1479 = break_inline result, %1478
+        } arg1 {
+          %1480 = arg_type %1475, 1
+          %1481 = int 0
+          %1482 = as %1480, %1481
+          %1483 = break_inline result, %1482
+        } arg2 {
+          %1484 = arg_type %1475, 2
+          %1485 = int 31
+          %1486 = as %1484, %1485
+          %1487 = break_inline result, %1486
+        } arg3 {
+          %1488 = arg_type %1475, 3
+          %1489 = int 1
+          %1490 = as %1488, %1489
+          %1491 = break_inline result, %1490
+        }
+        %1492 = as @type_bool, %1475
+        %1493 = bool_not %1492
+        %1499 = if %1493 then {
+          %1494 = ret_type
+          %1495 = int 2
+          %1496 = as_return %1494, %1495
+          %1497 = ret %1496
+        } else {
+          %1498 = break_inline result, @void_value
+        }
+        %1500 = decl_val "count_i32"
+        %1501 = call %1500 arg0 {
+          %1502 = arg_type %1501, 0
+          %1503 = int 0
+          %1504 = as %1502, %1503
+          %1505 = break_inline result, %1504
+        } arg1 {
+          %1506 = arg_type %1501, 1
+          %1507 = int 32
+          %1508 = as %1506, %1507
+          %1509 = break_inline result, %1508
+        } arg2 {
+          %1510 = arg_type %1501, 2
+          %1511 = int 32
+          %1512 = as %1510, %1511
+          %1513 = break_inline result, %1512
+        } arg3 {
+          %1514 = arg_type %1501, 3
+          %1515 = int 0
+          %1516 = as %1514, %1515
+          %1517 = break_inline result, %1516
+        }
+        %1518 = as @type_bool, %1501
+        %1519 = bool_not %1518
+        %1525 = if %1519 then {
+          %1520 = ret_type
+          %1521 = int 2
+          %1522 = as_return %1520, %1521
+          %1523 = ret %1522
+        } else {
+          %1524 = break_inline result, @void_value
+        }
+        %1526 = decl_val "count_i32"
+        %1527 = call %1526 arg0 {
+          %1528 = arg_type %1527, 0
+          %1529 = int 1
+          %1530 = as %1528, %1529
+          %1531 = break_inline result, %1530
+        } arg1 {
+          %1532 = arg_type %1527, 1
+          %1533 = int 31
+          %1534 = as %1532, %1533
+          %1535 = break_inline result, %1534
+        } arg2 {
+          %1536 = arg_type %1527, 2
+          %1537 = int 0
+          %1538 = as %1536, %1537
+          %1539 = break_inline result, %1538
+        } arg3 {
+          %1540 = arg_type %1527, 3
+          %1541 = int 1
+          %1542 = as %1540, %1541
+          %1543 = break_inline result, %1542
+        }
+        %1544 = as @type_bool, %1527
+        %1545 = bool_not %1544
+        %1551 = if %1545 then {
+          %1546 = ret_type
+          %1547 = int 2
+          %1548 = as_return %1546, %1547
+          %1549 = ret %1548
+        } else {
+          %1550 = break_inline result, @void_value
+        }
+        %1552 = decl_val "count_i32"
+        %1553 = call %1552 arg0 {
+          %1554 = arg_type %1553, 0
+          %1555 = int 1
+          %1556 = negate %1555
+          %1557 = as %1554, %1556
+          %1558 = break_inline result, %1557
+        } arg1 {
+          %1559 = arg_type %1553, 1
+          %1560 = int 0
+          %1561 = as %1559, %1560
+          %1562 = break_inline result, %1561
+        } arg2 {
+          %1563 = arg_type %1553, 2
+          %1564 = int 0
+          %1565 = as %1563, %1564
+          %1566 = break_inline result, %1565
+        } arg3 {
+          %1567 = arg_type %1553, 3
+          %1568 = int 32
+          %1569 = as %1567, %1568
+          %1570 = break_inline result, %1569
+        }
+        %1571 = as @type_bool, %1553
+        %1572 = bool_not %1571
+        %1578 = if %1572 then {
+          %1573 = ret_type
+          %1574 = int 2
+          %1575 = as_return %1573, %1574
+          %1576 = ret %1575
+        } else {
+          %1577 = break_inline result, @void_value
+        }
+        %1579 = decl_val "count_i32"
+        %1580 = call %1579 arg0 {
+          %1581 = arg_type %1580, 0
+          %1582 = int 2147483648
+          %1583 = negate %1582
+          %1584 = as %1581, %1583
+          %1585 = break_inline result, %1584
+        } arg1 {
+          %1586 = arg_type %1580, 1
+          %1587 = int 0
+          %1588 = as %1586, %1587
+          %1589 = break_inline result, %1588
+        } arg2 {
+          %1590 = arg_type %1580, 2
+          %1591 = int 31
+          %1592 = as %1590, %1591
+          %1593 = break_inline result, %1592
+        } arg3 {
+          %1594 = arg_type %1580, 3
+          %1595 = int 1
+          %1596 = as %1594, %1595
+          %1597 = break_inline result, %1596
+        }
+        %1598 = as @type_bool, %1580
+        %1599 = bool_not %1598
+        %1605 = if %1599 then {
+          %1600 = ret_type
+          %1601 = int 2
+          %1602 = as_return %1600, %1601
+          %1603 = ret %1602
+        } else {
+          %1604 = break_inline result, @void_value
+        }
+        %1606 = decl_val "count_u33"
+        %1607 = call %1606 arg0 {
+          %1608 = arg_type %1607, 0
+          %1609 = int 0
+          %1610 = as %1608, %1609
+          %1611 = break_inline result, %1610
+        } arg1 {
+          %1612 = arg_type %1607, 1
+          %1613 = int 33
+          %1614 = as %1612, %1613
+          %1615 = break_inline result, %1614
+        } arg2 {
+          %1616 = arg_type %1607, 2
+          %1617 = int 33
+          %1618 = as %1616, %1617
+          %1619 = break_inline result, %1618
+        } arg3 {
+          %1620 = arg_type %1607, 3
+          %1621 = int 0
+          %1622 = as %1620, %1621
+          %1623 = break_inline result, %1622
+        }
+        %1624 = as @type_bool, %1607
+        %1625 = bool_not %1624
+        %1631 = if %1625 then {
+          %1626 = ret_type
+          %1627 = int 2
+          %1628 = as_return %1626, %1627
+          %1629 = ret %1628
+        } else {
+          %1630 = break_inline result, @void_value
+        }
+        %1632 = decl_val "count_u33"
+        %1633 = call %1632 arg0 {
+          %1634 = arg_type %1633, 0
+          %1635 = int 1
+          %1636 = as %1634, %1635
+          %1637 = break_inline result, %1636
+        } arg1 {
+          %1638 = arg_type %1633, 1
+          %1639 = int 32
+          %1640 = as %1638, %1639
+          %1641 = break_inline result, %1640
+        } arg2 {
+          %1642 = arg_type %1633, 2
+          %1643 = int 0
+          %1644 = as %1642, %1643
+          %1645 = break_inline result, %1644
+        } arg3 {
+          %1646 = arg_type %1633, 3
+          %1647 = int 1
+          %1648 = as %1646, %1647
+          %1649 = break_inline result, %1648
+        }
+        %1650 = as @type_bool, %1633
+        %1651 = bool_not %1650
+        %1657 = if %1651 then {
+          %1652 = ret_type
+          %1653 = int 2
+          %1654 = as_return %1652, %1653
+          %1655 = ret %1654
+        } else {
+          %1656 = break_inline result, @void_value
+        }
+        %1658 = decl_val "count_u33"
+        %1659 = call %1658 arg0 {
+          %1660 = arg_type %1659, 0
+          %1661 = int 8589934591
+          %1662 = as %1660, %1661
+          %1663 = break_inline result, %1662
+        } arg1 {
+          %1664 = arg_type %1659, 1
+          %1665 = int 0
+          %1666 = as %1664, %1665
+          %1667 = break_inline result, %1666
+        } arg2 {
+          %1668 = arg_type %1659, 2
+          %1669 = int 0
+          %1670 = as %1668, %1669
+          %1671 = break_inline result, %1670
+        } arg3 {
+          %1672 = arg_type %1659, 3
+          %1673 = int 33
+          %1674 = as %1672, %1673
+          %1675 = break_inline result, %1674
+        }
+        %1676 = as @type_bool, %1659
+        %1677 = bool_not %1676
+        %1683 = if %1677 then {
+          %1678 = ret_type
+          %1679 = int 2
+          %1680 = as_return %1678, %1679
+          %1681 = ret %1680
+        } else {
+          %1682 = break_inline result, @void_value
+        }
+        %1684 = decl_val "count_u33"
+        %1685 = call %1684 arg0 {
+          %1686 = arg_type %1685, 0
+          %1687 = int 4294967296
+          %1688 = as %1686, %1687
+          %1689 = break_inline result, %1688
+        } arg1 {
+          %1690 = arg_type %1685, 1
+          %1691 = int 0
+          %1692 = as %1690, %1691
+          %1693 = break_inline result, %1692
+        } arg2 {
+          %1694 = arg_type %1685, 2
+          %1695 = int 32
+          %1696 = as %1694, %1695
+          %1697 = break_inline result, %1696
+        } arg3 {
+          %1698 = arg_type %1685, 3
+          %1699 = int 1
+          %1700 = as %1698, %1699
+          %1701 = break_inline result, %1700
+        }
+        %1702 = as @type_bool, %1685
+        %1703 = bool_not %1702
+        %1709 = if %1703 then {
+          %1704 = ret_type
+          %1705 = int 2
+          %1706 = as_return %1704, %1705
+          %1707 = ret %1706
+        } else {
+          %1708 = break_inline result, @void_value
+        }
+        %1710 = decl_val "count_i33"
+        %1711 = call %1710 arg0 {
+          %1712 = arg_type %1711, 0
+          %1713 = int 0
+          %1714 = as %1712, %1713
+          %1715 = break_inline result, %1714
+        } arg1 {
+          %1716 = arg_type %1711, 1
+          %1717 = int 33
+          %1718 = as %1716, %1717
+          %1719 = break_inline result, %1718
+        } arg2 {
+          %1720 = arg_type %1711, 2
+          %1721 = int 33
+          %1722 = as %1720, %1721
+          %1723 = break_inline result, %1722
+        } arg3 {
+          %1724 = arg_type %1711, 3
+          %1725 = int 0
+          %1726 = as %1724, %1725
+          %1727 = break_inline result, %1726
+        }
+        %1728 = as @type_bool, %1711
+        %1729 = bool_not %1728
+        %1735 = if %1729 then {
+          %1730 = ret_type
+          %1731 = int 2
+          %1732 = as_return %1730, %1731
+          %1733 = ret %1732
+        } else {
+          %1734 = break_inline result, @void_value
+        }
+        %1736 = decl_val "count_i33"
+        %1737 = call %1736 arg0 {
+          %1738 = arg_type %1737, 0
+          %1739 = int 1
+          %1740 = as %1738, %1739
+          %1741 = break_inline result, %1740
+        } arg1 {
+          %1742 = arg_type %1737, 1
+          %1743 = int 32
+          %1744 = as %1742, %1743
+          %1745 = break_inline result, %1744
+        } arg2 {
+          %1746 = arg_type %1737, 2
+          %1747 = int 0
+          %1748 = as %1746, %1747
+          %1749 = break_inline result, %1748
+        } arg3 {
+          %1750 = arg_type %1737, 3
+          %1751 = int 1
+          %1752 = as %1750, %1751
+          %1753 = break_inline result, %1752
+        }
+        %1754 = as @type_bool, %1737
+        %1755 = bool_not %1754
+        %1761 = if %1755 then {
+          %1756 = ret_type
+          %1757 = int 2
+          %1758 = as_return %1756, %1757
+          %1759 = ret %1758
+        } else {
+          %1760 = break_inline result, @void_value
+        }
+        %1762 = decl_val "count_i33"
+        %1763 = call %1762 arg0 {
+          %1764 = arg_type %1763, 0
+          %1765 = int 1
+          %1766 = negate %1765
+          %1767 = as %1764, %1766
+          %1768 = break_inline result, %1767
+        } arg1 {
+          %1769 = arg_type %1763, 1
+          %1770 = int 0
+          %1771 = as %1769, %1770
+          %1772 = break_inline result, %1771
+        } arg2 {
+          %1773 = arg_type %1763, 2
+          %1774 = int 0
+          %1775 = as %1773, %1774
+          %1776 = break_inline result, %1775
+        } arg3 {
+          %1777 = arg_type %1763, 3
+          %1778 = int 33
+          %1779 = as %1777, %1778
+          %1780 = break_inline result, %1779
+        }
+        %1781 = as @type_bool, %1763
+        %1782 = bool_not %1781
+        %1788 = if %1782 then {
+          %1783 = ret_type
+          %1784 = int 2
+          %1785 = as_return %1783, %1784
+          %1786 = ret %1785
+        } else {
+          %1787 = break_inline result, @void_value
+        }
+        %1789 = decl_val "count_i33"
+        %1790 = call %1789 arg0 {
+          %1791 = arg_type %1790, 0
+          %1792 = int 4294967296
+          %1793 = negate %1792
+          %1794 = as %1791, %1793
+          %1795 = break_inline result, %1794
+        } arg1 {
+          %1796 = arg_type %1790, 1
+          %1797 = int 0
+          %1798 = as %1796, %1797
+          %1799 = break_inline result, %1798
+        } arg2 {
+          %1800 = arg_type %1790, 2
+          %1801 = int 32
+          %1802 = as %1800, %1801
+          %1803 = break_inline result, %1802
+        } arg3 {
+          %1804 = arg_type %1790, 3
+          %1805 = int 1
+          %1806 = as %1804, %1805
+          %1807 = break_inline result, %1806
+        }
+        %1808 = as @type_bool, %1790
+        %1809 = bool_not %1808
+        %1815 = if %1809 then {
+          %1810 = ret_type
+          %1811 = int 2
+          %1812 = as_return %1810, %1811
+          %1813 = ret %1812
+        } else {
+          %1814 = break_inline result, @void_value
+        }
+        %1816 = decl_val "count_u40"
+        %1817 = call %1816 arg0 {
+          %1818 = arg_type %1817, 0
+          %1819 = int 0
+          %1820 = as %1818, %1819
+          %1821 = break_inline result, %1820
+        } arg1 {
+          %1822 = arg_type %1817, 1
+          %1823 = int 40
+          %1824 = as %1822, %1823
+          %1825 = break_inline result, %1824
+        } arg2 {
+          %1826 = arg_type %1817, 2
+          %1827 = int 40
+          %1828 = as %1826, %1827
+          %1829 = break_inline result, %1828
+        } arg3 {
+          %1830 = arg_type %1817, 3
+          %1831 = int 0
+          %1832 = as %1830, %1831
+          %1833 = break_inline result, %1832
+        }
+        %1834 = as @type_bool, %1817
+        %1835 = bool_not %1834
+        %1841 = if %1835 then {
+          %1836 = ret_type
+          %1837 = int 2
+          %1838 = as_return %1836, %1837
+          %1839 = ret %1838
+        } else {
+          %1840 = break_inline result, @void_value
+        }
+        %1842 = decl_val "count_u40"
+        %1843 = call %1842 arg0 {
+          %1844 = arg_type %1843, 0
+          %1845 = int 1
+          %1846 = as %1844, %1845
+          %1847 = break_inline result, %1846
+        } arg1 {
+          %1848 = arg_type %1843, 1
+          %1849 = int 39
+          %1850 = as %1848, %1849
+          %1851 = break_inline result, %1850
+        } arg2 {
+          %1852 = arg_type %1843, 2
+          %1853 = int 0
+          %1854 = as %1852, %1853
+          %1855 = break_inline result, %1854
+        } arg3 {
+          %1856 = arg_type %1843, 3
+          %1857 = int 1
+          %1858 = as %1856, %1857
+          %1859 = break_inline result, %1858
+        }
+        %1860 = as @type_bool, %1843
+        %1861 = bool_not %1860
+        %1867 = if %1861 then {
+          %1862 = ret_type
+          %1863 = int 2
+          %1864 = as_return %1862, %1863
+          %1865 = ret %1864
+        } else {
+          %1866 = break_inline result, @void_value
+        }
+        %1868 = decl_val "count_u40"
+        %1869 = call %1868 arg0 {
+          %1870 = arg_type %1869, 0
+          %1871 = int 1099511627775
+          %1872 = as %1870, %1871
+          %1873 = break_inline result, %1872
+        } arg1 {
+          %1874 = arg_type %1869, 1
+          %1875 = int 0
+          %1876 = as %1874, %1875
+          %1877 = break_inline result, %1876
+        } arg2 {
+          %1878 = arg_type %1869, 2
+          %1879 = int 0
+          %1880 = as %1878, %1879
+          %1881 = break_inline result, %1880
+        } arg3 {
+          %1882 = arg_type %1869, 3
+          %1883 = int 40
+          %1884 = as %1882, %1883
+          %1885 = break_inline result, %1884
+        }
+        %1886 = as @type_bool, %1869
+        %1887 = bool_not %1886
+        %1893 = if %1887 then {
+          %1888 = ret_type
+          %1889 = int 2
+          %1890 = as_return %1888, %1889
+          %1891 = ret %1890
+        } else {
+          %1892 = break_inline result, @void_value
+        }
+        %1894 = decl_val "count_u40"
+        %1895 = call %1894 arg0 {
+          %1896 = arg_type %1895, 0
+          %1897 = int 549755813888
+          %1898 = as %1896, %1897
+          %1899 = break_inline result, %1898
+        } arg1 {
+          %1900 = arg_type %1895, 1
+          %1901 = int 0
+          %1902 = as %1900, %1901
+          %1903 = break_inline result, %1902
+        } arg2 {
+          %1904 = arg_type %1895, 2
+          %1905 = int 39
+          %1906 = as %1904, %1905
+          %1907 = break_inline result, %1906
+        } arg3 {
+          %1908 = arg_type %1895, 3
+          %1909 = int 1
+          %1910 = as %1908, %1909
+          %1911 = break_inline result, %1910
+        }
+        %1912 = as @type_bool, %1895
+        %1913 = bool_not %1912
+        %1919 = if %1913 then {
+          %1914 = ret_type
+          %1915 = int 2
+          %1916 = as_return %1914, %1915
+          %1917 = ret %1916
+        } else {
+          %1918 = break_inline result, @void_value
+        }
+        %1920 = decl_val "count_i40"
+        %1921 = call %1920 arg0 {
+          %1922 = arg_type %1921, 0
+          %1923 = int 0
+          %1924 = as %1922, %1923
+          %1925 = break_inline result, %1924
+        } arg1 {
+          %1926 = arg_type %1921, 1
+          %1927 = int 40
+          %1928 = as %1926, %1927
+          %1929 = break_inline result, %1928
+        } arg2 {
+          %1930 = arg_type %1921, 2
+          %1931 = int 40
+          %1932 = as %1930, %1931
+          %1933 = break_inline result, %1932
+        } arg3 {
+          %1934 = arg_type %1921, 3
+          %1935 = int 0
+          %1936 = as %1934, %1935
+          %1937 = break_inline result, %1936
+        }
+        %1938 = as @type_bool, %1921
+        %1939 = bool_not %1938
+        %1945 = if %1939 then {
+          %1940 = ret_type
+          %1941 = int 2
+          %1942 = as_return %1940, %1941
+          %1943 = ret %1942
+        } else {
+          %1944 = break_inline result, @void_value
+        }
+        %1946 = decl_val "count_i40"
+        %1947 = call %1946 arg0 {
+          %1948 = arg_type %1947, 0
+          %1949 = int 1
+          %1950 = as %1948, %1949
+          %1951 = break_inline result, %1950
+        } arg1 {
+          %1952 = arg_type %1947, 1
+          %1953 = int 39
+          %1954 = as %1952, %1953
+          %1955 = break_inline result, %1954
+        } arg2 {
+          %1956 = arg_type %1947, 2
+          %1957 = int 0
+          %1958 = as %1956, %1957
+          %1959 = break_inline result, %1958
+        } arg3 {
+          %1960 = arg_type %1947, 3
+          %1961 = int 1
+          %1962 = as %1960, %1961
+          %1963 = break_inline result, %1962
+        }
+        %1964 = as @type_bool, %1947
+        %1965 = bool_not %1964
+        %1971 = if %1965 then {
+          %1966 = ret_type
+          %1967 = int 2
+          %1968 = as_return %1966, %1967
+          %1969 = ret %1968
+        } else {
+          %1970 = break_inline result, @void_value
+        }
+        %1972 = decl_val "count_i40"
+        %1973 = call %1972 arg0 {
+          %1974 = arg_type %1973, 0
+          %1975 = int 1
+          %1976 = negate %1975
+          %1977 = as %1974, %1976
+          %1978 = break_inline result, %1977
+        } arg1 {
+          %1979 = arg_type %1973, 1
+          %1980 = int 0
+          %1981 = as %1979, %1980
+          %1982 = break_inline result, %1981
+        } arg2 {
+          %1983 = arg_type %1973, 2
+          %1984 = int 0
+          %1985 = as %1983, %1984
+          %1986 = break_inline result, %1985
+        } arg3 {
+          %1987 = arg_type %1973, 3
+          %1988 = int 40
+          %1989 = as %1987, %1988
+          %1990 = break_inline result, %1989
+        }
+        %1991 = as @type_bool, %1973
+        %1992 = bool_not %1991
+        %1998 = if %1992 then {
+          %1993 = ret_type
+          %1994 = int 2
+          %1995 = as_return %1993, %1994
+          %1996 = ret %1995
+        } else {
+          %1997 = break_inline result, @void_value
+        }
+        %1999 = decl_val "count_i40"
+        %2000 = call %1999 arg0 {
+          %2001 = arg_type %2000, 0
+          %2002 = int 549755813888
+          %2003 = negate %2002
+          %2004 = as %2001, %2003
+          %2005 = break_inline result, %2004
+        } arg1 {
+          %2006 = arg_type %2000, 1
+          %2007 = int 0
+          %2008 = as %2006, %2007
+          %2009 = break_inline result, %2008
+        } arg2 {
+          %2010 = arg_type %2000, 2
+          %2011 = int 39
+          %2012 = as %2010, %2011
+          %2013 = break_inline result, %2012
+        } arg3 {
+          %2014 = arg_type %2000, 3
+          %2015 = int 1
+          %2016 = as %2014, %2015
+          %2017 = break_inline result, %2016
+        }
+        %2018 = as @type_bool, %2000
+        %2019 = bool_not %2018
+        %2025 = if %2019 then {
+          %2020 = ret_type
+          %2021 = int 2
+          %2022 = as_return %2020, %2021
+          %2023 = ret %2022
+        } else {
+          %2024 = break_inline result, @void_value
+        }
+        %2026 = decl_val "count_u63"
+        %2027 = call %2026 arg0 {
+          %2028 = arg_type %2027, 0
+          %2029 = int 0
+          %2030 = as %2028, %2029
+          %2031 = break_inline result, %2030
+        } arg1 {
+          %2032 = arg_type %2027, 1
+          %2033 = int 63
+          %2034 = as %2032, %2033
+          %2035 = break_inline result, %2034
+        } arg2 {
+          %2036 = arg_type %2027, 2
+          %2037 = int 63
+          %2038 = as %2036, %2037
+          %2039 = break_inline result, %2038
+        } arg3 {
+          %2040 = arg_type %2027, 3
+          %2041 = int 0
+          %2042 = as %2040, %2041
+          %2043 = break_inline result, %2042
+        }
+        %2044 = as @type_bool, %2027
+        %2045 = bool_not %2044
+        %2051 = if %2045 then {
+          %2046 = ret_type
+          %2047 = int 2
+          %2048 = as_return %2046, %2047
+          %2049 = ret %2048
+        } else {
+          %2050 = break_inline result, @void_value
+        }
+        %2052 = decl_val "count_u63"
+        %2053 = call %2052 arg0 {
+          %2054 = arg_type %2053, 0
+          %2055 = int 1
+          %2056 = as %2054, %2055
+          %2057 = break_inline result, %2056
+        } arg1 {
+          %2058 = arg_type %2053, 1
+          %2059 = int 62
+          %2060 = as %2058, %2059
+          %2061 = break_inline result, %2060
+        } arg2 {
+          %2062 = arg_type %2053, 2
+          %2063 = int 0
+          %2064 = as %2062, %2063
+          %2065 = break_inline result, %2064
+        } arg3 {
+          %2066 = arg_type %2053, 3
+          %2067 = int 1
+          %2068 = as %2066, %2067
+          %2069 = break_inline result, %2068
+        }
+        %2070 = as @type_bool, %2053
+        %2071 = bool_not %2070
+        %2077 = if %2071 then {
+          %2072 = ret_type
+          %2073 = int 2
+          %2074 = as_return %2072, %2073
+          %2075 = ret %2074
+        } else {
+          %2076 = break_inline result, @void_value
+        }
+        %2078 = decl_val "count_u63"
+        %2079 = call %2078 arg0 {
+          %2080 = arg_type %2079, 0
+          %2081 = int 9223372036854775807
+          %2082 = as %2080, %2081
+          %2083 = break_inline result, %2082
+        } arg1 {
+          %2084 = arg_type %2079, 1
+          %2085 = int 0
+          %2086 = as %2084, %2085
+          %2087 = break_inline result, %2086
+        } arg2 {
+          %2088 = arg_type %2079, 2
+          %2089 = int 0
+          %2090 = as %2088, %2089
+          %2091 = break_inline result, %2090
+        } arg3 {
+          %2092 = arg_type %2079, 3
+          %2093 = int 63
+          %2094 = as %2092, %2093
+          %2095 = break_inline result, %2094
+        }
+        %2096 = as @type_bool, %2079
+        %2097 = bool_not %2096
+        %2103 = if %2097 then {
+          %2098 = ret_type
+          %2099 = int 2
+          %2100 = as_return %2098, %2099
+          %2101 = ret %2100
+        } else {
+          %2102 = break_inline result, @void_value
+        }
+        %2104 = decl_val "count_u63"
+        %2105 = call %2104 arg0 {
+          %2106 = arg_type %2105, 0
+          %2107 = int 4611686018427387904
+          %2108 = as %2106, %2107
+          %2109 = break_inline result, %2108
+        } arg1 {
+          %2110 = arg_type %2105, 1
+          %2111 = int 0
+          %2112 = as %2110, %2111
+          %2113 = break_inline result, %2112
+        } arg2 {
+          %2114 = arg_type %2105, 2
+          %2115 = int 62
+          %2116 = as %2114, %2115
+          %2117 = break_inline result, %2116
+        } arg3 {
+          %2118 = arg_type %2105, 3
+          %2119 = int 1
+          %2120 = as %2118, %2119
+          %2121 = break_inline result, %2120
+        }
+        %2122 = as @type_bool, %2105
+        %2123 = bool_not %2122
+        %2129 = if %2123 then {
+          %2124 = ret_type
+          %2125 = int 2
+          %2126 = as_return %2124, %2125
+          %2127 = ret %2126
+        } else {
+          %2128 = break_inline result, @void_value
+        }
+        %2130 = decl_val "count_i63"
+        %2131 = call %2130 arg0 {
+          %2132 = arg_type %2131, 0
+          %2133 = int 0
+          %2134 = as %2132, %2133
+          %2135 = break_inline result, %2134
+        } arg1 {
+          %2136 = arg_type %2131, 1
+          %2137 = int 63
+          %2138 = as %2136, %2137
+          %2139 = break_inline result, %2138
+        } arg2 {
+          %2140 = arg_type %2131, 2
+          %2141 = int 63
+          %2142 = as %2140, %2141
+          %2143 = break_inline result, %2142
+        } arg3 {
+          %2144 = arg_type %2131, 3
+          %2145 = int 0
+          %2146 = as %2144, %2145
+          %2147 = break_inline result, %2146
+        }
+        %2148 = as @type_bool, %2131
+        %2149 = bool_not %2148
+        %2155 = if %2149 then {
+          %2150 = ret_type
+          %2151 = int 2
+          %2152 = as_return %2150, %2151
+          %2153 = ret %2152
+        } else {
+          %2154 = break_inline result, @void_value
+        }
+        %2156 = decl_val "count_i63"
+        %2157 = call %2156 arg0 {
+          %2158 = arg_type %2157, 0
+          %2159 = int 1
+          %2160 = as %2158, %2159
+          %2161 = break_inline result, %2160
+        } arg1 {
+          %2162 = arg_type %2157, 1
+          %2163 = int 62
+          %2164 = as %2162, %2163
+          %2165 = break_inline result, %2164
+        } arg2 {
+          %2166 = arg_type %2157, 2
+          %2167 = int 0
+          %2168 = as %2166, %2167
+          %2169 = break_inline result, %2168
+        } arg3 {
+          %2170 = arg_type %2157, 3
+          %2171 = int 1
+          %2172 = as %2170, %2171
+          %2173 = break_inline result, %2172
+        }
+        %2174 = as @type_bool, %2157
+        %2175 = bool_not %2174
+        %2181 = if %2175 then {
+          %2176 = ret_type
+          %2177 = int 2
+          %2178 = as_return %2176, %2177
+          %2179 = ret %2178
+        } else {
+          %2180 = break_inline result, @void_value
+        }
+        %2182 = decl_val "count_i63"
+        %2183 = call %2182 arg0 {
+          %2184 = arg_type %2183, 0
+          %2185 = int 1
+          %2186 = negate %2185
+          %2187 = as %2184, %2186
+          %2188 = break_inline result, %2187
+        } arg1 {
+          %2189 = arg_type %2183, 1
+          %2190 = int 0
+          %2191 = as %2189, %2190
+          %2192 = break_inline result, %2191
+        } arg2 {
+          %2193 = arg_type %2183, 2
+          %2194 = int 0
+          %2195 = as %2193, %2194
+          %2196 = break_inline result, %2195
+        } arg3 {
+          %2197 = arg_type %2183, 3
+          %2198 = int 63
+          %2199 = as %2197, %2198
+          %2200 = break_inline result, %2199
+        }
+        %2201 = as @type_bool, %2183
+        %2202 = bool_not %2201
+        %2208 = if %2202 then {
+          %2203 = ret_type
+          %2204 = int 2
+          %2205 = as_return %2203, %2204
+          %2206 = ret %2205
+        } else {
+          %2207 = break_inline result, @void_value
+        }
+        %2209 = decl_val "count_i63"
+        %2210 = call %2209 arg0 {
+          %2211 = arg_type %2210, 0
+          %2212 = int 4611686018427387904
+          %2213 = negate %2212
+          %2214 = as %2211, %2213
+          %2215 = break_inline result, %2214
+        } arg1 {
+          %2216 = arg_type %2210, 1
+          %2217 = int 0
+          %2218 = as %2216, %2217
+          %2219 = break_inline result, %2218
+        } arg2 {
+          %2220 = arg_type %2210, 2
+          %2221 = int 62
+          %2222 = as %2220, %2221
+          %2223 = break_inline result, %2222
+        } arg3 {
+          %2224 = arg_type %2210, 3
+          %2225 = int 1
+          %2226 = as %2224, %2225
+          %2227 = break_inline result, %2226
+        }
+        %2228 = as @type_bool, %2210
+        %2229 = bool_not %2228
+        %2235 = if %2229 then {
+          %2230 = ret_type
+          %2231 = int 2
+          %2232 = as_return %2230, %2231
+          %2233 = ret %2232
+        } else {
+          %2234 = break_inline result, @void_value
+        }
+        %2236 = decl_val "count_u64"
+        %2237 = call %2236 arg0 {
+          %2238 = arg_type %2237, 0
+          %2239 = int 0
+          %2240 = as %2238, %2239
+          %2241 = break_inline result, %2240
+        } arg1 {
+          %2242 = arg_type %2237, 1
+          %2243 = int 64
+          %2244 = as %2242, %2243
+          %2245 = break_inline result, %2244
+        } arg2 {
+          %2246 = arg_type %2237, 2
+          %2247 = int 64
+          %2248 = as %2246, %2247
+          %2249 = break_inline result, %2248
+        } arg3 {
+          %2250 = arg_type %2237, 3
+          %2251 = int 0
+          %2252 = as %2250, %2251
+          %2253 = break_inline result, %2252
+        }
+        %2254 = as @type_bool, %2237
+        %2255 = bool_not %2254
+        %2261 = if %2255 then {
+          %2256 = ret_type
+          %2257 = int 2
+          %2258 = as_return %2256, %2257
+          %2259 = ret %2258
+        } else {
+          %2260 = break_inline result, @void_value
+        }
+        %2262 = decl_val "count_u64"
+        %2263 = call %2262 arg0 {
+          %2264 = arg_type %2263, 0
+          %2265 = int 1
+          %2266 = as %2264, %2265
+          %2267 = break_inline result, %2266
+        } arg1 {
+          %2268 = arg_type %2263, 1
+          %2269 = int 63
+          %2270 = as %2268, %2269
+          %2271 = break_inline result, %2270
+        } arg2 {
+          %2272 = arg_type %2263, 2
+          %2273 = int 0
+          %2274 = as %2272, %2273
+          %2275 = break_inline result, %2274
+        } arg3 {
+          %2276 = arg_type %2263, 3
+          %2277 = int 1
+          %2278 = as %2276, %2277
+          %2279 = break_inline result, %2278
+        }
+        %2280 = as @type_bool, %2263
+        %2281 = bool_not %2280
+        %2287 = if %2281 then {
+          %2282 = ret_type
+          %2283 = int 2
+          %2284 = as_return %2282, %2283
+          %2285 = ret %2284
+        } else {
+          %2286 = break_inline result, @void_value
+        }
+        %2288 = decl_val "count_u64"
+        %2289 = call %2288 arg0 {
+          %2290 = arg_type %2289, 0
+          %2291 = int 18446744073709551615
+          %2292 = as %2290, %2291
+          %2293 = break_inline result, %2292
+        } arg1 {
+          %2294 = arg_type %2289, 1
+          %2295 = int 0
+          %2296 = as %2294, %2295
+          %2297 = break_inline result, %2296
+        } arg2 {
+          %2298 = arg_type %2289, 2
+          %2299 = int 0
+          %2300 = as %2298, %2299
+          %2301 = break_inline result, %2300
+        } arg3 {
+          %2302 = arg_type %2289, 3
+          %2303 = int 64
+          %2304 = as %2302, %2303
+          %2305 = break_inline result, %2304
+        }
+        %2306 = as @type_bool, %2289
+        %2307 = bool_not %2306
+        %2313 = if %2307 then {
+          %2308 = ret_type
+          %2309 = int 2
+          %2310 = as_return %2308, %2309
+          %2311 = ret %2310
+        } else {
+          %2312 = break_inline result, @void_value
+        }
+        %2314 = decl_val "count_u64"
+        %2315 = call %2314 arg0 {
+          %2316 = arg_type %2315, 0
+          %2317 = int 9223372036854775808
+          %2318 = as %2316, %2317
+          %2319 = break_inline result, %2318
+        } arg1 {
+          %2320 = arg_type %2315, 1
+          %2321 = int 0
+          %2322 = as %2320, %2321
+          %2323 = break_inline result, %2322
+        } arg2 {
+          %2324 = arg_type %2315, 2
+          %2325 = int 63
+          %2326 = as %2324, %2325
+          %2327 = break_inline result, %2326
+        } arg3 {
+          %2328 = arg_type %2315, 3
+          %2329 = int 1
+          %2330 = as %2328, %2329
+          %2331 = break_inline result, %2330
+        }
+        %2332 = as @type_bool, %2315
+        %2333 = bool_not %2332
+        %2339 = if %2333 then {
+          %2334 = ret_type
+          %2335 = int 2
+          %2336 = as_return %2334, %2335
+          %2337 = ret %2336
+        } else {
+          %2338 = break_inline result, @void_value
+        }
+        %2340 = decl_val "count_i64"
+        %2341 = call %2340 arg0 {
+          %2342 = arg_type %2341, 0
+          %2343 = int 0
+          %2344 = as %2342, %2343
+          %2345 = break_inline result, %2344
+        } arg1 {
+          %2346 = arg_type %2341, 1
+          %2347 = int 64
+          %2348 = as %2346, %2347
+          %2349 = break_inline result, %2348
+        } arg2 {
+          %2350 = arg_type %2341, 2
+          %2351 = int 64
+          %2352 = as %2350, %2351
+          %2353 = break_inline result, %2352
+        } arg3 {
+          %2354 = arg_type %2341, 3
+          %2355 = int 0
+          %2356 = as %2354, %2355
+          %2357 = break_inline result, %2356
+        }
+        %2358 = as @type_bool, %2341
+        %2359 = bool_not %2358
+        %2365 = if %2359 then {
+          %2360 = ret_type
+          %2361 = int 2
+          %2362 = as_return %2360, %2361
+          %2363 = ret %2362
+        } else {
+          %2364 = break_inline result, @void_value
+        }
+        %2366 = decl_val "count_i64"
+        %2367 = call %2366 arg0 {
+          %2368 = arg_type %2367, 0
+          %2369 = int 1
+          %2370 = as %2368, %2369
+          %2371 = break_inline result, %2370
+        } arg1 {
+          %2372 = arg_type %2367, 1
+          %2373 = int 63
+          %2374 = as %2372, %2373
+          %2375 = break_inline result, %2374
+        } arg2 {
+          %2376 = arg_type %2367, 2
+          %2377 = int 0
+          %2378 = as %2376, %2377
+          %2379 = break_inline result, %2378
+        } arg3 {
+          %2380 = arg_type %2367, 3
+          %2381 = int 1
+          %2382 = as %2380, %2381
+          %2383 = break_inline result, %2382
+        }
+        %2384 = as @type_bool, %2367
+        %2385 = bool_not %2384
+        %2391 = if %2385 then {
+          %2386 = ret_type
+          %2387 = int 2
+          %2388 = as_return %2386, %2387
+          %2389 = ret %2388
+        } else {
+          %2390 = break_inline result, @void_value
+        }
+        %2392 = decl_val "count_i64"
+        %2393 = call %2392 arg0 {
+          %2394 = arg_type %2393, 0
+          %2395 = int 1
+          %2396 = negate %2395
+          %2397 = as %2394, %2396
+          %2398 = break_inline result, %2397
+        } arg1 {
+          %2399 = arg_type %2393, 1
+          %2400 = int 0
+          %2401 = as %2399, %2400
+          %2402 = break_inline result, %2401
+        } arg2 {
+          %2403 = arg_type %2393, 2
+          %2404 = int 0
+          %2405 = as %2403, %2404
+          %2406 = break_inline result, %2405
+        } arg3 {
+          %2407 = arg_type %2393, 3
+          %2408 = int 64
+          %2409 = as %2407, %2408
+          %2410 = break_inline result, %2409
+        }
+        %2411 = as @type_bool, %2393
+        %2412 = bool_not %2411
+        %2418 = if %2412 then {
+          %2413 = ret_type
+          %2414 = int 2
+          %2415 = as_return %2413, %2414
+          %2416 = ret %2415
+        } else {
+          %2417 = break_inline result, @void_value
+        }
+        %2419 = decl_val "count_i64"
+        %2420 = call %2419 arg0 {
+          %2421 = arg_type %2420, 0
+          %2422 = int 9223372036854775808
+          %2423 = negate %2422
+          %2424 = as %2421, %2423
+          %2425 = break_inline result, %2424
+        } arg1 {
+          %2426 = arg_type %2420, 1
+          %2427 = int 0
+          %2428 = as %2426, %2427
+          %2429 = break_inline result, %2428
+        } arg2 {
+          %2430 = arg_type %2420, 2
+          %2431 = int 63
+          %2432 = as %2430, %2431
+          %2433 = break_inline result, %2432
+        } arg3 {
+          %2434 = arg_type %2420, 3
+          %2435 = int 1
+          %2436 = as %2434, %2435
+          %2437 = break_inline result, %2436
+        }
+        %2438 = as @type_bool, %2420
+        %2439 = bool_not %2438
+        %2445 = if %2439 then {
+          %2440 = ret_type
+          %2441 = int 2
+          %2442 = as_return %2440, %2441
+          %2443 = ret %2442
+        } else {
+          %2444 = break_inline result, @void_value
+        }
+        %2446 = ret_type
+        %2447 = int 0
+        %2448 = as_return %2446, %2447
+        %2449 = ret %2448
+      }
+    }
+    %2451 = break_inline result, %2450
+  }
+}

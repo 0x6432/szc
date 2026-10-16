@@ -286,6 +286,50 @@ test_bigint_random(void)
 }
 
 static void
+test_bigint_bit_counts(void)
+{
+	Arena arena;
+	arena_init(&arena);
+	uint64_t state = 998811;
+	uint32_t mismatches = 0;
+	for (uint32_t width = 0; width <= 64; width++) {
+		for (uint32_t round = 0; round < 16; round++) {
+			uint64_t raw = next_random(&state);
+			if (width < 64)
+				raw &= (UINT64_C(1) << width) - 1;
+			uint32_t leading = 0;
+			uint32_t trailing = 0;
+			uint32_t population = 0;
+			for (uint32_t i = 0; i < width; i++)
+				population += (uint32_t)(raw >> i & 1);
+			while (leading < width && (raw >> (width - leading - 1) & 1) == 0)
+				leading++;
+			while (trailing < width && (raw >> trailing & 1) == 0)
+				trailing++;
+			BigInt value = bigint_from_u64(&arena, raw);
+			mismatches += bigint_bit_count(&arena, &value, width, BIGINT_CLZ) != leading;
+			mismatches += bigint_bit_count(&arena, &value, width, BIGINT_CTZ) != trailing;
+			mismatches += bigint_bit_count(&arena, &value, width, BIGINT_POP_COUNT) != population;
+		}
+	}
+	CHECK(mismatches == 0);
+	BigInt one = bigint_from_u64(&arena, 1);
+	BigInt negative = bigint_negate(&arena, &one);
+	BigInt zero = bigint_from_u64(&arena, 0);
+	CHECK(bigint_bit_count(&arena, &negative, 257, BIGINT_CLZ) == 0);
+	CHECK(bigint_bit_count(&arena, &negative, 257, BIGINT_CTZ) == 0);
+	CHECK(bigint_bit_count(&arena, &negative, 257, BIGINT_POP_COUNT) == 257);
+	CHECK(bigint_bit_count(&arena, &zero, 65535, BIGINT_CLZ) == 65535);
+	CHECK(bigint_bit_count(&arena, &zero, 65535, BIGINT_CTZ) == 65535);
+	CHECK(bigint_bit_count(&arena, &zero, 65535, BIGINT_POP_COUNT) == 0);
+	BigInt high = bigint_shl(&arena, &one, 256);
+	CHECK(bigint_bit_count(&arena, &high, 257, BIGINT_CLZ) == 0);
+	CHECK(bigint_bit_count(&arena, &high, 257, BIGINT_CTZ) == 256);
+	CHECK(bigint_bit_count(&arena, &high, 257, BIGINT_POP_COUNT) == 1);
+	arena_free(&arena);
+}
+
+static void
 test_bigint_div_zero(void)
 {
 	Arena arena;
@@ -1338,6 +1382,7 @@ main(void)
 	test_bom_and_embedded_nul();
 	test_bigint_random();
 	test_bigint_div_zero();
+	test_bigint_bit_counts();
 	test_byte_values();
 	test_constant_references();
 	test_global_references();

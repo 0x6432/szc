@@ -769,6 +769,55 @@ emit_inst(Codegen *cg, TirRef ref)
 		emit_binary(cg, ref, QBE_W, op, inst->data.bin.lhs, inst->data.bin.rhs);
 		return;
 	}
+	case TIR_CLZ:
+	case TIR_CTZ:
+	case TIR_POP_COUNT: {
+		TirRef operand = inst->data.un.operand;
+		TypeId operand_type = inst_at(cg, operand)->type;
+		uint32_t bits = type_bits(cg, operand_type);
+		QbeClass operand_class = type_class(cg, operand_type, inst->src);
+		if (operand_class == QBE_NONE) {
+			print_dest(cg, ref, QBE_W);
+			fputs("copy 0\n", out);
+			return;
+		}
+		fprintf(out, "\t%%bc%u_bits =l %s ", ref, operand_class == QBE_W ? "extuw" : "copy");
+		print_operand(cg, operand);
+		fputc('\n', out);
+		/* Canonical signed values have sign-extension outside their logical width. */
+		if (bits < 64)
+			fprintf(out, "\t%%bc%u_bits =l and %%bc%u_bits, %" PRIu64 "\n", ref, ref, (UINT64_C(1) << bits) - 1);
+		fprintf(out, "\t%%bc%u_count =w copy 0\n", ref);
+		if (inst->op == TIR_CTZ) {
+			fprintf(out, "\t%%bc%u_zero =w ceql %%bc%u_bits, 0\n", ref, ref);
+			fprintf(out, "\tjnz %%bc%u_zero, @bc%u_zero, @bc%u_loop\n", ref, ref, ref);
+			fprintf(out, "@bc%u_zero\n\t%%bc%u_count =w copy %u\n\tjmp @bc%u_done\n", ref, ref, bits, ref);
+		} else {
+			fprintf(out, "\tjmp @bc%u_loop\n", ref);
+		}
+		fprintf(out, "@bc%u_loop\n", ref);
+		if (inst->op == TIR_CTZ) {
+			fprintf(out, "\t%%bc%u_low =l and %%bc%u_bits, 1\n", ref, ref);
+			fprintf(out, "\t%%bc%u_more =w ceql %%bc%u_low, 0\n", ref, ref);
+		} else {
+			fprintf(out, "\t%%bc%u_more =w cnel %%bc%u_bits, 0\n", ref, ref);
+		}
+		fprintf(out, "\tjnz %%bc%u_more, @bc%u_body, @bc%u_done\n", ref, ref, ref);
+		fprintf(out, "@bc%u_body\n\t%%bc%u_count =w add %%bc%u_count, 1\n", ref, ref, ref);
+		if (inst->op == TIR_POP_COUNT) {
+			fprintf(out, "\t%%bc%u_next =l sub %%bc%u_bits, 1\n", ref, ref);
+			fprintf(out, "\t%%bc%u_bits =l and %%bc%u_bits, %%bc%u_next\n", ref, ref, ref);
+		} else {
+			fprintf(out, "\t%%bc%u_bits =l shr %%bc%u_bits, 1\n", ref, ref);
+		}
+		fprintf(out, "\tjmp @bc%u_loop\n@bc%u_done\n", ref, ref);
+		print_dest(cg, ref, QBE_W);
+		if (inst->op == TIR_CLZ)
+			fprintf(out, "sub %u, %%bc%u_count\n", bits, ref);
+		else
+			fprintf(out, "copy %%bc%u_count\n", ref);
+		return;
+	}
 	case TIR_NOT:
 		print_dest(cg, ref, cls);
 		fputs("xor ", out);

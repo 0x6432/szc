@@ -55,6 +55,9 @@ typedef uint32_t TirBody;	/* extra index of a body, 0 = none */
 	X(BIT_CAST, "bit_cast")	/* un: equal-width scalar bit representation */ \
 	X(INT_CAST, "int_cast")	/* un: widen/narrow integer to `type` */ \
 	X(TRUNCATE, "truncate")	/* un: discard high integer bits */ \
+	X(CLZ, "clz") /* un: unsigned count of leading zeros in operand width */ \
+	X(CTZ, "ctz") /* un: unsigned count of trailing zeros in operand width */ \
+	X(POP_COUNT, "pop_count") /* un: unsigned population count */ \
 	X(INT_FROM_BOOL, "int_from_bool")	/* un: bool -> u1 */ \
 	X(ALIGN_CHECK, "align_check") /* bin: pointer and zero-length exemption; type carries alignment */ \
 	X(NULL_CHECK, "null_check") /* un: assert a thin pointer is non-null */ \

@@ -3285,6 +3285,35 @@ log2_int_bits(uint32_t bits)
 	return result;
 }
 
+/* Scalar integer bit-count builtins use the smallest unsigned type holding width. */
+static Operand
+analyze_bit_count(Block *block, const IrInst *inst)
+{
+	Sema *sema = block->sema;
+	Operand operand = resolve_ref(block, inst->data.un.operand);
+	if (operand.kind == OPERAND_NONE)
+		return operand_none;
+	if (!is_int(sema, operand.type)) {
+		sema_error(block, inst->src, "expected integer or vector, found '%s'", sema_type_name(sema, operand.type));
+		return operand_none;
+	}
+	uint32_t bits = sema->types[operand.type].as.integer.bits;
+	TypeId type = type_int(sema, false, log2_int_bits(bits + 1));
+	if (bits == 0)
+		return comptime_operand(type, value_int_u64(&sema->values, type, 0));
+	if (operand_is_undefined(block, operand))
+		return comptime_operand(type, value_undefined(&sema->values, type));
+	if (operand.kind == OPERAND_COMPTIME) {
+		BigIntCountOp op = inst->op == IR_CLZ ? BIGINT_CLZ : inst->op == IR_CTZ ? BIGINT_CTZ : BIGINT_POP_COUNT;
+		uint32_t count = bigint_bit_count(sema->arena, &operand_value(block, operand)->as.integer, bits, op);
+		return comptime_operand(type, value_int_u64(&sema->values, type, count));
+	}
+	if (!require_runtime(block, inst->src))
+		return operand_none;
+	TirOp op = inst->op == IR_CLZ ? TIR_CLZ : inst->op == IR_CTZ ? TIR_CTZ : TIR_POP_COUNT;
+	return runtime_operand(type, emit_tir_un(block, op, type, inst->src, operand.inst));
+}
+
 /* <<, >>, <<|. */
 static Operand
 analyze_shift(Block *block, const IrInst *inst)
@@ -6037,6 +6066,11 @@ analyze_inst(Block *block, IrInstIndex index, Operand *break_value)
 	case IR_INT_FROM_PTR:
 		result = analyze_int_from_ptr(block, inst);
 		break;
+	case IR_CLZ:
+	case IR_CTZ:
+	case IR_POP_COUNT:
+		result = analyze_bit_count(block, inst);
+		break;
 	case IR_INT_FROM_BOOL:
 		result = analyze_int_from_bool(block, inst);
 		break;
@@ -6584,6 +6618,9 @@ dump_tir_inst(FILE *out, Sema *sema, const TirFunc *tir, TirRef ref, uint32_t de
 	case TIR_BIT_CAST:
 	case TIR_INT_CAST:
 	case TIR_TRUNCATE:
+	case TIR_CLZ:
+	case TIR_CTZ:
+	case TIR_POP_COUNT:
 	case TIR_INT_FROM_BOOL:
 	case TIR_LOAD:
 	case TIR_LOAD_VOLATILE:

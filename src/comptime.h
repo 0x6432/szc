@@ -147,6 +147,16 @@ ValueId value_function(ValueTable *table, TypeId fn_type, FuncId function);
 
 /* ---------- Big integers (results are allocated in `arena`) ---------- */
 
+typedef enum BigIntCountOp {
+	BIGINT_CLZ,
+	BIGINT_CTZ,
+	BIGINT_POP_COUNT,
+} BigIntCountOp;
+
+/* Count the low `bits` two's-complement bits, including implicit zero limbs. */
+uint32_t bigint_bit_count(Arena *arena, const BigInt *value, uint32_t bits, BigIntCountOp op);
+
+
 BigInt bigint_from_u64(Arena *arena, uint64_t value);
 BigInt bigint_from_limbs(Arena *arena, const uint32_t *limbs, uint32_t limb_count);
 BigInt bigint_add(Arena *arena, const BigInt *a, const BigInt *b);

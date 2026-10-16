@@ -1015,3 +1015,24 @@ packed_bits_read(Arena *arena, const PackedBits *bits, uint32_t offset, uint32_t
 	*out = bigint_wrap(arena, &value, is_signed, width);
 	return true;
 }
+
+/* Width is explicit: signed inputs count their finite two's-complement bits. */
+uint32_t
+bigint_bit_count(Arena *arena, const BigInt *value, uint32_t bits, BigIntCountOp op)
+{
+	BigInt raw = bigint_wrap(arena, value, false, bits);
+	uint32_t count = 0;
+	if (op == BIGINT_POP_COUNT) {
+		for (uint32_t i = 0; i < raw.limb_count; i++)
+			for (uint32_t limb = raw.limbs[i]; limb != 0; limb &= limb - 1)
+				count++;
+		return count;
+	}
+	for (uint32_t i = 0; i < bits; i++) {
+		uint32_t bit = op == BIGINT_CLZ ? bits - i - 1 : i;
+		if (bit / 32 < raw.limb_count && (raw.limbs[bit / 32] & (UINT32_C(1) << (bit % 32))) != 0)
+			break;
+		count++;
+	}
+	return count;
+}

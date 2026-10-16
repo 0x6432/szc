@@ -185,6 +185,9 @@ typedef enum IrDataKind {
 	X(VOLATILE_CAST, "volatile_cast", IR_DATA_UN)	/* discard top-level volatile qualifier */ \
 	X(PTR_FROM_INT, "ptr_from_int", IR_DATA_BIN)	/* destination pointer type, usize address */ \
 	X(INT_FROM_PTR, "int_from_ptr", IR_DATA_UN)	/* @intFromPtr: usize address */ \
+	X(CLZ, "clz", IR_DATA_UN) \
+	X(CTZ, "ctz", IR_DATA_UN) \
+	X(POP_COUNT, "pop_count", IR_DATA_UN) \
 	X(INT_FROM_BOOL, "int_from_bool", IR_DATA_UN)	/* @intFromBool: u1 */ \
 	/* Arithmetic and logic */ \
 	X(ADD, "add", IR_DATA_BIN) \

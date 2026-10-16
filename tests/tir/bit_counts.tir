@@ -1,0 +1,1772 @@
+fn szc.main.1: fn () u8 {
+  %0: *u16 = alloc
+  %1: u16 = const 0
+  %2: void = store %0, %1
+  %3: void = block {
+    %4: noreturn = loop {
+      %5: u16 = load %0
+      %6: u16 = const 256
+      %7: bool = cmp_lt %5, %6
+      %26: noreturn = condbr %7 then {
+        %8: void = block {
+          %9: u16 = load %0
+          %10: u8 = int_cast %9
+          %11: bool = call szc.check_byte.2(%10)
+          %12: bool = not %11
+          %13: void = block {
+            %17: noreturn = condbr %12 then {
+              %14: u8 = const 1
+              %15: noreturn = ret %14
+            } else {
+              %16: noreturn = br %13
+            }
+          }
+          %18: noreturn = block {
+            %19: noreturn = br %8
+          }
+        }
+        %20: u16 = load %0
+        %21: u16 = const 1
+        %22: u16 = add %20, %21
+        %23: void = store %0, %22
+        %24: noreturn = repeat %4
+      } else {
+        %25: noreturn = block {
+          %27: noreturn = br %3
+        }
+      }
+    }
+  }
+  %28: u0 = const 0
+  %29: u8 = const 0
+  %30: u8 = const 0
+  %31: u8 = const 0
+  %32: bool = call szc.count_u0.3(%28, %29, %30, %31)
+  %33: bool = not %32
+  %34: void = block {
+    %38: noreturn = condbr %33 then {
+      %35: u8 = const 2
+      %36: noreturn = ret %35
+    } else {
+      %37: noreturn = br %34
+    }
+  }
+  %39: u1 = const 0
+  %40: u8 = const 1
+  %41: u8 = const 1
+  %42: u8 = const 0
+  %43: bool = call szc.count_u1.4(%39, %40, %41, %42)
+  %44: bool = not %43
+  %45: void = block {
+    %49: noreturn = condbr %44 then {
+      %46: u8 = const 2
+      %47: noreturn = ret %46
+    } else {
+      %48: noreturn = br %45
+    }
+  }
+  %50: u1 = const 1
+  %51: u8 = const 0
+  %52: u8 = const 0
+  %53: u8 = const 1
+  %54: bool = call szc.count_u1.4(%50, %51, %52, %53)
+  %55: bool = not %54
+  %56: void = block {
+    %60: noreturn = condbr %55 then {
+      %57: u8 = const 2
+      %58: noreturn = ret %57
+    } else {
+      %59: noreturn = br %56
+    }
+  }
+  %61: i1 = const 0
+  %62: u8 = const 1
+  %63: u8 = const 1
+  %64: u8 = const 0
+  %65: bool = call szc.count_i1.5(%61, %62, %63, %64)
+  %66: bool = not %65
+  %67: void = block {
+    %71: noreturn = condbr %66 then {
+      %68: u8 = const 2
+      %69: noreturn = ret %68
+    } else {
+      %70: noreturn = br %67
+    }
+  }
+  %72: i1 = const -1
+  %73: u8 = const 0
+  %74: u8 = const 0
+  %75: u8 = const 1
+  %76: bool = call szc.count_i1.5(%72, %73, %74, %75)
+  %77: bool = not %76
+  %78: void = block {
+    %82: noreturn = condbr %77 then {
+      %79: u8 = const 2
+      %80: noreturn = ret %79
+    } else {
+      %81: noreturn = br %78
+    }
+  }
+  %83: u5 = const 0
+  %84: u8 = const 5
+  %85: u8 = const 5
+  %86: u8 = const 0
+  %87: bool = call szc.count_u5.6(%83, %84, %85, %86)
+  %88: bool = not %87
+  %89: void = block {
+    %93: noreturn = condbr %88 then {
+      %90: u8 = const 2
+      %91: noreturn = ret %90
+    } else {
+      %92: noreturn = br %89
+    }
+  }
+  %94: u5 = const 1
+  %95: u8 = const 4
+  %96: u8 = const 0
+  %97: u8 = const 1
+  %98: bool = call szc.count_u5.6(%94, %95, %96, %97)
+  %99: bool = not %98
+  %100: void = block {
+    %104: noreturn = condbr %99 then {
+      %101: u8 = const 2
+      %102: noreturn = ret %101
+    } else {
+      %103: noreturn = br %100
+    }
+  }
+  %105: u5 = const 31
+  %106: u8 = const 0
+  %107: u8 = const 0
+  %108: u8 = const 5
+  %109: bool = call szc.count_u5.6(%105, %106, %107, %108)
+  %110: bool = not %109
+  %111: void = block {
+    %115: noreturn = condbr %110 then {
+      %112: u8 = const 2
+      %113: noreturn = ret %112
+    } else {
+      %114: noreturn = br %111
+    }
+  }
+  %116: u5 = const 16
+  %117: u8 = const 0
+  %118: u8 = const 4
+  %119: u8 = const 1
+  %120: bool = call szc.count_u5.6(%116, %117, %118, %119)
+  %121: bool = not %120
+  %122: void = block {
+    %126: noreturn = condbr %121 then {
+      %123: u8 = const 2
+      %124: noreturn = ret %123
+    } else {
+      %125: noreturn = br %122
+    }
+  }
+  %127: i5 = const 0
+  %128: u8 = const 5
+  %129: u8 = const 5
+  %130: u8 = const 0
+  %131: bool = call szc.count_i5.7(%127, %128, %129, %130)
+  %132: bool = not %131
+  %133: void = block {
+    %137: noreturn = condbr %132 then {
+      %134: u8 = const 2
+      %135: noreturn = ret %134
+    } else {
+      %136: noreturn = br %133
+    }
+  }
+  %138: i5 = const 1
+  %139: u8 = const 4
+  %140: u8 = const 0
+  %141: u8 = const 1
+  %142: bool = call szc.count_i5.7(%138, %139, %140, %141)
+  %143: bool = not %142
+  %144: void = block {
+    %148: noreturn = condbr %143 then {
+      %145: u8 = const 2
+      %146: noreturn = ret %145
+    } else {
+      %147: noreturn = br %144
+    }
+  }
+  %149: i5 = const -1
+  %150: u8 = const 0
+  %151: u8 = const 0
+  %152: u8 = const 5
+  %153: bool = call szc.count_i5.7(%149, %150, %151, %152)
+  %154: bool = not %153
+  %155: void = block {
+    %159: noreturn = condbr %154 then {
+      %156: u8 = const 2
+      %157: noreturn = ret %156
+    } else {
+      %158: noreturn = br %155
+    }
+  }
+  %160: i5 = const -16
+  %161: u8 = const 0
+  %162: u8 = const 4
+  %163: u8 = const 1
+  %164: bool = call szc.count_i5.7(%160, %161, %162, %163)
+  %165: bool = not %164
+  %166: void = block {
+    %170: noreturn = condbr %165 then {
+      %167: u8 = const 2
+      %168: noreturn = ret %167
+    } else {
+      %169: noreturn = br %166
+    }
+  }
+  %171: u8 = const 0
+  %172: u8 = const 8
+  %173: u8 = const 8
+  %174: u8 = const 0
+  %175: bool = call szc.count_u8.8(%171, %172, %173, %174)
+  %176: bool = not %175
+  %177: void = block {
+    %181: noreturn = condbr %176 then {
+      %178: u8 = const 2
+      %179: noreturn = ret %178
+    } else {
+      %180: noreturn = br %177
+    }
+  }
+  %182: u8 = const 1
+  %183: u8 = const 7
+  %184: u8 = const 0
+  %185: u8 = const 1
+  %186: bool = call szc.count_u8.8(%182, %183, %184, %185)
+  %187: bool = not %186
+  %188: void = block {
+    %192: noreturn = condbr %187 then {
+      %189: u8 = const 2
+      %190: noreturn = ret %189
+    } else {
+      %191: noreturn = br %188
+    }
+  }
+  %193: u8 = const 255
+  %194: u8 = const 0
+  %195: u8 = const 0
+  %196: u8 = const 8
+  %197: bool = call szc.count_u8.8(%193, %194, %195, %196)
+  %198: bool = not %197
+  %199: void = block {
+    %203: noreturn = condbr %198 then {
+      %200: u8 = const 2
+      %201: noreturn = ret %200
+    } else {
+      %202: noreturn = br %199
+    }
+  }
+  %204: u8 = const 128
+  %205: u8 = const 0
+  %206: u8 = const 7
+  %207: u8 = const 1
+  %208: bool = call szc.count_u8.8(%204, %205, %206, %207)
+  %209: bool = not %208
+  %210: void = block {
+    %214: noreturn = condbr %209 then {
+      %211: u8 = const 2
+      %212: noreturn = ret %211
+    } else {
+      %213: noreturn = br %210
+    }
+  }
+  %215: i8 = const 0
+  %216: u8 = const 8
+  %217: u8 = const 8
+  %218: u8 = const 0
+  %219: bool = call szc.count_i8.9(%215, %216, %217, %218)
+  %220: bool = not %219
+  %221: void = block {
+    %225: noreturn = condbr %220 then {
+      %222: u8 = const 2
+      %223: noreturn = ret %222
+    } else {
+      %224: noreturn = br %221
+    }
+  }
+  %226: i8 = const 1
+  %227: u8 = const 7
+  %228: u8 = const 0
+  %229: u8 = const 1
+  %230: bool = call szc.count_i8.9(%226, %227, %228, %229)
+  %231: bool = not %230
+  %232: void = block {
+    %236: noreturn = condbr %231 then {
+      %233: u8 = const 2
+      %234: noreturn = ret %233
+    } else {
+      %235: noreturn = br %232
+    }
+  }
+  %237: i8 = const -1
+  %238: u8 = const 0
+  %239: u8 = const 0
+  %240: u8 = const 8
+  %241: bool = call szc.count_i8.9(%237, %238, %239, %240)
+  %242: bool = not %241
+  %243: void = block {
+    %247: noreturn = condbr %242 then {
+      %244: u8 = const 2
+      %245: noreturn = ret %244
+    } else {
+      %246: noreturn = br %243
+    }
+  }
+  %248: i8 = const -128
+  %249: u8 = const 0
+  %250: u8 = const 7
+  %251: u8 = const 1
+  %252: bool = call szc.count_i8.9(%248, %249, %250, %251)
+  %253: bool = not %252
+  %254: void = block {
+    %258: noreturn = condbr %253 then {
+      %255: u8 = const 2
+      %256: noreturn = ret %255
+    } else {
+      %257: noreturn = br %254
+    }
+  }
+  %259: u29 = const 0
+  %260: u8 = const 29
+  %261: u8 = const 29
+  %262: u8 = const 0
+  %263: bool = call szc.count_u29.10(%259, %260, %261, %262)
+  %264: bool = not %263
+  %265: void = block {
+    %269: noreturn = condbr %264 then {
+      %266: u8 = const 2
+      %267: noreturn = ret %266
+    } else {
+      %268: noreturn = br %265
+    }
+  }
+  %270: u29 = const 1
+  %271: u8 = const 28
+  %272: u8 = const 0
+  %273: u8 = const 1
+  %274: bool = call szc.count_u29.10(%270, %271, %272, %273)
+  %275: bool = not %274
+  %276: void = block {
+    %280: noreturn = condbr %275 then {
+      %277: u8 = const 2
+      %278: noreturn = ret %277
+    } else {
+      %279: noreturn = br %276
+    }
+  }
+  %281: u29 = const 536870911
+  %282: u8 = const 0
+  %283: u8 = const 0
+  %284: u8 = const 29
+  %285: bool = call szc.count_u29.10(%281, %282, %283, %284)
+  %286: bool = not %285
+  %287: void = block {
+    %291: noreturn = condbr %286 then {
+      %288: u8 = const 2
+      %289: noreturn = ret %288
+    } else {
+      %290: noreturn = br %287
+    }
+  }
+  %292: u29 = const 268435456
+  %293: u8 = const 0
+  %294: u8 = const 28
+  %295: u8 = const 1
+  %296: bool = call szc.count_u29.10(%292, %293, %294, %295)
+  %297: bool = not %296
+  %298: void = block {
+    %302: noreturn = condbr %297 then {
+      %299: u8 = const 2
+      %300: noreturn = ret %299
+    } else {
+      %301: noreturn = br %298
+    }
+  }
+  %303: i29 = const 0
+  %304: u8 = const 29
+  %305: u8 = const 29
+  %306: u8 = const 0
+  %307: bool = call szc.count_i29.11(%303, %304, %305, %306)
+  %308: bool = not %307
+  %309: void = block {
+    %313: noreturn = condbr %308 then {
+      %310: u8 = const 2
+      %311: noreturn = ret %310
+    } else {
+      %312: noreturn = br %309
+    }
+  }
+  %314: i29 = const 1
+  %315: u8 = const 28
+  %316: u8 = const 0
+  %317: u8 = const 1
+  %318: bool = call szc.count_i29.11(%314, %315, %316, %317)
+  %319: bool = not %318
+  %320: void = block {
+    %324: noreturn = condbr %319 then {
+      %321: u8 = const 2
+      %322: noreturn = ret %321
+    } else {
+      %323: noreturn = br %320
+    }
+  }
+  %325: i29 = const -1
+  %326: u8 = const 0
+  %327: u8 = const 0
+  %328: u8 = const 29
+  %329: bool = call szc.count_i29.11(%325, %326, %327, %328)
+  %330: bool = not %329
+  %331: void = block {
+    %335: noreturn = condbr %330 then {
+      %332: u8 = const 2
+      %333: noreturn = ret %332
+    } else {
+      %334: noreturn = br %331
+    }
+  }
+  %336: i29 = const -268435456
+  %337: u8 = const 0
+  %338: u8 = const 28
+  %339: u8 = const 1
+  %340: bool = call szc.count_i29.11(%336, %337, %338, %339)
+  %341: bool = not %340
+  %342: void = block {
+    %346: noreturn = condbr %341 then {
+      %343: u8 = const 2
+      %344: noreturn = ret %343
+    } else {
+      %345: noreturn = br %342
+    }
+  }
+  %347: u32 = const 0
+  %348: u8 = const 32
+  %349: u8 = const 32
+  %350: u8 = const 0
+  %351: bool = call szc.count_u32.12(%347, %348, %349, %350)
+  %352: bool = not %351
+  %353: void = block {
+    %357: noreturn = condbr %352 then {
+      %354: u8 = const 2
+      %355: noreturn = ret %354
+    } else {
+      %356: noreturn = br %353
+    }
+  }
+  %358: u32 = const 1
+  %359: u8 = const 31
+  %360: u8 = const 0
+  %361: u8 = const 1
+  %362: bool = call szc.count_u32.12(%358, %359, %360, %361)
+  %363: bool = not %362
+  %364: void = block {
+    %368: noreturn = condbr %363 then {
+      %365: u8 = const 2
+      %366: noreturn = ret %365
+    } else {
+      %367: noreturn = br %364
+    }
+  }
+  %369: u32 = const 4294967295
+  %370: u8 = const 0
+  %371: u8 = const 0
+  %372: u8 = const 32
+  %373: bool = call szc.count_u32.12(%369, %370, %371, %372)
+  %374: bool = not %373
+  %375: void = block {
+    %379: noreturn = condbr %374 then {
+      %376: u8 = const 2
+      %377: noreturn = ret %376
+    } else {
+      %378: noreturn = br %375
+    }
+  }
+  %380: u32 = const 2147483648
+  %381: u8 = const 0
+  %382: u8 = const 31
+  %383: u8 = const 1
+  %384: bool = call szc.count_u32.12(%380, %381, %382, %383)
+  %385: bool = not %384
+  %386: void = block {
+    %390: noreturn = condbr %385 then {
+      %387: u8 = const 2
+      %388: noreturn = ret %387
+    } else {
+      %389: noreturn = br %386
+    }
+  }
+  %391: i32 = const 0
+  %392: u8 = const 32
+  %393: u8 = const 32
+  %394: u8 = const 0
+  %395: bool = call szc.count_i32.13(%391, %392, %393, %394)
+  %396: bool = not %395
+  %397: void = block {
+    %401: noreturn = condbr %396 then {
+      %398: u8 = const 2
+      %399: noreturn = ret %398
+    } else {
+      %400: noreturn = br %397
+    }
+  }
+  %402: i32 = const 1
+  %403: u8 = const 31
+  %404: u8 = const 0
+  %405: u8 = const 1
+  %406: bool = call szc.count_i32.13(%402, %403, %404, %405)
+  %407: bool = not %406
+  %408: void = block {
+    %412: noreturn = condbr %407 then {
+      %409: u8 = const 2
+      %410: noreturn = ret %409
+    } else {
+      %411: noreturn = br %408
+    }
+  }
+  %413: i32 = const -1
+  %414: u8 = const 0
+  %415: u8 = const 0
+  %416: u8 = const 32
+  %417: bool = call szc.count_i32.13(%413, %414, %415, %416)
+  %418: bool = not %417
+  %419: void = block {
+    %423: noreturn = condbr %418 then {
+      %420: u8 = const 2
+      %421: noreturn = ret %420
+    } else {
+      %422: noreturn = br %419
+    }
+  }
+  %424: i32 = const -2147483648
+  %425: u8 = const 0
+  %426: u8 = const 31
+  %427: u8 = const 1
+  %428: bool = call szc.count_i32.13(%424, %425, %426, %427)
+  %429: bool = not %428
+  %430: void = block {
+    %434: noreturn = condbr %429 then {
+      %431: u8 = const 2
+      %432: noreturn = ret %431
+    } else {
+      %433: noreturn = br %430
+    }
+  }
+  %435: u33 = const 0
+  %436: u8 = const 33
+  %437: u8 = const 33
+  %438: u8 = const 0
+  %439: bool = call szc.count_u33.14(%435, %436, %437, %438)
+  %440: bool = not %439
+  %441: void = block {
+    %445: noreturn = condbr %440 then {
+      %442: u8 = const 2
+      %443: noreturn = ret %442
+    } else {
+      %444: noreturn = br %441
+    }
+  }
+  %446: u33 = const 1
+  %447: u8 = const 32
+  %448: u8 = const 0
+  %449: u8 = const 1
+  %450: bool = call szc.count_u33.14(%446, %447, %448, %449)
+  %451: bool = not %450
+  %452: void = block {
+    %456: noreturn = condbr %451 then {
+      %453: u8 = const 2
+      %454: noreturn = ret %453
+    } else {
+      %455: noreturn = br %452
+    }
+  }
+  %457: u33 = const 8589934591
+  %458: u8 = const 0
+  %459: u8 = const 0
+  %460: u8 = const 33
+  %461: bool = call szc.count_u33.14(%457, %458, %459, %460)
+  %462: bool = not %461
+  %463: void = block {
+    %467: noreturn = condbr %462 then {
+      %464: u8 = const 2
+      %465: noreturn = ret %464
+    } else {
+      %466: noreturn = br %463
+    }
+  }
+  %468: u33 = const 4294967296
+  %469: u8 = const 0
+  %470: u8 = const 32
+  %471: u8 = const 1
+  %472: bool = call szc.count_u33.14(%468, %469, %470, %471)
+  %473: bool = not %472
+  %474: void = block {
+    %478: noreturn = condbr %473 then {
+      %475: u8 = const 2
+      %476: noreturn = ret %475
+    } else {
+      %477: noreturn = br %474
+    }
+  }
+  %479: i33 = const 0
+  %480: u8 = const 33
+  %481: u8 = const 33
+  %482: u8 = const 0
+  %483: bool = call szc.count_i33.15(%479, %480, %481, %482)
+  %484: bool = not %483
+  %485: void = block {
+    %489: noreturn = condbr %484 then {
+      %486: u8 = const 2
+      %487: noreturn = ret %486
+    } else {
+      %488: noreturn = br %485
+    }
+  }
+  %490: i33 = const 1
+  %491: u8 = const 32
+  %492: u8 = const 0
+  %493: u8 = const 1
+  %494: bool = call szc.count_i33.15(%490, %491, %492, %493)
+  %495: bool = not %494
+  %496: void = block {
+    %500: noreturn = condbr %495 then {
+      %497: u8 = const 2
+      %498: noreturn = ret %497
+    } else {
+      %499: noreturn = br %496
+    }
+  }
+  %501: i33 = const -1
+  %502: u8 = const 0
+  %503: u8 = const 0
+  %504: u8 = const 33
+  %505: bool = call szc.count_i33.15(%501, %502, %503, %504)
+  %506: bool = not %505
+  %507: void = block {
+    %511: noreturn = condbr %506 then {
+      %508: u8 = const 2
+      %509: noreturn = ret %508
+    } else {
+      %510: noreturn = br %507
+    }
+  }
+  %512: i33 = const -4294967296
+  %513: u8 = const 0
+  %514: u8 = const 32
+  %515: u8 = const 1
+  %516: bool = call szc.count_i33.15(%512, %513, %514, %515)
+  %517: bool = not %516
+  %518: void = block {
+    %522: noreturn = condbr %517 then {
+      %519: u8 = const 2
+      %520: noreturn = ret %519
+    } else {
+      %521: noreturn = br %518
+    }
+  }
+  %523: u40 = const 0
+  %524: u8 = const 40
+  %525: u8 = const 40
+  %526: u8 = const 0
+  %527: bool = call szc.count_u40.16(%523, %524, %525, %526)
+  %528: bool = not %527
+  %529: void = block {
+    %533: noreturn = condbr %528 then {
+      %530: u8 = const 2
+      %531: noreturn = ret %530
+    } else {
+      %532: noreturn = br %529
+    }
+  }
+  %534: u40 = const 1
+  %535: u8 = const 39
+  %536: u8 = const 0
+  %537: u8 = const 1
+  %538: bool = call szc.count_u40.16(%534, %535, %536, %537)
+  %539: bool = not %538
+  %540: void = block {
+    %544: noreturn = condbr %539 then {
+      %541: u8 = const 2
+      %542: noreturn = ret %541
+    } else {
+      %543: noreturn = br %540
+    }
+  }
+  %545: u40 = const 1099511627775
+  %546: u8 = const 0
+  %547: u8 = const 0
+  %548: u8 = const 40
+  %549: bool = call szc.count_u40.16(%545, %546, %547, %548)
+  %550: bool = not %549
+  %551: void = block {
+    %555: noreturn = condbr %550 then {
+      %552: u8 = const 2
+      %553: noreturn = ret %552
+    } else {
+      %554: noreturn = br %551
+    }
+  }
+  %556: u40 = const 549755813888
+  %557: u8 = const 0
+  %558: u8 = const 39
+  %559: u8 = const 1
+  %560: bool = call szc.count_u40.16(%556, %557, %558, %559)
+  %561: bool = not %560
+  %562: void = block {
+    %566: noreturn = condbr %561 then {
+      %563: u8 = const 2
+      %564: noreturn = ret %563
+    } else {
+      %565: noreturn = br %562
+    }
+  }
+  %567: i40 = const 0
+  %568: u8 = const 40
+  %569: u8 = const 40
+  %570: u8 = const 0
+  %571: bool = call szc.count_i40.17(%567, %568, %569, %570)
+  %572: bool = not %571
+  %573: void = block {
+    %577: noreturn = condbr %572 then {
+      %574: u8 = const 2
+      %575: noreturn = ret %574
+    } else {
+      %576: noreturn = br %573
+    }
+  }
+  %578: i40 = const 1
+  %579: u8 = const 39
+  %580: u8 = const 0
+  %581: u8 = const 1
+  %582: bool = call szc.count_i40.17(%578, %579, %580, %581)
+  %583: bool = not %582
+  %584: void = block {
+    %588: noreturn = condbr %583 then {
+      %585: u8 = const 2
+      %586: noreturn = ret %585
+    } else {
+      %587: noreturn = br %584
+    }
+  }
+  %589: i40 = const -1
+  %590: u8 = const 0
+  %591: u8 = const 0
+  %592: u8 = const 40
+  %593: bool = call szc.count_i40.17(%589, %590, %591, %592)
+  %594: bool = not %593
+  %595: void = block {
+    %599: noreturn = condbr %594 then {
+      %596: u8 = const 2
+      %597: noreturn = ret %596
+    } else {
+      %598: noreturn = br %595
+    }
+  }
+  %600: i40 = const -549755813888
+  %601: u8 = const 0
+  %602: u8 = const 39
+  %603: u8 = const 1
+  %604: bool = call szc.count_i40.17(%600, %601, %602, %603)
+  %605: bool = not %604
+  %606: void = block {
+    %610: noreturn = condbr %605 then {
+      %607: u8 = const 2
+      %608: noreturn = ret %607
+    } else {
+      %609: noreturn = br %606
+    }
+  }
+  %611: u63 = const 0
+  %612: u8 = const 63
+  %613: u8 = const 63
+  %614: u8 = const 0
+  %615: bool = call szc.count_u63.18(%611, %612, %613, %614)
+  %616: bool = not %615
+  %617: void = block {
+    %621: noreturn = condbr %616 then {
+      %618: u8 = const 2
+      %619: noreturn = ret %618
+    } else {
+      %620: noreturn = br %617
+    }
+  }
+  %622: u63 = const 1
+  %623: u8 = const 62
+  %624: u8 = const 0
+  %625: u8 = const 1
+  %626: bool = call szc.count_u63.18(%622, %623, %624, %625)
+  %627: bool = not %626
+  %628: void = block {
+    %632: noreturn = condbr %627 then {
+      %629: u8 = const 2
+      %630: noreturn = ret %629
+    } else {
+      %631: noreturn = br %628
+    }
+  }
+  %633: u63 = const 9223372036854775807
+  %634: u8 = const 0
+  %635: u8 = const 0
+  %636: u8 = const 63
+  %637: bool = call szc.count_u63.18(%633, %634, %635, %636)
+  %638: bool = not %637
+  %639: void = block {
+    %643: noreturn = condbr %638 then {
+      %640: u8 = const 2
+      %641: noreturn = ret %640
+    } else {
+      %642: noreturn = br %639
+    }
+  }
+  %644: u63 = const 4611686018427387904
+  %645: u8 = const 0
+  %646: u8 = const 62
+  %647: u8 = const 1
+  %648: bool = call szc.count_u63.18(%644, %645, %646, %647)
+  %649: bool = not %648
+  %650: void = block {
+    %654: noreturn = condbr %649 then {
+      %651: u8 = const 2
+      %652: noreturn = ret %651
+    } else {
+      %653: noreturn = br %650
+    }
+  }
+  %655: i63 = const 0
+  %656: u8 = const 63
+  %657: u8 = const 63
+  %658: u8 = const 0
+  %659: bool = call szc.count_i63.19(%655, %656, %657, %658)
+  %660: bool = not %659
+  %661: void = block {
+    %665: noreturn = condbr %660 then {
+      %662: u8 = const 2
+      %663: noreturn = ret %662
+    } else {
+      %664: noreturn = br %661
+    }
+  }
+  %666: i63 = const 1
+  %667: u8 = const 62
+  %668: u8 = const 0
+  %669: u8 = const 1
+  %670: bool = call szc.count_i63.19(%666, %667, %668, %669)
+  %671: bool = not %670
+  %672: void = block {
+    %676: noreturn = condbr %671 then {
+      %673: u8 = const 2
+      %674: noreturn = ret %673
+    } else {
+      %675: noreturn = br %672
+    }
+  }
+  %677: i63 = const -1
+  %678: u8 = const 0
+  %679: u8 = const 0
+  %680: u8 = const 63
+  %681: bool = call szc.count_i63.19(%677, %678, %679, %680)
+  %682: bool = not %681
+  %683: void = block {
+    %687: noreturn = condbr %682 then {
+      %684: u8 = const 2
+      %685: noreturn = ret %684
+    } else {
+      %686: noreturn = br %683
+    }
+  }
+  %688: i63 = const -4611686018427387904
+  %689: u8 = const 0
+  %690: u8 = const 62
+  %691: u8 = const 1
+  %692: bool = call szc.count_i63.19(%688, %689, %690, %691)
+  %693: bool = not %692
+  %694: void = block {
+    %698: noreturn = condbr %693 then {
+      %695: u8 = const 2
+      %696: noreturn = ret %695
+    } else {
+      %697: noreturn = br %694
+    }
+  }
+  %699: u64 = const 0
+  %700: u8 = const 64
+  %701: u8 = const 64
+  %702: u8 = const 0
+  %703: bool = call szc.count_u64.20(%699, %700, %701, %702)
+  %704: bool = not %703
+  %705: void = block {
+    %709: noreturn = condbr %704 then {
+      %706: u8 = const 2
+      %707: noreturn = ret %706
+    } else {
+      %708: noreturn = br %705
+    }
+  }
+  %710: u64 = const 1
+  %711: u8 = const 63
+  %712: u8 = const 0
+  %713: u8 = const 1
+  %714: bool = call szc.count_u64.20(%710, %711, %712, %713)
+  %715: bool = not %714
+  %716: void = block {
+    %720: noreturn = condbr %715 then {
+      %717: u8 = const 2
+      %718: noreturn = ret %717
+    } else {
+      %719: noreturn = br %716
+    }
+  }
+  %721: u64 = const 18446744073709551615
+  %722: u8 = const 0
+  %723: u8 = const 0
+  %724: u8 = const 64
+  %725: bool = call szc.count_u64.20(%721, %722, %723, %724)
+  %726: bool = not %725
+  %727: void = block {
+    %731: noreturn = condbr %726 then {
+      %728: u8 = const 2
+      %729: noreturn = ret %728
+    } else {
+      %730: noreturn = br %727
+    }
+  }
+  %732: u64 = const 9223372036854775808
+  %733: u8 = const 0
+  %734: u8 = const 63
+  %735: u8 = const 1
+  %736: bool = call szc.count_u64.20(%732, %733, %734, %735)
+  %737: bool = not %736
+  %738: void = block {
+    %742: noreturn = condbr %737 then {
+      %739: u8 = const 2
+      %740: noreturn = ret %739
+    } else {
+      %741: noreturn = br %738
+    }
+  }
+  %743: i64 = const 0
+  %744: u8 = const 64
+  %745: u8 = const 64
+  %746: u8 = const 0
+  %747: bool = call szc.count_i64.21(%743, %744, %745, %746)
+  %748: bool = not %747
+  %749: void = block {
+    %753: noreturn = condbr %748 then {
+      %750: u8 = const 2
+      %751: noreturn = ret %750
+    } else {
+      %752: noreturn = br %749
+    }
+  }
+  %754: i64 = const 1
+  %755: u8 = const 63
+  %756: u8 = const 0
+  %757: u8 = const 1
+  %758: bool = call szc.count_i64.21(%754, %755, %756, %757)
+  %759: bool = not %758
+  %760: void = block {
+    %764: noreturn = condbr %759 then {
+      %761: u8 = const 2
+      %762: noreturn = ret %761
+    } else {
+      %763: noreturn = br %760
+    }
+  }
+  %765: i64 = const -1
+  %766: u8 = const 0
+  %767: u8 = const 0
+  %768: u8 = const 64
+  %769: bool = call szc.count_i64.21(%765, %766, %767, %768)
+  %770: bool = not %769
+  %771: void = block {
+    %775: noreturn = condbr %770 then {
+      %772: u8 = const 2
+      %773: noreturn = ret %772
+    } else {
+      %774: noreturn = br %771
+    }
+  }
+  %776: i64 = const -9223372036854775808
+  %777: u8 = const 0
+  %778: u8 = const 63
+  %779: u8 = const 1
+  %780: bool = call szc.count_i64.21(%776, %777, %778, %779)
+  %781: bool = not %780
+  %782: void = block {
+    %786: noreturn = condbr %781 then {
+      %783: u8 = const 2
+      %784: noreturn = ret %783
+    } else {
+      %785: noreturn = br %782
+    }
+  }
+  %787: u8 = const 0
+  %788: noreturn = ret %787
+}
+fn szc.check_byte.2: fn (u8) bool {
+  %0: u8 = arg 0
+  %1: *u8 = alloc
+  %2: void = store %1, %0
+  %3: *u8 = alloc
+  %4: u8 = const 0
+  %5: void = store %3, %4
+  %6: *u8 = alloc
+  %7: u8 = const 0
+  %8: void = store %6, %7
+  %9: void = block {
+    %10: noreturn = loop {
+      %11: u8 = load %1
+      %12: u8 = const 0
+      %13: bool = cmp_neq %11, %12
+      %33: noreturn = condbr %13 then {
+        %14: void = block {
+          %15: u8 = load %3
+          %16: u8 = load %1
+          %17: u8 = const 1
+          %18: u8 = bit_and %16, %17
+          %19: u8 = add %15, %18
+          %20: void = store %3, %19
+          %21: u8 = load %6
+          %22: u8 = const 1
+          %23: u8 = add %21, %22
+          %24: void = store %6, %23
+          %25: u8 = load %1
+          %26: u3 = const 1
+          %27: u8 = shr %25, %26
+          %28: void = store %1, %27
+          %29: noreturn = block {
+            %30: noreturn = br %14
+          }
+        }
+        %31: noreturn = repeat %10
+      } else {
+        %32: noreturn = block {
+          %34: noreturn = br %9
+        }
+      }
+    }
+  }
+  %35: void = store %1, %0
+  %36: *u8 = alloc
+  %37: u8 = const 0
+  %38: void = store %36, %37
+  %39: u8 = load %1
+  %40: u8 = const 0
+  %41: bool = cmp_eq %39, %40
+  %42: void = block {
+    %69: noreturn = condbr %41 then {
+      %43: u8 = const 8
+      %44: void = store %36, %43
+      %67: noreturn = br %42
+    } else {
+      %45: void = block {
+        %46: noreturn = loop {
+          %47: u8 = load %1
+          %48: u8 = const 1
+          %49: u8 = bit_and %47, %48
+          %50: u8 = const 0
+          %51: bool = cmp_eq %49, %50
+          %65: noreturn = condbr %51 then {
+            %52: void = block {
+              %53: u8 = load %36
+              %54: u8 = const 1
+              %55: u8 = add %53, %54
+              %56: void = store %36, %55
+              %57: u8 = load %1
+              %58: u3 = const 1
+              %59: u8 = shr %57, %58
+              %60: void = store %1, %59
+              %61: noreturn = block {
+                %62: noreturn = br %52
+              }
+            }
+            %63: noreturn = repeat %46
+          } else {
+            %64: noreturn = block {
+              %66: noreturn = br %45
+            }
+          }
+        }
+      }
+      %68: noreturn = br %42
+    }
+  }
+  %70: i8 = bit_cast %0
+  %71: u4 = pop_count %0
+  %72: u8 = load %3
+  %73: u8 = int_cast %71
+  %74: bool = cmp_eq %73, %72
+  %75: bool = block {
+    %85: noreturn = condbr %74 then {
+      %76: u4 = clz %0
+      %77: u8 = load %6
+      %78: u8 = const 8
+      %79: u8 = sub %78, %77
+      %80: u8 = int_cast %76
+      %81: bool = cmp_eq %80, %79
+      %82: noreturn = br %75, %81
+    } else {
+      %83: bool = const false
+      %84: noreturn = br %75, %83
+    }
+  }
+  %86: bool = block {
+    %94: noreturn = condbr %75 then {
+      %87: u4 = ctz %0
+      %88: u8 = load %36
+      %89: u8 = int_cast %87
+      %90: bool = cmp_eq %89, %88
+      %91: noreturn = br %86, %90
+    } else {
+      %92: bool = const false
+      %93: noreturn = br %86, %92
+    }
+  }
+  %95: bool = block {
+    %103: noreturn = condbr %86 then {
+      %96: u4 = pop_count %70
+      %97: u8 = load %3
+      %98: u8 = int_cast %96
+      %99: bool = cmp_eq %98, %97
+      %100: noreturn = br %95, %99
+    } else {
+      %101: bool = const false
+      %102: noreturn = br %95, %101
+    }
+  }
+  %104: bool = block {
+    %114: noreturn = condbr %95 then {
+      %105: u4 = clz %70
+      %106: u8 = load %6
+      %107: u8 = const 8
+      %108: u8 = sub %107, %106
+      %109: u8 = int_cast %105
+      %110: bool = cmp_eq %109, %108
+      %111: noreturn = br %104, %110
+    } else {
+      %112: bool = const false
+      %113: noreturn = br %104, %112
+    }
+  }
+  %115: bool = block {
+    %123: noreturn = condbr %104 then {
+      %116: u4 = ctz %70
+      %117: u8 = load %36
+      %118: u8 = int_cast %116
+      %119: bool = cmp_eq %118, %117
+      %120: noreturn = br %115, %119
+    } else {
+      %121: bool = const false
+      %122: noreturn = br %115, %121
+    }
+  }
+  %124: noreturn = ret %115
+}
+fn szc.count_u0.3: fn (u0, u8, u8, u8) bool {
+  %0: u0 = arg 0
+  %1: u8 = arg 1
+  %2: u8 = arg 2
+  %3: u8 = arg 3
+  %4: u8 = const 0
+  %5: bool = cmp_eq %4, %1
+  %6: bool = block {
+    %12: noreturn = condbr %5 then {
+      %7: u8 = const 0
+      %8: bool = cmp_eq %7, %2
+      %9: noreturn = br %6, %8
+    } else {
+      %10: bool = const false
+      %11: noreturn = br %6, %10
+    }
+  }
+  %13: bool = block {
+    %19: noreturn = condbr %6 then {
+      %14: u8 = const 0
+      %15: bool = cmp_eq %14, %3
+      %16: noreturn = br %13, %15
+    } else {
+      %17: bool = const false
+      %18: noreturn = br %13, %17
+    }
+  }
+  %20: noreturn = ret %13
+}
+fn szc.count_u1.4: fn (u1, u8, u8, u8) bool {
+  %0: u1 = arg 0
+  %1: u8 = arg 1
+  %2: u8 = arg 2
+  %3: u8 = arg 3
+  %4: u1 = clz %0
+  %5: u8 = int_cast %4
+  %6: bool = cmp_eq %5, %1
+  %7: bool = block {
+    %14: noreturn = condbr %6 then {
+      %8: u1 = ctz %0
+      %9: u8 = int_cast %8
+      %10: bool = cmp_eq %9, %2
+      %11: noreturn = br %7, %10
+    } else {
+      %12: bool = const false
+      %13: noreturn = br %7, %12
+    }
+  }
+  %15: bool = block {
+    %22: noreturn = condbr %7 then {
+      %16: u1 = pop_count %0
+      %17: u8 = int_cast %16
+      %18: bool = cmp_eq %17, %3
+      %19: noreturn = br %15, %18
+    } else {
+      %20: bool = const false
+      %21: noreturn = br %15, %20
+    }
+  }
+  %23: noreturn = ret %15
+}
+fn szc.count_i1.5: fn (i1, u8, u8, u8) bool {
+  %0: i1 = arg 0
+  %1: u8 = arg 1
+  %2: u8 = arg 2
+  %3: u8 = arg 3
+  %4: u1 = clz %0
+  %5: u8 = int_cast %4
+  %6: bool = cmp_eq %5, %1
+  %7: bool = block {
+    %14: noreturn = condbr %6 then {
+      %8: u1 = ctz %0
+      %9: u8 = int_cast %8
+      %10: bool = cmp_eq %9, %2
+      %11: noreturn = br %7, %10
+    } else {
+      %12: bool = const false
+      %13: noreturn = br %7, %12
+    }
+  }
+  %15: bool = block {
+    %22: noreturn = condbr %7 then {
+      %16: u1 = pop_count %0
+      %17: u8 = int_cast %16
+      %18: bool = cmp_eq %17, %3
+      %19: noreturn = br %15, %18
+    } else {
+      %20: bool = const false
+      %21: noreturn = br %15, %20
+    }
+  }
+  %23: noreturn = ret %15
+}
+fn szc.count_u5.6: fn (u5, u8, u8, u8) bool {
+  %0: u5 = arg 0
+  %1: u8 = arg 1
+  %2: u8 = arg 2
+  %3: u8 = arg 3
+  %4: u3 = clz %0
+  %5: u8 = int_cast %4
+  %6: bool = cmp_eq %5, %1
+  %7: bool = block {
+    %14: noreturn = condbr %6 then {
+      %8: u3 = ctz %0
+      %9: u8 = int_cast %8
+      %10: bool = cmp_eq %9, %2
+      %11: noreturn = br %7, %10
+    } else {
+      %12: bool = const false
+      %13: noreturn = br %7, %12
+    }
+  }
+  %15: bool = block {
+    %22: noreturn = condbr %7 then {
+      %16: u3 = pop_count %0
+      %17: u8 = int_cast %16
+      %18: bool = cmp_eq %17, %3
+      %19: noreturn = br %15, %18
+    } else {
+      %20: bool = const false
+      %21: noreturn = br %15, %20
+    }
+  }
+  %23: noreturn = ret %15
+}
+fn szc.count_i5.7: fn (i5, u8, u8, u8) bool {
+  %0: i5 = arg 0
+  %1: u8 = arg 1
+  %2: u8 = arg 2
+  %3: u8 = arg 3
+  %4: u3 = clz %0
+  %5: u8 = int_cast %4
+  %6: bool = cmp_eq %5, %1
+  %7: bool = block {
+    %14: noreturn = condbr %6 then {
+      %8: u3 = ctz %0
+      %9: u8 = int_cast %8
+      %10: bool = cmp_eq %9, %2
+      %11: noreturn = br %7, %10
+    } else {
+      %12: bool = const false
+      %13: noreturn = br %7, %12
+    }
+  }
+  %15: bool = block {
+    %22: noreturn = condbr %7 then {
+      %16: u3 = pop_count %0
+      %17: u8 = int_cast %16
+      %18: bool = cmp_eq %17, %3
+      %19: noreturn = br %15, %18
+    } else {
+      %20: bool = const false
+      %21: noreturn = br %15, %20
+    }
+  }
+  %23: noreturn = ret %15
+}
+fn szc.count_u8.8: fn (u8, u8, u8, u8) bool {
+  %0: u8 = arg 0
+  %1: u8 = arg 1
+  %2: u8 = arg 2
+  %3: u8 = arg 3
+  %4: u4 = clz %0
+  %5: u8 = int_cast %4
+  %6: bool = cmp_eq %5, %1
+  %7: bool = block {
+    %14: noreturn = condbr %6 then {
+      %8: u4 = ctz %0
+      %9: u8 = int_cast %8
+      %10: bool = cmp_eq %9, %2
+      %11: noreturn = br %7, %10
+    } else {
+      %12: bool = const false
+      %13: noreturn = br %7, %12
+    }
+  }
+  %15: bool = block {
+    %22: noreturn = condbr %7 then {
+      %16: u4 = pop_count %0
+      %17: u8 = int_cast %16
+      %18: bool = cmp_eq %17, %3
+      %19: noreturn = br %15, %18
+    } else {
+      %20: bool = const false
+      %21: noreturn = br %15, %20
+    }
+  }
+  %23: noreturn = ret %15
+}
+fn szc.count_i8.9: fn (i8, u8, u8, u8) bool {
+  %0: i8 = arg 0
+  %1: u8 = arg 1
+  %2: u8 = arg 2
+  %3: u8 = arg 3
+  %4: u4 = clz %0
+  %5: u8 = int_cast %4
+  %6: bool = cmp_eq %5, %1
+  %7: bool = block {
+    %14: noreturn = condbr %6 then {
+      %8: u4 = ctz %0
+      %9: u8 = int_cast %8
+      %10: bool = cmp_eq %9, %2
+      %11: noreturn = br %7, %10
+    } else {
+      %12: bool = const false
+      %13: noreturn = br %7, %12
+    }
+  }
+  %15: bool = block {
+    %22: noreturn = condbr %7 then {
+      %16: u4 = pop_count %0
+      %17: u8 = int_cast %16
+      %18: bool = cmp_eq %17, %3
+      %19: noreturn = br %15, %18
+    } else {
+      %20: bool = const false
+      %21: noreturn = br %15, %20
+    }
+  }
+  %23: noreturn = ret %15
+}
+fn szc.count_u29.10: fn (u29, u8, u8, u8) bool {
+  %0: u29 = arg 0
+  %1: u8 = arg 1
+  %2: u8 = arg 2
+  %3: u8 = arg 3
+  %4: u5 = clz %0
+  %5: u8 = int_cast %4
+  %6: bool = cmp_eq %5, %1
+  %7: bool = block {
+    %14: noreturn = condbr %6 then {
+      %8: u5 = ctz %0
+      %9: u8 = int_cast %8
+      %10: bool = cmp_eq %9, %2
+      %11: noreturn = br %7, %10
+    } else {
+      %12: bool = const false
+      %13: noreturn = br %7, %12
+    }
+  }
+  %15: bool = block {
+    %22: noreturn = condbr %7 then {
+      %16: u5 = pop_count %0
+      %17: u8 = int_cast %16
+      %18: bool = cmp_eq %17, %3
+      %19: noreturn = br %15, %18
+    } else {
+      %20: bool = const false
+      %21: noreturn = br %15, %20
+    }
+  }
+  %23: noreturn = ret %15
+}
+fn szc.count_i29.11: fn (i29, u8, u8, u8) bool {
+  %0: i29 = arg 0
+  %1: u8 = arg 1
+  %2: u8 = arg 2
+  %3: u8 = arg 3
+  %4: u5 = clz %0
+  %5: u8 = int_cast %4
+  %6: bool = cmp_eq %5, %1
+  %7: bool = block {
+    %14: noreturn = condbr %6 then {
+      %8: u5 = ctz %0
+      %9: u8 = int_cast %8
+      %10: bool = cmp_eq %9, %2
+      %11: noreturn = br %7, %10
+    } else {
+      %12: bool = const false
+      %13: noreturn = br %7, %12
+    }
+  }
+  %15: bool = block {
+    %22: noreturn = condbr %7 then {
+      %16: u5 = pop_count %0
+      %17: u8 = int_cast %16
+      %18: bool = cmp_eq %17, %3
+      %19: noreturn = br %15, %18
+    } else {
+      %20: bool = const false
+      %21: noreturn = br %15, %20
+    }
+  }
+  %23: noreturn = ret %15
+}
+fn szc.count_u32.12: fn (u32, u8, u8, u8) bool {
+  %0: u32 = arg 0
+  %1: u8 = arg 1
+  %2: u8 = arg 2
+  %3: u8 = arg 3
+  %4: u6 = clz %0
+  %5: u8 = int_cast %4
+  %6: bool = cmp_eq %5, %1
+  %7: bool = block {
+    %14: noreturn = condbr %6 then {
+      %8: u6 = ctz %0
+      %9: u8 = int_cast %8
+      %10: bool = cmp_eq %9, %2
+      %11: noreturn = br %7, %10
+    } else {
+      %12: bool = const false
+      %13: noreturn = br %7, %12
+    }
+  }
+  %15: bool = block {
+    %22: noreturn = condbr %7 then {
+      %16: u6 = pop_count %0
+      %17: u8 = int_cast %16
+      %18: bool = cmp_eq %17, %3
+      %19: noreturn = br %15, %18
+    } else {
+      %20: bool = const false
+      %21: noreturn = br %15, %20
+    }
+  }
+  %23: noreturn = ret %15
+}
+fn szc.count_i32.13: fn (i32, u8, u8, u8) bool {
+  %0: i32 = arg 0
+  %1: u8 = arg 1
+  %2: u8 = arg 2
+  %3: u8 = arg 3
+  %4: u6 = clz %0
+  %5: u8 = int_cast %4
+  %6: bool = cmp_eq %5, %1
+  %7: bool = block {
+    %14: noreturn = condbr %6 then {
+      %8: u6 = ctz %0
+      %9: u8 = int_cast %8
+      %10: bool = cmp_eq %9, %2
+      %11: noreturn = br %7, %10
+    } else {
+      %12: bool = const false
+      %13: noreturn = br %7, %12
+    }
+  }
+  %15: bool = block {
+    %22: noreturn = condbr %7 then {
+      %16: u6 = pop_count %0
+      %17: u8 = int_cast %16
+      %18: bool = cmp_eq %17, %3
+      %19: noreturn = br %15, %18
+    } else {
+      %20: bool = const false
+      %21: noreturn = br %15, %20
+    }
+  }
+  %23: noreturn = ret %15
+}
+fn szc.count_u33.14: fn (u33, u8, u8, u8) bool {
+  %0: u33 = arg 0
+  %1: u8 = arg 1
+  %2: u8 = arg 2
+  %3: u8 = arg 3
+  %4: u6 = clz %0
+  %5: u8 = int_cast %4
+  %6: bool = cmp_eq %5, %1
+  %7: bool = block {
+    %14: noreturn = condbr %6 then {
+      %8: u6 = ctz %0
+      %9: u8 = int_cast %8
+      %10: bool = cmp_eq %9, %2
+      %11: noreturn = br %7, %10
+    } else {
+      %12: bool = const false
+      %13: noreturn = br %7, %12
+    }
+  }
+  %15: bool = block {
+    %22: noreturn = condbr %7 then {
+      %16: u6 = pop_count %0
+      %17: u8 = int_cast %16
+      %18: bool = cmp_eq %17, %3
+      %19: noreturn = br %15, %18
+    } else {
+      %20: bool = const false
+      %21: noreturn = br %15, %20
+    }
+  }
+  %23: noreturn = ret %15
+}
+fn szc.count_i33.15: fn (i33, u8, u8, u8) bool {
+  %0: i33 = arg 0
+  %1: u8 = arg 1
+  %2: u8 = arg 2
+  %3: u8 = arg 3
+  %4: u6 = clz %0
+  %5: u8 = int_cast %4
+  %6: bool = cmp_eq %5, %1
+  %7: bool = block {
+    %14: noreturn = condbr %6 then {
+      %8: u6 = ctz %0
+      %9: u8 = int_cast %8
+      %10: bool = cmp_eq %9, %2
+      %11: noreturn = br %7, %10
+    } else {
+      %12: bool = const false
+      %13: noreturn = br %7, %12
+    }
+  }
+  %15: bool = block {
+    %22: noreturn = condbr %7 then {
+      %16: u6 = pop_count %0
+      %17: u8 = int_cast %16
+      %18: bool = cmp_eq %17, %3
+      %19: noreturn = br %15, %18
+    } else {
+      %20: bool = const false
+      %21: noreturn = br %15, %20
+    }
+  }
+  %23: noreturn = ret %15
+}
+fn szc.count_u40.16: fn (u40, u8, u8, u8) bool {
+  %0: u40 = arg 0
+  %1: u8 = arg 1
+  %2: u8 = arg 2
+  %3: u8 = arg 3
+  %4: u6 = clz %0
+  %5: u8 = int_cast %4
+  %6: bool = cmp_eq %5, %1
+  %7: bool = block {
+    %14: noreturn = condbr %6 then {
+      %8: u6 = ctz %0
+      %9: u8 = int_cast %8
+      %10: bool = cmp_eq %9, %2
+      %11: noreturn = br %7, %10
+    } else {
+      %12: bool = const false
+      %13: noreturn = br %7, %12
+    }
+  }
+  %15: bool = block {
+    %22: noreturn = condbr %7 then {
+      %16: u6 = pop_count %0
+      %17: u8 = int_cast %16
+      %18: bool = cmp_eq %17, %3
+      %19: noreturn = br %15, %18
+    } else {
+      %20: bool = const false
+      %21: noreturn = br %15, %20
+    }
+  }
+  %23: noreturn = ret %15
+}
+fn szc.count_i40.17: fn (i40, u8, u8, u8) bool {
+  %0: i40 = arg 0
+  %1: u8 = arg 1
+  %2: u8 = arg 2
+  %3: u8 = arg 3
+  %4: u6 = clz %0
+  %5: u8 = int_cast %4
+  %6: bool = cmp_eq %5, %1
+  %7: bool = block {
+    %14: noreturn = condbr %6 then {
+      %8: u6 = ctz %0
+      %9: u8 = int_cast %8
+      %10: bool = cmp_eq %9, %2
+      %11: noreturn = br %7, %10
+    } else {
+      %12: bool = const false
+      %13: noreturn = br %7, %12
+    }
+  }
+  %15: bool = block {
+    %22: noreturn = condbr %7 then {
+      %16: u6 = pop_count %0
+      %17: u8 = int_cast %16
+      %18: bool = cmp_eq %17, %3
+      %19: noreturn = br %15, %18
+    } else {
+      %20: bool = const false
+      %21: noreturn = br %15, %20
+    }
+  }
+  %23: noreturn = ret %15
+}
+fn szc.count_u63.18: fn (u63, u8, u8, u8) bool {
+  %0: u63 = arg 0
+  %1: u8 = arg 1
+  %2: u8 = arg 2
+  %3: u8 = arg 3
+  %4: u6 = clz %0
+  %5: u8 = int_cast %4
+  %6: bool = cmp_eq %5, %1
+  %7: bool = block {
+    %14: noreturn = condbr %6 then {
+      %8: u6 = ctz %0
+      %9: u8 = int_cast %8
+      %10: bool = cmp_eq %9, %2
+      %11: noreturn = br %7, %10
+    } else {
+      %12: bool = const false
+      %13: noreturn = br %7, %12
+    }
+  }
+  %15: bool = block {
+    %22: noreturn = condbr %7 then {
+      %16: u6 = pop_count %0
+      %17: u8 = int_cast %16
+      %18: bool = cmp_eq %17, %3
+      %19: noreturn = br %15, %18
+    } else {
+      %20: bool = const false
+      %21: noreturn = br %15, %20
+    }
+  }
+  %23: noreturn = ret %15
+}
+fn szc.count_i63.19: fn (i63, u8, u8, u8) bool {
+  %0: i63 = arg 0
+  %1: u8 = arg 1
+  %2: u8 = arg 2
+  %3: u8 = arg 3
+  %4: u6 = clz %0
+  %5: u8 = int_cast %4
+  %6: bool = cmp_eq %5, %1
+  %7: bool = block {
+    %14: noreturn = condbr %6 then {
+      %8: u6 = ctz %0
+      %9: u8 = int_cast %8
+      %10: bool = cmp_eq %9, %2
+      %11: noreturn = br %7, %10
+    } else {
+      %12: bool = const false
+      %13: noreturn = br %7, %12
+    }
+  }
+  %15: bool = block {
+    %22: noreturn = condbr %7 then {
+      %16: u6 = pop_count %0
+      %17: u8 = int_cast %16
+      %18: bool = cmp_eq %17, %3
+      %19: noreturn = br %15, %18
+    } else {
+      %20: bool = const false
+      %21: noreturn = br %15, %20
+    }
+  }
+  %23: noreturn = ret %15
+}
+fn szc.count_u64.20: fn (u64, u8, u8, u8) bool {
+  %0: u64 = arg 0
+  %1: u8 = arg 1
+  %2: u8 = arg 2
+  %3: u8 = arg 3
+  %4: u7 = clz %0
+  %5: u8 = int_cast %4
+  %6: bool = cmp_eq %5, %1
+  %7: bool = block {
+    %14: noreturn = condbr %6 then {
+      %8: u7 = ctz %0
+      %9: u8 = int_cast %8
+      %10: bool = cmp_eq %9, %2
+      %11: noreturn = br %7, %10
+    } else {
+      %12: bool = const false
+      %13: noreturn = br %7, %12
+    }
+  }
+  %15: bool = block {
+    %22: noreturn = condbr %7 then {
+      %16: u7 = pop_count %0
+      %17: u8 = int_cast %16
+      %18: bool = cmp_eq %17, %3
+      %19: noreturn = br %15, %18
+    } else {
+      %20: bool = const false
+      %21: noreturn = br %15, %20
+    }
+  }
+  %23: noreturn = ret %15
+}
+fn szc.count_i64.21: fn (i64, u8, u8, u8) bool {
+  %0: i64 = arg 0
+  %1: u8 = arg 1
+  %2: u8 = arg 2
+  %3: u8 = arg 3
+  %4: u7 = clz %0
+  %5: u8 = int_cast %4
+  %6: bool = cmp_eq %5, %1
+  %7: bool = block {
+    %14: noreturn = condbr %6 then {
+      %8: u7 = ctz %0
+      %9: u8 = int_cast %8
+      %10: bool = cmp_eq %9, %2
+      %11: noreturn = br %7, %10
+    } else {
+      %12: bool = const false
+      %13: noreturn = br %7, %12
+    }
+  }
+  %15: bool = block {
+    %22: noreturn = condbr %7 then {
+      %16: u7 = pop_count %0
+      %17: u8 = int_cast %16
+      %18: bool = cmp_eq %17, %3
+      %19: noreturn = br %15, %18
+    } else {
+      %20: bool = const false
+      %21: noreturn = br %15, %20
+    }
+  }
+  %23: noreturn = ret %15
+}

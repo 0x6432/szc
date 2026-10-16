@@ -19,6 +19,16 @@ Read this first when resuming work (the sandbox resets often).
 
 ## Latest follow-up checkpoint
 
+- M9.4c integer bit counts are integrated: clz/ctz/popCount, finite signed
+  two's-complement comptime bits, smallest unsigned result type and portable QBE
+  runtime loops. Canonical u0 handling preserves call side effects. Actual Zig:
+  492 cases/114 exact diagnostics, exact result types and all-width native fixture.
+  Frozen GCC/Clang Werror ASan/UBSan: 1615 units/1075 goldens, 112+4 native,
+  16 driver, full C/ABI/storage/alignment, 60 volatile, 280 safety; optimized GCC
+  native/safety and both 20000 mutations/stage pass (256/256/74/130 seeds).
+  Four 60s fuzz counts: 1654621/29746/63225/77706. Next scoped work: bitReverse
+  and byteSwap with signed, odd-width, undefined and zero-width coverage.
+
 - M5.4e character literals are integrated: comptime code points, raw UTF-8 and
   shared string/character escape decoding, including reference escaped-surrogate
   character behavior. Actual Zig: 149 comparisons/12 exact diagnostics and native

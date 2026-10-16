@@ -164,7 +164,7 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
 - [ ] **M9.1 Threadlocal (QBE `thread`), atomics via runtime helpers.**
 - [ ] **M9.2 u128/i128 lowering via helpers.**
 - [ ] **M9.3 `@Vector` lowered to scalar loops.**
-- [ ] **M9.4 Labeled switch `continue :sw`, `@fieldParentPtr`, `@memcpy`/`@memset`, remaining builtins.**
+- [~] **M9.4 Labeled switch `continue :sw`, `@fieldParentPtr`, `@memcpy`/`@memset`, remaining builtins.**
   - [x] **M9.4a `@sizeOf`/`@alignOf` for supported type layouts.**
   - [x] **M9.4b `@bitSizeOf` for supported bit representations.**
 - [ ] **M9.5 Inline asm for x86_64-linux std usage.**
@@ -181,6 +181,31 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
 ## Completed milestone log
 
 (newest first; each entry: what, limitations, interactions)
+
+### M9.4c Integer bit-count builtins
+
+- **What**: `@clz`, `@ctz` and `@popCount` accept typed scalar integers, with
+  unsigned result widths matching smallestUnsignedInt(input_bits). Arbitrary-width
+  comptime values use finite two's-complement bits; runtime native-width values
+  lower to bounded portable QBE loops without compiler intrinsics or libc helpers.
+  Signed narrow values are masked before counting; zero clz/ctz return the logical
+  width. Zero-bit operands yield canonical zero even from undefined, without
+  dropping argument side effects.
+- **Validation**: actual Zig matches 492 cases with 114 exact primary diagnostics,
+  including exact result-pointer types, signed values, undefined, arity errors,
+  wide constants and 65535-bit zeros. Native fixture checks every width 0..64,
+  signed/unsigned boundary patterns, all 256 byte patterns and one-time argument
+  evaluation. Frozen GCC/Clang Werror ASan/UBSan pass 1615 units/1075 goldens,
+  112+4 native, 16 driver, full C/ABI/storage/alignment, 60 volatile and 280 safety
+  cases. Optimized GCC native/safety and both 20000 mutations/stage pass
+  (256/256/74/130 seeds). Four 60s fuzz counts: 1654621/29746/63225/77706.
+- **Interactions/limits**: untyped integer literals require an explicit integer
+  type as in Zig; nonzero-width undefined results stay undefined. Vectors and
+  runtime integers wider than 64 bits retain existing explicit limitations.
+  No result-location inference is imposed on builtin operands. CI adds the actual
+  reference matrix alongside existing differential suites.
+- **Evidence**: /data/bit-count-{reference-v3,native-v3,main-tests}.log and
+  /data/bit-count-final-{gcc,clang,fuzz}.log.
 
 ### M5.4e Character literal code points and shared escape decoding
 
