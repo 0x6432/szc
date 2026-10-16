@@ -1,0 +1,3 @@
+tests/tir/errors/character_unicode_empty.zig:1:36: error: empty unicode escape sequence
+pub fn main() void { const n = '\u{}'; _ = n; }
+                                   ^

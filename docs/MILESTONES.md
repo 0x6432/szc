@@ -114,6 +114,7 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
   - [x] **M5.4b Scalar-sentinel arrays**: explicit syntax, storage, initialization and coercions.
   - [x] **M5.4c Scalar-sentinel slices**: descriptors, inference, inherited slicing and element bounds.
   - [x] **M5.4d Explicit sentinel assertions**: contextual typing, constant checks and ordered runtime guards (validated in isolated checkout).
+  - [x] **M5.4e Character literals**: comptime Unicode code points, byte/Unicode escapes and strict raw UTF-8 decoding.
 - [~] **M5.5 Casting builtins**: `@intCast`, `@truncate`, `@ptrCast`, `@intFromPtr`, `@ptrFromInt`, `@bitCast`, `@as`.
   - [x] **M5.5a Pointer address conversion (`@intFromPtr`).**
   - [x] **M5.5b Integer-to-pointer conversion (`@ptrFromInt`)**: constant/numeric addresses and runtime guards (locally validated).
@@ -180,6 +181,28 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
 ## Completed milestone log
 
 (newest first; each entry: what, limitations, interactions)
+
+### M5.4e Character literal code points and shared escape decoding
+
+- **What**: character literals lower to comptime integers, including raw UTF-8,
+  simple escapes, exact two-digit byte escapes and Unicode escapes. Shared escape
+  decoding preserves raw byte escapes in strings and UTF-8 encodes Unicode string
+  escapes. Raw characters reject invalid UTF-8, overlong encodings, surrogates and
+  out-of-range scalars. Escaped surrogate character values intentionally match
+  Zig 0.17 parseCharLiteral; string Unicode surrogates remain errors.
+- **Validation**: actual Zig matches 149 cases with 12 exact primary diagnostics;
+  the native fixture checks code points, typed arrays/calls and string regressions.
+  Independent frozen GCC/Clang Werror ASan/UBSan suites pass 1605 unit checks,
+  1066 goldens, 111+4 native, 16 driver, full C/ABI/storage/alignment, 60 volatile
+  and 280 safety cases. Optimized GCC native/safety and both 20000 mutations per
+  stage pass (256/256/73/129 seeds). Four fresh 60s fuzzers execute
+  2514761/49796/67861/89258 inputs. Main forced unit/golden tests pass.
+- **Interactions/limits**: this completes character literal lowering, not general
+  string operations, float arithmetic or remaining sentinel types. No new IR value
+  representation or runtime encoding helper is needed. Includes the M2.14 parser
+  correction and M5.5n pointer round trips in both frozen full-suite trees.
+- **Evidence**: /data/character-literal-{reference,native,main-tests}.log and
+  /data/character-literal-final-{gcc,clang,fuzz}.log.
 
 ### M2.14 Repeated pointer modifier grammar correction
 

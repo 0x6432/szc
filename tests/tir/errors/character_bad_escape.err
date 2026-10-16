@@ -1,0 +1,3 @@
+tests/tir/errors/character_bad_escape.zig:1:34: error: invalid escape character: 'q'
+pub fn main() void { const n = '\q'; _ = n; }
+                                 ^

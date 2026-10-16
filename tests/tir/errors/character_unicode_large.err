@@ -1,0 +1,3 @@
+tests/tir/errors/character_unicode_large.zig:1:41: error: unicode escape does not correspond to a valid unicode scalar value
+pub fn main() void { const n = '\u{110000}'; _ = n; }
+                                        ^

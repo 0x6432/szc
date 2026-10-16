@@ -1004,6 +1004,51 @@ test_scalar_bit_casts(void)
 }
 
 static void
+test_character_literals(void)
+{
+	const struct {
+		const char *body;
+		const char *error;
+	} cases[] = {
+		{"const n = 'a'; const check:u8=if(n==97) 0 else 256; _=check;", NULL},
+		{"const n = '\\n'; const check:u8=if(n==10) 0 else 256; _=check;", NULL},
+		{"const n = '\\x00'; const check:u8=if(n==0) 0 else 256; _=check;", NULL},
+		{"const n = '\\xff'; const check:u8=if(n==255) 0 else 256; _=check;", NULL},
+		{"const n = 'ä'; const check:u8=if(n==228) 0 else 256; _=check;", NULL},
+		{"const n = 'ぁ'; const check:u8=if(n==12353) 0 else 256; _=check;", NULL},
+		{"const n = '😀'; const check:u8=if(n==128512) 0 else 256; _=check;", NULL},
+		{"const n = '\\u{7ff}'; const check:u8=if(n==2047) 0 else 256; _=check;", NULL},
+		{"const n = '\\u{10ffff}'; const check:u8=if(n==1114111) 0 else 256; _=check;", NULL},
+		{"const n = '\\u{d800}'; const check:u8=if(n==55296) 0 else 256; _=check;", NULL},
+		{"const n = '\\u{0000000041}'; const check:u8=if(n==65) 0 else 256; _=check;", NULL},
+	};
+	for (uint32_t i = 0; i < sizeof(cases) / sizeof(cases[0]); i++) {
+		Arena arena;
+		arena_init(&arena);
+		SourceTable sources;
+		source_table_init(&sources, &arena);
+		Diag diag;
+		diag_init(&diag, &arena, &sources);
+		Interner interner;
+		intern_init(&interner, &arena);
+		char source[4096];
+		int length = snprintf(source, sizeof(source), "pub fn main() void { %s }", cases[i].body);
+		CHECK(length > 0 && (size_t)length < sizeof(source));
+		FileId file = source_add_memory(&sources, "character_literals.zig", source, (uint32_t)length);
+		AstContainerDecl *root = parse_file(&arena, &diag, &sources, file);
+		CHECK(!diag_has_errors(&diag));
+		IrFile *ir = irgen_file(&arena, &diag, &interner, source_get(&sources, file), file, root);
+		CHECK(!diag_has_errors(&diag));
+		Sema *sema = sema_create(&arena, &diag, &interner, &sources);
+		bool success = sema_analyze_executable(sema, file, ir);
+		CHECK(success == (cases[i].error == NULL));
+		if (cases[i].error != NULL)
+			CHECK(diag.count != 0 && strstr(diag.items[0].message, cases[i].error) != NULL);
+		arena_free(&arena);
+	}
+}
+
+static void
 test_constant_aggregate_bit_casts(void)
 {
 	const struct {
@@ -1311,6 +1356,7 @@ main(void)
 	test_alignment_cast_types();
 	test_thin_pointer_casts();
 	test_scalar_bit_casts();
+	test_character_literals();
 	test_packed_bits();
 	test_constant_aggregate_bit_casts();
 	test_runtime_aggregate_bit_casts();

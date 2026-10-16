@@ -19,6 +19,17 @@ Read this first when resuming work (the sandbox resets often).
 
 ## Latest follow-up checkpoint
 
+- M5.4e character literals are integrated: comptime code points, raw UTF-8 and
+  shared string/character escape decoding, including reference escaped-surrogate
+  character behavior. Actual Zig: 149 comparisons/12 exact diagnostics and native
+  fixture pass. Frozen GCC/Clang Werror ASan/UBSan: 1605 units/1066 goldens,
+  111+4 native, 16 driver, full C/ABI/storage/alignment, 60 volatile, 280 safety;
+  optimized GCC native/safety and both 20000 mutations/stage pass (256/256/73/129).
+  Four 60s fuzz counts: 2514761/49796/67861/89258. Main forced tests pass.
+  Hosted 67720c3 and 46f8531 are green; later runs remain pending. The known j
+  parser mismatch is fixed in 162042f, whose hosted run is still pending.
+  Next scoped work: integer bit-count builtins, checking actual Sema semantics.
+
 - M2.14 fixes hosted parser mutation m00770: repeated const/volatile/allowzero
   pointer modifiers are accepted, while repeated align/addrspace stay errors.
   New mixed-order parser fixture/negative goldens/fuzz seed preserve the grammar.

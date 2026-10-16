@@ -1,0 +1,3 @@
+tests/tir/errors/character_extra.zig:1:37: error: expected single quote ('), found '0'
+pub fn main() void { const n = '\x000'; _ = n; }
+                                    ^

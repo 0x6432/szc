@@ -665,6 +665,68 @@ literal_error(GenBody *body, uint32_t start, uint32_t index, const char *message
 	return IR_REF_VOID_VALUE;
 }
 
+/* Escapes yield a code point; string encoding separately rejects surrogates.
+ * Zig 0.17 parseCharLiteral accepts escaped surrogate values as integers. */
+static bool
+literal_escape_error(GenBody *body, Span span, uint32_t index, const char *message, uint8_t c)
+{
+	(void)literal_error(body, span.start, index, message, c);
+	return false;
+}
+
+static bool
+literal_escape(GenBody *body, Span span, uint32_t *index, uint32_t *result)
+{
+	const uint8_t *text = (const uint8_t *)body->gen->source + span.start;
+	uint32_t length = span.end - span.start;
+	uint32_t i = *index + 1;
+	uint32_t escape = i;
+	uint8_t c = i < length ? text[i++] : 0;
+	uint32_t value;
+	switch (c) {
+	case 'n': value = '\n'; break;
+	case 'r': value = '\r'; break;
+	case 't': value = '\t'; break;
+	case '\\':
+	case '\'':
+	case '"': value = c; break;
+	case 'x':
+		value = 0;
+		for (uint32_t j = 0; j < 2; j++, i++) {
+			uint32_t digit = i < length ? hex_digit(text[i]) : UINT32_MAX;
+			if (digit == UINT32_MAX)
+				return literal_escape_error(body, span, i, "expected hex digit, found '%c'", i < length ? text[i] : 0);
+			value = value * 16 + digit;
+		}
+		break;
+	case 'u':
+		if (i >= length || text[i] != '{')
+			return literal_escape_error(body, span, i, "expected '{', found '%c'", i < length ? text[i] : 0);
+		i++;
+		if (i < length && text[i] == '}')
+			return literal_escape_error(body, span, i, "empty unicode escape sequence", 0);
+		value = 0;
+		while (i < length && text[i] != '}') {
+			uint32_t digit = hex_digit(text[i]);
+			if (digit == UINT32_MAX)
+				return literal_escape_error(body, span, i, "expected hex digit or '}', found '%c'", text[i]);
+			value = value * 16 + digit;
+			if (value > 0x10ffff)
+				return literal_escape_error(body, span, i, "unicode escape does not correspond to a valid unicode scalar value", 0);
+			i++;
+		}
+		if (i >= length)
+			return literal_escape_error(body, span, i, "expected '}', found '%c'", 0);
+		i++;
+		break;
+	default:
+		return literal_escape_error(body, span, escape, "invalid escape character: '%c'", c);
+	}
+	*index = i;
+	*result = value;
+	return true;
+}
+
 /* Same escapes and UTF-8 encoding as 0.17 std.zig.string_literal.parseWrite. */
 static IrRef
 string_literal(GenBody *body, AstNode *node)
@@ -677,74 +739,80 @@ string_literal(GenBody *body, AstNode *node)
 	uint8_t *bytes = ARENA_ARRAY(gen->arena, uint8_t, length);
 	uint32_t count = 0;
 	for (uint32_t i = 1; i < length - 1;) {
-		uint8_t c = text[i++];
+		uint8_t c = text[i];
 		if (c != '\\') {
 			bytes[count++] = c;
+			i++;
 			continue;
 		}
 		uint32_t escape = i;
-		c = text[i++];
-		switch (c) {
-		case 'n': bytes[count++] = '\n'; break;
-		case 'r': bytes[count++] = '\r'; break;
-		case 't': bytes[count++] = '\t'; break;
-		case '\\':
-		case '\'':
-		case '"': bytes[count++] = c; break;
-		case 'x': {
-			uint32_t value = 0;
-			for (uint32_t j = 0; j < 2; j++, i++) {
-				uint32_t digit = i < length ? hex_digit(text[i]) : UINT32_MAX;
-				if (digit == UINT32_MAX)
-					return literal_error(body, span.start, i, "expected hex digit, found '%c'", i < length ? text[i] : 0);
-				value = value * 16 + digit;
-			}
+		uint32_t value;
+		if (!literal_escape(body, span, &i, &value))
+			return IR_REF_VOID_VALUE;
+		/* Byte escapes are not Unicode escapes: \xff remains one raw byte. */
+		if (text[escape + 1] != 'u' || value <= 0x7f) {
 			bytes[count++] = (uint8_t)value;
-			break;
-		}
-		case 'u': {
-			if (i >= length || text[i] != '{')
-				return literal_error(body, span.start, i, "expected '{', found '%c'", i < length ? text[i] : 0);
-			i++;
-			if (i < length && text[i] == '}')
-				return literal_error(body, span.start, i, "empty unicode escape sequence", 0);
-			uint32_t value = 0;
-			while (i < length && text[i] != '}') {
-				uint32_t digit = hex_digit(text[i]);
-				if (digit == UINT32_MAX)
-					return literal_error(body, span.start, i, "expected hex digit or '}', found '%c'", text[i]);
-				value = value * 16 + digit;
-				if (value > 0x10ffff)
-					return literal_error(body, span.start, i, "unicode escape does not correspond to a valid unicode scalar value", 0);
-				i++;
-			}
-			if (i >= length)
-				return literal_error(body, span.start, i, "expected '}', found '%c'", 0);
-			i++;
-			if (value >= 0xd800 && value <= 0xdfff)
-				return literal_error(body, span.start, escape + 1, "unicode escape does not correspond to a valid unicode scalar value", 0);
-			if (value <= 0x7f) {
-				bytes[count++] = (uint8_t)value;
-			} else if (value <= 0x7ff) {
-				bytes[count++] = (uint8_t)(0xc0 | value >> 6);
-				bytes[count++] = (uint8_t)(0x80 | (value & 0x3f));
-			} else if (value <= 0xffff) {
-				bytes[count++] = (uint8_t)(0xe0 | value >> 12);
-				bytes[count++] = (uint8_t)(0x80 | (value >> 6 & 0x3f));
-				bytes[count++] = (uint8_t)(0x80 | (value & 0x3f));
-			} else {
-				bytes[count++] = (uint8_t)(0xf0 | value >> 18);
-				bytes[count++] = (uint8_t)(0x80 | (value >> 12 & 0x3f));
-				bytes[count++] = (uint8_t)(0x80 | (value >> 6 & 0x3f));
-				bytes[count++] = (uint8_t)(0x80 | (value & 0x3f));
-			}
-			break;
-		}
-		default:
-			return literal_error(body, span.start, escape, "invalid escape character: '%c'", c);
+		} else if (value <= 0x7ff) {
+			bytes[count++] = (uint8_t)(0xc0 | value >> 6);
+			bytes[count++] = (uint8_t)(0x80 | (value & 0x3f));
+		} else if (value >= 0xd800 && value <= 0xdfff) {
+			return literal_error(body, span.start, escape + 2, "unicode escape does not correspond to a valid unicode scalar value", 0);
+		} else if (value <= 0xffff) {
+			bytes[count++] = (uint8_t)(0xe0 | value >> 12);
+			bytes[count++] = (uint8_t)(0x80 | (value >> 6 & 0x3f));
+			bytes[count++] = (uint8_t)(0x80 | (value & 0x3f));
+		} else {
+			bytes[count++] = (uint8_t)(0xf0 | value >> 18);
+			bytes[count++] = (uint8_t)(0x80 | (value >> 12 & 0x3f));
+			bytes[count++] = (uint8_t)(0x80 | (value >> 6 & 0x3f));
+			bytes[count++] = (uint8_t)(0x80 | (value & 0x3f));
 		}
 	}
 	return emit_name(body, IR_STR, node->offset, intern(gen->interner, (const char *)bytes, count), IR_REF_NONE);
+}
+
+/* Character literals are comptime integers, not UTF-8 byte strings. */
+static IrRef
+character_literal(GenBody *body, AstNode *node)
+{
+	AstLiteral *literal = AST_CAST(AstLiteral, node, AST_CHAR_LITERAL);
+	Span span = literal->text;
+	const uint8_t *text = (const uint8_t *)body->gen->source + span.start;
+	uint32_t length = span.end - span.start;
+	if (length < 3)
+		return literal_error(body, span.start, 0, "empty character literal", 0);
+	uint32_t value;
+	uint32_t i = 1;
+	if (text[i] == '\\') {
+		if (!literal_escape(body, span, &i, &value))
+			return IR_REF_VOID_VALUE;
+	} else {
+		uint8_t first = text[i];
+		uint32_t count = first < 0x80 ? 1 : (first & 0xe0) == 0xc0 ? 2
+			: (first & 0xf0) == 0xe0 ? 3 : (first & 0xf8) == 0xf0 ? 4 : 0;
+		if (first == 0)
+			return literal_error(body, span.start, i, "invalid byte in string or character literal: '%c'", 0);
+		if (count == 0 || length - 2 < count)
+			return literal_error(body, span.start, i, "unicode escape does not correspond to a valid unicode scalar value", 0);
+		if (length - 2 > count)
+			return literal_error(body, span.start, i + count, "expected single quote ('), found '%c'", text[i + count]);
+		value = count == 1 ? first : first & ((1u << (7 - count)) - 1);
+		for (uint32_t j = 1; j < count; j++) {
+			if ((text[i + j] & 0xc0) != 0x80)
+				return literal_error(body, span.start, i, "unicode escape does not correspond to a valid unicode scalar value", 0);
+			value = (value << 6) | (text[i + j] & 0x3f);
+		}
+		if ((count == 2 && value < 0x80) || (count == 3 && value < 0x800)
+			|| (count == 4 && value < 0x10000) || value > 0x10ffff
+			|| (value >= 0xd800 && value <= 0xdfff))
+			return literal_error(body, span.start, i, "unicode escape does not correspond to a valid unicode scalar value", 0);
+		i += count;
+	}
+	if (i != length - 1 || text[i] != '\'')
+		return literal_error(body, span.start, i, "expected single quote ('), found '%c'", i < length ? text[i] : 0);
+	IrData data = {0};
+	data.integer = value;
+	return emit(body, IR_INT, node->offset, data);
 }
 
 /* Multiline lines are raw bytes, joined by newlines without a trailing newline. */
@@ -1813,6 +1881,8 @@ expr(GenBody *body, Scope *scope, ResultInfo info, AstNode *node)
 		IrRef base = field_ref ? address_of(body, scope, result_none, field->lhs) : expr(body, scope, result_none, field->lhs);
 		return rvalue(body, info, emit_name(body, field_ref ? IR_FIELD_REF : IR_FIELD_VAL, node->offset, name, base), node->offset);
 	}
+	case AST_CHAR_LITERAL:
+		return rvalue(body, info, character_literal(body, node), node->offset);
 	case AST_STRING_LITERAL:
 		return rvalue(body, info, string_literal(body, node), node->offset);
 	case AST_MULTILINE_STRING_LITERAL:
