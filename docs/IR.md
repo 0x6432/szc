@@ -832,3 +832,20 @@ with the type's sentinel. Neither path is a physical pointer-memory cast. The re
 scalarizer currently omits sentinel elements from its loop bounds; a bool-sentinel
 native regression is explicitly scoped under tests/run_szc rather than copying
 that upstream defect. Numeric-sentinel native comparisons remain enabled.
+
+
+## Scalar memory copies (M9.4g)
+
+IR_MEMCPY is binary: destination and source indexable pointers, evaluated once.
+Neither operand is contextually coerced into an element value. Sema derives
+logical lengths from slices/array pointers, and can infer a many-pointer extent
+from the other operand. Element types require in-memory compatibility. A separate
+TIR_COPY_LEN_CHECK checks runtime length equality, including zero-bit copies.
+
+TIR_MEMCPY uses TirMemcpy { destination, source, length }. Both data operands are
+thin pointers retaining independent qualifiers/alignment. The backend checks
+non-overlap using byte extents (logical length times ABI stride), then copies
+scalar storage in a bounded loop. Volatile reads/writes use outlined helpers;
+unused high integer storage bits are not numerically normalized by the copy.
+Top-level sentinels are outside the logical extent. Internal TIR_ARRAY_COPY still
+means overlap-safe whole-object copying; it is not the source @memcpy operation.

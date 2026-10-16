@@ -1,0 +1,3 @@
+tests/tir/errors/memcpy_aggregate.zig:1:74: error: not supported by szc yet: @memcpy element type '[1]u8'
+pub fn main() void { var a:[1][1]u8=undefined; const b:[1][1]u8=.{.{7}}; @memcpy(&a,&b); }
+                                                                         ^

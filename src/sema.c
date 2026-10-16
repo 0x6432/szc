@@ -5010,6 +5010,126 @@ memory_element_type(Block *block, Operand destination, uint32_t src)
 	return 0;
 }
 
+/* An absent length denotes a many pointer, not an undefined length. */
+static Operand
+memory_length(Block *block, Operand pointer, uint32_t src)
+{
+	Sema *sema = block->sema;
+	TypePointer shape = sema->types[pointer.type].as.pointer;
+	if (shape.size == POINTER_SLICE)
+		return slice_field(block, pointer, true, src);
+	if (shape.size == POINTER_ONE)
+		return comptime_operand(T_USIZE, value_int_u64(&sema->values, T_USIZE,
+			sema->types[shape.child].as.array.length));
+	return operand_none;
+}
+
+/* Borrow data without changing const/volatile/alignment promises. */
+static Operand
+memory_data(Block *block, Operand pointer, TypeId child, uint32_t src)
+{
+	Sema *sema = block->sema;
+	TypePointer shape = sema->types[pointer.type].as.pointer;
+	if (shape.size == POINTER_SLICE)
+		return slice_field(block, pointer, false, src);
+	if (shape.size != POINTER_ONE)
+		return pointer;
+	Type type = make_type(TYPE_POINTER);
+	type.as.pointer = shape;
+	type.as.pointer.size = POINTER_MANY;
+	type.as.pointer.child = child;
+	type.as.pointer.sentinel = VALUE_NONE;
+	return retag_pointer(block, pointer, type_intern(sema, &type), src);
+}
+
+/* Length/type validation precedes zero-bit elision; undefined data still errors
+ * for zero-length copies with nonzero-bit elements, as in Zig zirMemcpy. */
+static Operand
+analyze_memcpy(Block *block, const IrInst *inst)
+{
+	Sema *sema = block->sema;
+	Operand destination = resolve_ref(block, inst->data.bin.lhs);
+	Operand source = resolve_ref(block, inst->data.bin.rhs);
+	if (destination.kind == OPERAND_NONE || source.kind == OPERAND_NONE)
+		return operand_none;
+	TypeId child = memory_element_type(block, destination, inst->src);
+	TypeId source_child = memory_element_type(block, source, inst->src);
+	if (child == 0 || source_child == 0)
+		return operand_none;
+	Operand dest_len = memory_length(block, destination, inst->src);
+	Operand source_len = memory_length(block, source, inst->src);
+	if (sema->types[destination.type].as.pointer.is_const) {
+		sema_error(block, inst->src, "cannot copy to constant pointer");
+		return operand_none;
+	}
+	if (dest_len.kind == OPERAND_NONE && source_len.kind == OPERAND_NONE) {
+		sema_error(block, inst->src, "unknown copy length");
+		return operand_none;
+	}
+	if (!memory_coercion_allowed(sema, child, source_child, false)) {
+		sema_error(block, inst->src, "pointer element type '%s' cannot coerce into element type '%s'",
+			sema_type_name(sema, source_child), sema_type_name(sema, child));
+		return operand_none;
+	}
+	if ((dest_len.kind != OPERAND_NONE && !check_defined(block, dest_len, inst->src))
+		|| (source_len.kind != OPERAND_NONE && !check_defined(block, source_len, inst->src)))
+		return operand_none;
+	Operand length = dest_len.kind != OPERAND_NONE ? dest_len : source_len;
+	if (source_len.kind == OPERAND_COMPTIME)
+		length = source_len;
+	if (dest_len.kind != OPERAND_NONE && source_len.kind != OPERAND_NONE) {
+		if (dest_len.kind == OPERAND_COMPTIME && source_len.kind == OPERAND_COMPTIME) {
+			if (bigint_compare(&operand_value(block, dest_len)->as.integer,
+				&operand_value(block, source_len)->as.integer) != 0) {
+				sema_error(block, inst->src, "non-matching copy lengths");
+				return operand_none;
+			}
+		} else {
+			if (!require_runtime(block, inst->src))
+				return operand_none;
+			emit_tir_bin(block, TIR_COPY_LEN_CHECK, T_VOID, inst->src,
+				materialize(block, dest_len, inst->src), materialize(block, source_len, inst->src));
+		}
+	}
+	uint64_t stride;
+	if (!is_comptime_only_type(sema, child) && sema_type_size(sema, child, &stride) && stride == 0)
+		return void_operand(sema);
+	if (!check_defined(block, destination, inst->src) || !check_defined(block, source, inst->src))
+		return operand_none;
+	Operand dest_data = memory_data(block, destination, child, inst->src);
+	Operand source_data = memory_data(block, source, source_child, inst->src);
+	if (dest_data.kind == OPERAND_NONE || source_data.kind == OPERAND_NONE
+		|| !check_defined(block, dest_data, inst->src) || !check_defined(block, source_data, inst->src))
+		return operand_none;
+	if (length.kind == OPERAND_COMPTIME && bigint_is_zero(&operand_value(block, length)->as.integer))
+		return void_operand(sema);
+	TypeKind kind = sema->types[child].kind;
+	if (sema_type_is_aggregate(sema, child) || (kind != TYPE_INT && kind != TYPE_BOOL && kind != TYPE_POINTER)) {
+		sema_error(block, inst->src, "not supported by szc yet: @memcpy element type '%s'", sema_type_name(sema, child));
+		return operand_none;
+	}
+	if (dest_data.kind == OPERAND_COMPTIME && source_data.kind == OPERAND_COMPTIME
+		&& length.kind == OPERAND_COMPTIME && sema_type_size(sema, child, &stride)) {
+		PointerAddress dest = value_pointer_address(&sema->values, dest_data.value);
+		PointerAddress from = value_pointer_address(&sema->values, source_data.value);
+		uint64_t count = bigint_to_u64_bits(&operand_value(block, length)->as.integer);
+		uint64_t distance = dest.offset >= from.offset ? dest.offset - from.offset : from.offset - dest.offset;
+		if (pointer_same_root(sema, dest, from) && distance < count * stride) {
+			sema_error(block, inst->src, "'@memcpy' arguments alias");
+			return operand_none;
+		}
+	}
+	if (!require_runtime(block, inst->src) || !pointer_operand(block, dest_data, inst->src))
+		return operand_none;
+	TirMemcpy copy;
+	copy.destination = materialize(block, dest_data, inst->src);
+	copy.source = materialize(block, source_data, inst->src);
+	copy.length = materialize(block, length, inst->src);
+	TirRef ref = emit_tir(block, TIR_MEMCPY, T_VOID, inst->src);
+	block->tir->insts[ref].data.payload = tir_extra(block->tir, sema->arena, &copy, TIR_WORDS(TirMemcpy));
+	return void_operand(sema);
+}
+
 /* Fill logical elements, not byte storage or the trailing sentinel. */
 static Operand
 analyze_memset(Block *block, const IrInst *inst)
@@ -6227,6 +6347,9 @@ analyze_inst(Block *block, IrInstIndex index, Operand *break_value)
 			result = type_operand(sema, child);
 		break;
 	}
+	case IR_MEMCPY:
+		result = analyze_memcpy(block, inst);
+		break;
 	case IR_MEMSET:
 		result = analyze_memset(block, inst);
 		break;
@@ -6813,6 +6936,12 @@ dump_tir_inst(FILE *out, Sema *sema, const TirFunc *tir, TirRef ref, uint32_t de
 			fprintf(out, ", %%%u", (unsigned)inst->data.bin.rhs);
 		fputs("\n", out);
 		return;
+	case TIR_MEMCPY: {
+		TirMemcpy copy;
+		memcpy(&copy, &tir->extra[inst->data.payload], sizeof(copy));
+		fprintf(out, " %%%u, %%%u, %%%u\n", copy.destination, copy.source, copy.length);
+		return;
+	}
 	case TIR_MEMSET: {
 		TirMemset fill;
 		memcpy(&fill, &tir->extra[inst->data.payload], sizeof(fill));

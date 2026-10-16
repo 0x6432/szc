@@ -49,6 +49,7 @@ observe_fault(int signal_number, siginfo_t *info, void *context)
 void *observe_memory(size_t offset);
 bool observe_finish(uint32_t expected_reads, uint32_t expected_writes);
 bool observe_finish_compound(void);
+bool observe_finish_copy(void);
 
 void *
 observe_memory(size_t offset)
@@ -107,4 +108,17 @@ observe_finish_compound(void)
 	if (reads == 1 && event_count == 3)
 		return events[0] == 'w' && events[1] == 'w' && events[2] == 'r';
 	return false;
+}
+
+/* Scalar memcpy must read each element before storing it, with no extra access. */
+bool
+observe_finish_copy(void)
+{
+	active = 0;
+	if (reads != 3 || writes != 3 || event_count != 6)
+		return false;
+	for (size_t index = 0; index < 6; index++)
+		if (events[index] != (index % 2 == 0 ? 'r' : 'w'))
+			return false;
+	return true;
 }

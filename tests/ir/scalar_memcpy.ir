@@ -1,0 +1,85 @@
+%63 = struct_decl (flags=0) {
+  decl fn "copy" value {
+    %11 = func "copy" {
+      %3 = param "d" type {
+        %0 = ptr_type @type_u16, @false slice
+        %1 = as @type_type, %0
+        %2 = break_inline result, %1
+      }
+      %7 = param "s" type {
+        %4 = ptr_type @type_u16, @true slice
+        %5 = as @type_type, %4
+        %6 = break_inline result, %5
+      }
+      ret type {
+        %8 = break_inline result, @type_void
+      }
+      body insts {
+        %9 = memcpy %3, %7
+        %10 = ret_implicit
+      }
+    }
+    %12 = break_inline result, %11
+  }
+  decl fn "main" pub value {
+    %61 = func "main" {
+      ret type {
+        %13 = break_inline result, @type_u8
+      }
+      body insts {
+        %14 = int 2
+        %15 = as @type_usize, %14
+        %16 = array_type %15, @type_u16
+        %17 = as @type_type, %16
+        %18 = array_elem_type %17
+        %19 = int 1
+        %20 = as %18, %19
+        %21 = int 2
+        %22 = as %18, %21
+        %23 = array_init %17, %20, %22
+        %24 = as %17, %23
+        %25 = alloc type=%17 init=%24
+        %26 = int 2
+        %27 = as @type_usize, %26
+        %28 = array_type %27, @type_u16
+        %29 = as @type_type, %28
+        %30 = array_elem_type %29
+        %31 = int 7
+        %32 = as %30, %31
+        %33 = int 9
+        %34 = as %30, %33
+        %35 = array_init %29, %32, %34
+        %36 = as %29, %35
+        %43 = ref %36
+        %37 = decl_val "copy"
+        %38 = call %37 arg0 {
+          %39 = arg_type %38, 0
+          %40 = as %39, %25
+          %41 = break_inline result, %40
+        } arg1 {
+          %42 = arg_type %38, 1
+          %44 = as %42, %43
+          %45 = break_inline result, %44
+        }
+        %46 = ret_type
+        %47 = array_base_ptr %25
+        %48 = int 1
+        %49 = as @type_usize, %48
+        %50 = array_index %47, %49
+        %51 = int 9
+        %52 = cmp_eq %50, %51
+        %59 = if %52 then {
+          %53 = int 0
+          %54 = as %46, %53
+          %55 = break_inline result, %54
+        } else {
+          %56 = int 1
+          %57 = as %46, %56
+          %58 = break_inline result, %57
+        }
+        %60 = ret %59
+      }
+    }
+    %62 = break_inline result, %61
+  }
+}

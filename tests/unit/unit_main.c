@@ -1142,6 +1142,52 @@ test_character_literals(void)
 }
 
 static void
+test_scalar_memcpy(void)
+{
+	const struct {
+		const char *body;
+		const char *error;
+	} cases[] = {
+		{"var a:[3]u16=undefined; const b:[3]u16=.{7,9,11}; @memcpy(&a,&b);", NULL},
+		{"@memcpy(@as(*[0]u8,undefined),@as(*const [0]u8,undefined));", "use of undefined"},
+		{"@memcpy(@as(*[1]u0,undefined),@as(*const [1]u0,undefined));", NULL},
+		{"@memcpy(@as([]u0,undefined),@as([]const u0,undefined));", "use of undefined"},
+		{"@memcpy(@as(*[0]u0,undefined),@as(*const [1]u0,undefined));", "non-matching copy lengths"},
+		{"@memcpy(@as(*const [0]u0,undefined),@as(*const [0]u0,undefined));", "cannot copy to constant pointer"},
+		{"@memcpy(@as([*]u0,undefined),@as([*]const u0,undefined));", "unknown copy length"},
+		{"var a:[0]u8=.{}; const b:[0]i8=.{}; @memcpy(&a,&b);", "cannot coerce into element type"},
+		{"var a:[3]u8=undefined; @memcpy(&a,\"abc\");", NULL},
+		{"@memcpy(1,1);", "not an indexable pointer"},
+		{"var a:[1][1]u8=undefined; const b:[1][1]u8=.{.{7}}; @memcpy(&a,&b);", "@memcpy element type"},
+		{"var a:[0][1]u8=.{}; const b:[0][1]u8=.{}; @memcpy(&a,&b);", NULL},
+	};
+	for (uint32_t i = 0; i < sizeof(cases) / sizeof(cases[0]); i++) {
+		Arena arena;
+		arena_init(&arena);
+		SourceTable sources;
+		source_table_init(&sources, &arena);
+		Diag diag;
+		diag_init(&diag, &arena, &sources);
+		Interner interner;
+		intern_init(&interner, &arena);
+		char source[4096];
+		int length = snprintf(source, sizeof(source), "pub fn main() void { %s }", cases[i].body);
+		CHECK(length > 0 && (size_t)length < sizeof(source));
+		FileId file = source_add_memory(&sources, "scalar_memcpy.zig", source, (uint32_t)length);
+		AstContainerDecl *root = parse_file(&arena, &diag, &sources, file);
+		CHECK(!diag_has_errors(&diag));
+		IrFile *ir = irgen_file(&arena, &diag, &interner, source_get(&sources, file), file, root);
+		CHECK(!diag_has_errors(&diag));
+		Sema *sema = sema_create(&arena, &diag, &interner, &sources);
+		bool success = sema_analyze_executable(sema, file, ir);
+		CHECK(success == (cases[i].error == NULL));
+		if (cases[i].error != NULL)
+			CHECK(diag.count != 0 && strstr(diag.items[0].message, cases[i].error) != NULL);
+		arena_free(&arena);
+	}
+}
+
+static void
 test_scalar_memset(void)
 {
 	const struct {
@@ -1497,6 +1543,7 @@ main(void)
 	test_scalar_bit_casts();
 	test_character_literals();
 	test_scalar_memset();
+	test_scalar_memcpy();
 	test_packed_bits();
 	test_constant_aggregate_bit_casts();
 	test_runtime_aggregate_bit_casts();

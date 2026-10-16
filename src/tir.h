@@ -55,6 +55,8 @@ typedef uint32_t TirBody;	/* extra index of a body, 0 = none */
 	X(BIT_CAST, "bit_cast")	/* un: equal-width scalar bit representation */ \
 	X(INT_CAST, "int_cast")	/* un: widen/narrow integer to `type` */ \
 	X(TRUNCATE, "truncate")	/* un: discard high integer bits */ \
+	X(COPY_LEN_CHECK, "copy_len_check") /* bin: equal logical lengths */ \
+	X(MEMCPY, "memcpy") /* payload: TirMemcpy; non-overlapping scalar storage */ \
 	X(MEMSET, "memset") /* payload: TirMemset; count excludes any sentinel */ \
 	X(ABS, "abs") /* un: signed integer -> unsigned magnitude, including minimum */ \
 	X(BIT_REVERSE, "bit_reverse") /* un: reverse operand logical bits */ \
@@ -126,6 +128,12 @@ typedef struct TirCall {
 	TirRef   indirect;	/* TIR_REF_NONE for direct call */
 	uint32_t arg_count;	/* followed by arg_count TirRefs */
 } TirCall;
+
+typedef struct TirMemcpy {
+	TirRef destination;
+	TirRef source;
+	TirRef length;
+} TirMemcpy;
 
 typedef struct TirMemset {
 	TirRef pointer;

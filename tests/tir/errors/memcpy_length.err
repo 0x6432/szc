@@ -1,0 +1,3 @@
+tests/tir/errors/memcpy_length.zig:1:45: error: non-matching copy lengths
+pub fn main() void { var a:[1]u8=undefined; @memcpy(&a,"ab"); }
+                                            ^

@@ -1,0 +1,3 @@
+tests/tir/errors/memcpy_constant.zig:1:41: error: cannot copy to constant pointer
+pub fn main() void { const a:[0]u8=.{}; @memcpy(&a,&a); }
+                                        ^

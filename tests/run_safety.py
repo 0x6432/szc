@@ -24,6 +24,23 @@ def binary_case(name, integer_type, operator, lhs, rhs, message="integer overflo
 
 
 def cases():
+    for ty, value in (('u8', '7'), ('u0', '0'), ('void', '{}')):
+        for d, n in ((0, 1), (2, 1)):
+            yield f'memcpy_length_{ty}_{d}_{n}', (
+                f'fn operation(d:[]{ty},s:[]const {ty}) void {{ @memcpy(d,s); }} '
+                f'pub fn main() void {{ var a:[{d}]{ty}=undefined; '
+                f'const b:[{n}]{ty}=.{{{value}}}; operation(&a,&b); }}\n'), (
+                'source and destination arguments have non-equal lengths')
+    for lo, hi, n in ((0,0,1), (0,1,2), (1,0,2)):
+        for ty in ('u8', 'u33'):
+            yield f'memcpy_alias_{ty}_{lo}_{hi}', (
+                f'fn operation(p:[]{ty},a:usize,b:usize,n:usize) void {{ @memcpy(p[a..][0..n],p[b..][0..n]); }} '
+                f'pub fn main() void {{ var a:[3]{ty}=.{{7,9,11}}; operation(&a,{lo},{hi},{n}); }}\n'), (
+                '@memcpy arguments alias')
+    yield 'memcpy_length_before_alias', (
+        'fn operation(d:[]u8,s:[]const u8) void { @memcpy(d,s); } '
+        'pub fn main() void { var a:[2]u8=.{1,2}; operation(&a,a[0..1]); }\n'), (
+        'source and destination arguments have non-equal lengths')
     for label, source, message in (
         ("parameter", 'fn crash(s: []const u8) noreturn { @panic(s); } pub fn main() void { crash("dynamic message"); }', "dynamic message"),
         ("binary", 'fn crash(s: []const u8) noreturn { @panic(s); } pub fn main() void { var a = [4]u8{65,0,255,66}; a[3] = 67; crash(&a); }', b"A\x00\xffC"),

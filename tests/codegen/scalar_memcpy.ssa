@@ -1,0 +1,111 @@
+function w $szc.main.1() {
+@start
+	%t0 =l alloc4 4
+	%t2 =l alloc8 16
+	%t1 =l copy %t0
+	%t3 =l copy %t2
+	%t4 =l add %t2, 8
+	storel %t1, %t3
+	storel 2, %t4
+	call $szc.copy.2(l %t2, l $szc.const.2)
+	%e11_offset =l mul 1, 2
+	%t11 =l add %t0, %e11_offset
+	%t12 =w loaduh %t11
+	%t14 =w ceqw %t12, 9
+	jnz %t14, @c20_then, @c20_else
+@c20_then
+	%t15 =w copy 0
+	jmp @b15
+@c20_else
+	%t15 =w copy 1
+	jmp @b15
+@b15
+	ret %t15
+}
+
+function $szc.copy.2(l %t0, l %t3) {
+@start
+	%t1 =l alloc8 16
+	%t4 =l alloc8 16
+	call $memmove(l %t1, l %t0, l 16)
+	call $memmove(l %t4, l %t3, l 16)
+	%t6 =l add %t1, 8
+	%t7 =l loadl %t6
+	%t8 =l add %t4, 8
+	%t9 =l loadl %t8
+	%g10_len =w cnel %t7, %t9
+	jnz %g10_len, @g10_len_panic, @g10_len_ok
+@g10_len_panic
+	call $szc.panic.13()
+	hlt
+@g10_len_ok
+	%t11 =l copy %t1
+	%t12 =l loadl %t11
+	%t13 =l copy %t4
+	%t14 =l loadl %t13
+	%mc15_dest =l copy %t12
+	%mc15_source =l copy %t14
+	%mc15_bytes =l mul %t7, 2
+	%mc15_source_end =l add %mc15_source, %mc15_bytes
+	%mc15_dest_end =l add %mc15_dest, %mc15_bytes
+	%mc15_before =w cultl %mc15_dest, %mc15_source_end
+	%mc15_after =w cultl %mc15_source, %mc15_dest_end
+	%g15_alias =w and %mc15_before, %mc15_after
+	jnz %g15_alias, @g15_alias_panic, @g15_alias_ok
+@g15_alias_panic
+	call $szc.panic.14()
+	hlt
+@g15_alias_ok
+	%mc15_index =l copy 0
+	jmp @mc15_loop
+@mc15_loop
+	%mc15_more =w cultl %mc15_index, %t7
+	jnz %mc15_more, @mc15_body, @mc15_done
+@mc15_body
+	%mc15_value =w call $szc.volatile.load.u16(l %mc15_source)
+	call $szc.volatile.store.16(l %mc15_dest, w %mc15_value)
+	%mc15_dest =l add %mc15_dest, 2
+	%mc15_source =l add %mc15_source, 2
+	%mc15_index =l add %mc15_index, 1
+	jmp @mc15_loop
+@mc15_done
+	ret
+}
+
+section ".rodata"
+data $szc.const.1 = align 2 { h 7, h 9 }
+section ".data.rel.ro"
+data $szc.const.2 = align 8 { l $szc.const.1, l 2 }
+function w $szc.volatile.load.u16(l %ptr) {
+@start
+	%value =w loaduh %ptr
+	ret %value
+}
+
+function $szc.volatile.store.16(l %ptr, w %value) {
+@start
+	storeh %value, %ptr
+	ret
+}
+
+data $szc.panic.msg.13 = { b "source and destination arguments have non-equal lengths\n", b 0 }
+function $szc.panic.13() {
+@start
+	call $write(w 2, l $szc.panic.msg.13, l 56)
+	call $abort()
+	hlt
+}
+
+data $szc.panic.msg.14 = { b "@memcpy arguments alias\n", b 0 }
+function $szc.panic.14() {
+@start
+	call $write(w 2, l $szc.panic.msg.14, l 24)
+	call $abort()
+	hlt
+}
+
+export function w $main() {
+@start
+	%status =w call $szc.main.1()
+	ret %status
+}

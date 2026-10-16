@@ -37,6 +37,8 @@ typedef enum PanicKind {
 	PANIC_NULL_CAST,
 	PANIC_ALIGNMENT,
 	PANIC_SLICE_CAST_LEN,
+	PANIC_COPY_LEN,
+	PANIC_MEMCPY_ALIAS,
 	PANIC_COUNT,
 } PanicKind;
 
@@ -301,6 +303,8 @@ static const char *const panic_messages[PANIC_COUNT] = {
 	"cast causes pointer to be null",
 	"incorrect alignment",
 	"slice length does not divide exactly into destination elements",
+	"source and destination arguments have non-equal lengths",
+	"@memcpy arguments alias",
 };
 
 /* Bounds as canonical 64-bit bit patterns; wider types have already errored. */
@@ -1061,6 +1065,55 @@ emit_inst(Codegen *cg, TirRef ref)
 		if (type_bits(cg, inst->type) < storage_size(cg, inst->type, inst->src) * 8)
 			normalize(cg, ref, inst->type, cls);
 		return;
+	case TIR_MEMCPY: {
+		TirMemcpy copy;
+		memcpy(&copy, &cg->tir->extra[inst->data.payload], sizeof(copy));
+		TypePointer dest = sema_type(cg->sema, inst_at(cg, copy.destination)->type)->as.pointer;
+		TypePointer source = sema_type(cg->sema, inst_at(cg, copy.source)->type)->as.pointer;
+		TypeId child = dest.child;
+		QbeClass value_class = type_class(cg, child, inst->src);
+		uint64_t stride = storage_size(cg, child, inst->src);
+		if (value_class == QBE_NONE || stride == 0)
+			return;
+		fprintf(out, "\t%%mc%u_dest =l copy ", ref);
+		print_operand(cg, copy.destination);
+		fprintf(out, "\n\t%%mc%u_source =l copy ", ref);
+		print_operand(cg, copy.source);
+		fprintf(out, "\n\t%%mc%u_bytes =l mul ", ref);
+		print_operand(cg, copy.length);
+		fprintf(out, ", %" PRIu64 "\n", stride);
+		fprintf(out, "\t%%mc%u_source_end =l add %%mc%u_source, %%mc%u_bytes\n", ref, ref, ref);
+		fprintf(out, "\t%%mc%u_dest_end =l add %%mc%u_dest, %%mc%u_bytes\n", ref, ref, ref);
+		fprintf(out, "\t%%mc%u_before =w cultl %%mc%u_dest, %%mc%u_source_end\n", ref, ref, ref);
+		fprintf(out, "\t%%mc%u_after =w cultl %%mc%u_source, %%mc%u_dest_end\n", ref, ref, ref);
+		fprintf(out, "\t%%g%u_alias =w and %%mc%u_before, %%mc%u_after\n", ref, ref, ref);
+		emit_guard(cg, ref, "alias", PANIC_MEMCPY_ALIAS);
+		fprintf(out, "\t%%mc%u_index =l copy 0\n\tjmp @mc%u_loop\n@mc%u_loop\n", ref, ref, ref);
+		fprintf(out, "\t%%mc%u_more =w cultl %%mc%u_index, ", ref, ref);
+		print_operand(cg, copy.length);
+		fprintf(out, "\n\tjnz %%mc%u_more, @mc%u_body, @mc%u_done\n@mc%u_body\n", ref, ref, ref, ref);
+		if (source.is_volatile) {
+			MemoryWidth width = memory_width(cg, child);
+			cg->volatile_loads[0][width] = true;
+			fprintf(out, "\t%%mc%u_value =%c call $szc.volatile.load.u%u(l %%mc%u_source)\n",
+				ref, class_char(value_class), (unsigned)(8u << width), ref);
+		} else {
+			fprintf(out, "\t%%mc%u_value =%c %s %%mc%u_source\n", ref, class_char(value_class), load_op(cg, child), ref);
+		}
+		if (dest.is_volatile) {
+			MemoryWidth width = memory_width(cg, child);
+			cg->volatile_stores[width] = true;
+			fprintf(out, "\tcall $szc.volatile.store.%u(l %%mc%u_dest, %c %%mc%u_value)\n",
+				(unsigned)(8u << width), ref, class_char(value_class), ref);
+		} else {
+			fprintf(out, "\t%s %%mc%u_value, %%mc%u_dest\n", store_op(cg, child), ref, ref);
+		}
+		fprintf(out, "\t%%mc%u_dest =l add %%mc%u_dest, %" PRIu64 "\n", ref, ref, stride);
+		fprintf(out, "\t%%mc%u_source =l add %%mc%u_source, %" PRIu64 "\n", ref, ref, stride);
+		fprintf(out, "\t%%mc%u_index =l add %%mc%u_index, 1\n", ref, ref);
+		fprintf(out, "\tjmp @mc%u_loop\n@mc%u_done\n", ref, ref);
+		return;
+	}
 	case TIR_MEMSET: {
 		TirMemset fill;
 		memcpy(&fill, &cg->tir->extra[inst->data.payload], sizeof(fill));
@@ -1145,13 +1198,14 @@ emit_inst(Codegen *cg, TirRef ref)
 			normalize(cg, ref, inst->type, cls);
 		return;
 	}
+	case TIR_COPY_LEN_CHECK:
 	case TIR_FOR_LEN_CHECK:
 		fprintf(out, "\t%%g%u_len =w cnel ", (unsigned)ref);
 		print_operand(cg, inst->data.bin.lhs);
 		fputs(", ", out);
 		print_operand(cg, inst->data.bin.rhs);
 		fputs("\n", out);
-		emit_guard(cg, ref, "len", PANIC_FOR_LEN);
+		emit_guard(cg, ref, "len", inst->op == TIR_COPY_LEN_CHECK ? PANIC_COPY_LEN : PANIC_FOR_LEN);
 		return;
 	case TIR_RET:
 		if (inst->data.un.operand == TIR_REF_NONE || type_class(cg, inst_at(cg, inst->data.un.operand)->type, inst->src) == QBE_NONE) {

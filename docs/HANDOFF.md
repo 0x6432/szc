@@ -19,9 +19,38 @@ Read this first when resuming work (the sandbox resets often).
 
 ## Latest follow-up checkpoint
 
-- **Paused at the user's request after completing scalar @memset.** Do not start
-  another milestone unless the user asks to resume. The earlier continuous-work
-  workflow above is suspended.
+- **Development resumed at the user's explicit request on 2026-10-16.** The
+  earlier pause is superseded. Continue coherent implementation, validation,
+  documentation, commit/push and subsequent milestones; Q6 remains M10.2.
+- M9.4g scalar runtime @memcpy is integrated and validated in immutable
+  /data/copy-verified/{gcc,clang,optimized} trees. Destination/source
+  evaluate once; at least one operand supplies a length; two known lengths must
+  match, runtime lengths are guarded before alias checks. Zero-bit copies still
+  validate lengths; nonzero-bit zero-length copies still reject undefined data.
+  Scalar integers/bools/thin pointers copy at ABI strides, excluding top-level
+  sentinels; source and destination volatile accesses use outlined helpers.
+  Aggregates, floats/vectors and general comptime memory copies remain NYI.
+  Actual Zig: 312 comparisons/138 exact primary diagnostics; native fixture and
+  all-width integer fixture pass Debug and ReleaseFast; 13 new safety comparisons
+  and existing 60-sequence reference observer coverage pass. Frozen GCC/Clang
+  Werror ASan/UBSan: 1722 units/1111 goldens, 117+4 native, 16 driver, full
+  C/ABI/storage/alignment, 96 observed volatile sequences, 293 safety cases;
+  optimized GCC native/safety and both 20000 mutations/stage pass (256/256/78/134).
+  Four fresh 60s fuzz counts: 824317/21026/22554/23459. Forced main tests pass.
+  Evidence: /data/copy-reference-final.log, /data/copy-native-final.log,
+  /data/copy-volatile-final.log, /data/copy-safety-reference-final.log,
+  /data/copy-verified-{gcc,clang,optimized,fuzz}.log, /data/copy-main-final.log.
+  Next scoped extension: nonvolatile aggregate copies in /data/copy-aggregate-next;
+  do not copy its older documentation over main.
+- Hosted recheck: d4172c9 (57 jobs), 75ded7a (56), 12c4d3a (55) and 162042f
+  (52) completed successfully. a56409d still has 52 success/one running; its
+  remaining rerun is not yet confirmed green. Old failure evidence files from
+  the previous sandbox are absent after reset.
+- Environment restored from main d4172c9. Official binary/source release archives
+  verified against the Zig download index SHA-256 sums. Sources came from
+  zig-0.17.0.tar.xz because the upstream Git repository had no 0.17.0 tag.
+  QBE restored at the documented pin; baseline 1666 units/1099 goldens and
+  20000 standalone mutations/stage passed before implementation.
 - M9.4f scalar runtime @memset is integrated: contextually typed integer/bool/thin
   pointer fills, ABI strides, sentinel preservation, empty and zero-bit no-ops,
   single evaluation and outlined volatile stores. Actual Zig: 158 cases/69 exact

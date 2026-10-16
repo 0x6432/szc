@@ -117,6 +117,7 @@ jobs:
           - diff_pointer_roundtrips
           - diff_integer_abs
           - diff_scalar_memset
+          - diff_scalar_memcpy
           - diff_bit_transforms
           - diff_bit_counts
           - diff_character_literals

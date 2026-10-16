@@ -12,7 +12,7 @@ TYPES = ('u8', 'i8', 'u16', 'i16', 'u32', 'i32', 'u64', 'i64', 'u3', 'i5',
          'u17', 'i33', 'u40', 'i63', 'bool', '*u8', '*const fn () u8')
 
 
-def fixtures(safety=True, include_memset=True):
+def fixtures(safety=True, include_memset=True, include_memcpy=True):
     declarations, checks = [], []
     for index, ty in enumerate(TYPES):
         declarations.append(f'extern fn memory_{index}(offset: usize) *align(1) volatile {ty};')
@@ -120,7 +120,28 @@ def fixtures(safety=True, include_memset=True):
                 f'@memset(empty_{index}_{offset}[0..0], 7);',
                 'if (!observe_finish(0, 0)) return 22;',
             ])
+    # Bulk-copy reference backends need not use szc's one-load/one-store loop.
+    for index, ty in (((0, 'u8'), (2, 'u16'), (11, 'i33')) if include_memcpy else ()):
+        for offset in (0, 1):
+            name = f'copy_{index}_{offset}'
+            checks.extend([
+                f'const {name}_write: [*]align(1) volatile {ty} = @ptrCast(memory_{index}({offset}));',
+                f'const {name}_values:[3]{ty}=.{{7,9,11}};',
+                f'@memcpy({name}_write[0..3],&{name}_values);',
+                'if (!observe_finish(0, 3)) return 23;',
+                f'const {name}_read: [*]align(1) const volatile {ty} = @ptrCast(memory_{index}({offset}));',
+                f'var {name}_local:[3]{ty}=undefined;',
+                f'@memcpy(&{name}_local,{name}_read[0..3]);',
+                'if (!observe_finish(3, 0)) return 24;',
+                f'const {name}_both: [*]align(1) volatile {ty} = @ptrCast(memory_{index}({offset}));',
+                f'@memcpy({name}_both[0..3],{name}_both[4..7]);',
+                'if (!observe_finish_copy()) return 25;',
+                f'const {name}_empty: [*]align(1) volatile {ty} = @ptrCast(memory_{index}({offset}));',
+                f'@memcpy({name}_empty[0..0],{name}_empty[0..0]);',
+                'if (!observe_finish(0, 0)) return 26;',
+            ])
     source = ('extern fn observe_finish(reads: u32, writes: u32) bool;\n'
+              'extern fn observe_finish_copy() bool;\n'
               'extern fn observe_finish_compound() bool;\n'
               'var left: u8 = 1;\nvar right: u8 = 2;\n'
               'var byte_left: [1]u8 = .{7}; var byte_right: [1]u8 = .{9};\n'
@@ -163,13 +184,13 @@ def main():
         if os.environ.get('ZIG'):
             for mode in ('Debug', 'ReleaseFast'):
                 # ReleaseFast removes safety assertions, including their volatile load.
-                source.write_text(fixtures(safety=mode == 'Debug', include_memset=False)[0])
+                source.write_text(fixtures(safety=mode == 'Debug', include_memset=False, include_memcpy=False)[0])
                 executable = root / ('reference-' + mode)
                 run([os.environ['ZIG'], 'build-exe', str(source), str(assembly), str(object_),
                      '-O' + mode, '-j2', '-lc', f'-femit-bin={executable}'])
                 result = run([str(executable)])
                 assert not result.stdout and not result.stderr
-    print(f'volatile accesses: {2 * (len(TYPES) + 13) + 12} observed sequences, 0 failed', flush=True)
+    print(f'volatile accesses: {2 * (len(TYPES) + 13) + 12 + 24} observed sequences, 0 failed', flush=True)
 
 
 if __name__ == '__main__':

@@ -171,6 +171,7 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
   - [x] **M9.4d Integer permutations**: `@bitReverse`, `@byteSwap`, signed bit patterns and exact logical widths.
   - [x] **M9.4e Integer absolute values**: unsigned magnitudes, including signed minima.
   - [x] **M9.4f Scalar runtime `@memset`**: typed logical-element fills, zero ranges and volatile stores.
+  - [x] **M9.4g Scalar runtime `@memcpy`**: length inference/equality, alias guards, ABI strides and volatile accesses.
 - [ ] **M9.5 Inline asm for x86_64-linux std usage.**
 
 ## Phase 10: std tests and bootstrap
@@ -185,6 +186,40 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
 ## Completed milestone log
 
 (newest first; each entry: what, limitations, interactions)
+
+### M9.4g Scalar runtime memory copies
+
+- **What**: `IR_MEMCPY` evaluates destination and source without contextual
+  element-value coercion. Sema accepts mutable destination slices/array pointers
+  and source slices/array pointers; a many pointer is allowed when the other
+  argument supplies the length. Element types must be in-memory compatible.
+  Constant lengths are checked; runtime lengths use `TIR_COPY_LEN_CHECK` before
+  zero-bit elision or memory accesses. Known pointer roots/offsets detect constant
+  overlap; codegen guards runtime byte extents before its element-copy loop.
+  `TirMemcpy` carries destination, source and logical length. ABI storage strides,
+  not packed bit sizes, are copied, with independent outlined volatile reads and
+  writes. Top-level sentinels are excluded and argument effects are retained.
+- **Validation**: 312 actual-Zig comparisons with 138 exact primary diagnostics.
+  Native scalar/sentinel/side-effect and all-width integer fixtures pass official
+  Zig Debug and ReleaseFast; 13 focused panic comparisons pass. Existing 60
+  reference observer sequences still pass Debug/ReleaseFast; szc's exact bulk-copy
+  counts are separately observed, not imposed on reference backend coalescing.
+  Frozen GCC/Clang Werror ASan/UBSan: 1722 units/1111 goldens, 117+4 native,
+  16 driver, full C/ABI/storage/alignment, 96 szc volatile sequences and 293 safety
+  cases. Optimized GCC native/safety and both 20000 mutations/stage pass with
+  256/256/78/134 seeds. Four fresh 60s fuzz counts: 824317/21026/22554/23459.
+  Forced main unit/golden checks pass. New IR/TIR/QBE and nine error goldens,
+  twelve semantic unit cases, native fixture, all-width generator, fuzz seeds
+  and an independent hosted reference matrix preserve coverage.
+- **Interactions/limits**: nonempty copies support native-width integer/bool/thin
+  pointer elements. General aggregates, floats/vectors and comptime mutable-memory
+  copies remain unsupported. Zero-bit types skip data/alias checks only after
+  length validation; nonzero-bit zero-length copies still require defined pointer
+  data, unlike memset. This is not memmove, aggregate memset, C-pointer completion,
+  or completion of M9.4. Existing internal `TIR_ARRAY_COPY` remains overlap-safe.
+- **Evidence**: /data/copy-reference-final.log, /data/copy-native-final.log,
+  /data/copy-volatile-final.log, /data/copy-safety-reference-final.log,
+  /data/copy-verified-{gcc,clang,optimized,fuzz}.log and /data/copy-main-final.log.
 
 ### M9.4f Scalar runtime memory fills
 

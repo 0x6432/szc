@@ -1,0 +1,6 @@
+tests/tir/errors/memcpy_operand.zig:1:22: error: type 'comptime_int' is not an indexable pointer
+pub fn main() void { @memcpy(1,1); }
+                     ^
+tests/tir/errors/memcpy_operand.zig:1:22: error: type 'comptime_int' is not an indexable pointer
+pub fn main() void { @memcpy(1,1); }
+                     ^

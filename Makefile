@@ -19,7 +19,7 @@ FUZZ_SECONDS ?= 60
 LIB_SOURCES = src/arena.c src/source.c src/diag.c src/intern.c src/lexer.c src/ast.c src/parser.c src/irgen.c src/comptime.c src/sema.c src/codegen.c src/driver.c
 HEADERS     = $(wildcard src/*.h)
 FUZZERS     = lexer parser irgen sema
-GENERATED_RUN_TESTS = build/integer-widths.zig build/conditional-widths.zig build/loop-widths.zig build/block-widths.zig build/for-widths.zig build/defer-widths.zig build/noreturn-widths.zig build/pointer-widths.zig build/global-widths.zig build/function-pointer-widths.zig build/array-widths.zig build/bitcast-widths.zig build/aggregate-bitcast-1-widths.zig build/aggregate-bitcast-2-widths.zig build/aggregate-bitcast-3-widths.zig build/aggregate-bitcast-4-widths.zig build/aggregate-bitcast-5-widths.zig build/aggregate-bitcast-8-widths.zig
+GENERATED_RUN_TESTS = build/memcpy-widths.zig build/integer-widths.zig build/conditional-widths.zig build/loop-widths.zig build/block-widths.zig build/for-widths.zig build/defer-widths.zig build/noreturn-widths.zig build/pointer-widths.zig build/global-widths.zig build/function-pointer-widths.zig build/array-widths.zig build/bitcast-widths.zig build/aggregate-bitcast-1-widths.zig build/aggregate-bitcast-2-widths.zig build/aggregate-bitcast-3-widths.zig build/aggregate-bitcast-4-widths.zig build/aggregate-bitcast-5-widths.zig build/aggregate-bitcast-8-widths.zig
 
 .PHONY: fuzz-driver-test fuzz-partition-test all release asan test unit-test golden-test e2e-test e2e-native-test e2e-storage-test e2e-alignment-test e2e-safety-test safety-test fuzz fuzz-run fuzz-standalone clean
 
@@ -49,6 +49,9 @@ golden-test: build/asan/szc
 	./tests/run_golden.sh build/asan/szc
 
 test: unit-test golden-test fuzz-driver-test fuzz-partition-test
+
+build/memcpy-widths.zig: tools/generate_memcpy_tests.py
+	python3 $< $@
 
 build/integer-widths.zig: tools/generate_integer_tests.py
 	python3 $< $@
