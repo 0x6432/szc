@@ -165,6 +165,9 @@ print_pointer_address(Codegen *cg, FILE *out, ValueId id, bool outlined, bool wi
 		cg->bytes_used[address.root] = true;
 		fprintf(out, "%sszc.bytes.%u", prefix, (unsigned)address.root);
 		break;
+	case VALUE_FUNCTION:
+		fprintf(out, "%s%s", prefix, sema_func(cg->sema, root->as.function)->symbol);
+		break;
 	case VALUE_GLOBAL:
 		fprintf(out, "%s%s", prefix, sema_global(cg->sema, root->as.global)->symbol);
 		break;
@@ -213,6 +216,7 @@ print_operand(Codegen *cg, TirRef ref)
 		cg->constants_used[value->as.object] = true;
 		fprintf(cg->out, "$szc.const.%u", (unsigned)value->as.object);
 		return;
+	case VALUE_REINTERPRET_PTR:
 	case VALUE_PTR_CAST:
 	case VALUE_SLICE_FIELD_PTR:
 	case VALUE_ELEMENT_PTR:
@@ -681,7 +685,8 @@ emit_inst(Codegen *cg, TirRef ref)
 	case TIR_CONST: {
 		const Value *value = value_get(sema_values(cg->sema), inst->data.value);
 		PointerAddress address = value_pointer_address(sema_values(cg->sema), inst->data.value);
-		if ((value->kind == VALUE_ELEMENT_PTR || value->kind == VALUE_PTR_CAST || value->kind == VALUE_SLICE_FIELD_PTR) && address.offset != 0) {
+		if ((value->kind == VALUE_ELEMENT_PTR || value->kind == VALUE_PTR_CAST
+			|| value->kind == VALUE_REINTERPRET_PTR || value->kind == VALUE_SLICE_FIELD_PTR) && address.offset != 0) {
 			print_dest(cg, ref, QBE_L);
 			fputs("add ", out);
 			print_pointer_address(cg, cg->out, inst->data.value, false, false);
@@ -1177,7 +1182,8 @@ mark_value_dependencies(Codegen *cg, ValueId id)
 		return;
 	cg->dependencies_seen[id] = true;
 	const Value *value = value_get(sema_values(cg->sema), id);
-	if (value->kind == VALUE_ELEMENT_PTR || value->kind == VALUE_PTR_CAST || value->kind == VALUE_SLICE_FIELD_PTR)
+	if (value->kind == VALUE_ELEMENT_PTR || value->kind == VALUE_PTR_CAST
+			|| value->kind == VALUE_REINTERPRET_PTR || value->kind == VALUE_SLICE_FIELD_PTR)
 		mark_value_dependencies(cg, value_pointer_address(sema_values(cg->sema), id).root);
 	else if (value->kind == VALUE_REF)
 		cg->constants_used[value->as.object] = true;
@@ -1292,6 +1298,7 @@ emit_data_value(Codegen *cg, FILE *out, ValueId stored, bool outlined, bool *fir
 	case VALUE_REF:
 		fprintf(out, "%sszc.const.%u", outlined ? "" : "$", (unsigned)value->as.object);
 		break;
+	case VALUE_REINTERPRET_PTR:
 	case VALUE_PTR_CAST:
 	case VALUE_SLICE_FIELD_PTR:
 	case VALUE_ELEMENT_PTR:

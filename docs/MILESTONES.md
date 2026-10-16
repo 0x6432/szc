@@ -124,6 +124,7 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
   - [x] **M5.5g Native-width runtime aggregate bit casts**: typed element packing/unpacking up to 64 total logical bits.
   - [x] **M5.5h Thin runtime/numeric pointer casts**: child/shape/sentinel changes, combined qualifier/alignment permissions and non-null guards.
   - [x] **M5.5i Slice-source thin pointer casts**: borrow the data address, retain original qualifiers/alignment, and check empty sources too.
+  - [x] **M5.5j Symbolic pointer views**: preserve root/offset relocation identity; runtime mutable views and function/data round trips.
 
 ## Phase 6: Aggregates and errors
 
@@ -175,6 +176,34 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
 ## Completed milestone log
 
 (newest first; each entry: what, limitations, interactions)
+
+### M5.5j Symbolic pointer views
+
+- **What**: symbolic @ptrCast child/shape changes retain the original storage root
+  and cumulative physical byte offset. A distinct interned VALUE_REINTERPRET_PTR
+  marker survives qualifier wrappers and indexing, rather than treating the cast
+  as a value coercion or allocating a replacement object. Mutable global views
+  support runtime reads/writes; runtime parameters can consume immutable backing
+  views. Function/data round trips and global callback relocations remain reachable.
+- **Limits**: direct known immutable/comptime physical-view loads remain explicit
+  NYI, including integer ABI-padding reads. No synthetic padding, implicit runtime
+  fallback for constant loads, or invented comptime memory is allowed. Numeric
+  addresses retain foreign backing. Slice destinations remain separate work.
+- **Interactions**: address extraction, static relocations, codegen operand/data
+  printing and function/dependency discovery all traverse the new marker. Known
+  array indexing through a view goes through its real address, not a whole-root
+  value coercion. Zero-storage values keep their existing behavior.
+- **Validation**: corrected frozen GCC/Clang Werror ASan/UBSan suites pass 1447
+  units/1051 goldens, 106+4 native programs, 16 driver checks, full C/ABI/storage/
+  alignment suites, 60 volatile sequences and 265 safety cases. Optimized GCC
+  native/safety and both 20000-mutation/stage replays pass (256/256/68/124 seeds).
+  Four corrected-snapshot 60s fuzzers execute 774839/26407/24016/14384 inputs.
+  Actual Zig comparisons: 252 symbolic cases and 744 thin-pointer cases; after
+  M5.5i.1, the final compiler additionally passes all 48 known-slice cases (16
+  exact diagnostics). Original symbolic snapshot also passed full actual-Zig e2e;
+  corrected full regression suites do not claim a fresh full reference rerun.
+- **Evidence**: /data/symbolic-pointer-final-v2-{gcc,clang,fuzz}.log,
+  /data/symbolic-pointer-{reference,thin-reference,known-reference-v2}.log.
 
 ### M5.5i.1 Known slice address compatibility
 

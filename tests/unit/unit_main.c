@@ -430,6 +430,25 @@ test_element_pointers(void)
 	CHECK(cast != value_pointer_cast(&table, 6, nested));
 	address = value_pointer_address(&table, root);
 	CHECK(address.root == root && address.offset == 0 && !address.logical);
+	ValueId view = value_pointer_reinterpret(&table, 5, nested);
+	CHECK(view == value_pointer_reinterpret(&table, 5, nested));
+	CHECK(view != value_pointer_cast(&table, 5, nested));
+	CHECK(value_get(&table, view)->kind == VALUE_REINTERPRET_PTR);
+	address = value_pointer_address(&table, view);
+	CHECK(address.root == root && address.offset == 10 && !address.logical);
+	ValueId qualified_view = value_pointer_cast(&table, 6, view);
+	CHECK(value_get(&table, qualified_view)->as.pointer == view);
+	address = value_pointer_address(&table, qualified_view);
+	CHECK(address.root == root && address.offset == 10 && !address.logical);
+	ValueId selected_view = value_element_pointer(&table, 7, qualified_view, 1, 14, false);
+	address = value_pointer_address(&table, selected_view);
+	CHECK(address.root == root && address.offset == 14 && !address.logical);
+	ValueId numeric = value_pointer_reinterpret(&table, 5, value_int_pointer(&table, 4, 17));
+	CHECK(value_get(&table, numeric)->kind == VALUE_INT_PTR);
+	CHECK(value_get(&table, numeric)->as.address == 17);
+	ValueId function_view = value_pointer_reinterpret(&table, 5, value_function(&table, 4, 2));
+	address = value_pointer_address(&table, function_view);
+	CHECK(value_get(&table, address.root)->kind == VALUE_FUNCTION && address.offset == 0);
 	ValueId logical = value_element_pointer(&table, 4, root, 1, 1, true);
 	address = value_pointer_address(&table, logical);
 	CHECK(address.root == root && address.offset == 1 && address.logical);
@@ -1122,7 +1141,7 @@ test_thin_pointer_casts(void)
 		{"pub fn main() void {const p:*allowzero u8=undefined; const q:*i8=@ptrCast(p); _=q;}", "use of undefined", 0, 0},
 		{"pub fn main() void {const p:*u8=undefined; const q:*allowzero i8=@ptrCast(p); _=q;}", NULL, 0, 0},
 		{"pub fn main() void {const p:*u8=@ptrFromInt(16); const q:[*:17]i8=@ptrCast(p); _=q;}", NULL, 0, 0},
-		{"pub fn main() void {const n:u16=258; const q:*const u8=@ptrCast(&n); _=q;}", "symbolic @ptrCast with changed child or pointer size", 0, 0},
+		{"pub fn main() void {const n:u16=258; const q:*const u8=@ptrCast(&n); _=q;}", NULL, 0, 0},
 		{"pub fn main() void {const n:u16=258; const q:*const u16=@ptrCast(&n); _=q;}", NULL, 0, 0},
 		{"fn f(p:[]u8) *u8 {return @ptrCast(p);} pub fn main() void {_=f(undefined);}", NULL, 0, 0},
 		{"fn f(p:[*]u8) []u8 {return @ptrCast(p);} pub fn main() void {_=f(undefined);}", "slice destination @ptrCast", 0, 0},

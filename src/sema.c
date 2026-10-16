@@ -901,7 +901,8 @@ queue_value_functions(Block *block, ValueId id, uint32_t src)
 		return;
 	sema->queued_values[id] = true;
 	const Value *value = value_get(&sema->values, id);
-	while (value->kind == VALUE_REF || value->kind == VALUE_ELEMENT_PTR || value->kind == VALUE_PTR_CAST || value->kind == VALUE_SLICE_FIELD_PTR) {
+	while (value->kind == VALUE_REF || value->kind == VALUE_ELEMENT_PTR || value->kind == VALUE_PTR_CAST
+		|| value->kind == VALUE_REINTERPRET_PTR || value->kind == VALUE_SLICE_FIELD_PTR) {
 		id = value->kind == VALUE_REF ? sema->values.objects[value->as.object].value
 			: value->kind == VALUE_ELEMENT_PTR ? value->as.element.base
 			: value->kind == VALUE_SLICE_FIELD_PTR ? value->as.field.base : value->as.pointer;
@@ -1596,7 +1597,7 @@ retag_pointer(Block *block, Operand operand, TypeId type, uint32_t src)
 	}
 	if (operand.kind == OPERAND_COMPTIME) {
 		const Value *value = operand_value(block, operand);
-		if (value->kind == VALUE_BYTES || value->kind == VALUE_PTR_CAST
+		if (value->kind == VALUE_BYTES || value->kind == VALUE_PTR_CAST || value->kind == VALUE_REINTERPRET_PTR
 			|| value->kind == VALUE_ELEMENT_PTR || value->kind == VALUE_SLICE_FIELD_PTR)
 			return comptime_operand(type, value_pointer_cast(&sema->values, type, operand.value));
 		Value cast = *value;
@@ -2162,6 +2163,35 @@ integer_pointer(Block *block, Operand pointer)
 	return pointer.kind == OPERAND_COMPTIME && operand_value(block, pointer)->kind == VALUE_INT_PTR;
 }
 
+/* A physical view may occur below qualifier wrappers, indexing or slicing.
+ * Such reads must use real storage until physical comptime memory is implemented. */
+static bool
+runtime_pointer_view(Block *block, Operand pointer)
+{
+	if (pointer.kind != OPERAND_COMPTIME || block->sema->types[pointer.type].kind != TYPE_POINTER)
+		return false;
+	const Value *value = operand_value(block, pointer);
+	for (;;) {
+		ValueId parent;
+		switch (value->kind) {
+		case VALUE_REINTERPRET_PTR:
+			return true;
+		case VALUE_PTR_CAST:
+			parent = value->as.pointer;
+			break;
+		case VALUE_ELEMENT_PTR:
+			parent = value->as.element.base;
+			break;
+		case VALUE_SLICE_FIELD_PTR:
+			parent = value->as.field.base;
+			break;
+		default:
+			return false;
+		}
+		value = value_get(&block->sema->values, parent);
+	}
+}
+
 static Operand
 analyze_ptr_from_int(Block *block, const IrInst *inst)
 {
@@ -2268,10 +2298,8 @@ analyze_ptr_cast(Block *block, const IrInst *inst)
 			}
 			return comptime_operand(type, value_int_pointer(&sema->values, type, address));
 		}
-		if (from.child != to.child || from.size != to.size) {
-			sema_error(block, inst->src, "not supported by szc yet: symbolic @ptrCast with changed child or pointer size");
-			return operand_none;
-		}
+		if (from.child != to.child || from.size != to.size)
+			return comptime_operand(type, value_pointer_reinterpret(&sema->values, type, operand.value));
 		return retag_pointer(block, operand, type, inst->src);
 	}
 	if (!require_runtime(block, inst->src))
@@ -4266,8 +4294,10 @@ pointer_operand(Block *block, Operand operand, uint32_t src)
 		return false;
 	if (operand.kind == OPERAND_COMPTIME) {
 		PointerAddress address = value_pointer_address(&block->sema->values, operand.value);
-		if (value_get(&block->sema->values, address.root)->kind == VALUE_GLOBAL
-			|| value_get(&block->sema->values, address.root)->kind == VALUE_INT_PTR)
+		ValueKind root = value_get(&block->sema->values, address.root)->kind;
+		if (root == VALUE_GLOBAL || root == VALUE_INT_PTR
+			|| (runtime_pointer_view(block, operand)
+				&& (root == VALUE_REF || root == VALUE_BYTES || root == VALUE_FUNCTION)))
 			return true;
 	}
 	if (operand.kind != OPERAND_RUNTIME) {
@@ -4301,7 +4331,14 @@ load_pointer(Block *block, Operand pointer, uint32_t src)
 	if (sema->types[child].kind == TYPE_ARRAY && type_has_one_value(sema, child)
 		&& sema_type_size(sema, child, &size) && size == 0)
 		return one_value_operand(block, child, src);
+	bool physical_view = runtime_pointer_view(block, pointer);
 	bool mutable_global = mutable_global_pointer(block, pointer);
+	if (physical_view && (block->is_comptime || !mutable_global)) {
+		/* Falling back to a runtime read of immutable known memory could invent
+		 * values for undefined ABI padding or bypass an undefined-layout error. */
+		sema_error(block, src, "not supported by szc yet: known immutable/comptime load through reinterpreted pointer");
+		return operand_none;
+	}
 	if (mutable_global && block->is_comptime) {
 		PointerAddress address = value_pointer_address(&sema->values, pointer.value);
 		Global *global = sema->globals[value_get(&sema->values, address.root)->as.global];
@@ -4310,7 +4347,7 @@ load_pointer(Block *block, Operand pointer, uint32_t src)
 			sema_error(block, src, "unable to resolve comptime value");
 		return operand_none;
 	}
-	if (pointer.kind == OPERAND_COMPTIME && !mutable_global && !integer_pointer(block, pointer)) {
+	if (pointer.kind == OPERAND_COMPTIME && !mutable_global && !integer_pointer(block, pointer) && !physical_view) {
 		const Value *value = operand_value(block, pointer);
 		if (value->kind == VALUE_FUNCTION && sema->types[child].kind == TYPE_FN)
 			return comptime_operand(child, value_function(&sema->values, child, value->as.function));
@@ -5301,7 +5338,7 @@ analyze_array_index(Block *block, const IrInst *inst, bool address_only, bool bo
 		if (base.kind == OPERAND_COMPTIME) {
 			if (address_only || (borrow && sema->types[array.child].kind == TYPE_ARRAY))
 				return constant_array_pointer(block, base, index, array, inst->src);
-			if (mutable_global_pointer(block, base) || integer_pointer(block, base)) {
+			if (mutable_global_pointer(block, base) || integer_pointer(block, base) || runtime_pointer_view(block, base)) {
 				Operand pointer = constant_array_pointer(block, base, index, array, inst->src);
 				return load_pointer(block, pointer, inst->src);
 			}
@@ -6325,6 +6362,8 @@ value_text(Sema *sema, ValueId id)
 	}
 	case VALUE_INT_PTR:
 		return arena_sprintf(sema->arena, "ptr(0x%" PRIx64 ")", value->as.address);
+	case VALUE_REINTERPRET_PTR:
+		return arena_sprintf(sema->arena, "ptr_view(value.%u)", (unsigned)value->as.pointer);
 	case VALUE_PTR_CAST:
 		return arena_sprintf(sema->arena, "ptr_cast(value.%u)", (unsigned)value->as.pointer);
 	case VALUE_ELEMENT_PTR:

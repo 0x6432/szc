@@ -541,6 +541,7 @@ value_hash(const Value *value)
 		hash = hash_mix(hash, (uint32_t)value->as.address);
 		hash = hash_mix(hash, (uint32_t)(value->as.address >> 32));
 		break;
+	case VALUE_REINTERPRET_PTR:
 	case VALUE_PTR_CAST:
 		hash = hash_mix(hash, value->as.pointer);
 		break;
@@ -600,6 +601,7 @@ value_equal(const Value *a, const Value *b)
 		return a->as.object == b->as.object;
 	case VALUE_INT_PTR:
 		return a->as.address == b->as.address;
+	case VALUE_REINTERPRET_PTR:
 	case VALUE_PTR_CAST:
 		return a->as.pointer == b->as.pointer;
 	case VALUE_ELEMENT_PTR:
@@ -905,6 +907,17 @@ value_pointer_cast(ValueTable *table, TypeId type, ValueId pointer)
 	return value_intern(table, &value);
 }
 
+/* Reinterpretation is not a new object and must not fold through a type coercion. */
+ValueId
+value_pointer_reinterpret(ValueTable *table, TypeId type, ValueId pointer)
+{
+	if (value_get(table, pointer)->kind == VALUE_INT_PTR)
+		return value_int_pointer(table, type, value_get(table, pointer)->as.address);
+	Value value = make_value(VALUE_REINTERPRET_PTR, type);
+	value.as.pointer = pointer;
+	return value_intern(table, &value);
+}
+
 /* Qualifier coercions retain the path; address identity ignores pointer types. */
 PointerAddress
 value_pointer_address(const ValueTable *table, ValueId id)
@@ -912,7 +925,8 @@ value_pointer_address(const ValueTable *table, ValueId id)
 	PointerAddress address = {id, 0, false};
 	bool selected = false;
 	const Value *value = value_get(table, id);
-	while (value->kind == VALUE_ELEMENT_PTR || value->kind == VALUE_PTR_CAST || value->kind == VALUE_SLICE_FIELD_PTR) {
+	while (value->kind == VALUE_ELEMENT_PTR || value->kind == VALUE_PTR_CAST
+		|| value->kind == VALUE_REINTERPRET_PTR || value->kind == VALUE_SLICE_FIELD_PTR) {
 		if (value->kind == VALUE_ELEMENT_PTR) {
 			if (!selected) {
 				address.offset = value->as.element.offset;

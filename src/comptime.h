@@ -37,6 +37,7 @@ typedef enum ValueKind {
 	VALUE_REF,	/* immutable address of an interned value */
 	VALUE_INT_PTR,	/* absolute address; not compiler-owned memory */
 	VALUE_PTR_CAST,	/* pointer qualification preserving the original byte backing */
+	VALUE_REINTERPRET_PTR,	/* physical runtime view retaining original root and offsets */
 	VALUE_ELEMENT_PTR,	/* subobject path into real backing, never a copied element */
 	VALUE_SLICE_FIELD_PTR,	/* address of one descriptor word in original backing */
 	VALUE_SLICE,	/* pointer/usize length, not the pointee contents */
@@ -131,6 +132,7 @@ ValueId value_element_pointer(ValueTable *table, TypeId type, ValueId base, uint
 ValueId value_slice_field_pointer(ValueTable *table, TypeId type, ValueId base, uint64_t offset, bool length);
 ValueId value_int_pointer(ValueTable *table, TypeId type, uint64_t address);
 ValueId value_pointer_cast(ValueTable *table, TypeId type, ValueId pointer);
+ValueId value_pointer_reinterpret(ValueTable *table, TypeId type, ValueId pointer);
 PointerAddress value_pointer_address(const ValueTable *table, ValueId id);
 ValueId value_slice(ValueTable *table, TypeId type, ValueId pointer, ValueId length);
 ValueId value_array(ValueTable *table, TypeId type, const ValueId *items, uint32_t count);

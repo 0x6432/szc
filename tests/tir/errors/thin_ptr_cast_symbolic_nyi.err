@@ -1,3 +1,3 @@
-tests/tir/errors/thin_ptr_cast_symbolic_nyi.zig:1:56: error: not supported by szc yet: symbolic @ptrCast with changed child or pointer size
-pub fn main() void {const n:u16=258; const q:*const u8=@ptrCast(&n); _=q;}
-                                                       ^
+tests/tir/errors/thin_ptr_cast_symbolic_nyi.zig:1:73: error: not supported by szc yet: known immutable/comptime load through reinterpreted pointer
+pub fn main() void {const n:u16=258; const q:*const u8=@ptrCast(&n); _=q.*;}
+                                                                        ^

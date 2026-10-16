@@ -19,6 +19,22 @@ Read this first when resuming work (the sandbox resets often).
 
 ## Latest follow-up checkpoint
 
+- M5.5j symbolic pointer views are integrated: root/physical offset survives
+  reinterpretation, qualifiers, relocations and dependency discovery. Runtime
+  mutable global views/function-data round trips work; direct known immutable/
+  comptime physical loads remain explicit NYI (including ABI padding).
+  Corrected frozen GCC/Clang suites: 1447 units/1051 goldens, 106+4 native,
+  16 driver, full C/ABI/storage/alignment, 60 volatile, 265 safety, optimized
+  GCC native/safety; both 20000 mutations/stage with 256/256/68/124 seeds.
+  Fresh four 60s fuzz counts: 774839/26407/24016/14384. Actual Zig: 252 symbolic,
+  744 thin and final 48 known-slice cases pass. Full original symbolic e2e had
+  actual Zig; corrected full suites use targeted reference proof separately.
+  Next: fixed-extent slice destinations, equal-stride slices, then resizing.
+- Hosted M5.5h run 38901283117 passed all 46 jobs. M5.5i run 38902004958 had
+  one GCC native execution timeout in divCeil_overflow_i64 (264/265 safety pass,
+  no sanitizer report); local full GCC/Clang safety passes, failed-job rerun
+  requested. Do not call that run green until its rerun completes.
+
 - M5.5i.1 corrects known numeric zero-address slice casts to match actual Zig;
   runtime null/alignment guards are unchanged. Frozen known-slice-fix-final
   GCC/Clang suites pass 1436 units/1049 goldens, 105+4 native, 16 driver,
