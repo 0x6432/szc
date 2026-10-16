@@ -1,0 +1,23 @@
+fn szc.main.1: fn () void {
+  %0: usize = const 1
+  %1: void = call szc.f.2(%0)
+  %2: noreturn = ret
+}
+fn szc.f.2: fn (usize) void {
+  %0: usize = arg 0
+  %1: usize = const 5
+  %2: void = slice_start_check %0, %1
+  %3: usize = const 5
+  %4: usize = const 6
+  %5: void = slice_end_check %3, %4
+  %6: [*]const u8 = const ptr_cast(value.8)
+  %7: [*]const u8 = ptr_add %6, %0
+  %8: usize = const 5
+  %9: usize = sub_wrap %8, %0
+  %10: *const [:0]const u8 = alloc
+  %11: *[*:0]const u8 = ptr_cast %10
+  %12: *usize = slice_len_ptr %10
+  %13: void = store %11, %7
+  %14: void = store %12, %9
+  %15: noreturn = ret
+}

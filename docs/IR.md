@@ -673,3 +673,24 @@ slice ends use the logical length instead. Keep these upstream boundary rules
 rather than treating the mathematical 2^64 physical elements as addressable.
 Sentinel slice descriptors, explicit `[a..b:s]` checks and non-integer/bool
 sentinel values remain separate milestones.
+
+
+## Scalar-sentinel slices (M5.4c)
+
+POINTER_SLICE carries TypePointer.sentinel as a ValueId while retaining the same
+owned sixteen-byte pointer/length backing. The `.ptr` type is a many-pointer with
+the descriptor's promise; descriptor word addresses retain storage qualifiers.
+Joins preserve equal array/slice promises and drop incompatible ones. Slice
+coercion cannot invent or change a promise, especially in writable nested slots.
+
+IR_SLICE inherits the sentinel for open tails and known original logical ends.
+A known result length produces a single pointer to `[len:s]T`; dynamic lengths
+produce descriptors. Physical runtime bounds use wrapping usize `len + 1`;
+known descriptors with dynamic-result paths instead use Zig's logical-bound
+behavior. Sentinel indexing accepts `index <= len`; non-sentinel indexing uses
+`index < len`. Zero-bit elements do not suppress runtime slice index guards.
+
+An empty array may discard const/alignment only under Zig's physical-empty or
+unsentinelled-empty destination rules. Known zero-bit array view loads fold the
+requested view type, not the canonical cast root's extent. Explicit assertions
+and non-integer/bool sentinel values remain separate work.

@@ -1,0 +1,23 @@
+fn szc.main.1: fn () void {
+  %0: bool = const true
+  %1: usize = call szc.f.2(%0)
+  %2: noreturn = ret
+}
+fn szc.f.2: fn (bool) usize {
+  %0: bool = arg 0
+  %1: void = block {
+    %9: noreturn = condbr %0 then {
+      %3: *const [:0]const u8 = const ref(object.1)
+      %4: void = array_copy %2, %3
+      %5: noreturn = br %1
+    } else {
+      %6: *const [:0]const u8 = const ref(object.2)
+      %7: void = array_copy %2, %6
+      %8: noreturn = br %1
+    }
+  }
+  %2: *const [:0]const u8 = alloc
+  %10: *const usize = slice_len_ptr %2
+  %11: usize = load %10
+  %12: noreturn = ret %11
+}

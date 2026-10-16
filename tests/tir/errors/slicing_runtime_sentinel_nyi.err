@@ -1,3 +1,0 @@
-tests/tir/errors/slicing_runtime_sentinel_nyi.zig:1:34: error: not supported by szc yet: runtime sentinel slices
-fn f(n: usize) void { _ = "hello"[n..]; } pub fn main() void { f(1); }
-                                 ^

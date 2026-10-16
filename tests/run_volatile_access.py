@@ -65,14 +65,31 @@ def fixtures():
             f'_ = &field_only_{offset}.len;', f'_ = &field_only_{offset}.ptr;',
             'if (!observe_finish(0, 0)) return 12;',
         ])
+    sentinel_index = slice_index + 1
+    declarations.append(f'extern fn memory_{sentinel_index}(offset: usize) *align(1) volatile [:17]u8;')
+    for offset in (0, 1):
+        checks.extend([
+            f'const sentinel_descriptor_{offset} = memory_{sentinel_index}({offset});',
+            f'sentinel_descriptor_{offset}.len = 1;',
+            f'sentinel_descriptor_{offset}.ptr = &sentinel_left;',
+            f'_ = sentinel_descriptor_{offset}.len;', f'_ = sentinel_descriptor_{offset}.len;',
+            f'sentinel_descriptor_{offset}.ptr = &sentinel_right;',
+            f'const sentinel_data_{offset} = sentinel_descriptor_{offset}.ptr;',
+            'if (!observe_finish(3, 3)) return 13;',
+            f'if (sentinel_data_{offset}[0] != 9 or sentinel_data_{offset}[1] != 17) return 14;',
+            f'const sentinel_fields_{offset} = memory_{sentinel_index}({offset});',
+            f'_ = &sentinel_fields_{offset}.len;', f'_ = &sentinel_fields_{offset}.ptr;',
+            'if (!observe_finish(0, 0)) return 15;',
+        ])
     source = ('extern fn observe_finish(reads: u32, writes: u32) bool;\n'
               'extern fn observe_finish_compound() bool;\n'
               'var left: u8 = 1;\nvar right: u8 = 2;\n'
               'var byte_left: [1]u8 = .{7}; var byte_right: [1]u8 = .{9};\n'
+              'var sentinel_left: [1:17]u8 = .{7}; var sentinel_right: [1:17]u8 = .{9};\n'
               'fn seven() u8 { return 7; }\nfn nine() u8 { return 9; }\n'
               + '\n'.join(declarations) + '\npub fn main() u8 {\n' + '\n'.join(checks) + '\nreturn 0;\n}\n')
     aliases = []
-    for index in range(len(TYPES) + 3):
+    for index in range(len(TYPES) + 4):
         aliases.extend(['.text', f'.globl memory_{index}', f'memory_{index}:', 'jmp observe_memory'])
     assembly = '\n'.join(aliases) + '\n.section .note.GNU-stack,"",@progbits\n'
     return source, assembly
@@ -111,7 +128,7 @@ def main():
                      '-O' + mode, '-j2', '-lc', f'-femit-bin={executable}'])
                 result = run([str(executable)])
                 assert not result.stdout and not result.stderr
-    print(f'volatile accesses: {2 * (len(TYPES) + 7)} observed sequences, 0 failed', flush=True)
+    print(f'volatile accesses: {2 * (len(TYPES) + 9)} observed sequences, 0 failed', flush=True)
 
 
 if __name__ == '__main__':

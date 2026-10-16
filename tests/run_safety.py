@@ -36,6 +36,26 @@ def cases():
     ):
         yield "panic_slice_" + label, source + "\n", message
 
+    for label, expression, index in (
+        ('read', '_ = s[n]', 4),
+        ('write', 's[n] = 9', 4),
+        ('window', '_ = s[0..n]', 5),
+        ('tail', '_ = s[n..]', 4),
+    ):
+        source = ('fn operation(s: [:17]u16, n: usize) void { '+expression+'; } '
+                  'pub fn main() void { var a: [3:17]u16 = .{7,9,11}; operation(&a,'+str(index)+'); }\n')
+        message = 'index out of bounds' if label != 'tail' else 'start index is larger than end index'
+        reference_message = 'start index 4 is larger than end index 3' if label == 'tail' else message
+        yield 'sentinel_slice_'+label, source, message, reference_message
+
+    yield 'sentinel_slice_zero_bits', (
+        'fn operation(s: [:0]const u0, n: usize) void { _ = s[n]; } '
+        'pub fn main() void { const a = [2:0]u0{0,0}; operation(&a,100); }\n'), 'index out of bounds'
+
+    yield 'sentinel_slice_known_window', (
+        'const a = [3:17]u16{7,9,11}; const s: [:17]const u16 = &a; '
+        'fn operation(n: usize) void { _ = s[n..4]; } pub fn main() void { operation(1); }\n'), 'index out of bounds'
+
     for label, child, sentinel, count, values, index in (
         ('integer', 'u16', '17', 3, '7,9,11', 4),
         ('boolean', 'bool', 'true', 2, 'false,true', 3),

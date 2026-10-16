@@ -535,7 +535,7 @@ sema_type_name(Sema *sema, TypeId type_id)
 			const Value *sentinel = value_get(&sema->values, type->as.pointer.sentinel);
 			const char *text = sentinel->kind == VALUE_BOOL ? (sentinel->as.boolean ? "true" : "false")
 				: bigint_to_string(sema->arena, &sentinel->as.integer);
-			prefix = arena_sprintf(sema->arena, "[*:%s]", text);
+			prefix = arena_sprintf(sema->arena, type->as.pointer.size == POINTER_SLICE ? "[:%s]" : "[*:%s]", text);
 		}
 		const char *alignment = type->as.pointer.alignment == 0 ? "" : arena_sprintf(sema->arena, "align(%u) ", (unsigned)type->as.pointer.alignment);
 		return arena_sprintf(sema->arena, "%s%s%s%s%s%s", prefix, alignment, type->as.pointer.is_allowzero ? "allowzero " : "", type->as.pointer.is_const ? "const " : "", type->as.pointer.is_volatile ? "volatile " : "", sema_type_name(sema, type->as.pointer.child));
@@ -1588,7 +1588,10 @@ array_slice_allowed(Sema *sema, TypeId dest, TypeId source)
 	/* Zig's array-pointer conversion checks const/volatile/alignment attributes,
 	 * but does not use the ordinary pointer allowzero compatibility rule. */
 	adjusted.as.pointer.is_allowzero = to.is_allowzero;
-	if (sema->types[from.child].as.array.length == 0) {
+	TypeArray array = sema->types[from.child].as.array;
+	bool empty = array.length + (array.sentinel != VALUE_NONE ? 1u : 0u) == 0
+		|| (array.length == 0 && to.sentinel == VALUE_NONE);
+	if (empty) {
 		adjusted.as.pointer.is_const = to.is_const;
 		adjusted.as.pointer.alignment = pointer_alignment(sema, to);
 	}
@@ -2025,11 +2028,6 @@ peer_type(Block *block, Operand lhs, Operand rhs, uint32_t src, TypeId *out)
 		bool array_slice = ap.size == POINTER_ONE && bp.size == POINTER_ONE
 			&& sema->types[ap.child].kind == TYPE_ARRAY && sema->types[bp.child].kind == TYPE_ARRAY
 			&& sema->types[ap.child].as.array.length != sema->types[bp.child].as.array.length;
-		if (array_slice && sema->types[ap.child].as.array.sentinel != VALUE_NONE
-			&& sema->types[ap.child].as.array.sentinel == sema->types[bp.child].as.array.sentinel) {
-			sema_error(block, src, "not supported by szc yet: inferred sentinel slices");
-			return false;
-		}
 		if (ap.size == bp.size || many_array || slice_array) {
 			Type candidate = make_type(TYPE_POINTER);
 			candidate.as.pointer = ap;
@@ -2049,8 +2047,13 @@ peer_type(Block *block, Operand lhs, Operand rhs, uint32_t src, TypeId *out)
 				candidate.as.pointer.child = type_intern(sema, &array);
 			}
 			candidate.as.pointer.sentinel = ap.sentinel == bp.sentinel ? ap.sentinel : VALUE_NONE;
-			if (many_array) {
-				TypePointer many = ap.size == POINTER_MANY ? ap : bp;
+			if (array_slice) {
+				ValueId first = sema->types[ap.child].as.array.sentinel;
+				ValueId second = sema->types[bp.child].as.array.sentinel;
+				candidate.as.pointer.sentinel = first == second ? first : VALUE_NONE;
+			}
+			if (many_array || slice_array) {
+				TypePointer many = ap.size != POINTER_ONE ? ap : bp;
 				TypeArray array = sema->types[ap.size == POINTER_ONE ? ap.child : bp.child].as.array;
 				candidate.as.pointer.sentinel = array.sentinel == many.sentinel ? many.sentinel : VALUE_NONE;
 			}
@@ -3698,6 +3701,8 @@ pointer_operand(Block *block, Operand operand, uint32_t src)
 	return true;
 }
 
+static bool type_has_one_value(const Sema *sema, TypeId type);
+static Operand one_value_operand(Block *block, TypeId type, uint32_t src);
 static Operand constant_array_element(Block *block, Operand base, TypeArray array, uint64_t index, uint32_t src);
 static Operand load_offset_pointer(Block *block, Operand pointer, uint32_t src);
 static TypeId indexable_array_type(Sema *sema, TypeId type);
@@ -3716,6 +3721,10 @@ load_pointer(Block *block, Operand pointer, uint32_t src)
 		return void_operand(sema);
 	if (is_int(sema, child) && sema->types[child].as.integer.bits == 0)
 		return comptime_operand(child, value_int_u64(&sema->values, child, 0));
+	uint64_t size;
+	if (sema->types[child].kind == TYPE_ARRAY && type_has_one_value(sema, child)
+		&& sema_type_size(sema, child, &size) && size == 0)
+		return one_value_operand(block, child, src);
 	bool mutable_global = mutable_global_pointer(block, pointer);
 	if (mutable_global && block->is_comptime) {
 		PointerAddress address = value_pointer_address(&sema->values, pointer.value);
@@ -3984,7 +3993,8 @@ analyze_deref(Block *block, const IrInst *inst)
 		}
 		Type array_pointer = sema->types[pointer.type];
 		array_pointer.as.pointer.size = POINTER_ONE;
-		array_pointer.as.pointer.child = array_type_id(sema, type.child, count, VALUE_NONE);
+		array_pointer.as.pointer.child = array_type_id(sema, type.child, count, type.sentinel);
+		array_pointer.as.pointer.sentinel = VALUE_NONE;
 		TypeId array_pointer_type = type_intern(sema, &array_pointer);
 		pointer = comptime_operand(array_pointer_type, operand_is_undefined(block, data)
 			? value_undefined(&sema->values, array_pointer_type)
@@ -4461,6 +4471,7 @@ analyze_slice(Block *block, const IrInst *inst)
 			return operand_none;
 		data = slice_field(block, base, false, inst->src);
 		available = slice_field(block, base, true, inst->src);
+		inherited_sentinel = shape.sentinel;
 	} else if (shape.size == POINTER_ONE) {
 		TypeArray array;
 		if (sema->types[shape.child].kind == TYPE_ARRAY) {
@@ -4509,11 +4520,17 @@ analyze_slice(Block *block, const IrInst *inst)
 		? inherited_sentinel : VALUE_NONE;
 	Operand bound = available;
 	if (inherited_sentinel != VALUE_NONE) {
-		uint64_t length = bigint_to_u64_bits(&operand_value(block, available)->as.integer);
-		/* Match Zig's usize physical-length wrap for maximal zero-bit arrays.
-		 * An omitted end uses the logical length without this explicit-end check. */
-		bound = comptime_operand(T_USIZE,
-			value_int_u64(&sema->values, T_USIZE, length + 1));
+		/* Zig uses wrapping usize addition for the physical sentinel bound. */
+		if (available.kind == OPERAND_COMPTIME) {
+			uint64_t length = bigint_to_u64_bits(&operand_value(block, available)->as.integer);
+			bound = comptime_operand(T_USIZE, value_int_u64(&sema->values, T_USIZE, length + 1));
+		} else {
+			if (!require_runtime(block, inst->src))
+				return operand_none;
+			Operand one = comptime_operand(T_USIZE, value_int_u64(&sema->values, T_USIZE, 1));
+			bound = runtime_operand(T_USIZE, emit_tir_bin(block, TIR_ADD_WRAP, T_USIZE, inst->src,
+				materialize(block, available, inst->src), materialize(block, one, inst->src)));
+		}
 	}
 	if (slice.end != IR_REF_NONE && known_end && bound.kind == OPERAND_COMPTIME) {
 		uint64_t limit = bigint_to_u64_bits(&operand_value(block, bound)->as.integer);
@@ -4531,14 +4548,22 @@ analyze_slice(Block *block, const IrInst *inst)
 	if ((!known_start || !known_end) && !(known_start && first == 0) && !same_index) {
 		if (!require_runtime(block, inst->src))
 			return operand_none;
-		emit_tir_bin(block, TIR_SLICE_START_CHECK, T_VOID, inst->src,
-			materialize(block, start, inst->src), materialize(block, end, inst->src));
+		TirRef start_ref = materialize(block, start, inst->src);
+		TirRef end_ref = materialize(block, end, inst->src);
+		emit_tir_bin(block, TIR_SLICE_START_CHECK, T_VOID, inst->src, start_ref, end_ref);
 	}
-	if (slice.end != IR_REF_NONE && bound.kind != OPERAND_NONE && !(known_end && bound.kind == OPERAND_COMPTIME)) {
+	bool runtime_sentinel = inherited_sentinel != VALUE_NONE && (!known_start || !known_end);
+	/* Zig's dynamic-result path uses a known descriptor's logical length,
+	 * but runtime descriptors and array backing include the physical sentinel. */
+	Operand runtime_bound = runtime_sentinel && is_slice(sema, base.type)
+		&& available.kind == OPERAND_COMPTIME ? available : bound;
+	if (runtime_bound.kind != OPERAND_NONE && (runtime_sentinel
+		|| (slice.end != IR_REF_NONE && !(known_end && runtime_bound.kind == OPERAND_COMPTIME)))) {
 		if (!require_runtime(block, inst->src))
 			return operand_none;
-		emit_tir_bin(block, TIR_SLICE_END_CHECK, T_VOID, inst->src,
-			materialize(block, end, inst->src), materialize(block, bound, inst->src));
+		TirRef end_ref = materialize(block, end, inst->src);
+		TirRef bound_ref = materialize(block, runtime_bound, inst->src);
+		emit_tir_bin(block, TIR_SLICE_END_CHECK, T_VOID, inst->src, end_ref, bound_ref);
 	}
 	Operand pointer = analyze_pointer_offset(block, IR_ADD, data, start, inst->src);
 	if (pointer.kind == OPERAND_NONE)
@@ -4561,14 +4586,10 @@ analyze_slice(Block *block, const IrInst *inst)
 			return comptime_operand(type, value_pointer_cast(&sema->values, type, pointer.value));
 		return runtime_operand(type, emit_tir_un(block, TIR_PTR_CAST, type, inst->src, pointer.inst));
 	}
-	if (sentinel != VALUE_NONE) {
-		sema_error(block, inst->src, "not supported by szc yet: runtime sentinel slices");
-		return operand_none;
-	}
 	TirRef length = emit_tir_bin(block, TIR_SUB_WRAP, T_USIZE, inst->src,
 		materialize(block, end, inst->src), materialize(block, start, inst->src));
 	result.as.pointer.size = POINTER_SLICE;
-	result.as.pointer.sentinel = VALUE_NONE;
+	result.as.pointer.sentinel = sentinel;
 	return make_slice(block, type_intern(sema, &result), pointer, runtime_operand(T_USIZE, length), inst->src);
 }
 
@@ -4588,14 +4609,16 @@ analyze_array_index(Block *block, const IrInst *inst, bool address_only, bool bo
 		if (index.kind == OPERAND_COMPTIME && length.kind == OPERAND_COMPTIME) {
 			uint64_t item = bigint_to_u64_bits(&operand_value(block, index)->as.integer);
 			uint64_t count = bigint_to_u64_bits(&operand_value(block, length)->as.integer);
-			if (item >= count) {
-				sema_error(block, inst->src, "index %" PRIu64 " outside slice of length %" PRIu64, item, count);
+			bool has_sentinel = sema->types[base.type].as.pointer.sentinel != VALUE_NONE;
+			if (item > count || (item == count && !has_sentinel) || (count == UINT64_MAX && has_sentinel)) {
+				sema_error(block, inst->src, "index %" PRIu64 " outside slice of length %" PRIu64 "%s", item, count, has_sentinel ? " +1 (sentinel)" : "");
 				return operand_none;
 			}
 		} else {
 			if (!require_runtime(block, inst->src))
 				return operand_none;
-			emit_tir_bin(block, TIR_INDEX_CHECK, T_VOID, inst->src,
+			emit_tir_bin(block, sema->types[base.type].as.pointer.sentinel != VALUE_NONE
+				? TIR_SLICE_END_CHECK : TIR_INDEX_CHECK, T_VOID, inst->src,
 				materialize(block, index, inst->src), materialize(block, length, inst->src));
 		}
 		return analyze_many_index(block, data, index, inst->src, address_only, borrow);

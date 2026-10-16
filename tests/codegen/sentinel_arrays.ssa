@@ -6,12 +6,11 @@ function w $szc.main.1() {
 	%t140 =l alloc4 2
 	%t168 =l alloc4 2
 	%t189 =l alloc4 1
-	%t200 =l alloc4 1
-	%t205 =l alloc4 1
-	%t226 =l alloc4 1
-	%t239 =l alloc4 6
-	%t258 =l alloc4 6
-	%t301 =l alloc8 8
+	%t204 =l alloc4 1
+	%t225 =l alloc4 1
+	%t238 =l alloc4 6
+	%t257 =l alloc4 6
+	%t300 =l alloc8 8
 	call $memmove(l %t0, l $szc.const.5, l 8)
 	%e4_offset =l mul 3, 2
 	%t4 =l add %t0, %e4_offset
@@ -234,128 +233,128 @@ function w $szc.main.1() {
 	%t195 =l add %t189, %e195_offset
 	%e197_offset =l mul 2, 0
 	%t197 =l add %t189, %e197_offset
-	%e204_offset =l mul 2, 0
-	%t204 =l add %t189, %e204_offset
-	call $memmove(l %t205, l $szc.const.8, l 1)
-	%e209_offset =l mul 0, 1
-	%t209 =l add %t205, %e209_offset
-	%t210 =w loadub %t209
-	%t212 =w cnew %t210, 255
-	jnz %t212, @c217_then, @c217_else
-@c217_then
+	%e203_offset =l mul 2, 0
+	%t203 =l add %t189, %e203_offset
+	call $memmove(l %t204, l $szc.const.8, l 1)
+	%e208_offset =l mul 0, 1
+	%t208 =l add %t204, %e208_offset
+	%t209 =w loadub %t208
+	%t211 =w cnew %t209, 255
+	jnz %t211, @c216_then, @c216_else
+@c216_then
 	ret 8
-@c217_else
-	jmp @b213
-@b213
-	%e219_offset =l mul 0, 1
-	%t219 =l add %t205, %e219_offset
-	storeb 17, %t219
-	%e223_offset =l mul 0, 1
-	%t223 =l add %t205, %e223_offset
-	storeb 255, %t223
-	call $memmove(l %t226, l %t205, l 1)
-	call $memmove(l %t205, l %t226, l 1)
-	%e230_offset =l mul 0, 1
-	%t230 =l add %t205, %e230_offset
-	%t231 =w loadub %t230
-	%t233 =w cnew %t231, 255
-	jnz %t233, @c238_then, @c238_else
-@c238_then
+@c216_else
+	jmp @b212
+@b212
+	%e218_offset =l mul 0, 1
+	%t218 =l add %t204, %e218_offset
+	storeb 17, %t218
+	%e222_offset =l mul 0, 1
+	%t222 =l add %t204, %e222_offset
+	storeb 255, %t222
+	call $memmove(l %t225, l %t204, l 1)
+	call $memmove(l %t204, l %t225, l 1)
+	%e229_offset =l mul 0, 1
+	%t229 =l add %t204, %e229_offset
+	%t230 =w loadub %t229
+	%t232 =w cnew %t230, 255
+	jnz %t232, @c237_then, @c237_else
+@c237_then
 	ret 9
-@c238_else
-	jmp @b234
-@b234
-	call $memmove(l %t239, l $szc.const.9, l 6)
-	%e243_offset =l mul 2, 2
-	%t243 =l add %t239, %e243_offset
-	storeh 41, %t243
-	%e247_offset =l mul 0, 2
-	%t247 =l add %t239, %e247_offset
-	%t248 =w call $szc.observe.3(l %t239)
-	%t248 =w and %t248, 65535
-	storeh %t248, %t247
-	%e251_offset =l mul 1, 2
-	%t251 =l add %t239, %e251_offset
-	%t252 =w call $szc.observe.3(l %t239)
-	%t252 =w and %t252, 65535
-	storeh %t252, %t251
-	%e255_offset =l mul 2, 2
-	%t255 =l add %t239, %e255_offset
-	storeh 17, %t255
-	call $memmove(l %t258, l %t239, l 6)
-	call $memmove(l %t239, l %t258, l 6)
-	%t262 =w loadub $szc.g.2
-	%t264 =w cnew %t262, 2
-	jnz %t264, @c274_then, @c274_else
-@c274_then
-	%t265 =w copy 1
-	jmp @b265
-@c274_else
-	%e267_offset =l mul 0, 2
-	%t267 =l add %t239, %e267_offset
-	%t268 =w loaduh %t267
-	%t270 =w cnew %t268, 41
-	%t265 =w copy %t270
-	jmp @b265
-@b265
-	jnz %t265, @c284_then, @c284_else
-@c284_then
-	%t275 =w copy 1
-	jmp @b275
-@c284_else
-	%e277_offset =l mul 1, 2
-	%t277 =l add %t239, %e277_offset
-	%t278 =w loaduh %t277
-	%t280 =w cnew %t278, 41
-	%t275 =w copy %t280
-	jmp @b275
-@b275
-	jnz %t275, @c294_then, @c294_else
-@c294_then
-	%t285 =w copy 1
-	jmp @b285
-@c294_else
-	%e287_offset =l mul 2, 2
-	%t287 =l add %t239, %e287_offset
-	%t288 =w loaduh %t287
-	%t290 =w cnew %t288, 17
-	%t285 =w copy %t290
-	jmp @b285
-@b285
-	jnz %t285, @c299_then, @c299_else
-@c299_then
+@c237_else
+	jmp @b233
+@b233
+	call $memmove(l %t238, l $szc.const.9, l 6)
+	%e242_offset =l mul 2, 2
+	%t242 =l add %t238, %e242_offset
+	storeh 41, %t242
+	%e246_offset =l mul 0, 2
+	%t246 =l add %t238, %e246_offset
+	%t247 =w call $szc.observe.3(l %t238)
+	%t247 =w and %t247, 65535
+	storeh %t247, %t246
+	%e250_offset =l mul 1, 2
+	%t250 =l add %t238, %e250_offset
+	%t251 =w call $szc.observe.3(l %t238)
+	%t251 =w and %t251, 65535
+	storeh %t251, %t250
+	%e254_offset =l mul 2, 2
+	%t254 =l add %t238, %e254_offset
+	storeh 17, %t254
+	call $memmove(l %t257, l %t238, l 6)
+	call $memmove(l %t238, l %t257, l 6)
+	%t261 =w loadub $szc.g.2
+	%t263 =w cnew %t261, 2
+	jnz %t263, @c273_then, @c273_else
+@c273_then
+	%t264 =w copy 1
+	jmp @b264
+@c273_else
+	%e266_offset =l mul 0, 2
+	%t266 =l add %t238, %e266_offset
+	%t267 =w loaduh %t266
+	%t269 =w cnew %t267, 41
+	%t264 =w copy %t269
+	jmp @b264
+@b264
+	jnz %t264, @c283_then, @c283_else
+@c283_then
+	%t274 =w copy 1
+	jmp @b274
+@c283_else
+	%e276_offset =l mul 1, 2
+	%t276 =l add %t238, %e276_offset
+	%t277 =w loaduh %t276
+	%t279 =w cnew %t277, 41
+	%t274 =w copy %t279
+	jmp @b274
+@b274
+	jnz %t274, @c293_then, @c293_else
+@c293_then
+	%t284 =w copy 1
+	jmp @b284
+@c293_else
+	%e286_offset =l mul 2, 2
+	%t286 =l add %t238, %e286_offset
+	%t287 =w loaduh %t286
+	%t289 =w cnew %t287, 17
+	%t284 =w copy %t289
+	jmp @b284
+@b284
+	jnz %t284, @c298_then, @c298_else
+@c298_then
 	ret 10
-@c299_else
-	jmp @b295
-@b295
-	%t300 =l copy %t239
-	storel %t300, %t301
-	%t303 =l loadl %t301
-	%e305_offset =l mul 1, 2
-	%t305 =l add %t303, %e305_offset
-	storeh 43, %t305
-	%e309_offset =l mul 1, 2
-	%t309 =l add %t239, %e309_offset
-	%t310 =w loaduh %t309
-	%t312 =w cnew %t310, 43
-	jnz %t312, @c322_then, @c322_else
-@c322_then
-	%t313 =w copy 1
-	jmp @b313
-@c322_else
-	%e315_offset =l mul 2, 2
-	%t315 =l add %t239, %e315_offset
-	%t316 =w loaduh %t315
-	%t318 =w cnew %t316, 17
-	%t313 =w copy %t318
-	jmp @b313
-@b313
-	jnz %t313, @c327_then, @c327_else
-@c327_then
+@c298_else
+	jmp @b294
+@b294
+	%t299 =l copy %t238
+	storel %t299, %t300
+	%t302 =l loadl %t300
+	%e304_offset =l mul 1, 2
+	%t304 =l add %t302, %e304_offset
+	storeh 43, %t304
+	%e308_offset =l mul 1, 2
+	%t308 =l add %t238, %e308_offset
+	%t309 =w loaduh %t308
+	%t311 =w cnew %t309, 43
+	jnz %t311, @c321_then, @c321_else
+@c321_then
+	%t312 =w copy 1
+	jmp @b312
+@c321_else
+	%e314_offset =l mul 2, 2
+	%t314 =l add %t238, %e314_offset
+	%t315 =w loaduh %t314
+	%t317 =w cnew %t315, 17
+	%t312 =w copy %t317
+	jmp @b312
+@b312
+	jnz %t312, @c326_then, @c326_else
+@c326_then
 	ret 11
-@c327_else
-	jmp @b323
-@b323
+@c326_else
+	jmp @b322
+@b322
 	ret 0
 }
 

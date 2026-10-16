@@ -885,7 +885,7 @@ alignment_body(IrGen *gen, Scope *scope, AstNode *node)
 static IrRef
 pointer_type(GenBody *body, Scope *scope, AstPointerType *node)
 {
-	if ((node->size != AST_POINTER_ONE && node->size != AST_POINTER_MANY && node->size != AST_POINTER_SLICE) || (node->sentinel != NULL && node->size != AST_POINTER_MANY) || node->bit_offset != NULL || node->host_size != NULL || node->addrspace != NULL) {
+	if ((node->size != AST_POINTER_ONE && node->size != AST_POINTER_MANY && node->size != AST_POINTER_SLICE) || (node->sentinel != NULL && node->size == AST_POINTER_ONE) || node->bit_offset != NULL || node->host_size != NULL || node->addrspace != NULL) {
 		unsupported(body, &node->base, "pointer sizes other than single pointers or pointer attributes");
 		return IR_REF_VOID_VALUE;
 	}

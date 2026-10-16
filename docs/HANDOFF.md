@@ -56,14 +56,32 @@ Read this first when resuming work (the sandbox resets often).
   949201/24630/26297/41516 inputs; both builds replay 20000 mutations/stage
   (56 irgen/112 sema seeds). All final processes exit zero. Older final/final2
   array snapshots are superseded. Logs use /data/sentinel-arrays-final3-*.
-- Active next work is isolated in /data/sentinel-slices-next: scalar sentinel
-  descriptors, inference, inherited slicing and zero-bit view loads. Initial
-  256 actual semantic comparisons, native, six panic cases, four C layouts and
-  52 volatile sequences pass. Frozen validation found GCC/Clang golden ordering
-  differed for two materialize calls used as C function arguments. Those calls
-  are now explicitly sequenced; /data/sentinel-slices-final2 is under full
-  validation and the earlier snapshot is superseded. Do not claim M5.4c complete
-  before all final processes succeed. No slice compiler changes are integrated.
+- M5.4c scalar-sentinel slices has completed local validation. Final immutable
+  /data/sentinel-slices-final2 GCC/Clang sources/test/config match development:
+  718 units/961 goldens, 88 ordinary/generated + three scoped native programs,
+  16 driver checks, all C/ABI/alignment suites, 52 volatile sequences, 226 safety.
+  Fresh matrices: 256 sentinel slices + 313 sentinel arrays + 209 sentinel
+  pointers + 168 fields + 87 dereference + 204 slicing + 252 slices. Both builds
+  separately run new native/four C variants/volatile Debug+ReleaseFast against
+  actual Zig; GCC full e2e also runs Zig. Optimized GCC passes 88 native/226 safety;
+  949 unchanged array/layout cases replay the source-hash-verified reference
+  oracle, not fresh Zig. Four 60s fuzzers: 1306173/33229/36889/42163; 20000
+  mutations/stage on both builds, 57 irgen/113 sema seeds. Every final wrapper
+  exits zero. Older final is superseded. Logs: /data/sentinel-slices-final2-*.
+- Integration into the main checkout is awaiting approval after an environment
+  safety block on the bulk-copy operation. No C changes are integrated or pushed.
+  Do not retry the blocked integration without user approval. Development is
+  preserved separately in /data/sentinel-slices-next.
+- Next M5.4d is /data/sentinel-assertions-next with frozen full validation in
+  /data/sentinel-assertions-final. Initial 178 actual semantic comparisons,
+  17 new panic cases, four C storage variants and 54 volatile sequences pass;
+  stage/unit checks pass 726/972. Full wrappers and fresh regression matrices
+  are running; do not claim the milestone complete until all exit zero.
+- CI 768cdb9/run 38790363308 completed failure in safety; its annotation reports
+  hosted runner lost communication, not a proven semantic regression. M5.4b
+  09e535e/run 38796178970 failed in the old safety job (annotation:
+  operation canceled); safety partitioning 51372be/run
+  38796715747 queued at the latest check. None is counted green.
 - CI 7aeb3e5/run 38786030355 failed with runner shutdown/exit143 after native
   run/build timeouts; both reported cases pass with the original frozen compiler
   and unchanged deadlines (/data/ci-slice-fields-native-reproduction.log).

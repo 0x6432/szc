@@ -108,9 +108,11 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
   - [x] **M5.3d1 Borrowed slicing expressions and bounds checks** (explicit/runtime sentinel slices remain NYI).
   - [x] **M5.3d2 Known slice dereference and borrowed array addresses.**
   - [x] **M5.3e Writable/addressable slice descriptor fields and volatile word access.**
-- [~] **M5.4 String literals, sentinels, `[*:0]const u8`.** Literal byte values landed in M4.5b; general string/memory operations and sentinel slices remain pending.
+- [~] **M5.4 String literals, sentinels, `[*:0]const u8`.** Literal byte values landed in M4.5b; general string/memory operations and non-scalar sentinels remain pending.
   - [x] **M5.4a Scalar-sentinel many-pointers**: integer/bool promises, coercions and arithmetic.
   - [x] **M5.4b Scalar-sentinel arrays**: explicit syntax, storage, initialization and coercions.
+  - [x] **M5.4c Scalar-sentinel slices**: descriptors, inference, inherited slicing and element bounds.
+  - [~] **M5.4d Explicit sentinel assertions**: isolated implementation and focused tests; full validation pending.
 - [~] **M5.5 Casting builtins**: `@intCast`, `@truncate`, `@ptrCast`, `@intFromPtr`, `@ptrFromInt`, `@bitCast`, `@as`.
   - [x] **M5.5a Pointer address conversion (`@intFromPtr`).**
 
@@ -164,6 +166,37 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
 ## Completed milestone log
 
 (newest first; each entry: what, limitations, interactions)
+
+### M5.4c Scalar-sentinel slices
+- **What**: integer/bool sentinel descriptors use the existing owned pointer/usize
+  representation. Type interning, coercions, joins, `.ptr`/`.len` word addresses,
+  globals, internal calls/returns and inherited slicing preserve exact promises.
+  Sentinel indexing includes the physical end; explicit unsentinelled windows
+  drop it unless they end at the known original logical length. Runtime descriptors
+  use the physical bound; known descriptors with dynamic result lengths follow
+  Zig's logical-bound guard. Empty-array const exceptions and zero-bit views are
+  checked against the actual 0.17.0 compiler, not inferred from source alone.
+- **Validation**: immutable /data/sentinel-slices-final2 GCC/Clang Werror ASan/UBSan
+  runs exit zero: 718 units/961 goldens, 88 ordinary/generated + three scoped
+  native programs, 16 driver checks, all C/ABI/alignment suites, 52 observed
+  volatile sequences and 226 safety cases. GCC full e2e runs actual Zig; both
+  builds additionally reference-check the new native fixture, four C storage
+  variants and volatile sequences in Debug/ReleaseFast. Fresh actual comparisons:
+  256 sentinel slices + 313 sentinel arrays + 209 sentinel pointers + 168 fields +
+  87 dereference + 204 slicing + 252 slices. Optimized GCC passes 88 native/226
+  safety cases; 949 unchanged array/layout cases replay a source-hash-verified
+  prior actual-reference oracle (not 949 fresh Zig builds). Four 60s fuzzers run
+  1306173/33229/36889/42163 inputs; both builds replay 20000 mutations per stage
+  (57 irgen/113 sema seeds). Logs: /data/sentinel-slices-final2-*. Older final is
+  superseded after explicitly sequencing C argument materialization to obtain
+  identical GCC/Clang stage output. All final wrapper processes exit zero.
+- **Interactions/limits**: no descriptor ABI or codegen representation change.
+  `.ptr` carries the sentinel independently of descriptor-storage qualifiers;
+  direct known slice dereference produces `[len:s]T` backing views. Zero-bit
+  runtime indexing still requires its safety guard. Whole volatile descriptor
+  copies, non-integer/bool sentinels and explicit sentinel assertions are not
+  completed by this milestone. The reference CI matrix grows from 25 to 26;
+  hosted status is asynchronous and is not claimed successful from local tests.
 
 ### M0.5c Exact-coverage safety reference partitions
 - **What**: four safety jobs select stable case ordinals modulo four. The default
