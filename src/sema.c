@@ -2336,6 +2336,33 @@ finish_ptr_cast(Block *block, Operand pointer, TypeId type, SliceCastLength leng
 	return make_slice(block, type, pointer, count, src);
 }
 
+/* Only cast/qualifier wrappers preserve the exact subobject. Stop at indexing
+ * or descriptor projections: equal numeric offsets alone do not prove a type. */
+static Operand
+restore_pointer_view(Block *block, Operand pointer, TypeId type, uint32_t src)
+{
+	Sema *sema = block->sema;
+	TypePointer target = sema->types[type].as.pointer;
+	ValueId candidate = pointer.value;
+	ValueId restored = VALUE_NONE;
+	for (;;) {
+		const Value *value = value_get(&sema->values, candidate);
+		if (sema->types[value->type].kind == TYPE_POINTER) {
+			TypePointer original = sema->types[value->type].as.pointer;
+			if (original.child == target.child && original.size == target.size
+				&& pointer_alignment(sema, original) >= pointer_alignment(sema, target))
+				restored = candidate;
+		}
+		if (value->kind != VALUE_REINTERPRET_PTR && value->kind != VALUE_PTR_CAST)
+			break;
+		candidate = value->as.pointer;
+	}
+	if (restored == VALUE_NONE)
+		return comptime_operand(type, value_pointer_reinterpret(&sema->values, type, pointer.value));
+	const Value *value = value_get(&sema->values, restored);
+	return retag_pointer(block, comptime_operand(value->type, restored), type, src);
+}
+
 /* Casts change address interpretation, not the contents of known backing. */
 static Operand
 analyze_ptr_cast(Block *block, const IrInst *inst)
@@ -2410,7 +2437,7 @@ analyze_ptr_cast(Block *block, const IrInst *inst)
 		}
 		Operand result;
 		if (from.child != to.child || from.size != to.size)
-			result = comptime_operand(pointer_type, value_pointer_reinterpret(&sema->values, pointer_type, operand.value));
+			result = restore_pointer_view(block, operand, pointer_type, inst->src);
 		else
 			result = retag_pointer(block, operand, pointer_type, inst->src);
 		return finish_ptr_cast(block, result, type, length, inst->src);

@@ -169,82 +169,81 @@ fn szc.main.1: fn () u8 {
   %125: *const u8 = load %124
   %126: *const fn (u8) u8 = ptr_cast %125
   %127: u8 = const 3
-  %128: *const fn (u8) u8 = const ptr_view(value.94)
-  %129: u8 = call %128(%127)
-  %130: u8 = const 4
-  %131: bool = cmp_neq %129, %130
-  %132: bool = block {
-    %140: noreturn = condbr %131 then {
-      %138: bool = const true
-      %139: noreturn = br %132, %138
+  %128: u8 = call szc.increment.8(%127)
+  %129: u8 = const 4
+  %130: bool = cmp_neq %128, %129
+  %131: bool = block {
+    %139: noreturn = condbr %130 then {
+      %137: bool = const true
+      %138: noreturn = br %131, %137
     } else {
-      %133: u8 = const 5
-      %134: u8 = call %126(%133)
-      %135: u8 = const 7
-      %136: bool = cmp_neq %134, %135
-      %137: noreturn = br %132, %136
+      %132: u8 = const 5
+      %133: u8 = call %126(%132)
+      %134: u8 = const 7
+      %135: bool = cmp_neq %133, %134
+      %136: noreturn = br %131, %135
     }
   }
-  %141: void = block {
-    %145: noreturn = condbr %132 then {
-      %142: u8 = const 7
-      %143: noreturn = ret %142
+  %140: void = block {
+    %144: noreturn = condbr %131 then {
+      %141: u8 = const 7
+      %142: noreturn = ret %141
     } else {
-      %144: noreturn = br %141
+      %143: noreturn = br %140
     }
   }
-  %146: *const u32 = const ptr_view(value.9)
-  %147: u32 = call szc.read_word.9(%146)
-  %148: u32 = const 2018915346
-  %149: bool = cmp_neq %147, %148
-  %150: void = block {
-    %154: noreturn = condbr %149 then {
-      %151: u8 = const 8
-      %152: noreturn = ret %151
+  %145: *const u32 = const szc.g.1
+  %146: u32 = call szc.read_word.9(%145)
+  %147: u32 = const 2018915346
+  %148: bool = cmp_neq %146, %147
+  %149: void = block {
+    %153: noreturn = condbr %148 then {
+      %150: u8 = const 8
+      %151: noreturn = ret %150
     } else {
-      %153: noreturn = br %150
+      %152: noreturn = br %149
     }
   }
-  %155: [*]const u8 = const ptr_cast(value.105)
-  %156: usize = const 0
-  %157: u8 = call szc.read.2(%155, %156)
-  %158: u8 = const 52
-  %159: bool = cmp_neq %157, %158
-  %160: bool = block {
-    %169: noreturn = condbr %159 then {
-      %167: bool = const true
-      %168: noreturn = br %160, %167
+  %154: [*]const u8 = const ptr_cast(value.103)
+  %155: usize = const 0
+  %156: u8 = call szc.read.2(%154, %155)
+  %157: u8 = const 52
+  %158: bool = cmp_neq %156, %157
+  %159: bool = block {
+    %168: noreturn = condbr %158 then {
+      %166: bool = const true
+      %167: noreturn = br %159, %166
     } else {
-      %161: [*]const u8 = const ptr_cast(value.105)
-      %162: usize = const 1
-      %163: u8 = call szc.read.2(%161, %162)
-      %164: u8 = const 86
-      %165: bool = cmp_neq %163, %164
-      %166: noreturn = br %160, %165
+      %160: [*]const u8 = const ptr_cast(value.103)
+      %161: usize = const 1
+      %162: u8 = call szc.read.2(%160, %161)
+      %163: u8 = const 86
+      %164: bool = cmp_neq %162, %163
+      %165: noreturn = br %159, %164
     }
   }
-  %170: void = block {
-    %174: noreturn = condbr %160 then {
-      %171: u8 = const 9
-      %172: noreturn = ret %171
+  %169: void = block {
+    %173: noreturn = condbr %159 then {
+      %170: u8 = const 9
+      %171: noreturn = ret %170
     } else {
-      %173: noreturn = br %170
+      %172: noreturn = br %169
     }
   }
-  %175: *const volatile u8 = const ptr_view(value.8)
-  %176: u8 = call szc.volatile_byte.10(%175)
-  %177: u8 = const 18
-  %178: bool = cmp_neq %176, %177
-  %179: void = block {
-    %183: noreturn = condbr %178 then {
-      %180: u8 = const 10
-      %181: noreturn = ret %180
+  %174: *const volatile u8 = const ptr_view(value.8)
+  %175: u8 = call szc.volatile_byte.10(%174)
+  %176: u8 = const 18
+  %177: bool = cmp_neq %175, %176
+  %178: void = block {
+    %182: noreturn = condbr %177 then {
+      %179: u8 = const 10
+      %180: noreturn = ret %179
     } else {
-      %182: noreturn = br %179
+      %181: noreturn = br %178
     }
   }
-  %184: u8 = const 0
-  %185: noreturn = ret %184
+  %183: u8 = const 0
+  %184: noreturn = ret %183
 }
 fn szc.read.2: fn ([*]const u8, usize) u8 {
   %0: [*]const u8 = arg 0

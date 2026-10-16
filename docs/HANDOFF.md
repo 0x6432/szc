@@ -19,6 +19,18 @@ Read this first when resuming work (the sandbox resets often).
 
 ## Latest follow-up checkpoint
 
+- M5.5n exact constant pointer round trips are integrated: cast-only wrappers can
+  recover an original exact typed subobject with sufficient alignment. Index/
+  descriptor projections stop the search; arbitrary physical byte views remain
+  explicit NYI. Original constant scalar/u33/array/element/string/descriptor
+  reads and function direct-call identity work; mutable global contents remain
+  runtime. Frozen GCC/Clang: 1561 units/1056 goldens, 110+4 native, 16 driver,
+  full C/ABI/storage/alignment, 60 volatile, 280 safety; optimized GCC native/
+  safety and both 20000 mutations/stage pass (256/256/72/128 seeds). Actual Zig:
+  84 forced-value comparisons and native fixture pass. Fresh 60s fuzz counts:
+  2697687/64634/79190/92445. Main forced tests pass. Parser duplicate-qualifier
+  fix is separately validating after the hosted CI mismatch.
+
 - M5.5m resizing slice casts are integrated. ABI-stride count conversion preserves
   borrowed backing, with null/alignment before exact-divisibility checks and
   reference-style wrapping runtime usize multiplication. Empty exemptions use

@@ -1116,6 +1116,10 @@ test_thin_pointer_casts(void)
 		uint32_t null_checks;
 		uint32_t align_checks;
 	} cases[] = {
+		{"const n:u32=17; const p:*const u8=@ptrCast(&n); const q:*const u32=@alignCast(@ptrCast(p)); const x=q.*; pub fn main() void {const z:u8=if(x==17) 0 else 256; _=z;}", NULL, 0, 0},
+		{"const n:u33=8589934591; const p:*const u8=@ptrCast(&n); const q:*const u33=@alignCast(@ptrCast(p)); const x=q.*; pub fn main() void {const z:u8=if(x==n) 0 else 256; _=z;}", NULL, 0, 0},
+		{"const n:u32=17; const p:*const u8=@ptrCast(&n); const q:*const u64=@alignCast(@ptrCast(p)); const x=q.*; pub fn main() void {_=x;}", "known immutable/comptime load through reinterpreted pointer", 0, 0},
+		{"const a=[2]u32{17,29}; const p:[*]const u8=@ptrCast(&a); const shifted=p+4; const q:*const u32=@alignCast(@ptrCast(shifted)); const x=q.*; pub fn main() void {_=x;}", "known immutable/comptime load through reinterpreted pointer", 0, 0},
 		{"fn f(p:[]u16) []u8 {return @ptrCast(p);} pub fn main() void {_=f(undefined);}", NULL, 0, 0},
 		{"fn f(p:[]allowzero u8) []u16 {return @alignCast(@ptrCast(p));} pub fn main() void {_=f(undefined);}", NULL, 1, 1},
 		{"fn f(p:[][3]u8) []u16 {return @alignCast(@ptrCast(p));} pub fn main() void {_=f(undefined);}", NULL, 0, 1},

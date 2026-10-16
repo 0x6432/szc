@@ -128,6 +128,7 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
   - [x] **M5.5k Fixed-extent slice destination casts**: infer logical array/scalar extent using ABI strides, with exact divisibility.
   - [x] **M5.5l Equal-stride slice casts**: preserve counts and exempt empty runtime slices from address checks.
   - [x] **M5.5m Resizing slice casts**: ABI-stride length conversion with ordered runtime divisibility checks.
+  - [x] **M5.5n Exact constant pointer round trips**: recover original typed subobjects through cast-only chains.
 
 ## Phase 6: Aggregates and errors
 
@@ -179,6 +180,32 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
 ## Completed milestone log
 
 (newest first; each entry: what, limitations, interactions)
+
+### M5.5n Exact constant pointer round trips
+
+- **What**: a symbolic cast-only chain can recover an original pointer with the
+  exact destination child/shape and sufficient original alignment. Original typed
+  scalar, array, element, byte-string and slice-descriptor values can then be read
+  normally at comptime. Native tests include u33 without inventing its padding.
+  Function-pointer round trips can regain direct-call identity.
+- **Limits**: only qualification/reinterpretation wrappers are traversed. Stop at
+  indexing or descriptor projection rather than equating unrelated subobjects by
+  their numeric address. An offset byte pointer or differently typed load remains
+  explicit physical-memory NYI. Restoration does not reinterpret bytes, authorize
+  a new layout, bypass qualifier checks, or make mutable globals comptime-known.
+- **Interactions**: semantic restoration reuses retag_pointer after proving the
+  original type and alignment, retaining destination permissions. The existing
+  symbolic TIR golden changes an exactly restored function call from indirect to
+  direct; its runtime-parameter indirect call and global callback remain tested.
+- **Validation**: frozen GCC/Clang Werror ASan/UBSan suites pass 1561 units/1056
+  goldens, 110+4 native, 16 driver checks, full C/ABI/storage/alignment, 60 volatile
+  and 280 safety cases. Optimized GCC native/safety and both 20000-mutation/stage
+  replays pass (256/256/72/128 seeds). Four 60s fuzzers:
+  2697687/64634/79190/92445 inputs. Actual Zig: 84 forced constant-value round-trip
+  comparisons and the native fixture pass. Main forced tests pass; no fresh full
+  actual-Zig suite is claimed beyond targeted comparisons.
+- **Evidence**: /data/pointer-roundtrip-final-{gcc,clang,fuzz}.log,
+  /data/pointer-roundtrip-{reference,native,main-tests}.log.
 
 ### M5.5m Resizing slice casts
 
