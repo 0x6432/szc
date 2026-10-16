@@ -24,6 +24,15 @@ def binary_case(name, integer_type, operator, lhs, rhs, message="integer overflo
 
 
 def cases():
+    for label, ty, initial in (('array', '[3]u8', '.{1,2,3}'), ('descriptor', '[]const u8', '"abc"')):
+        yield 'memcpy_aggregate_alias_'+label, (
+            f'fn operation(d:[]{ty},s:[]const {ty}) void {{ @memcpy(d,s); }} '
+            f'pub fn main() void {{ var a:[3]{ty}=.{{{initial},{initial},{initial}}}; operation(a[0..2],a[1..3]); }}\n'), (
+            '@memcpy arguments alias')
+    yield 'memcpy_aggregate_length', (
+        'fn operation(d:[][3]u8,s:[]const [3]u8) void { @memcpy(d,s); } '
+        'pub fn main() void { var a:[2][3]u8=undefined; const b:[1][3]u8=.{.{1,2,3}}; operation(&a,&b); }\n'), (
+        'source and destination arguments have non-equal lengths')
     for ty, value in (('u8', '7'), ('u0', '0'), ('void', '{}')):
         for d, n in ((0, 1), (2, 1)):
             yield f'memcpy_length_{ty}_{d}_{n}', (

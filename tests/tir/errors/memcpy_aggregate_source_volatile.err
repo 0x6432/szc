@@ -1,0 +1,3 @@
+tests/tir/errors/memcpy_aggregate_source_volatile.zig:1:52: error: not supported by szc yet: volatile aggregate @memcpy
+fn copy(d:[][1]u8,s:[]const volatile [1]u8) void { @memcpy(d,s); }
+                                                   ^

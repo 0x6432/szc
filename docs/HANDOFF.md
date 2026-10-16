@@ -22,6 +22,38 @@ Read this first when resuming work (the sandbox resets often).
 - **Development resumed at the user's explicit request on 2026-10-16.** The
   earlier pause is superseded. Continue coherent implementation, validation,
   documentation, commit/push and subsequent milestones; Q6 remains M10.2.
+- M9.4h nonvolatile aggregate @memcpy is integrated and validated in
+  /data/aggregate-verified/{gcc,clang,optimized}. Supported nested arrays
+  and slice descriptors use byte extents based on ABI stride, with the existing
+  length/alias checks. Empty runtime copies skip libc memcpy entirely, permitting
+  null allowzero data. Descriptor copying preserves borrowed element pointers;
+  it is not deep copying. Volatile aggregate copies, unsupported layouts and
+  general comptime mutable-memory copies remain explicit limitations.
+  Audit caught and fixed a scalar-copy regression in 6c3ea34: unresolved layouts
+  must not be treated as zero-bit simply because sema_type_size returns zero.
+  Elision now requires !layout_is_comptime_only plus type_has_one_value. Nonempty
+  arrays of type values still inspect undefined pointer operands, while empty
+  arrays of comptime-only elements remain valid zero-bit no-ops as Zig permits.
+  anyerror layout now diagnoses instead of silently dropping the copy. New unit,
+  negative-golden and fuzz regressions preserve both cases. The older
+  /data/aggregate-final snapshots predate this fix and are not final evidence.
+  Reference: 127 aggregate cases/26 exact primary diagnostics; 312 scalar
+  regression cases/138 exact diagnostics pass. Three native reference fixtures
+  and all 16 memcpy safety cases pass; the new aggregate fixture also passes
+  ReleaseFast. Frozen GCC/Clang Werror ASan/UBSan: 1772 units/1117 goldens,
+  118+4 native, 16 driver, full C/ABI/storage/alignment, 96 volatile sequences
+  and 296 safety cases. Optimized GCC native/safety and both 20000 mutations/stage
+  pass (256/256/80/136 seeds). Fresh four 60s fuzz counts: 1489345/49372/43418/35478.
+  Forced main unit/golden checks pass. Final evidence is in
+  /data/aggregate-reference-final.log, /data/aggregate-scalar-reference-final.log,
+  /data/aggregate-native-verified.log, /data/aggregate-safety-verified.log,
+  /data/aggregate-fast-reference.log, /data/aggregate-verified-{gcc,clang,optimized,fuzz}.log
+  and /data/aggregate-main-final.log. No old pre-audit run is counted as final.
+  Scalar milestone 6c3ea34 is pushed; its hosted run 38920105169 most recently
+  showed 52 successful jobs/five running, no failures. It is not yet confirmed
+  green, and this new milestone's hosted CI has not yet been verified.
+  Next scoped candidate: nonvolatile aggregate memset with one evaluated/snapshotted
+  fill value. This has not been started; M9.4 and other partial parents stay partial.
 - M9.4g scalar runtime @memcpy is integrated and validated in immutable
   /data/copy-verified/{gcc,clang,optimized} trees. Destination/source
   evaluate once; at least one operand supplies a length; two known lengths must
@@ -29,8 +61,9 @@ Read this first when resuming work (the sandbox resets often).
   validate lengths; nonzero-bit zero-length copies still reject undefined data.
   Scalar integers/bools/thin pointers copy at ABI strides, excluding top-level
   sentinels; source and destination volatile accesses use outlined helpers.
-  Aggregates, floats/vectors and general comptime memory copies remain NYI.
-  Actual Zig: 312 comparisons/138 exact primary diagnostics; native fixture and
+  At that checkpoint aggregates, floats/vectors and comptime memory copies
+  remained NYI; M9.4h lifts the supported nonvolatile aggregate restriction and
+  fixes the zero-bit proof. Actual Zig: 312 comparisons/138 exact primary diagnostics; native fixture and
   all-width integer fixture pass Debug and ReleaseFast; 13 new safety comparisons
   and existing 60-sequence reference observer coverage pass. Frozen GCC/Clang
   Werror ASan/UBSan: 1722 units/1111 goldens, 117+4 native, 16 driver, full
@@ -40,8 +73,8 @@ Read this first when resuming work (the sandbox resets often).
   Evidence: /data/copy-reference-final.log, /data/copy-native-final.log,
   /data/copy-volatile-final.log, /data/copy-safety-reference-final.log,
   /data/copy-verified-{gcc,clang,optimized,fuzz}.log, /data/copy-main-final.log.
-  Next scoped extension: nonvolatile aggregate copies in /data/copy-aggregate-next;
-  do not copy its older documentation over main.
+  /data/copy-aggregate-next is now superseded and predates the audit fix;
+  do not copy its older source or documentation over main.
 - Hosted recheck: d4172c9 (57 jobs), 75ded7a (56), 12c4d3a (55) and 162042f
   (52) completed successfully. a56409d still has 52 success/one running; its
   remaining rerun is not yet confirmed green. Old failure evidence files from

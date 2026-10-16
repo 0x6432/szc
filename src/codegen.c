@@ -1071,9 +1071,10 @@ emit_inst(Codegen *cg, TirRef ref)
 		TypePointer dest = sema_type(cg->sema, inst_at(cg, copy.destination)->type)->as.pointer;
 		TypePointer source = sema_type(cg->sema, inst_at(cg, copy.source)->type)->as.pointer;
 		TypeId child = dest.child;
-		QbeClass value_class = type_class(cg, child, inst->src);
+		bool aggregate = sema_type_is_aggregate(cg->sema, child);
+		QbeClass value_class = aggregate ? QBE_NONE : type_class(cg, child, inst->src);
 		uint64_t stride = storage_size(cg, child, inst->src);
-		if (value_class == QBE_NONE || stride == 0)
+		if ((!aggregate && value_class == QBE_NONE) || stride == 0)
 			return;
 		fprintf(out, "\t%%mc%u_dest =l copy ", ref);
 		print_operand(cg, copy.destination);
@@ -1088,6 +1089,14 @@ emit_inst(Codegen *cg, TirRef ref)
 		fprintf(out, "\t%%mc%u_after =w cultl %%mc%u_source, %%mc%u_dest_end\n", ref, ref, ref);
 		fprintf(out, "\t%%g%u_alias =w and %%mc%u_before, %%mc%u_after\n", ref, ref, ref);
 		emit_guard(cg, ref, "alias", PANIC_MEMCPY_ALIAS);
+		if (aggregate) {
+			/* Empty Zig ranges may have null data; do not pass them to libc. */
+			fprintf(out, "\t%%mc%u_nonempty =w cnel %%mc%u_bytes, 0\n", ref, ref);
+			fprintf(out, "\tjnz %%mc%u_nonempty, @mc%u_copy, @mc%u_done\n@mc%u_copy\n", ref, ref, ref, ref);
+			fprintf(out, "\tcall $memcpy(l %%mc%u_dest, l %%mc%u_source, l %%mc%u_bytes)\n", ref, ref, ref);
+			fprintf(out, "\tjmp @mc%u_done\n@mc%u_done\n", ref, ref);
+			return;
+		}
 		fprintf(out, "\t%%mc%u_index =l copy 0\n\tjmp @mc%u_loop\n@mc%u_loop\n", ref, ref, ref);
 		fprintf(out, "\t%%mc%u_more =w cultl %%mc%u_index, ", ref, ref);
 		print_operand(cg, copy.length);

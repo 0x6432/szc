@@ -1158,7 +1158,7 @@ test_scalar_memcpy(void)
 		{"var a:[0]u8=.{}; const b:[0]i8=.{}; @memcpy(&a,&b);", "cannot coerce into element type"},
 		{"var a:[3]u8=undefined; @memcpy(&a,\"abc\");", NULL},
 		{"@memcpy(1,1);", "not an indexable pointer"},
-		{"var a:[1][1]u8=undefined; const b:[1][1]u8=.{.{7}}; @memcpy(&a,&b);", "@memcpy element type"},
+		{"var a:[1][1]u8=undefined; const b:[1][1]u8=.{.{7}}; @memcpy(&a,&b);", NULL},
 		{"var a:[0][1]u8=.{}; const b:[0][1]u8=.{}; @memcpy(&a,&b);", NULL},
 	};
 	for (uint32_t i = 0; i < sizeof(cases) / sizeof(cases[0]); i++) {
@@ -1174,6 +1174,51 @@ test_scalar_memcpy(void)
 		int length = snprintf(source, sizeof(source), "pub fn main() void { %s }", cases[i].body);
 		CHECK(length > 0 && (size_t)length < sizeof(source));
 		FileId file = source_add_memory(&sources, "scalar_memcpy.zig", source, (uint32_t)length);
+		AstContainerDecl *root = parse_file(&arena, &diag, &sources, file);
+		CHECK(!diag_has_errors(&diag));
+		IrFile *ir = irgen_file(&arena, &diag, &interner, source_get(&sources, file), file, root);
+		CHECK(!diag_has_errors(&diag));
+		Sema *sema = sema_create(&arena, &diag, &interner, &sources);
+		bool success = sema_analyze_executable(sema, file, ir);
+		CHECK(success == (cases[i].error == NULL));
+		if (cases[i].error != NULL)
+			CHECK(diag.count != 0 && strstr(diag.items[0].message, cases[i].error) != NULL);
+		arena_free(&arena);
+	}
+}
+
+static void
+test_aggregate_memcpy(void)
+{
+	const struct {
+		const char *body;
+		const char *error;
+	} cases[] = {
+		{"@memcpy(@as(*[1][1]type,undefined),@as(*const [1][1]type,undefined));", "use of undefined"},
+		{"@memcpy(@as(*[1][0]type,undefined),@as(*const [1][0]type,undefined));", NULL},
+		{"const d:[*]anyerror=@ptrFromInt(4096); const s:[*]const anyerror=@ptrFromInt(8192); @memcpy(d[0..1],s[0..1]);", "@memcpy element type 'anyerror'"},
+		{"var a:[1][1]u8=undefined; const b:[1][1]u8=.{.{7}}; const d:*volatile [1][1]u8=&a; @memcpy(d,&b);", "volatile aggregate @memcpy"},
+		{"var a:[1][1]u8=undefined; const b:[1][1]u8=.{.{7}}; const b_ptr:*const volatile [1][1]u8=&b; @memcpy(&a,b_ptr);", "volatile aggregate @memcpy"},
+		{"var a:[2][3]u8=undefined; const b:[2][3]u8=.{.{1,2,3},.{4,5,6}}; @memcpy(&a,&b);", NULL},
+		{"var a:[1][]const u8=undefined; const b:[1][]const u8=.{\"abc\"}; @memcpy(&a,&b);", NULL},
+		{"@memcpy(@as(*[1][0]u8,undefined),@as(*const [1][0]u8,undefined));", NULL},
+		{"@memcpy(@as(*[0][1]u8,undefined),@as(*const [0][1]u8,undefined));", "use of undefined"},
+		{"var a:[1][1]u8=undefined; const b:[1][2]u8=.{.{1,2}}; @memcpy(&a,&b);", "cannot coerce into element type"},
+		{"@memcpy(@as(*volatile [1][1]u8,undefined),@as(*const [1][1]u8,undefined));", "use of undefined"},
+	};
+	for (uint32_t i = 0; i < sizeof(cases) / sizeof(cases[0]); i++) {
+		Arena arena;
+		arena_init(&arena);
+		SourceTable sources;
+		source_table_init(&sources, &arena);
+		Diag diag;
+		diag_init(&diag, &arena, &sources);
+		Interner interner;
+		intern_init(&interner, &arena);
+		char source[4096];
+		int length = snprintf(source, sizeof(source), "pub fn main() void { %s }", cases[i].body);
+		CHECK(length > 0 && (size_t)length < sizeof(source));
+		FileId file = source_add_memory(&sources, "aggregate_memcpy.zig", source, (uint32_t)length);
 		AstContainerDecl *root = parse_file(&arena, &diag, &sources, file);
 		CHECK(!diag_has_errors(&diag));
 		IrFile *ir = irgen_file(&arena, &diag, &interner, source_get(&sources, file), file, root);
@@ -1544,6 +1589,7 @@ main(void)
 	test_character_literals();
 	test_scalar_memset();
 	test_scalar_memcpy();
+	test_aggregate_memcpy();
 	test_packed_bits();
 	test_constant_aggregate_bit_casts();
 	test_runtime_aggregate_bit_casts();

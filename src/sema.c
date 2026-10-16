@@ -5092,7 +5092,7 @@ analyze_memcpy(Block *block, const IrInst *inst)
 		}
 	}
 	uint64_t stride;
-	if (!is_comptime_only_type(sema, child) && sema_type_size(sema, child, &stride) && stride == 0)
+	if (!layout_is_comptime_only(sema, child) && type_has_one_value(sema, child))
 		return void_operand(sema);
 	if (!check_defined(block, destination, inst->src) || !check_defined(block, source, inst->src))
 		return operand_none;
@@ -5104,8 +5104,15 @@ analyze_memcpy(Block *block, const IrInst *inst)
 	if (length.kind == OPERAND_COMPTIME && bigint_is_zero(&operand_value(block, length)->as.integer))
 		return void_operand(sema);
 	TypeKind kind = sema->types[child].kind;
-	if (sema_type_is_aggregate(sema, child) || (kind != TYPE_INT && kind != TYPE_BOOL && kind != TYPE_POINTER)) {
+	bool aggregate = sema_type_is_aggregate(sema, child);
+	if ((aggregate && !array_storage_allowed(sema, child))
+		|| (!aggregate && kind != TYPE_INT && kind != TYPE_BOOL && kind != TYPE_POINTER)) {
 		sema_error(block, inst->src, "not supported by szc yet: @memcpy element type '%s'", sema_type_name(sema, child));
+		return operand_none;
+	}
+	if (aggregate && (sema->types[dest_data.type].as.pointer.is_volatile
+		|| sema->types[source_data.type].as.pointer.is_volatile)) {
+		sema_error(block, inst->src, "not supported by szc yet: volatile aggregate @memcpy");
 		return operand_none;
 	}
 	if (dest_data.kind == OPERAND_COMPTIME && source_data.kind == OPERAND_COMPTIME

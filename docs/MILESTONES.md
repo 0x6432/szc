@@ -172,6 +172,7 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
   - [x] **M9.4e Integer absolute values**: unsigned magnitudes, including signed minima.
   - [x] **M9.4f Scalar runtime `@memset`**: typed logical-element fills, zero ranges and volatile stores.
   - [x] **M9.4g Scalar runtime `@memcpy`**: length inference/equality, alias guards, ABI strides and volatile accesses.
+  - [x] **M9.4h Nonvolatile aggregate `@memcpy`**: supported array layouts and borrowed slice descriptors.
 - [ ] **M9.5 Inline asm for x86_64-linux std usage.**
 
 ## Phase 10: std tests and bootstrap
@@ -186,6 +187,45 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
 ## Completed milestone log
 
 (newest first; each entry: what, limitations, interactions)
+
+### M9.4h Nonvolatile aggregate memory copies
+
+- **What**: extends `TIR_MEMCPY` to existing supported runtime array and slice
+  descriptor layouts. After length equality and alias checks, QBE calls libc
+  memcpy with logical count times ABI stride. A separate nonempty guard skips
+  that call for zero byte extents, including runtime empty null allowzero ranges.
+  Nested array sentinels participate in each element's storage stride, while the
+  top-level sentinel stays excluded. Descriptor copies retain borrowed pointers,
+  lengths and compatible const qualifications; no backing elements are cloned.
+  Zero-bit elision now uses a conservative one-possible-value proof and the
+  existing recursive comptime-only layout test, not a possibly unresolved ABI
+  size. This fixes 6c3ea34's dropped copies for nested comptime-only or unresolved
+  layouts. Empty arrays of comptime-only children remain permitted zero-bit types;
+  unsupported anyerror layouts reject rather than pretending to occupy no bits.
+- **Validation**: 127 actual-Zig aggregate cases/26 exact primary diagnostics,
+  including the nested comptime-only/empty-array correction. The original 312
+  scalar cases/138 diagnostics pass again. Three target native fixtures and all
+  16 memcpy panic cases pass actual Zig; the aggregate fixture also passes
+  ReleaseFast. Frozen GCC/Clang Werror ASan/UBSan: 1772 units/1117 goldens,
+  118+4 native, 16 driver, full C/ABI/storage/alignment, 96 volatile sequences
+  and 296 safety cases. Optimized GCC native/safety and both 20000 mutations/stage
+  pass (256/256/80/136 seeds). Four fresh 60s fuzz counts: 1489345/49372/43418/35478.
+  Forced main unit/golden tests pass. Coverage adds a nested-array/descriptor/
+  sentinel/empty-native fixture, IR/TIR/QBE goldens, eleven focused unit cases,
+  three additional error goldens, source/destination volatile rejection checks,
+  three aggregate safety cases, fuzz seeds and a separate hosted reference matrix.
+  Final snapshots/evidence use aggregate-verified, not the pre-audit aggregate-final.
+- **Interactions/limits**: only the layouts already allowed by runtime aggregate
+  storage are accepted. Nonempty volatile aggregates are explicitly rejected
+  rather than silently discarding accesses. General comptime copying, float/vector
+  layouts and aggregate memset remain future work. Scalar copy loops/outlined
+  volatile access are unchanged. M9.4 remains partial; internal overlap-safe
+  `TIR_ARRAY_COPY` is still distinct from source @memcpy.
+- **Evidence**: /data/aggregate-reference-final.log,
+  /data/aggregate-scalar-reference-final.log, /data/aggregate-native-verified.log,
+  /data/aggregate-safety-verified.log, /data/aggregate-fast-reference.log,
+  /data/aggregate-verified-{gcc,clang,optimized,fuzz}.log and
+  /data/aggregate-main-final.log.
 
 ### M9.4g Scalar runtime memory copies
 

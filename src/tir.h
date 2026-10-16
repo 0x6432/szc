@@ -56,7 +56,7 @@ typedef uint32_t TirBody;	/* extra index of a body, 0 = none */
 	X(INT_CAST, "int_cast")	/* un: widen/narrow integer to `type` */ \
 	X(TRUNCATE, "truncate")	/* un: discard high integer bits */ \
 	X(COPY_LEN_CHECK, "copy_len_check") /* bin: equal logical lengths */ \
-	X(MEMCPY, "memcpy") /* payload: TirMemcpy; non-overlapping scalar storage */ \
+	X(MEMCPY, "memcpy") /* payload: TirMemcpy; non-overlapping supported storage */ \
 	X(MEMSET, "memset") /* payload: TirMemset; count excludes any sentinel */ \
 	X(ABS, "abs") /* un: signed integer -> unsigned magnitude, including minimum */ \
 	X(BIT_REVERSE, "bit_reverse") /* un: reverse operand logical bits */ \

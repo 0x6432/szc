@@ -849,3 +849,19 @@ scalar storage in a bounded loop. Volatile reads/writes use outlined helpers;
 unused high integer storage bits are not numerically normalized by the copy.
 Top-level sentinels are outside the logical extent. Internal TIR_ARRAY_COPY still
 means overlap-safe whole-object copying; it is not the source @memcpy operation.
+
+
+## Nonvolatile aggregate memory copies (M9.4h)
+
+The same TIR_MEMCPY payload can address supported aggregate elements. Length and
+alias validation are unchanged; the backend uses ABI byte extents and calls libc
+memcpy only for nonempty copies. Nested arrays include their own sentinel storage
+in the stride. Slice descriptors copy two words and retain their borrowed backing.
+No aggregate is put into a scalar QBE temporary, and no deep copy is implied.
+Nonempty volatile aggregate copies remain explicit NYI rather than using libc.
+
+Zero-bit copy elision requires both a proven one-possible-value element type and
+a runtime (not comptime-only) layout. A zero returned by the partial ABI layout
+helper is not proof: unsupported types and nested comptime-only children must not
+silently become no-ops. The recursive layout predicate intentionally exempts empty
+arrays, whose elements need no runtime representation.
