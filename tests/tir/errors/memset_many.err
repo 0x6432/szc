@@ -1,0 +1,3 @@
+tests/tir/errors/memset_many.zig:1:22: error: unknown @memset length
+fn f(p:[*]u8) void { @memset(p,3); }
+                     ^

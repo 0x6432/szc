@@ -19,8 +19,26 @@ Read this first when resuming work (the sandbox resets often).
 
 ## Latest follow-up checkpoint
 
-- User requested stopping after the current scalar @memset work is complete.
-  Finish its validation, documentation and push; do not start another milestone.
+- **Paused at the user's request after completing scalar @memset.** Do not start
+  another milestone unless the user asks to resume. The earlier continuous-work
+  workflow above is suspended.
+- M9.4f scalar runtime @memset is integrated: contextually typed integer/bool/thin
+  pointer fills, ABI strides, sentinel preservation, empty and zero-bit no-ops,
+  single evaluation and outlined volatile stores. Actual Zig: 158 cases/69 exact
+  diagnostics plus native fixture pass. Frozen GCC/Clang Werror ASan/UBSan:
+  1666 units/1099 goldens, 115+4 native, 16 driver, full C/ABI/storage/alignment,
+  72 szc volatile sequences, 280 safety; optimized GCC native/safety and both
+  20000 mutations/stage pass (256/256/77/133). Reference observer's existing
+  60 cases pass Debug/ReleaseFast; exact new bulk-fill access counts intentionally
+  are szc-only because reference backends can replicate/coalesce stores. Four
+  60s fuzz counts: 2323751/64909/61090/78698. Main forced tests pass.
+  General aggregate/comptime mutable-memory fills and memcpy remain future work.
+- Hosted CI: b750c9c, 2654c96, 87c95ef and 38fca14 are green. Newer runs remain
+  pending. Inspected a56409d/gcc and 162042f/clang failures: safety harness native
+  15s and compiler 120s timeouts, not semantic/sanitizer reports; both failed jobs
+  were explicitly rerun and are pending. Evidence: /data/ci-character-failure.log
+  and /data/ci-parser-failure.log. Do not call pending reruns green.
+
 - M9.4e integer abs is integrated: exact unsigned magnitudes including signed
   minima, arbitrary-width constants and branch-free native lowering. Actual Zig:
   169 cases/36 exact diagnostics and all-width native fixture pass. Frozen GCC/

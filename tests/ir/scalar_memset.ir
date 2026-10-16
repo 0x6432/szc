@@ -1,0 +1,74 @@
+%52 = struct_decl (flags=0) {
+  decl fn "fill" value {
+    %11 = func "fill" {
+      %3 = param "p" type {
+        %0 = ptr_type @type_u16, @false slice
+        %1 = as @type_type, %0
+        %2 = break_inline result, %1
+      }
+      %5 = param "n" type {
+        %4 = break_inline result, @type_u16
+      }
+      ret type {
+        %6 = break_inline result, @type_void
+      }
+      body insts {
+        %7 = memset_elem_type %3
+        %8 = as %7, %5
+        %9 = memset %3, %8
+        %10 = ret_implicit
+      }
+    }
+    %12 = break_inline result, %11
+  }
+  decl fn "main" pub value {
+    %50 = func "main" {
+      ret type {
+        %13 = break_inline result, @type_u8
+      }
+      body insts {
+        %14 = int 2
+        %15 = as @type_usize, %14
+        %16 = array_type %15, @type_u16
+        %17 = as @type_type, %16
+        %18 = array_elem_type %17
+        %19 = int 1
+        %20 = as %18, %19
+        %21 = int 2
+        %22 = as %18, %21
+        %23 = array_init %17, %20, %22
+        %24 = as %17, %23
+        %25 = alloc type=%17 init=%24
+        %26 = decl_val "fill"
+        %27 = call %26 arg0 {
+          %28 = arg_type %27, 0
+          %29 = as %28, %25
+          %30 = break_inline result, %29
+        } arg1 {
+          %31 = arg_type %27, 1
+          %32 = int 1234
+          %33 = as %31, %32
+          %34 = break_inline result, %33
+        }
+        %35 = ret_type
+        %36 = array_base_ptr %25
+        %37 = int 1
+        %38 = as @type_usize, %37
+        %39 = array_index %36, %38
+        %40 = int 1234
+        %41 = cmp_eq %39, %40
+        %48 = if %41 then {
+          %42 = int 0
+          %43 = as %35, %42
+          %44 = break_inline result, %43
+        } else {
+          %45 = int 1
+          %46 = as %35, %45
+          %47 = break_inline result, %46
+        }
+        %49 = ret %48
+      }
+    }
+    %51 = break_inline result, %50
+  }
+}

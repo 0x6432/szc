@@ -12,7 +12,7 @@ TYPES = ('u8', 'i8', 'u16', 'i16', 'u32', 'i32', 'u64', 'i64', 'u3', 'i5',
          'u17', 'i33', 'u40', 'i63', 'bool', '*u8', '*const fn () u8')
 
 
-def fixtures(safety=True):
+def fixtures(safety=True, include_memset=True):
     declarations, checks = [], []
     for index, ty in enumerate(TYPES):
         declarations.append(f'extern fn memory_{index}(offset: usize) *align(1) volatile {ty};')
@@ -108,6 +108,18 @@ def fixtures(safety=True):
         'align_access.* = 7;', '_ = align_access.*;',
         'if (!observe_finish(1, 1)) return 20;',
     ])
+    # Reference backends can use overlapping rep movsb; exact scalar access
+    # counts here intentionally check szc's outlined volatile-store contract.
+    for index, ty in (((0, 'u8'), (2, 'u16'), (11, 'i33')) if include_memset else ()):
+        for offset in (0, 1):
+            checks.extend([
+                f'const fill_{index}_{offset}: [*]align(1) volatile {ty} = @ptrCast(memory_{index}({offset}));',
+                f'@memset(fill_{index}_{offset}[0..3], 7);',
+                'if (!observe_finish(0, 3)) return 21;',
+                f'const empty_{index}_{offset}: [*]align(1) volatile {ty} = @ptrCast(memory_{index}({offset}));',
+                f'@memset(empty_{index}_{offset}[0..0], 7);',
+                'if (!observe_finish(0, 0)) return 22;',
+            ])
     source = ('extern fn observe_finish(reads: u32, writes: u32) bool;\n'
               'extern fn observe_finish_compound() bool;\n'
               'var left: u8 = 1;\nvar right: u8 = 2;\n'
@@ -151,13 +163,13 @@ def main():
         if os.environ.get('ZIG'):
             for mode in ('Debug', 'ReleaseFast'):
                 # ReleaseFast removes safety assertions, including their volatile load.
-                source.write_text(fixtures(safety=mode == 'Debug')[0])
+                source.write_text(fixtures(safety=mode == 'Debug', include_memset=False)[0])
                 executable = root / ('reference-' + mode)
                 run([os.environ['ZIG'], 'build-exe', str(source), str(assembly), str(object_),
                      '-O' + mode, '-j2', '-lc', f'-femit-bin={executable}'])
                 result = run([str(executable)])
                 assert not result.stdout and not result.stderr
-    print(f'volatile accesses: {2 * (len(TYPES) + 13)} observed sequences, 0 failed', flush=True)
+    print(f'volatile accesses: {2 * (len(TYPES) + 13) + 12} observed sequences, 0 failed', flush=True)
 
 
 if __name__ == '__main__':

@@ -1140,6 +1140,7 @@ typedef enum Builtin {
 	BUILTIN_LAYOUT,
 	BUILTIN_ARITH,
 	BUILTIN_INT_BITS,
+	BUILTIN_MEMSET,
 	BUILTIN_PANIC,
 } Builtin;
 
@@ -1166,6 +1167,7 @@ static const BuiltinInfo builtin_table[] = {
 	{"sizeOf", BUILTIN_LAYOUT, 1, IR_SIZE_OF},
 	{"bitSizeOf", BUILTIN_LAYOUT, 1, IR_BIT_SIZE_OF},
 	{"alignOf", BUILTIN_LAYOUT, 1, IR_ALIGN_OF},
+	{"memset", BUILTIN_MEMSET, 2, IR_MEMSET},
 	{"abs", BUILTIN_INT_BITS, 1, IR_ABS},
 	{"bitReverse", BUILTIN_INT_BITS, 1, IR_BIT_REVERSE},
 	{"byteSwap", BUILTIN_INT_BITS, 1, IR_BYTE_SWAP},
@@ -1350,6 +1352,13 @@ builtin_call(GenBody *body, Scope *scope, ResultInfo info, AstNode *node)
 			return IR_REF_VOID_VALUE;
 		IrRef operand = expr(body, scope, result_none, args[0]);
 		return rvalue(body, info, emit_un(body, builtin->arith_op, node->offset, operand), node->offset);
+	}
+	case BUILTIN_MEMSET: {
+		IrRef destination = expr(body, scope, result_none, args[0]);
+		IrRef type = emit_un(body, IR_MEMSET_ELEM_TYPE, args[0]->offset, destination);
+		IrRef value = expr(body, scope, result_type(type), args[1]);
+		emit_bin(body, IR_MEMSET, node->offset, destination, value);
+		return rvalue(body, info, IR_REF_VOID_VALUE, node->offset);
 	}
 	case BUILTIN_INT_BITS: {
 		IrRef operand = expr(body, scope, result_none, args[0]);

@@ -1061,6 +1061,37 @@ emit_inst(Codegen *cg, TirRef ref)
 		if (type_bits(cg, inst->type) < storage_size(cg, inst->type, inst->src) * 8)
 			normalize(cg, ref, inst->type, cls);
 		return;
+	case TIR_MEMSET: {
+		TirMemset fill;
+		memcpy(&fill, &cg->tir->extra[inst->data.payload], sizeof(fill));
+		TypePointer pointer = sema_type(cg->sema, inst_at(cg, fill.pointer)->type)->as.pointer;
+		TypeId child = pointer.child;
+		QbeClass value_class = type_class(cg, child, inst->src);
+		uint64_t stride = storage_size(cg, child, inst->src);
+		if (value_class == QBE_NONE || stride == 0)
+			return;
+		fprintf(out, "\t%%ms%u_pointer =l copy ", ref);
+		print_operand(cg, fill.pointer);
+		fprintf(out, "\n\t%%ms%u_index =l copy 0\n\tjmp @ms%u_loop\n@ms%u_loop\n", ref, ref, ref);
+		fprintf(out, "\t%%ms%u_more =w cultl %%ms%u_index, ", ref, ref);
+		print_operand(cg, fill.length);
+		fprintf(out, "\n\tjnz %%ms%u_more, @ms%u_body, @ms%u_done\n@ms%u_body\n", ref, ref, ref, ref);
+		if (pointer.is_volatile) {
+			MemoryWidth width = memory_width(cg, child);
+			cg->volatile_stores[width] = true;
+			fprintf(out, "\tcall $szc.volatile.store.%u(l %%ms%u_pointer, %c ", (unsigned)(8u << width), ref, class_char(value_class));
+			print_operand(cg, fill.value);
+			fputs(")\n", out);
+		} else {
+			fprintf(out, "\t%s ", store_op(cg, child));
+			print_operand(cg, fill.value);
+			fprintf(out, ", %%ms%u_pointer\n", ref);
+		}
+		fprintf(out, "\t%%ms%u_pointer =l add %%ms%u_pointer, %" PRIu64 "\n", ref, ref, stride);
+		fprintf(out, "\t%%ms%u_index =l add %%ms%u_index, 1\n", ref, ref);
+		fprintf(out, "\tjmp @ms%u_loop\n@ms%u_done\n", ref, ref);
+		return;
+	}
 	case TIR_ARRAY_COPY: {
 		TypePointer pointer = sema_type(cg->sema, inst_at(cg, inst->data.bin.lhs)->type)->as.pointer;
 		uint64_t size = storage_size(cg, pointer.child, inst->src);

@@ -4992,6 +4992,90 @@ analyze_array_type(Block *block, const IrInst *inst)
 	return type_operand(sema, array_type_id(sema, child, count, sentinel));
 }
 
+/* Memory builtins accept slices, many pointers and single array pointers. */
+static TypeId
+memory_element_type(Block *block, Operand destination, uint32_t src)
+{
+	Sema *sema = block->sema;
+	if (destination.kind == OPERAND_NONE)
+		return 0;
+	if (sema->types[destination.type].kind == TYPE_POINTER) {
+		TypePointer pointer = sema->types[destination.type].as.pointer;
+		if (pointer.size != POINTER_ONE)
+			return pointer.child;
+		if (sema->types[pointer.child].kind == TYPE_ARRAY)
+			return sema->types[pointer.child].as.array.child;
+	}
+	sema_error(block, src, "type '%s' is not an indexable pointer", sema_type_name(sema, destination.type));
+	return 0;
+}
+
+/* Fill logical elements, not byte storage or the trailing sentinel. */
+static Operand
+analyze_memset(Block *block, const IrInst *inst)
+{
+	Sema *sema = block->sema;
+	Operand destination = resolve_ref(block, inst->data.bin.lhs);
+	Operand value = resolve_ref(block, inst->data.bin.rhs);
+	if (destination.kind == OPERAND_NONE || value.kind == OPERAND_NONE)
+		return operand_none;
+	TypeId child = memory_element_type(block, destination, inst->src);
+	if (child == 0)
+		return operand_none;
+	TypePointer shape = sema->types[destination.type].as.pointer;
+	if (shape.is_const) {
+		sema_error(block, inst->src, "cannot memset constant pointer");
+		return operand_none;
+	}
+	if (shape.size != POINTER_SLICE && shape.size != POINTER_ONE) {
+		sema_error(block, inst->src, "unknown @memset length");
+		return operand_none;
+	}
+	value = coerce(block, value, child, inst->src);
+	if (value.kind == OPERAND_NONE)
+		return operand_none;
+	if (type_has_one_value(sema, child))
+		return void_operand(sema);
+	Operand data;
+	Operand length;
+	if (shape.size == POINTER_SLICE) {
+		data = slice_field(block, destination, false, inst->src);
+		length = slice_field(block, destination, true, inst->src);
+	} else {
+		uint64_t count = sema->types[shape.child].as.array.length;
+		length = comptime_operand(T_USIZE, value_int_u64(&sema->values, T_USIZE, count));
+		Type pointer = make_type(TYPE_POINTER);
+		pointer.as.pointer = shape;
+		pointer.as.pointer.size = POINTER_MANY;
+		pointer.as.pointer.child = child;
+		pointer.as.pointer.sentinel = VALUE_NONE;
+		data = retag_pointer(block, destination, type_intern(sema, &pointer), inst->src);
+	}
+	if (data.kind == OPERAND_NONE || length.kind == OPERAND_NONE || !check_defined(block, length, inst->src))
+		return operand_none;
+	if (length.kind == OPERAND_COMPTIME && bigint_is_zero(&operand_value(block, length)->as.integer))
+		return void_operand(sema);
+	TypeKind kind = sema->types[child].kind;
+	if (sema_type_is_aggregate(sema, child) || (kind != TYPE_INT && kind != TYPE_BOOL && kind != TYPE_POINTER)) {
+		sema_error(block, inst->src, "not supported by szc yet: @memset element type '%s'", sema_type_name(sema, child));
+		return operand_none;
+	}
+	if (!check_defined(block, data, inst->src) || !require_runtime(block, inst->src))
+		return operand_none;
+	if (!pointer_operand(block, data, inst->src))
+		return operand_none;
+	/* A nonvolatile undefined fill may leave any previous representation. */
+	if (operand_is_undefined(block, value) && !shape.is_volatile)
+		return void_operand(sema);
+	TirMemset fill;
+	fill.pointer = materialize(block, data, inst->src);
+	fill.length = materialize(block, length, inst->src);
+	fill.value = materialize(block, value, inst->src);
+	TirRef ref = emit_tir(block, TIR_MEMSET, T_VOID, inst->src);
+	block->tir->insts[ref].data.payload = tir_extra(block->tir, sema->arena, &fill, TIR_WORDS(TirMemset));
+	return void_operand(sema);
+}
+
 static Operand
 analyze_array_init(Block *block, const IrInst *inst)
 {
@@ -6137,6 +6221,15 @@ analyze_inst(Block *block, IrInstIndex index, Operand *break_value)
 	case IR_INT_FROM_PTR:
 		result = analyze_int_from_ptr(block, inst);
 		break;
+	case IR_MEMSET_ELEM_TYPE: {
+		TypeId child = memory_element_type(block, resolve_ref(block, inst->data.un.operand), src);
+		if (child != 0)
+			result = type_operand(sema, child);
+		break;
+	}
+	case IR_MEMSET:
+		result = analyze_memset(block, inst);
+		break;
 	case IR_ABS:
 		result = analyze_abs(block, inst);
 		break;
@@ -6720,6 +6813,12 @@ dump_tir_inst(FILE *out, Sema *sema, const TirFunc *tir, TirRef ref, uint32_t de
 			fprintf(out, ", %%%u", (unsigned)inst->data.bin.rhs);
 		fputs("\n", out);
 		return;
+	case TIR_MEMSET: {
+		TirMemset fill;
+		memcpy(&fill, &tir->extra[inst->data.payload], sizeof(fill));
+		fprintf(out, " %%%u, %%%u, %%%u\n", fill.pointer, fill.length, fill.value);
+		return;
+	}
 	case TIR_CALL: {
 		TirCall call;
 		memcpy(&call, &tir->extra[inst->data.payload], sizeof(call));

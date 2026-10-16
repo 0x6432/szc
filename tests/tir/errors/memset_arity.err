@@ -1,0 +1,3 @@
+tests/tir/errors/memset_arity.zig:1:22: error: expected 2 arguments, found 0
+pub fn main() void { @memset(); }
+                     ^

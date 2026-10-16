@@ -170,6 +170,7 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
   - [x] **M9.4c Integer bit counts**: `@clz`, `@ctz`, `@popCount`, native runtime and arbitrary-width constants.
   - [x] **M9.4d Integer permutations**: `@bitReverse`, `@byteSwap`, signed bit patterns and exact logical widths.
   - [x] **M9.4e Integer absolute values**: unsigned magnitudes, including signed minima.
+  - [x] **M9.4f Scalar runtime `@memset`**: typed logical-element fills, zero ranges and volatile stores.
 - [ ] **M9.5 Inline asm for x86_64-linux std usage.**
 
 ## Phase 10: std tests and bootstrap
@@ -184,6 +185,40 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
 ## Completed milestone log
 
 (newest first; each entry: what, limitations, interactions)
+
+### M9.4f Scalar runtime memory fills
+
+- **What**: `@memset` contextually types its fill value from a mutable slice or
+  single array pointer. A three-operand typed instruction carries data, logical
+  length and value into a QBE scalar-store loop using the actual ABI stride.
+  Trailing sentinels are excluded. Destination and value are evaluated once,
+  including empty ranges. Const pointers and unknown-length many pointers are
+  rejected; zero-length and one-value element cases retain reference ordering.
+  Volatile fills use the existing outlined observable store helpers.
+- **Validation**: actual Zig matches 158 cases/69 exact primary diagnostics.
+  Native comparisons cover integers including u33/i40 strides, bools, pointers,
+  globals, subranges, sentinels, zero-bit elements, empty null allowzero ranges,
+  volatile fill values and one-time argument evaluation. Ten focused semantic
+  unit cases and seven diagnostic goldens include explicit aggregate rejection.
+  Frozen GCC/Clang Werror ASan/UBSan pass 1666 unit checks/1099 goldens, 115+4
+  native, 16 driver, full C/ABI/storage/alignment, 72 observed volatile sequences
+  and 280 safety cases. Optimized GCC native/safety and both 20000 mutations/stage
+  pass (256/256/77/133 seeds). Four fresh 60s fuzz counts:
+  2323751/64909/61090/78698. Main forced unit/golden tests pass.
+- **Interactions/limits**: nonempty fills currently support native-width scalar
+  integers, bools and thin pointers; aggregates, floating values, vectors and
+  general comptime mutable-memory fills remain unsupported. Nonvolatile undefined
+  fills may retain the previous representation; no Debug poison-byte guarantee is
+  claimed. Empty or one-value fills do not touch memory. Exact per-element
+  volatile counts are checked for szc; the existing 60-sequence reference observer
+  suite still passes in Debug/ReleaseFast. New reference bulk-fill access counts
+  are not equated with szc: the reference x86 backend may replicate with overlapping
+  rep movsb, and LLVM can coalesce byte fills. Both compilers separately pass the
+  volatile value/sentinel native fixture. M9.4 remains partial; this is not memcpy
+  or general aggregate memset completion.
+- **Evidence**: /data/memset-reference-v2.log, /data/memset-native-v4.log,
+  /data/memset-volatile-reference-v3.log, /data/memset-main-tests.log and
+  /data/memset-final-{gcc,clang,fuzz}.log.
 
 ### M9.4e Integer absolute values
 

@@ -1,0 +1,3 @@
+tests/tir/errors/memset_nonpointer.zig:1:30: error: type 'comptime_int' is not an indexable pointer
+pub fn main() void { @memset(1,3); }
+                             ^

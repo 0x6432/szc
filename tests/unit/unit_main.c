@@ -1142,6 +1142,50 @@ test_character_literals(void)
 }
 
 static void
+test_scalar_memset(void)
+{
+	const struct {
+		const char *body;
+		const char *error;
+	} cases[] = {
+		{"var a:[3]u16=undefined; @memset(&a,1234);", NULL},
+		{"@memset(@as(*[0]u8,undefined),1);", NULL},
+		{"@memset(@as([]u0,undefined),undefined);", NULL},
+		{"@memset(@as([]void,undefined),{});", NULL},
+		{"@memset(@as(*const [0]u8,undefined),1);", "cannot memset constant pointer"},
+		{"@memset(@as(*[1]u8,undefined),1);", "use of undefined"},
+		{"@memset(@as([]u8,undefined),1);", "use of undefined"},
+		{"var a:[0]u8=.{}; @memset(&a,256);", "cannot represent integer value"},
+		{"@memset(@as([*]u0,undefined),0);", "unknown @memset length"},
+		{"@memset(1,1);", "not an indexable pointer"},
+	};
+	for (uint32_t i = 0; i < sizeof(cases) / sizeof(cases[0]); i++) {
+		Arena arena;
+		arena_init(&arena);
+		SourceTable sources;
+		source_table_init(&sources, &arena);
+		Diag diag;
+		diag_init(&diag, &arena, &sources);
+		Interner interner;
+		intern_init(&interner, &arena);
+		char source[4096];
+		int length = snprintf(source, sizeof(source), "pub fn main() void { %s }", cases[i].body);
+		CHECK(length > 0 && (size_t)length < sizeof(source));
+		FileId file = source_add_memory(&sources, "scalar_memset.zig", source, (uint32_t)length);
+		AstContainerDecl *root = parse_file(&arena, &diag, &sources, file);
+		CHECK(!diag_has_errors(&diag));
+		IrFile *ir = irgen_file(&arena, &diag, &interner, source_get(&sources, file), file, root);
+		CHECK(!diag_has_errors(&diag));
+		Sema *sema = sema_create(&arena, &diag, &interner, &sources);
+		bool success = sema_analyze_executable(sema, file, ir);
+		CHECK(success == (cases[i].error == NULL));
+		if (cases[i].error != NULL)
+			CHECK(diag.count != 0 && strstr(diag.items[0].message, cases[i].error) != NULL);
+		arena_free(&arena);
+	}
+}
+
+static void
 test_constant_aggregate_bit_casts(void)
 {
 	const struct {
@@ -1452,6 +1496,7 @@ main(void)
 	test_thin_pointer_casts();
 	test_scalar_bit_casts();
 	test_character_literals();
+	test_scalar_memset();
 	test_packed_bits();
 	test_constant_aggregate_bit_casts();
 	test_runtime_aggregate_bit_casts();
