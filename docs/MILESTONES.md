@@ -122,6 +122,7 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
   - [x] **M5.5e Scalar bit casts**: equal-width integer/bool/void representations; native-width runtime and arbitrary-width constants.
   - [x] **M5.5f Constant aggregate bit casts**: logical nested arrays, sentinels and undefined/zero-bit representations.
   - [x] **M5.5g Native-width runtime aggregate bit casts**: typed element packing/unpacking up to 64 total logical bits.
+  - [x] **M5.5h Thin runtime/numeric pointer casts**: child/shape/sentinel changes, combined qualifier/alignment permissions and non-null guards.
 
 ## Phase 6: Aggregates and errors
 
@@ -173,6 +174,37 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
 ## Completed milestone log
 
 (newest first; each entry: what, limitations, interactions)
+
+### M5.5h Thin runtime/numeric pointer casts
+
+- **What**: contextual @ptrCast between supported single/many pointers, including
+  child reinterpretation, explicit sentinel promises, function/data pointers and
+  allowzero narrowing. Adjacent ptr/align/const/volatile casts share permissions;
+  duplicate flags fail and the primary operation remains @ptrCast. Alignment
+  increases require @alignCast; qualifier removal requires its explicit cast.
+- **Runtime**: representation-preserving TIR_PTR_CAST keeps the original address.
+  A separate TIR_NULL_CHECK asserts non-null before an optional alignment guard;
+  neither check disappears when the cast result is discarded. Numeric constants
+  retain numeric backing, with reference-matching null/misalignment diagnostics.
+  Undefined non-null pointers fail; nullable results retain undefined.
+- **Validation**: GCC/Clang Werror ASan/UBSan pass 1392 units/1048 goldens,
+  104 ordinary/generated plus four scoped native programs, 16 driver checks,
+  all C/ABI/storage/alignment suites, 60 volatile sequences and 261 safety cases.
+  GCC full e2e includes actual Zig; the new native fixture is separately compared.
+  Optimized GCC native/safety checks and 20000 standalone mutations/stage under
+  both compilers pass (256/256/66/122 seeds). Four 60s fuzzers execute
+  2865890/42334/37246/37021 inputs. Fresh reference matrices cover 568 thin casts
+  (113 exact primary diagnostics), 409 alignment, 326 qualifier and 225 numeric
+  pointer cases. An adapter-contract regression caught a missing context label
+  before integration; corrected full validations pass. Evidence:
+  /data/thin-casts-final-{gcc,clang,fuzz,diff_*}.log and thin-casts-reference.log.
+- **Limits/interactions**: slice casts and symbolic pointers whose child or shape
+  changes are explicit NYI, not whole-root coercions. Known same-child/same-shape
+  qualifier/alignment changes retain earlier provenance behavior. This does not
+  implement physical comptime byte reinterpretation, padding or relocations.
+  Numeric addresses never acquire compiler-owned memory. Optional/vector/C/packed
+  pointers and wider runtime bit casts remain separate; M5.5 remains partial.
+  The new reference matrix runs in CI; new inputs seed both irgen and sema fuzzers.
 
 ### M0.5d Independent standalone fuzz partitions
 

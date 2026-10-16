@@ -1068,6 +1068,7 @@ typedef enum Builtin {
 	BUILTIN_PTR_FROM_INT,
 	BUILTIN_QUALIFIER_CAST,
 	BUILTIN_ALIGN_CAST,
+	BUILTIN_PTR_CAST,
 	BUILTIN_LAYOUT,
 	BUILTIN_ARITH,
 	BUILTIN_PANIC,
@@ -1088,6 +1089,7 @@ static const BuiltinInfo builtin_table[] = {
 	{"truncate", BUILTIN_TRUNCATE, 1, IR_OP_COUNT},
 	{"intFromBool", BUILTIN_INT_FROM_BOOL, 1, IR_OP_COUNT},
 	{"alignCast", BUILTIN_ALIGN_CAST, 1, IR_ALIGN_CAST},
+	{"ptrCast", BUILTIN_PTR_CAST, 1, IR_PTR_CAST},
 	{"constCast", BUILTIN_QUALIFIER_CAST, 1, IR_CONST_CAST},
 	{"volatileCast", BUILTIN_QUALIFIER_CAST, 1, IR_VOLATILE_CAST},
 	{"ptrFromInt", BUILTIN_PTR_FROM_INT, 1, IR_OP_COUNT},
@@ -1163,7 +1165,7 @@ cast_result_type(GenBody *body, ResultInfo info, AstNode *node, const char *name
 
 /* Adjacent pointer casts share the result context and permission flags. */
 static IrRef
-alignment_cast_chain(GenBody *body, Scope *scope, ResultInfo info, AstNode *root, bool *handled)
+pointer_cast_chain(GenBody *body, Scope *scope, ResultInfo info, AstNode *root, bool *handled)
 {
 	IrGen *gen = body->gen;
 	IrPointerCastFlags flags = 0;
@@ -1179,9 +1181,11 @@ alignment_cast_chain(GenBody *body, Scope *scope, ResultInfo info, AstNode *root
 		const BuiltinInfo *builtin = lookup_builtin(gen->source + call_node->name.start + 1,
 			call_node->name.end - call_node->name.start - 1);
 		if (builtin == NULL || call_node->args.count != 1
-			|| (builtin->builtin != BUILTIN_ALIGN_CAST && builtin->builtin != BUILTIN_QUALIFIER_CAST))
+			|| (builtin->builtin != BUILTIN_ALIGN_CAST && builtin->builtin != BUILTIN_PTR_CAST
+				&& builtin->builtin != BUILTIN_QUALIFIER_CAST))
 			break;
-		IrPointerCastFlags flag = builtin->builtin == BUILTIN_ALIGN_CAST ? IR_CAST_ALIGN
+		IrPointerCastFlags flag = builtin->builtin == BUILTIN_PTR_CAST ? IR_CAST_PTR
+			: builtin->builtin == BUILTIN_ALIGN_CAST ? IR_CAST_ALIGN
 			: builtin->arith_op == IR_CONST_CAST ? IR_CAST_CONST : IR_CAST_VOLATILE;
 		if ((flags & flag) != 0) {
 			*handled = true;
@@ -1191,17 +1195,18 @@ alignment_cast_chain(GenBody *body, Scope *scope, ResultInfo info, AstNode *root
 		flags = (IrPointerCastFlags)(flags | flag);
 		node = call_node->args.items[0];
 	}
-	*handled = (flags & IR_CAST_ALIGN) != 0;
+	*handled = (flags & (IR_CAST_ALIGN | IR_CAST_PTR)) != 0;
 	if (!*handled)
 		return IR_REF_NONE;
 	IrPointerCast payload;
-	payload.type = cast_result_type(body, info, root, "alignCast");
+	bool pointer_cast = (flags & IR_CAST_PTR) != 0;
+	payload.type = cast_result_type(body, info, root, pointer_cast ? "ptrCast" : "alignCast");
 	payload.operand = expr(body, scope, result_none, node);
 	payload.flags = flags;
 	payload.operand_src = node->offset;
 	if (payload.type == IR_REF_NONE)
 		return IR_REF_VOID_VALUE;
-	return emit_payload(body, IR_ALIGN_CAST, root->offset, APPEND_EXTRA(gen, payload));
+	return emit_payload(body, pointer_cast ? IR_PTR_CAST : IR_ALIGN_CAST, root->offset, APPEND_EXTRA(gen, payload));
 }
 
 static IrRef
@@ -1223,14 +1228,16 @@ builtin_call(GenBody *body, Scope *scope, ResultInfo info, AstNode *node)
 		error_at(gen, node->offset, "%s", message);
 		return IR_REF_VOID_VALUE;
 	}
-	if (builtin->builtin == BUILTIN_ALIGN_CAST || builtin->builtin == BUILTIN_QUALIFIER_CAST) {
+	if (builtin->builtin == BUILTIN_ALIGN_CAST || builtin->builtin == BUILTIN_PTR_CAST
+		|| builtin->builtin == BUILTIN_QUALIFIER_CAST) {
 		bool handled;
-		IrRef result = alignment_cast_chain(body, scope, info, node, &handled);
+		IrRef result = pointer_cast_chain(body, scope, info, node, &handled);
 		if (handled)
 			return result;
 	}
 	switch (builtin->builtin) {
 	case BUILTIN_ALIGN_CAST:
+	case BUILTIN_PTR_CAST:
 		return IR_REF_VOID_VALUE;
 	case BUILTIN_PANIC: {
 		IrPanic payload;
@@ -2780,6 +2787,7 @@ dump_inst(const IrDumper *dumper, IrInstIndex index, uint32_t depth)
 		dump_ref(dumper, payload.sentinel);
 		break;
 	}
+	case IR_PTR_CAST:
 	case IR_ALIGN_CAST: {
 		IrPointerCast cast;
 		memcpy(&cast, &ir->extra[inst->data.payload], sizeof(cast));

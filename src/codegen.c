@@ -793,6 +793,9 @@ emit_inst(Codegen *cg, TirRef ref)
 		emit_guard(cg, ref, "alignment", PANIC_ALIGNMENT);
 		return;
 	}
+	case TIR_NULL_CHECK:
+		emit_bound_check(cg, ref, inst->data.un.operand, "null", "ceq", 0, PANIC_NULL_CAST);
+		return;
 	case TIR_PTR_FROM_INT: {
 		TypePointer pointer = sema_type(cg->sema, inst->type)->as.pointer;
 		TirRef operand = inst->data.un.operand;

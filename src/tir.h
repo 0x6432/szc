@@ -51,12 +51,13 @@ typedef uint32_t TirBody;	/* extra index of a body, 0 = none */
 	X(NOT, "not")	/* un: bool not / bitwise not */ \
 	X(NEGATE, "negate")	/* un: checked negation */ \
 	X(NEGATE_WRAP, "negate_wrap") \
-	X(PTR_CAST, "ptr_cast")	/* un: compatible pointer qualifier coercion */ \
+	X(PTR_CAST, "ptr_cast")	/* un: representation-preserving thin pointer cast */ \
 	X(BIT_CAST, "bit_cast")	/* un: equal-width scalar bit representation */ \
 	X(INT_CAST, "int_cast")	/* un: widen/narrow integer to `type` */ \
 	X(TRUNCATE, "truncate")	/* un: discard high integer bits */ \
 	X(INT_FROM_BOOL, "int_from_bool")	/* un: bool -> u1 */ \
 	X(ALIGN_CHECK, "align_check") /* bin: pointer and zero-length exemption; type carries alignment */ \
+	X(NULL_CHECK, "null_check") /* un: assert a thin pointer is non-null */ \
 	X(PTR_FROM_INT, "ptr_from_int")	/* un: checked usize -> pointer type */ \
 	X(PTR_TO_INT, "ptr_to_int")	/* un: pointer address as usize */ \
 	X(PTR_ADD, "ptr_add")	/* bin: many pointer, usize element count */ \

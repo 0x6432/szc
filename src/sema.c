@@ -2201,6 +2201,82 @@ analyze_ptr_from_int(Block *block, const IrInst *inst)
 	return runtime_operand(type, emit_tir_un(block, TIR_PTR_FROM_INT, type, inst->src, operand.inst));
 }
 
+/* Thin casts change address interpretation, not the contents of known backing.
+ * Slice length inference and physical comptime memory views are separate work. */
+static Operand
+analyze_ptr_cast(Block *block, const IrInst *inst)
+{
+	Sema *sema = block->sema;
+	IrPointerCast cast;
+	memcpy(&cast, &block->ir->extra[inst->data.payload], sizeof(cast));
+	TypeId type;
+	if (!operand_to_type(block, resolve_ref(block, cast.type), inst->src, &type))
+		return operand_none;
+	Operand operand = resolve_ref(block, cast.operand);
+	if (operand.kind == OPERAND_NONE)
+		return operand_none;
+	if (sema->types[type].kind != TYPE_POINTER || sema->types[operand.type].kind != TYPE_POINTER) {
+		sema_error(block, inst->src, "expected pointer, found '%s'",
+			sema_type_name(sema, sema->types[type].kind != TYPE_POINTER ? type : operand.type));
+		return operand_none;
+	}
+	TypePointer from = sema->types[operand.type].as.pointer;
+	TypePointer to = sema->types[type].as.pointer;
+	if (from.size == POINTER_SLICE || to.size == POINTER_SLICE) {
+		sema_error(block, inst->src, "not supported by szc yet: slice @ptrCast");
+		return operand_none;
+	}
+	uint32_t source_alignment = pointer_alignment(sema, from);
+	uint32_t target_alignment = pointer_alignment(sema, to);
+	if (target_alignment > source_alignment && (cast.flags & IR_CAST_ALIGN) == 0) {
+		sema_error(block, inst->src, "@ptrCast increases pointer alignment");
+		return operand_none;
+	}
+	if (from.is_const && !to.is_const && (cast.flags & IR_CAST_CONST) == 0) {
+		sema_error(block, inst->src, "@ptrCast discards const qualifier");
+		return operand_none;
+	}
+	if (from.is_volatile && !to.is_volatile && (cast.flags & IR_CAST_VOLATILE) == 0) {
+		sema_error(block, inst->src, "@ptrCast discards volatile qualifier");
+		return operand_none;
+	}
+	if (operand_is_undefined(block, operand)) {
+		if (!to.is_allowzero && !check_defined(block, operand, cast.operand_src))
+			return operand_none;
+		return comptime_operand(type, value_undefined(&sema->values, type));
+	}
+	if (operand.kind == OPERAND_COMPTIME) {
+		if (integer_pointer(block, operand)) {
+			uint64_t address = operand_value(block, operand)->as.address;
+			if (address == 0 && !to.is_allowzero) {
+				sema_error(block, cast.operand_src, "null pointer casted to type '%s'", sema_type_name(sema, type));
+				return operand_none;
+			}
+			if (target_alignment > source_alignment && (address & (target_alignment - 1)) != 0) {
+				sema_error(block, cast.operand_src, "pointer address 0x%" PRIX64 " is not aligned to %u bytes",
+					address, (unsigned)target_alignment);
+				return operand_none;
+			}
+			return comptime_operand(type, value_int_pointer(&sema->values, type, address));
+		}
+		if (from.child != to.child || from.size != to.size) {
+			sema_error(block, inst->src, "not supported by szc yet: symbolic @ptrCast with changed child or pointer size");
+			return operand_none;
+		}
+		return retag_pointer(block, operand, type, inst->src);
+	}
+	if (!require_runtime(block, inst->src))
+		return operand_none;
+	TirRef pointer = materialize(block, operand, inst->src);
+	if (from.is_allowzero && !to.is_allowzero)
+		emit_tir_un(block, TIR_NULL_CHECK, T_VOID, inst->src, pointer);
+	if (target_alignment > source_alignment) {
+		Operand empty = comptime_operand(T_BOOL, value_bool(&sema->values, T_BOOL, false));
+		emit_tir_bin(block, TIR_ALIGN_CHECK, type, inst->src, pointer, materialize(block, empty, inst->src));
+	}
+	return runtime_operand(type, emit_tir_un(block, TIR_PTR_CAST, type, inst->src, pointer));
+}
+
 /* @alignCast changes only alignment; nested qualifier flags are explicit permissions. */
 static Operand
 analyze_align_cast(Block *block, const IrInst *inst)
@@ -5750,6 +5826,9 @@ analyze_inst(Block *block, IrInstIndex index, Operand *break_value)
 		result = operand.kind == OPERAND_NONE ? operand_none : cast_pointer_qualifier(block, operand, inst->op, inst->src);
 		break;
 	}
+	case IR_PTR_CAST:
+		result = analyze_ptr_cast(block, inst);
+		break;
 	case IR_ALIGN_CAST:
 		result = analyze_align_cast(block, inst);
 		break;
@@ -6299,6 +6378,7 @@ dump_tir_inst(FILE *out, Sema *sema, const TirFunc *tir, TirRef ref, uint32_t de
 	case TIR_SLICE_LEN_PTR:
 	case TIR_PTR_FROM_INT:
 	case TIR_PTR_TO_INT:
+	case TIR_NULL_CHECK:
 	case TIR_PTR_CAST:
 	case TIR_BIT_CAST:
 	case TIR_INT_CAST:

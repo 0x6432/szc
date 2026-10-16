@@ -47,6 +47,18 @@ def cases():
     ):
         yield 'align_cast_'+label, source+'\n', 'incorrect alignment'
 
+    for label, source_type, destination, expression, address, message in (
+        ('null', '*allowzero u8', '*i8', '@ptrCast(p)', 0, 'cast causes pointer to be null'),
+        ('null_many', '[*]allowzero u8', '[*:17]i8', '@ptrCast(p)', 0, 'cast causes pointer to be null'),
+        ('null_before_alignment', '*allowzero u8', '*u16', '@alignCast(@ptrCast(p))', 0, 'cast causes pointer to be null'),
+        ('alignment', '*u8', '*u16', '@alignCast(@ptrCast(p))', 17, 'incorrect alignment'),
+        ('nullable_alignment', '*allowzero u8', '*allowzero u16', '@alignCast(@ptrCast(p))', 17, 'incorrect alignment'),
+        ('combined', '*const volatile u8', '*u32', '@volatileCast(@constCast(@alignCast(@ptrCast(p))))', 17, 'incorrect alignment'),
+    ):
+        yield 'thin_ptr_cast_' + label, (
+            f'fn f(p: {source_type}) void {{ const q: {destination} = {expression}; _ = q; }} '
+            f'pub fn main() void {{ f(@ptrFromInt({address})); }}\n'), message
+
     for label, ty, address, message in (
         ('null', '*u8', 0, 'cast causes pointer to be null'),
         ('aligned_null', '*u32', 0, 'cast causes pointer to be null'),

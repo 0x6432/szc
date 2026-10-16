@@ -1089,6 +1089,72 @@ test_runtime_aggregate_bit_casts(void)
 }
 
 static void
+test_thin_pointer_casts(void)
+{
+	const struct {
+		const char *source;
+		const char *error;
+		uint32_t null_checks;
+		uint32_t align_checks;
+	} cases[] = {
+		{"fn f(p:*u8) *i8 {return @ptrCast(p);} pub fn main() void {_=f(undefined);}", NULL, 0, 0},
+		{"fn f(p:*u8) *u16 {return @ptrCast(p);} pub fn main() void {_=f(undefined);}", "@ptrCast increases pointer alignment", 0, 0},
+		{"fn f(p:*u8) *u16 {return @alignCast(@ptrCast(p));} pub fn main() void {_=f(undefined);}", NULL, 0, 1},
+		{"fn f(p:*allowzero u8) *i8 {return @ptrCast(p);} pub fn main() void {_=f(undefined);}", NULL, 1, 0},
+		{"fn f(p:*allowzero u8) *u16 {return @alignCast(@ptrCast(p));} pub fn main() void {_=f(undefined);}", NULL, 1, 1},
+		{"fn f(p:*allowzero u8) *allowzero u16 {return @alignCast(@ptrCast(p));} pub fn main() void {_=f(undefined);}", NULL, 0, 1},
+		{"fn f(p:*const u8) *i8 {return @alignCast(@ptrCast(p));} pub fn main() void {_=f(undefined);}", "@ptrCast discards const qualifier", 0, 0},
+		{"fn f(p:*volatile u8) *i8 {return @constCast(@ptrCast(p));} pub fn main() void {_=f(undefined);}", "@ptrCast discards volatile qualifier", 0, 0},
+		{"fn f(p:*const volatile u8) *u16 {return @volatileCast(@alignCast(@constCast(@ptrCast(p))));} pub fn main() void {_=f(undefined);}", NULL, 0, 1},
+		{"pub fn main() void {const p:*allowzero u8=@ptrFromInt(0); const q:*i8=@ptrCast(p); _=q;}", "null pointer casted to type", 0, 0},
+		{"pub fn main() void {const p:*allowzero u8=@ptrFromInt(0); const q:*allowzero u16=@alignCast(@ptrCast(p)); _=q;}", NULL, 0, 0},
+		{"pub fn main() void {const p:*u8=@ptrFromInt(17); const q:*u16=@alignCast(@ptrCast(p)); _=q;}", "pointer address 0x11 is not aligned to 2 bytes", 0, 0},
+		{"pub fn main() void {const p:*u8=@ptrFromInt(16); const q:*u16=@alignCast(@ptrCast(p)); _=q;}", NULL, 0, 0},
+		{"pub fn main() void {const p:*allowzero u8=undefined; const q:*i8=@ptrCast(p); _=q;}", "use of undefined", 0, 0},
+		{"pub fn main() void {const p:*u8=undefined; const q:*allowzero i8=@ptrCast(p); _=q;}", NULL, 0, 0},
+		{"pub fn main() void {const p:*u8=@ptrFromInt(16); const q:[*:17]i8=@ptrCast(p); _=q;}", NULL, 0, 0},
+		{"pub fn main() void {const n:u16=258; const q:*const u8=@ptrCast(&n); _=q;}", "symbolic @ptrCast with changed child or pointer size", 0, 0},
+		{"pub fn main() void {const n:u16=258; const q:*const u16=@ptrCast(&n); _=q;}", NULL, 0, 0},
+		{"fn f(p:[]u8) *u8 {return @ptrCast(p);} pub fn main() void {_=f(undefined);}", "slice @ptrCast", 0, 0},
+		{"fn f(p:[*]u8) []u8 {return @ptrCast(p);} pub fn main() void {_=f(undefined);}", "slice @ptrCast", 0, 0},
+	};
+	for (uint32_t i = 0; i < sizeof(cases) / sizeof(cases[0]); i++) {
+		Arena arena;
+		arena_init(&arena);
+		SourceTable sources;
+		source_table_init(&sources, &arena);
+		Diag diag;
+		diag_init(&diag, &arena, &sources);
+		Interner interner;
+		intern_init(&interner, &arena);
+		FileId file = source_add_memory(&sources, "thin_pointer_casts.zig", cases[i].source, (uint32_t)strlen(cases[i].source));
+		AstContainerDecl *root = parse_file(&arena, &diag, &sources, file);
+		CHECK(!diag_has_errors(&diag));
+		IrFile *ir = irgen_file(&arena, &diag, &interner, source_get(&sources, file), file, root);
+		CHECK(!diag_has_errors(&diag));
+		Sema *sema = sema_create(&arena, &diag, &interner, &sources);
+		bool success = sema_analyze_executable(sema, file, ir);
+		CHECK(success == (cases[i].error == NULL));
+		if (cases[i].error != NULL)
+			CHECK(diag.count != 0 && strstr(diag.items[0].message, cases[i].error) != NULL);
+		else {
+			uint32_t null_checks = 0;
+			uint32_t align_checks = 0;
+			for (FuncId f = 1; f < sema_func_count(sema); f++) {
+				const TirFunc *tir = &sema_func(sema, f)->tir;
+				for (TirRef j = 0; j < tir->inst_count; j++) {
+					null_checks += tir->insts[j].op == TIR_NULL_CHECK;
+					align_checks += tir->insts[j].op == TIR_ALIGN_CHECK;
+				}
+			}
+			CHECK(null_checks == cases[i].null_checks);
+			CHECK(align_checks == cases[i].align_checks);
+		}
+		arena_free(&arena);
+	}
+}
+
+static void
 test_packed_bits(void)
 {
 	Arena arena;
@@ -1191,6 +1257,7 @@ main(void)
 	test_qualifier_cast_types();
 	test_qualifier_cast_chains();
 	test_alignment_cast_types();
+	test_thin_pointer_casts();
 	test_scalar_bit_casts();
 	test_packed_bits();
 	test_constant_aggregate_bit_casts();

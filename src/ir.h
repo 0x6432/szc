@@ -179,6 +179,7 @@ typedef enum IrDataKind {
 	X(BIT_SIZE_OF, "bit_size_of", IR_DATA_UN)	/* type -> comptime_int representation bits */ \
 	X(SIZE_OF, "size_of", IR_DATA_UN)	/* type -> comptime_int ABI bytes */ \
 	X(ALIGN_OF, "align_of", IR_DATA_UN)	/* type -> comptime_int ABI alignment */ \
+	X(PTR_CAST, "ptr_cast", IR_DATA_PAYLOAD) /* IrPointerCast: contextual thin reinterpretation */ \
 	X(ALIGN_CAST, "align_cast", IR_DATA_PAYLOAD) /* IrPointerCast: contextual alignment assertion */ \
 	X(CONST_CAST, "const_cast", IR_DATA_UN)	/* discard top-level const qualifier */ \
 	X(VOLATILE_CAST, "volatile_cast", IR_DATA_UN)	/* discard top-level volatile qualifier */ \
@@ -426,6 +427,7 @@ typedef enum IrPointerCastFlags {
 	IR_CAST_ALIGN = 0x1,
 	IR_CAST_CONST = 0x2,
 	IR_CAST_VOLATILE = 0x4,
+	IR_CAST_PTR = 0x8,
 } IrPointerCastFlags;
 
 typedef struct IrPointerCast {

@@ -1,0 +1,315 @@
+global szc.g.1: [8]u8 align(64) = array(8 elements)
+fn szc.main.1: fn () u8 {
+  %0: *u32 = alloc
+  %1: u32 = const 2018915346
+  %2: void = store %0, %1
+  %3: [*]u8 = call szc.bytes.2(%0)
+  %4: *const [*]u8 = alloc
+  %5: void = store %4, %3
+  %6: usize = const 0
+  %7: *u8 = ptr_elem_ptr %3, %6
+  %8: u8 = load %7
+  %9: u8 = const 18
+  %10: bool = cmp_neq %8, %9
+  %11: bool = block {
+    %20: noreturn = condbr %10 then {
+      %18: bool = const true
+      %19: noreturn = br %11, %18
+    } else {
+      %12: usize = const 1
+      %13: *u8 = ptr_elem_ptr %3, %12
+      %14: u8 = load %13
+      %15: u8 = const 52
+      %16: bool = cmp_neq %14, %15
+      %17: noreturn = br %11, %16
+    }
+  }
+  %21: bool = block {
+    %30: noreturn = condbr %11 then {
+      %28: bool = const true
+      %29: noreturn = br %21, %28
+    } else {
+      %22: usize = const 2
+      %23: *u8 = ptr_elem_ptr %3, %22
+      %24: u8 = load %23
+      %25: u8 = const 86
+      %26: bool = cmp_neq %24, %25
+      %27: noreturn = br %21, %26
+    }
+  }
+  %31: bool = block {
+    %40: noreturn = condbr %21 then {
+      %38: bool = const true
+      %39: noreturn = br %31, %38
+    } else {
+      %32: usize = const 3
+      %33: *u8 = ptr_elem_ptr %3, %32
+      %34: u8 = load %33
+      %35: u8 = const 120
+      %36: bool = cmp_neq %34, %35
+      %37: noreturn = br %31, %36
+    }
+  }
+  %41: void = block {
+    %45: noreturn = condbr %31 then {
+      %42: u8 = const 1
+      %43: noreturn = ret %42
+    } else {
+      %44: noreturn = br %41
+    }
+  }
+  %46: [*]u8 = load %4
+  %47: usize = const 1
+  %48: *u8 = ptr_elem_ptr %46, %47
+  %49: u8 = const 171
+  %50: void = store %48, %49
+  %51: u32 = load %0
+  %52: u32 = const 2018945810
+  %53: bool = cmp_neq %51, %52
+  %54: bool = block {
+    %66: noreturn = condbr %53 then {
+      %64: bool = const true
+      %65: noreturn = br %54, %64
+    } else {
+      %55: [*]u8 = load %4
+      %56: usize = const 0
+      %57: *u8 = ptr_elem_ptr %55, %56
+      %58: *align(1) const volatile u8 = ptr_cast %57
+      %59: *u32 = call szc.word.3(%58)
+      %60: u32 = load %59
+      %61: u32 = load %0
+      %62: bool = cmp_neq %60, %61
+      %63: noreturn = br %54, %62
+    }
+  }
+  %67: void = block {
+    %71: noreturn = condbr %54 then {
+      %68: u8 = const 2
+      %69: noreturn = ret %68
+    } else {
+      %70: noreturn = br %67
+    }
+  }
+  %72: *i32 = call szc.signed.4(%0)
+  %73: i32 = const -1
+  %74: void = store %72, %73
+  %75: u32 = load %0
+  %76: u32 = const 4294967295
+  %77: bool = cmp_neq %75, %76
+  %78: void = block {
+    %82: noreturn = condbr %77 then {
+      %79: u8 = const 3
+      %80: noreturn = ret %79
+    } else {
+      %81: noreturn = br %78
+    }
+  }
+  %83: *[4]u8 = alloc
+  %84: *const [4]u8 = const ref(object.1)
+  %85: void = array_copy %83, %84
+  %86: [*]u8 = ptr_cast %83
+  %87: *u8 = call szc.scalar.5(%86)
+  %88: u8 = load %87
+  %89: u8 = const 7
+  %90: bool = cmp_neq %88, %89
+  %91: bool = block {
+    %101: noreturn = condbr %90 then {
+      %99: bool = const true
+      %100: noreturn = br %91, %99
+    } else {
+      %92: [*:0]u8 = call szc.sentinel.6(%86)
+      %93: usize = const 3
+      %94: *u8 = ptr_elem_ptr %92, %93
+      %95: u8 = load %94
+      %96: u8 = const 0
+      %97: bool = cmp_neq %95, %96
+      %98: noreturn = br %91, %97
+    }
+  }
+  %102: void = block {
+    %106: noreturn = condbr %91 then {
+      %103: u8 = const 4
+      %104: noreturn = ret %103
+    } else {
+      %105: noreturn = br %102
+    }
+  }
+  %107: *[4]u8 = call szc.array.7(%86)
+  %108: *const *[4]u8 = alloc
+  %109: void = store %108, %107
+  %110: *[4]u8 = load %108
+  %111: usize = const 2
+  %112: *u8 = array_elem_ptr %110, %111
+  %113: u8 = const 19
+  %114: void = store %112, %113
+  %115: usize = const 2
+  %116: *u8 = array_elem_ptr %83, %115
+  %117: u8 = load %116
+  %118: u8 = const 19
+  %119: bool = cmp_neq %117, %118
+  %120: void = block {
+    %124: noreturn = condbr %119 then {
+      %121: u8 = const 5
+      %122: noreturn = ret %121
+    } else {
+      %123: noreturn = br %120
+    }
+  }
+  %125: usize = const 0
+  %126: *u8 = array_elem_ptr %83, %125
+  %127: *allowzero u8 = ptr_cast %126
+  %128: *i8 = call szc.checked.8(%127)
+  %129: i8 = load %128
+  %130: i8 = const 7
+  %131: bool = cmp_neq %129, %130
+  %132: void = block {
+    %136: noreturn = condbr %131 then {
+      %133: u8 = const 6
+      %134: noreturn = ret %133
+    } else {
+      %135: noreturn = br %132
+    }
+  }
+  %137: *allowzero u8 = const ptr(0x0)
+  %138: *allowzero u16 = call szc.numeric.9(%137)
+  %139: usize = ptr_to_int %138
+  %140: usize = const 0
+  %141: bool = cmp_neq %139, %140
+  %142: void = block {
+    %146: noreturn = condbr %141 then {
+      %143: u8 = const 7
+      %144: noreturn = ret %143
+    } else {
+      %145: noreturn = br %142
+    }
+  }
+  %147: *allowzero u8 = const ptr(0x10)
+  %148: *allowzero u16 = call szc.numeric.9(%147)
+  %149: usize = ptr_to_int %148
+  %150: usize = const 16
+  %151: bool = cmp_neq %149, %150
+  %152: void = block {
+    %156: noreturn = condbr %151 then {
+      %153: u8 = const 8
+      %154: noreturn = ret %153
+    } else {
+      %155: noreturn = br %152
+    }
+  }
+  %157: *const fn (u8) u8 = const szc.add.12
+  %158: *const u8 = call szc.data.11(%157)
+  %159: *const fn (u8) u8 = call szc.function.10(%158)
+  %160: u8 = const 3
+  %161: u8 = call %159(%160)
+  %162: u8 = const 10
+  %163: bool = cmp_neq %161, %162
+  %164: void = block {
+    %168: noreturn = condbr %163 then {
+      %165: u8 = const 9
+      %166: noreturn = ret %165
+    } else {
+      %167: noreturn = br %164
+    }
+  }
+  %169: *const [4]u8 = ptr_cast %83
+  %170: u32 = call szc.read_bytes.13(%169)
+  %171: u32 = const 1247495
+  %172: bool = cmp_neq %170, %171
+  %173: void = block {
+    %177: noreturn = condbr %172 then {
+      %174: u8 = const 10
+      %175: noreturn = ret %174
+    } else {
+      %176: noreturn = br %173
+    }
+  }
+  %178: *u8 = const elem(base.105, index.0, offset.0)
+  %179: *align(64) u16 = call szc.realign.14(%178)
+  %180: u16 = load %179
+  %181: u16 = const 513
+  %182: bool = cmp_neq %180, %181
+  %183: void = block {
+    %187: noreturn = condbr %182 then {
+      %184: u8 = const 11
+      %185: noreturn = ret %184
+    } else {
+      %186: noreturn = br %183
+    }
+  }
+  %188: u8 = const 0
+  %189: noreturn = ret %188
+}
+fn szc.bytes.2: fn (*u32) [*]u8 {
+  %0: *u32 = arg 0
+  %1: [*]u8 = ptr_cast %0
+  %2: noreturn = ret %1
+}
+fn szc.word.3: fn (*align(1) const volatile u8) *u32 {
+  %0: *align(1) const volatile u8 = arg 0
+  %1: bool = const false
+  %2: *u32 = align_check %0, %1
+  %3: *u32 = ptr_cast %0
+  %4: noreturn = ret %3
+}
+fn szc.signed.4: fn (*u32) *i32 {
+  %0: *u32 = arg 0
+  %1: *i32 = ptr_cast %0
+  %2: noreturn = ret %1
+}
+fn szc.scalar.5: fn ([*]u8) *u8 {
+  %0: [*]u8 = arg 0
+  %1: *u8 = ptr_cast %0
+  %2: noreturn = ret %1
+}
+fn szc.sentinel.6: fn ([*]u8) [*:0]u8 {
+  %0: [*]u8 = arg 0
+  %1: [*:0]u8 = ptr_cast %0
+  %2: noreturn = ret %1
+}
+fn szc.array.7: fn ([*]u8) *[4]u8 {
+  %0: [*]u8 = arg 0
+  %1: *[4]u8 = ptr_cast %0
+  %2: noreturn = ret %1
+}
+fn szc.checked.8: fn (*allowzero u8) *i8 {
+  %0: *allowzero u8 = arg 0
+  %1: void = null_check %0
+  %2: *i8 = ptr_cast %0
+  %3: noreturn = ret %2
+}
+fn szc.numeric.9: fn (*allowzero u8) *allowzero u16 {
+  %0: *allowzero u8 = arg 0
+  %1: bool = const false
+  %2: *allowzero u16 = align_check %0, %1
+  %3: *allowzero u16 = ptr_cast %0
+  %4: noreturn = ret %3
+}
+fn szc.function.10: fn (*const u8) *const fn (u8) u8 {
+  %0: *const u8 = arg 0
+  %1: *const fn (u8) u8 = ptr_cast %0
+  %2: noreturn = ret %1
+}
+fn szc.data.11: fn (*const fn (u8) u8) *const u8 {
+  %0: *const fn (u8) u8 = arg 0
+  %1: *const u8 = ptr_cast %0
+  %2: noreturn = ret %1
+}
+fn szc.add.12: fn (u8) u8 {
+  %0: u8 = arg 0
+  %1: u8 = const 7
+  %2: u8 = add %0, %1
+  %3: noreturn = ret %2
+}
+fn szc.read_bytes.13: fn (*const [4]u8) u32 {
+  %0: *const [4]u8 = arg 0
+  %1: *align(1) const u32 = ptr_cast %0
+  %2: u32 = load %1
+  %3: noreturn = ret %2
+}
+fn szc.realign.14: fn (*u8) *align(64) u16 {
+  %0: *u8 = arg 0
+  %1: bool = const false
+  %2: *align(64) u16 = align_check %0, %1
+  %3: *align(64) u16 = ptr_cast %0
+  %4: noreturn = ret %3
+}

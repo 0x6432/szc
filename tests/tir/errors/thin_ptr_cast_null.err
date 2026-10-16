@@ -1,0 +1,3 @@
+tests/tir/errors/thin_ptr_cast_null.zig:1:80: error: null pointer casted to type '*i8'
+pub fn main() void {const p:*allowzero u8=@ptrFromInt(0); const q:*i8=@ptrCast(p); _=q;}
+                                                                               ^

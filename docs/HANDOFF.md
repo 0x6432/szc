@@ -19,6 +19,25 @@ Read this first when resuming work (the sandbox resets often).
 
 ## Latest follow-up checkpoint
 
+- M5.5h thin runtime/numeric ptrCast is complete. Frozen /data/thin-casts-final
+  GCC/Clang trees pass 1392 units/1048 goldens, 104 ordinary/generated plus four
+  scoped native programs, 16 driver checks, full C/ABI/storage/alignment, 60
+  volatile sequences and 261 safety cases. GCC full e2e references actual Zig;
+  optimized GCC native/safety and both 20000-mutation/stage replays pass. Fresh
+  reference matrices: 568 thin (113 exact primary diagnostics), 409 alignment,
+  326 qualifier, 225 numeric pointers. Four 60s fuzzers:
+  2865890/42334/37246/37021. Logs: /data/thin-casts-final-* and
+  /data/thin-casts-reference.log. Symbolic child/shape reinterpretation and slice
+  casts are explicitly NYI; no physical backing/padding reinterpretation is
+  invented. Numeric addresses remain foreign runtime memory. Next: slice-source
+  thin casts, then provenance-preserving symbolic memory views.
+- Hosted db7f4c5 run 38874118846 attempt 2 completed successfully: all eight
+  standalone fuzz partitions, reference suites, fuzz job and GCC/Clang build/e2e
+  checks pass. Attempt 1's Clang safety run timed out on two native executions;
+  no sanitizer report. A fresh local Clang baseline passes all 255 safety cases,
+  and the failed-job rerun passes without changing deadlines or skipping tests.
+  This verifies that commit, not future pushes. Do not claim older failed runs
+  or this new language milestone green until checking their own runs.
 - M0.5d standalone CI replay partitions are complete: eight independent GCC/Clang
   stage jobs, max four concurrent, each with unchanged seeds/20000 mutations,
   Werror+ASan/UBSan, 15-minute step deadline and distinct last-input capture.
@@ -122,12 +141,10 @@ Read this first when resuming work (the sandbox resets often).
   of make test. Fresh independent GCC/Clang Werror sanitizer trees pass 864 units,
   1028 goldens, harness checks, and 20000 mutations/stage (63 irgen/119 sema seeds).
   Logs: /data/fuzz-driver-{gcc,clang}-{tests,replay}.log.
-- Hosted alignment run 38863898754 (failed-job rerun) and scalar run 38866600907
-  are now completed successfully. The earlier GCC failure was runner shutdown/143,
-  with no sanitizer diagnostic. Harness run 38868786280 lost its GCC runner during
-  standalone replay (shutdown, no sanitizer diagnostic); Clang remains in progress.
-  Failed-job rerun is rejected while the workflow is running; retry after completion.
-  Do not claim newer commits green until checking their runs.
+- Historical hosted alignment run 38863898754 and scalar run 38866600907
+  completed successfully. Runs 38868786280/38873268794/38873763789 completed
+  with failures; earlier runner shutdowns do not prove every later failure is
+  infrastructure. Latest verified green status is recorded above.
 
 ## Latest integrated checkpoint
 
