@@ -3314,6 +3314,44 @@ analyze_bit_count(Block *block, const IrInst *inst)
 	return runtime_operand(type, emit_tir_un(block, op, type, inst->src, operand.inst));
 }
 
+/* Integer absolute values include signed minimum without overflow. */
+static Operand
+analyze_abs(Block *block, const IrInst *inst)
+{
+	Sema *sema = block->sema;
+	Operand operand = resolve_ref(block, inst->data.un.operand);
+	if (operand.kind == OPERAND_NONE)
+		return operand_none;
+	TypeId type = operand.type;
+	TypeKind kind = sema->types[type].kind;
+	if (kind == TYPE_FLOAT || kind == TYPE_COMPTIME_FLOAT) {
+		if (operand_is_undefined(block, operand))
+			return operand;
+		sema_error(block, inst->src, "not supported by szc yet: floating-point @abs");
+		return operand_none;
+	}
+	if (!is_int_or_comptime_int(sema, type)) {
+		sema_error(block, inst->src, "expected integer, float, or vector of either integers or floats, found '%s'", sema_type_name(sema, type));
+		return operand_none;
+	}
+	if (kind == TYPE_INT && !is_signed_type(sema, type)) {
+		if (sema->types[type].as.integer.bits == 0)
+			return comptime_operand(type, value_int_u64(&sema->values, type, 0));
+		return operand;
+	}
+	if (kind == TYPE_INT)
+		type = type_int(sema, false, sema->types[type].as.integer.bits);
+	if (operand_is_undefined(block, operand))
+		return comptime_operand(type, value_undefined(&sema->values, type));
+	if (operand.kind == OPERAND_COMPTIME) {
+		BigInt result = bigint_abs(sema->arena, &operand_value(block, operand)->as.integer);
+		return comptime_operand(type, value_int(&sema->values, type, &result));
+	}
+	if (!require_runtime(block, inst->src))
+		return operand_none;
+	return runtime_operand(type, emit_tir_un(block, TIR_ABS, type, inst->src, operand.inst));
+}
+
 /* Width-preserving integer permutations; vectors are a separate milestone. */
 static Operand
 analyze_integer_transform(Block *block, const IrInst *inst)
@@ -6099,6 +6137,9 @@ analyze_inst(Block *block, IrInstIndex index, Operand *break_value)
 	case IR_INT_FROM_PTR:
 		result = analyze_int_from_ptr(block, inst);
 		break;
+	case IR_ABS:
+		result = analyze_abs(block, inst);
+		break;
 	case IR_BIT_REVERSE:
 	case IR_BYTE_SWAP:
 		result = analyze_integer_transform(block, inst);
@@ -6655,6 +6696,7 @@ dump_tir_inst(FILE *out, Sema *sema, const TirFunc *tir, TirRef ref, uint32_t de
 	case TIR_BIT_CAST:
 	case TIR_INT_CAST:
 	case TIR_TRUNCATE:
+	case TIR_ABS:
 	case TIR_BIT_REVERSE:
 	case TIR_BYTE_SWAP:
 	case TIR_CLZ:

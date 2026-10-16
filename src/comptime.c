@@ -1053,3 +1053,9 @@ bigint_transform(Arena *arena, const BigInt *value, bool is_signed, uint32_t bit
 	}
 	return bigint_wrap(arena, &result, is_signed, bits);
 }
+
+BigInt
+bigint_abs(Arena *arena, const BigInt *a)
+{
+	return bigint_from_limbs(arena, a->limbs, a->limb_count);
+}

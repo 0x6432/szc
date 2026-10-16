@@ -19,6 +19,17 @@ Read this first when resuming work (the sandbox resets often).
 
 ## Latest follow-up checkpoint
 
+- User requested stopping after the current scalar @memset work is complete.
+  Finish its validation, documentation and push; do not start another milestone.
+- M9.4e integer abs is integrated: exact unsigned magnitudes including signed
+  minima, arbitrary-width constants and branch-free native lowering. Actual Zig:
+  169 cases/36 exact diagnostics and all-width native fixture pass. Frozen GCC/
+  Clang Werror ASan/UBSan: 1620 units/1090 goldens, 114+4 native, 16 driver,
+  full C/ABI/storage/alignment, 60 volatile, 280 safety; optimized GCC native/
+  safety and both 20000 mutations/stage pass (256/256/76/132). Four 60s fuzz
+  counts: 1950971/51661/54825/58575. Main forced tests pass. Hosted CI pending.
+
+
 - M9.4d bitReverse/byteSwap are integrated: exact typed finite-bit permutations,
   signed canonicalization, byte-width diagnostics and portable QBE loops. Actual
   Zig: 296 cases/92 exact diagnostics, native all-width/byte-pattern/evaluation

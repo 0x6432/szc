@@ -1,0 +1,114 @@
+%80 = struct_decl (flags=0) {
+  decl fn "magnitude" value {
+    %9 = func "magnitude" {
+      %2 = param "n" type {
+        %0 = int_type i33
+        %1 = break_inline result, %0
+      }
+      ret type {
+        %3 = int_type u33
+        %4 = break_inline result, %3
+      }
+      body insts {
+        %5 = ret_type
+        %6 = abs %2
+        %7 = as_return %5, %6
+        %8 = ret %7
+      }
+    }
+    %10 = break_inline result, %9
+  }
+  decl fn "identity" value {
+    %20 = func "identity" {
+      %13 = param "n" type {
+        %11 = int_type u5
+        %12 = break_inline result, %11
+      }
+      ret type {
+        %14 = int_type u5
+        %15 = break_inline result, %14
+      }
+      body insts {
+        %16 = ret_type
+        %17 = abs %13
+        %18 = as_return %16, %17
+        %19 = ret %18
+      }
+    }
+    %21 = break_inline result, %20
+  }
+  decl fn "main" pub value {
+    %78 = func "main" {
+      ret type {
+        %22 = break_inline result, @type_u8
+      }
+      body insts {
+        %23 = int_type i257
+        %24 = int_big 0x10000000000000000000000000000000000000000000000000000000000000000
+        %25 = negate %24
+        %26 = as %23, %25
+        %27 = abs %26
+        %28 = int_big 0x10000000000000000000000000000000000000000000000000000000000000000
+        %29 = cmp_eq %27, %28
+        %36 = if %29 then {
+          %30 = int 0
+          %31 = as @type_u8, %30
+          %32 = break_inline result, %31
+        } else {
+          %33 = int 256
+          %34 = as @type_u8, %33
+          %35 = break_inline result, %34
+        }
+        %37 = int 12345678901234567890
+        %38 = negate %37
+        %39 = abs %38
+        %40 = int 12345678901234567890
+        %41 = cmp_eq %39, %40
+        %48 = if %41 then {
+          %42 = int 0
+          %43 = as @type_u8, %42
+          %44 = break_inline result, %43
+        } else {
+          %45 = int 256
+          %46 = as @type_u8, %45
+          %47 = break_inline result, %46
+        }
+        %49 = decl_val "magnitude"
+        %50 = call %49 arg0 {
+          %51 = arg_type %50, 0
+          %52 = int 4294967296
+          %53 = negate %52
+          %54 = as %51, %53
+          %55 = break_inline result, %54
+        }
+        %56 = int 4294967296
+        %57 = cmp_neq %50, %56
+        %67 = bool_or %57 rhs {
+          %58 = decl_val "identity"
+          %59 = call %58 arg0 {
+            %60 = arg_type %59, 0
+            %61 = int 31
+            %62 = as %60, %61
+            %63 = break_inline result, %62
+          }
+          %64 = int 31
+          %65 = cmp_neq %59, %64
+          %66 = break_inline result, %65
+        }
+        %73 = if %67 then {
+          %68 = ret_type
+          %69 = int 1
+          %70 = as_return %68, %69
+          %71 = ret %70
+        } else {
+          %72 = break_inline result, @void_value
+        }
+        %74 = ret_type
+        %75 = int 0
+        %76 = as_return %74, %75
+        %77 = ret %76
+      }
+    }
+    %79 = break_inline result, %78
+  }
+}

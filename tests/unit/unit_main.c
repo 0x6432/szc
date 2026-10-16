@@ -226,6 +226,8 @@ test_bigint_random(void)
 		mismatches += bigint_to_i128(&r) != (Int128)x + y;
 		r = bigint_sub(&arena, &a, &b);
 		mismatches += bigint_to_i128(&r) != (Int128)x - y;
+		r = bigint_abs(&arena, &a);
+		mismatches += bigint_to_i128(&r) != (x < 0 ? -(Int128)x : (Int128)x);
 		r = bigint_mul(&arena, &a, &b);
 		mismatches += bigint_to_i128(&r) != (Int128)x * y;
 		BigInt q;

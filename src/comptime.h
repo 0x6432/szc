@@ -171,6 +171,7 @@ BigInt bigint_add(Arena *arena, const BigInt *a, const BigInt *b);
 BigInt bigint_sub(Arena *arena, const BigInt *a, const BigInt *b);
 BigInt bigint_mul(Arena *arena, const BigInt *a, const BigInt *b);
 BigInt bigint_negate(Arena *arena, const BigInt *a);
+BigInt bigint_abs(Arena *arena, const BigInt *a);
 int    bigint_compare(const BigInt *a, const BigInt *b);
 bool   bigint_is_zero(const BigInt *a);
 /* True if the value fits in an integer with `bits` bits and the given signedness. */

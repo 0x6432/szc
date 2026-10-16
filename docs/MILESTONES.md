@@ -169,6 +169,7 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
   - [x] **M9.4b `@bitSizeOf` for supported bit representations.**
   - [x] **M9.4c Integer bit counts**: `@clz`, `@ctz`, `@popCount`, native runtime and arbitrary-width constants.
   - [x] **M9.4d Integer permutations**: `@bitReverse`, `@byteSwap`, signed bit patterns and exact logical widths.
+  - [x] **M9.4e Integer absolute values**: unsigned magnitudes, including signed minima.
 - [ ] **M9.5 Inline asm for x86_64-linux std usage.**
 
 ## Phase 10: std tests and bootstrap
@@ -183,6 +184,26 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
 ## Completed milestone log
 
 (newest first; each entry: what, limitations, interactions)
+
+### M9.4e Integer absolute values
+
+- **What**: scalar integer `@abs` returns an unsigned magnitude of the same
+  width, including signed minima without overflow. Arbitrary-width constants
+  use `bigint_abs` in comptime.c; native-width runtime lowering uses a sign mask,
+  xor and modular subtraction. Unsigned operands are identity operations;
+  zero-width results are canonical zero while argument side effects remain.
+- **Validation**: actual Zig matches 169 cases/36 exact primary diagnostics and
+  the all-width native fixture. Frozen GCC/Clang Werror ASan/UBSan pass 1620 units,
+  1090 goldens, 114+4 native, 16 driver, full C/ABI/storage/alignment, 60 volatile
+  and 280 safety cases. Optimized GCC native/safety and both 20000 mutations/stage
+  pass (256/256/76/132 seeds). Four fresh 60s fuzz counts:
+  1950971/51661/54825/58575. Main forced unit/golden tests pass.
+- **Interactions/limits**: comptime_int remains comptime_int; typed signed
+  integers become exactly same-width unsigned integers. Finite floating absolute
+  values and vectors remain explicit unsupported work; runtime integers wider
+  than 64 bits remain a backend limitation.
+- **Evidence**: /data/abs-{reference,native,main-tests}.log and
+  /data/abs-final-{gcc,clang,fuzz}.log.
 
 ### M9.4d Bit reversal and byte swapping
 

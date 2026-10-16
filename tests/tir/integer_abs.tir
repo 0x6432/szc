@@ -1,0 +1,37 @@
+fn szc.main.1: fn () u8 {
+  %0: i33 = const -4294967296
+  %1: u33 = call szc.magnitude.2(%0)
+  %2: u33 = const 4294967296
+  %3: bool = cmp_neq %1, %2
+  %4: bool = block {
+    %12: noreturn = condbr %3 then {
+      %10: bool = const true
+      %11: noreturn = br %4, %10
+    } else {
+      %5: u5 = const 31
+      %6: u5 = call szc.identity.3(%5)
+      %7: u5 = const 31
+      %8: bool = cmp_neq %6, %7
+      %9: noreturn = br %4, %8
+    }
+  }
+  %13: void = block {
+    %17: noreturn = condbr %4 then {
+      %14: u8 = const 1
+      %15: noreturn = ret %14
+    } else {
+      %16: noreturn = br %13
+    }
+  }
+  %18: u8 = const 0
+  %19: noreturn = ret %18
+}
+fn szc.magnitude.2: fn (i33) u33 {
+  %0: i33 = arg 0
+  %1: u33 = abs %0
+  %2: noreturn = ret %1
+}
+fn szc.identity.3: fn (u5) u5 {
+  %0: u5 = arg 0
+  %1: noreturn = ret %0
+}

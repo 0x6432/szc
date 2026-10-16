@@ -1166,6 +1166,7 @@ static const BuiltinInfo builtin_table[] = {
 	{"sizeOf", BUILTIN_LAYOUT, 1, IR_SIZE_OF},
 	{"bitSizeOf", BUILTIN_LAYOUT, 1, IR_BIT_SIZE_OF},
 	{"alignOf", BUILTIN_LAYOUT, 1, IR_ALIGN_OF},
+	{"abs", BUILTIN_INT_BITS, 1, IR_ABS},
 	{"bitReverse", BUILTIN_INT_BITS, 1, IR_BIT_REVERSE},
 	{"byteSwap", BUILTIN_INT_BITS, 1, IR_BYTE_SWAP},
 	{"clz", BUILTIN_INT_BITS, 1, IR_CLZ},

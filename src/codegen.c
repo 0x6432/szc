@@ -769,6 +769,20 @@ emit_inst(Codegen *cg, TirRef ref)
 		emit_binary(cg, ref, QBE_W, op, inst->data.bin.lhs, inst->data.bin.rhs);
 		return;
 	}
+	case TIR_ABS: {
+		TirRef operand = inst->data.un.operand;
+		fprintf(out, "\t%%ab%u_sign =%c sar ", ref, class_char(cls));
+		print_operand(cg, operand);
+		fprintf(out, ", %u\n", cls == QBE_W ? 31u : 63u);
+		print_dest(cg, ref, cls);
+		fputs("xor ", out);
+		print_operand(cg, operand);
+		fprintf(out, ", %%ab%u_sign\n", ref);
+		print_dest(cg, ref, cls);
+		fprintf(out, "sub %%t%u, %%ab%u_sign\n", ref, ref);
+		normalize(cg, ref, inst->type, cls);
+		return;
+	}
 	case TIR_BIT_REVERSE:
 	case TIR_BYTE_SWAP: {
 		TirRef operand = inst->data.un.operand;
