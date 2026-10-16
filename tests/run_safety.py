@@ -85,6 +85,22 @@ def cases():
             f'fn f(s: {source_type}) void {{ const p: {destination} = @alignCast(@ptrCast(s)); _ = p; }} '
             f'pub fn main() void {{ const p: {many_type} = @ptrFromInt({address}); f(p[0..1]); }}\n'), message
 
+    for label, source_type, destination, count, address, message in (
+        ('zero_bit_null', '[]allowzero u0', '[]u8', 3, 0, 'cast causes pointer to be null'),
+        ('zero_bit_alignment', '[]u0', '[]u16', 3, 17, 'incorrect alignment'),
+        ('remainder', '[]u8', '[]u16', 3, 16, 'slice length does not divide exactly into destination elements'),
+        ('odd_source', '[][3]u8', '[]u16', 1, 16, 'slice length does not divide exactly into destination elements'),
+        ('odd_destination', '[]u16', '[][3]u8', 1, 16, 'slice length does not divide exactly into destination elements'),
+        ('null_first', '[]allowzero u8', '[]u16', 3, 0, 'cast causes pointer to be null'),
+        ('alignment_first', '[]u8', '[]u16', 3, 17, 'incorrect alignment'),
+    ):
+        many_type = source_type.replace('[]', '[*]', 1)
+        source = (
+            f'fn f(s: {source_type}) void {{ const p: {destination} = @alignCast(@ptrCast(s)); _ = p; }} '
+            f'pub fn main() void {{ const p: {many_type} = @ptrFromInt({address}); f(p[0..{count}]); }}\n')
+        reference_message = 'does not divide exactly into destination elements' if 'slice length' in message else message
+        yield 'resized_slice_cast_' + label, source, message, reference_message
+
     for label, ty, address, message in (
         ('null', '*u8', 0, 'cast causes pointer to be null'),
         ('aligned_null', '*u32', 0, 'cast causes pointer to be null'),

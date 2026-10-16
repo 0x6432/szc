@@ -127,6 +127,7 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
   - [x] **M5.5j Symbolic pointer views**: preserve root/offset relocation identity; runtime mutable views and function/data round trips.
   - [x] **M5.5k Fixed-extent slice destination casts**: infer logical array/scalar extent using ABI strides, with exact divisibility.
   - [x] **M5.5l Equal-stride slice casts**: preserve counts and exempt empty runtime slices from address checks.
+  - [x] **M5.5m Resizing slice casts**: ABI-stride length conversion with ordered runtime divisibility checks.
 
 ## Phase 6: Aggregates and errors
 
@@ -178,6 +179,37 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
 ## Completed milestone log
 
 (newest first; each entry: what, limitations, interactions)
+
+### M5.5m Resizing slice casts
+
+- **What**: different-stride slice destinations compute element counts from ABI
+  byte extents. Known lengths fold with exact-divisibility diagnostics; runtime
+  lengths use integer-ratio multiply/divide fast paths or multiply then exact
+  division. Runtime usize multiplication is unchecked/wrapping like reference
+  AIR.mul; a large-count regression verifies this instead of adding an overflow
+  panic not present in Zig. Unknown layouts/overflowing constant extents remain NYI.
+- **Safety**: pointer null/alignment checks precede a remainder guard, which remains
+  even for a discarded result. Empty-source address exemptions use the original
+  source count, not the resized count: two zero-bit regressions prove nonempty
+  inputs cannot bypass checks merely because their result length is zero.
+  TIR_SLICE_CAST_LEN_CHECK lowers to unsigned remainder and a dedicated panic.
+- **Validation**: frozen GCC/Clang Werror ASan/UBSan suites pass 1543 units/1055
+  goldens, 109+4 native, 16 driver checks, full C/ABI/storage/alignment, 60 volatile
+  sequences and the initial 278 safety cases. Both sanitized compilers and GCC
+  optimized were then run through the full expanded 280-case safety suite: all
+  pass. Optimized GCC native and both 20000-mutation/stage replays pass
+  (256/256/71/127 seeds). Four 60s fuzzers: 1189927/29179/36070/83723 inputs.
+  Actual Zig: 183 comparisons/41 exact diagnostics, updated native fixture
+  including huge-count wrapping, and all seven new safety cases pass. Integrated
+  main forced tests pass; no full actual-Zig rerun is claimed for this milestone.
+- **Interactions/limits**: remove the now-obsolete runtime-slice NYI fixture and
+  replace it with a constant-remainder error. The equal-stride TIR golden loses
+  only redundant empty predicates when no address guard is needed. Borrowed data
+  provenance and conservative known immutable/comptime physical-load NYIs remain.
+- **Evidence**: /data/resized-slice-final-v4-{gcc,clang,fuzz}.log,
+  /data/resized-slice-all280-{gcc,clang,optimized}.log,
+  /data/resized-slice-{reference,native,new-safety}-v4.log,
+  /data/resized-slice-zero-bit-reference.log and resized-slice-main-tests-v4.log.
 
 ### M5.5l Equal-stride slice casts
 

@@ -1,3 +1,0 @@
-tests/tir/errors/slice_cast_runtime_source_nyi.zig:1:28: error: not supported by szc yet: slice @ptrCast with changed element stride
-fn f(p:[]u8) []u16 {return @alignCast(@ptrCast(p));} pub fn main() void {_=f(undefined);}
-                           ^

@@ -36,6 +36,7 @@ typedef enum PanicKind {
 	PANIC_SENTINEL,
 	PANIC_NULL_CAST,
 	PANIC_ALIGNMENT,
+	PANIC_SLICE_CAST_LEN,
 	PANIC_COUNT,
 } PanicKind;
 
@@ -299,6 +300,7 @@ static const char *const panic_messages[PANIC_COUNT] = {
 	"sentinel mismatch",
 	"cast causes pointer to be null",
 	"incorrect alignment",
+	"slice length does not divide exactly into destination elements",
 };
 
 /* Bounds as canonical 64-bit bit patterns; wider types have already errored. */
@@ -798,6 +800,14 @@ emit_inst(Codegen *cg, TirRef ref)
 		emit_guard(cg, ref, "alignment", PANIC_ALIGNMENT);
 		return;
 	}
+	case TIR_SLICE_CAST_LEN_CHECK:
+		fprintf(out, "\t%%g%u_slice_remainder =l urem ", (unsigned)ref);
+		print_operand(cg, inst->data.bin.lhs);
+		fputs(", ", out);
+		print_operand(cg, inst->data.bin.rhs);
+		fprintf(out, "\n\t%%g%u_slice_length =w cnel %%g%u_slice_remainder, 0\n", (unsigned)ref, (unsigned)ref);
+		emit_guard(cg, ref, "slice_length", PANIC_SLICE_CAST_LEN);
+		return;
 	case TIR_SLICE_NULL_CHECK:
 		fprintf(out, "\t%%g%u_is_null =w ceql ", (unsigned)ref);
 		print_operand(cg, inst->data.bin.lhs);

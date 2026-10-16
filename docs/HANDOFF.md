@@ -19,6 +19,22 @@ Read this first when resuming work (the sandbox resets often).
 
 ## Latest follow-up checkpoint
 
+- M5.5m resizing slice casts are integrated. ABI-stride count conversion preserves
+  borrowed backing, with null/alignment before exact-divisibility checks and
+  reference-style wrapping runtime usize multiplication. Empty exemptions use
+  the original source count, including zero-bit elements. Frozen GCC/Clang:
+  1543 units/1055 goldens, 109+4 native, 16 driver, full C/ABI/storage/alignment,
+  60 volatile, initial 278 safety; subsequently full 280 safety passes on both
+  sanitized compilers and optimized GCC. Optimized native and both 20000/stage
+  replays pass (256/256/71/127 seeds). Actual Zig: 183 cases/41 exact diagnostics,
+  updated native fixture and seven new safety cases pass. Four 60s fuzz counts:
+  1189927/29179/36070/83723. Main forced tests pass. Next scoped work: exact
+  pointer round-trip restoration without physical comptime byte reinterpretation.
+- Hosted j parser differential uncovered a real grammar mismatch: duplicate
+  const pointer qualifiers are accepted by std.zig.Parse but szc rejected them.
+  Reproducer downloaded to /data/ci-j-parser-mutant.zig; fix is next, not a rerun
+  to hide the failure. Hosted newer milestone runs remain pending, not green.
+
 - M5.5l equal-stride slice casts are integrated. Runtime empty slices exempt
   null/alignment checks; nonempty slices retain ordered guards. Known constant
   alignment still checks empty slices, with M5.5i.1 numeric-null behavior.

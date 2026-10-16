@@ -2231,76 +2231,109 @@ analyze_ptr_from_int(Block *block, const IrInst *inst)
 	return runtime_operand(type, emit_tir_un(block, TIR_PTR_FROM_INT, type, inst->src, operand.inst));
 }
 
-/* A single pointer supplies one element, or an array's logical extent without
- * its sentinel. Runtime slice resizing is deliberately a separate operation. */
-static Operand
-ptr_cast_slice_length(Block *block, Operand operand, TypeId destination, uint32_t src)
+/* Length inference is separate from runtime evaluation so address guards execute
+ * before a dynamic divisibility check, just as in the reference compiler. */
+typedef struct SliceCastLength {
+	Operand value;
+	uint64_t multiplier;
+	uint64_t divisor;
+} SliceCastLength;
+
+static bool
+ptr_cast_slice_length(Block *block, Operand operand, TypeId destination, uint32_t src, SliceCastLength *result)
 {
 	Sema *sema = block->sema;
 	TypePointer from = sema->types[operand.type].as.pointer;
 	TypeId child = from.child;
-	uint64_t count = 1;
 	if (from.size == POINTER_MANY || from.size == POINTER_C) {
 		sema_error(block, src, "cannot infer length of slice from %s",
 			from.size == POINTER_MANY ? "many pointer" : "C pointer");
-		return operand_none;
+		return false;
 	}
-	if (from.size == POINTER_SLICE) {
-		TypeId target = sema->types[destination].as.pointer.child;
-		if (child != target) {
-			uint64_t source_size, target_size;
-			if (!sema_type_size(sema, child, &source_size) || !sema_type_size(sema, target, &target_size)) {
-				sema_error(block, src, "not supported by szc yet: slice cast of type with unknown storage size");
-				return operand_none;
-			}
-			if (target_size == 0) {
-				sema_error(block, src, "cannot infer length of slice of zero-bit '%s' from '%s'",
-					sema_type_name(sema, target), sema_type_name(sema, operand.type));
-				return operand_none;
-			}
-			if (source_size != target_size) {
-				sema_error(block, src, "not supported by szc yet: slice @ptrCast with changed element stride");
-				return operand_none;
-			}
-		}
-		return slice_field(block, operand, true, src);
-	}
-	if (sema->types[child].kind == TYPE_ARRAY) {
+	uint64_t count = 1;
+	if (from.size == POINTER_ONE && sema->types[child].kind == TYPE_ARRAY) {
 		count = sema->types[child].as.array.length;
 		child = sema->types[child].as.array.child;
 	}
+	Operand length = operand_none;
+	if (from.size == POINTER_SLICE) {
+		length = slice_field(block, operand, true, src);
+		if (length.kind == OPERAND_NONE)
+			return false;
+	}
+	result->value = length;
 	TypeId target = sema->types[destination].as.pointer.child;
-	if (child != target) {
-		uint64_t source_size, target_size;
-		if (!sema_type_size(sema, child, &source_size) || !sema_type_size(sema, target, &target_size)) {
-			sema_error(block, src, "not supported by szc yet: slice cast of type with unknown storage size");
-			return operand_none;
-		}
-		if (target_size == 0) {
-			sema_error(block, src, "cannot infer length of slice of zero-bit '%s' from '%s'",
-				sema_type_name(sema, target), sema_type_name(sema, operand.type));
-			return operand_none;
+	if (child == target) {
+		if (from.size != POINTER_SLICE)
+			result->value = comptime_operand(T_USIZE, value_int_u64(&sema->values, T_USIZE, count));
+		return true;
+	}
+	uint64_t source_size, target_size;
+	if (!sema_type_size(sema, child, &source_size) || !sema_type_size(sema, target, &target_size)) {
+		sema_error(block, src, "not supported by szc yet: slice cast of type with unknown storage size");
+		return false;
+	}
+	if (target_size == 0) {
+		sema_error(block, src, "cannot infer length of slice of zero-bit '%s' from '%s'",
+			sema_type_name(sema, target), sema_type_name(sema, operand.type));
+		return false;
+	}
+	if (from.size != POINTER_SLICE || length.kind == OPERAND_COMPTIME) {
+		if (from.size == POINTER_SLICE) {
+			if (operand_is_undefined(block, length))
+				return true;
+			count = bigint_to_u64_bits(&operand_value(block, length)->as.integer);
 		}
 		if (source_size != 0 && count > UINT64_MAX / source_size) {
 			sema_error(block, src, "not supported by szc yet: slice cast byte extent exceeds usize");
-			return operand_none;
+			return false;
 		}
 		uint64_t bytes = count * source_size;
 		if (bytes % target_size != 0) {
-			sema_error(block, src, "type '%s' does not divide exactly into destination elements",
-				sema_type_name(sema, from.child));
-			return operand_none;
+			if (from.size == POINTER_SLICE)
+				sema_error(block, src, "slice length '%" PRIu64 "' does not divide exactly into destination elements", count);
+			else
+				sema_error(block, src, "type '%s' does not divide exactly into destination elements",
+					sema_type_name(sema, from.child));
+			return false;
 		}
-		count = bytes / target_size;
+		result->value = comptime_operand(T_USIZE, value_int_u64(&sema->values, T_USIZE, bytes / target_size));
+		return true;
 	}
-	return comptime_operand(T_USIZE, value_int_u64(&sema->values, T_USIZE, count));
+	/* Prefer the reference's integer-ratio fast paths. Its runtime multiply is
+	 * unchecked usize arithmetic; do not introduce an unrelated overflow panic. */
+	if (source_size % target_size == 0)
+		result->multiplier = source_size / target_size;
+	else if (source_size != 0 && target_size % source_size == 0)
+		result->divisor = target_size / source_size;
+	else {
+		result->multiplier = source_size;
+		result->divisor = target_size;
+	}
+	return true;
 }
 
 /* A slice owns only its descriptor; its data pointer retains the original backing. */
 static Operand
-finish_ptr_cast(Block *block, Operand pointer, TypeId type, Operand length, uint32_t src)
+finish_ptr_cast(Block *block, Operand pointer, TypeId type, SliceCastLength length, uint32_t src)
 {
-	return length.kind == OPERAND_NONE ? pointer : make_slice(block, type, pointer, length, src);
+	if (length.value.kind == OPERAND_NONE)
+		return pointer;
+	Sema *sema = block->sema;
+	Operand count = length.value;
+	if (length.multiplier != 1) {
+		Operand factor = comptime_operand(T_USIZE, value_int_u64(&sema->values, T_USIZE, length.multiplier));
+		count = runtime_operand(T_USIZE, emit_tir_bin(block, TIR_MUL_WRAP, T_USIZE, src,
+			materialize(block, count, src), materialize(block, factor, src)));
+	}
+	if (length.divisor != 1) {
+		Operand divisor = comptime_operand(T_USIZE, value_int_u64(&sema->values, T_USIZE, length.divisor));
+		TirRef lhs = materialize(block, count, src);
+		TirRef rhs = materialize(block, divisor, src);
+		emit_tir_bin(block, TIR_SLICE_CAST_LEN_CHECK, T_VOID, src, lhs, rhs);
+		count = runtime_operand(T_USIZE, emit_tir_bin(block, TIR_DIV_TRUNC, T_USIZE, src, lhs, rhs));
+	}
+	return make_slice(block, type, pointer, count, src);
 }
 
 /* Casts change address interpretation, not the contents of known backing. */
@@ -2323,11 +2356,10 @@ analyze_ptr_cast(Block *block, const IrInst *inst)
 	}
 	TypePointer from = sema->types[operand.type].as.pointer;
 	TypePointer to = sema->types[type].as.pointer;
-	Operand length = operand_none;
+	SliceCastLength length = {operand_none, 1, 1};
 	TypeId pointer_type = type;
 	if (to.size == POINTER_SLICE) {
-		length = ptr_cast_slice_length(block, operand, type, inst->src);
-		if (length.kind == OPERAND_NONE)
+		if (!ptr_cast_slice_length(block, operand, type, inst->src, &length))
 			return operand_none;
 		pointer_type = slice_pointer_type(sema, type);
 		to = sema->types[pointer_type].as.pointer;
@@ -2353,7 +2385,7 @@ analyze_ptr_cast(Block *block, const IrInst *inst)
 	}
 	/* Only runtime slice-to-slice casts exempt an empty source from address
 	 * checks. Constant casts and thin results still validate their data address. */
-	bool slice_to_slice = from.size == POINTER_SLICE && length.kind != OPERAND_NONE;
+	bool slice_to_slice = from.size == POINTER_SLICE && length.value.kind != OPERAND_NONE;
 	bool source_slice = from.size == POINTER_SLICE;
 	if (source_slice) {
 		operand = slice_field(block, operand, false, inst->src);
@@ -2391,7 +2423,7 @@ analyze_ptr_cast(Block *block, const IrInst *inst)
 		if (slice_to_slice) {
 			Operand zero = comptime_operand(T_USIZE, value_int_u64(&sema->values, T_USIZE, 0));
 			empty = runtime_operand(T_BOOL, emit_tir_bin(block, TIR_CMP_EQ, T_BOOL, inst->src,
-				materialize(block, length, inst->src), materialize(block, zero, inst->src)));
+				materialize(block, length.value, inst->src), materialize(block, zero, inst->src)));
 		}
 	}
 	TirRef pointer = materialize(block, operand, inst->src);
