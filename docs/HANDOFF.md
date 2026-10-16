@@ -19,6 +19,18 @@ Read this first when resuming work (the sandbox resets often).
 
 ## Latest follow-up checkpoint
 
+- M5.5k fixed-extent slice destinations are integrated. ABI-stride/divisibility
+  inference borrows single-pointer scalar/array backing, excluding sentinels;
+  empty arrays still check null/alignment. Runtime slice-source destinations
+  remain NYI here. Corrected final GCC/Clang suites pass 1484 units/1053 goldens,
+  107+4 native, 16 driver, full C/ABI/storage/alignment, 60 volatile, 269 safety;
+  optimized GCC native/safety and both 20000-mutation/stage replays pass
+  (256/256/69/125 seeds). Actual Zig: 304 cases/108 exact diagnostics and native
+  fixture pass. Fresh 60s fuzzers: 989233/27385/28745/33507. Main forced tests pass.
+  Evidence: /data/slice-destination-final-v2-*.log and fixed-slice-main-tests-v2.log.
+- Hosted M5.5i failed-job rerun (38902004958 attempt 2) completed successfully;
+  the earlier isolated native timeout is not a remaining failed CI job.
+
 - M5.5j symbolic pointer views are integrated: root/physical offset survives
   reinterpretation, qualifiers, relocations and dependency discovery. Runtime
   mutable global views/function-data round trips work; direct known immutable/

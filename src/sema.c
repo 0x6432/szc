@@ -2231,8 +2231,63 @@ analyze_ptr_from_int(Block *block, const IrInst *inst)
 	return runtime_operand(type, emit_tir_un(block, TIR_PTR_FROM_INT, type, inst->src, operand.inst));
 }
 
-/* Thin casts change address interpretation, not the contents of known backing.
- * Slice length inference and physical comptime memory views are separate work. */
+/* A single pointer supplies one element, or an array's logical extent without
+ * its sentinel. Runtime slice resizing is deliberately a separate operation. */
+static Operand
+ptr_cast_slice_length(Block *block, Operand operand, TypeId destination, uint32_t src)
+{
+	Sema *sema = block->sema;
+	TypePointer from = sema->types[operand.type].as.pointer;
+	TypeId child = from.child;
+	uint64_t count = 1;
+	if (from.size == POINTER_MANY || from.size == POINTER_C) {
+		sema_error(block, src, "cannot infer length of slice from %s",
+			from.size == POINTER_MANY ? "many pointer" : "C pointer");
+		return operand_none;
+	}
+	if (from.size == POINTER_SLICE) {
+		sema_error(block, src, "not supported by szc yet: slice-source to slice-destination @ptrCast");
+		return operand_none;
+	}
+	if (sema->types[child].kind == TYPE_ARRAY) {
+		count = sema->types[child].as.array.length;
+		child = sema->types[child].as.array.child;
+	}
+	TypeId target = sema->types[destination].as.pointer.child;
+	if (child != target) {
+		uint64_t source_size, target_size;
+		if (!sema_type_size(sema, child, &source_size) || !sema_type_size(sema, target, &target_size)) {
+			sema_error(block, src, "not supported by szc yet: slice cast of type with unknown storage size");
+			return operand_none;
+		}
+		if (target_size == 0) {
+			sema_error(block, src, "cannot infer length of slice of zero-bit '%s' from '%s'",
+				sema_type_name(sema, target), sema_type_name(sema, operand.type));
+			return operand_none;
+		}
+		if (source_size != 0 && count > UINT64_MAX / source_size) {
+			sema_error(block, src, "not supported by szc yet: slice cast byte extent exceeds usize");
+			return operand_none;
+		}
+		uint64_t bytes = count * source_size;
+		if (bytes % target_size != 0) {
+			sema_error(block, src, "type '%s' does not divide exactly into destination elements",
+				sema_type_name(sema, from.child));
+			return operand_none;
+		}
+		count = bytes / target_size;
+	}
+	return comptime_operand(T_USIZE, value_int_u64(&sema->values, T_USIZE, count));
+}
+
+/* A slice owns only its descriptor; its data pointer retains the original backing. */
+static Operand
+finish_ptr_cast(Block *block, Operand pointer, TypeId type, Operand length, uint32_t src)
+{
+	return length.kind == OPERAND_NONE ? pointer : make_slice(block, type, pointer, length, src);
+}
+
+/* Casts change address interpretation, not the contents of known backing. */
 static Operand
 analyze_ptr_cast(Block *block, const IrInst *inst)
 {
@@ -2252,9 +2307,14 @@ analyze_ptr_cast(Block *block, const IrInst *inst)
 	}
 	TypePointer from = sema->types[operand.type].as.pointer;
 	TypePointer to = sema->types[type].as.pointer;
+	Operand length = operand_none;
+	TypeId pointer_type = type;
 	if (to.size == POINTER_SLICE) {
-		sema_error(block, inst->src, "not supported by szc yet: slice destination @ptrCast");
-		return operand_none;
+		length = ptr_cast_slice_length(block, operand, type, inst->src);
+		if (length.kind == OPERAND_NONE)
+			return operand_none;
+		pointer_type = slice_pointer_type(sema, type);
+		to = sema->types[pointer_type].as.pointer;
 	}
 	uint32_t source_alignment = pointer_alignment(sema, from);
 	uint32_t target_alignment = pointer_alignment(sema, to);
@@ -2296,11 +2356,15 @@ analyze_ptr_cast(Block *block, const IrInst *inst)
 					address, (unsigned)target_alignment);
 				return operand_none;
 			}
-			return comptime_operand(type, value_int_pointer(&sema->values, type, address));
+			Operand result = comptime_operand(pointer_type, value_int_pointer(&sema->values, pointer_type, address));
+			return finish_ptr_cast(block, result, type, length, inst->src);
 		}
+		Operand result;
 		if (from.child != to.child || from.size != to.size)
-			return comptime_operand(type, value_pointer_reinterpret(&sema->values, type, operand.value));
-		return retag_pointer(block, operand, type, inst->src);
+			result = comptime_operand(pointer_type, value_pointer_reinterpret(&sema->values, pointer_type, operand.value));
+		else
+			result = retag_pointer(block, operand, pointer_type, inst->src);
+		return finish_ptr_cast(block, result, type, length, inst->src);
 	}
 	if (!require_runtime(block, inst->src))
 		return operand_none;
@@ -2309,9 +2373,10 @@ analyze_ptr_cast(Block *block, const IrInst *inst)
 		emit_tir_un(block, TIR_NULL_CHECK, T_VOID, inst->src, pointer);
 	if (target_alignment > source_alignment) {
 		Operand empty = comptime_operand(T_BOOL, value_bool(&sema->values, T_BOOL, false));
-		emit_tir_bin(block, TIR_ALIGN_CHECK, type, inst->src, pointer, materialize(block, empty, inst->src));
+		emit_tir_bin(block, TIR_ALIGN_CHECK, pointer_type, inst->src, pointer, materialize(block, empty, inst->src));
 	}
-	return runtime_operand(type, emit_tir_un(block, TIR_PTR_CAST, type, inst->src, pointer));
+	Operand result = runtime_operand(pointer_type, emit_tir_un(block, TIR_PTR_CAST, pointer_type, inst->src, pointer));
+	return finish_ptr_cast(block, result, type, length, inst->src);
 }
 
 /* @alignCast changes only alignment; nested qualifier flags are explicit permissions. */

@@ -48,6 +48,10 @@ def cases():
         yield 'align_cast_'+label, source+'\n', 'incorrect alignment'
 
     for label, source_type, destination, expression, address, message in (
+        ('slice_null', '*allowzero [4]u8', '[]u16', '@alignCast(@ptrCast(p))', 0, 'cast causes pointer to be null'),
+        ('slice_alignment', '*[4]u8', '[]u16', '@alignCast(@ptrCast(p))', 17, 'incorrect alignment'),
+        ('empty_array_null', '*allowzero [0]u8', '[]u8', '@ptrCast(p)', 0, 'cast causes pointer to be null'),
+        ('empty_array_alignment', '*[0]u8', '[]u16', '@alignCast(@ptrCast(p))', 17, 'incorrect alignment'),
         ('null', '*allowzero u8', '*i8', '@ptrCast(p)', 0, 'cast causes pointer to be null'),
         ('null_many', '[*]allowzero u8', '[*:17]i8', '@ptrCast(p)', 0, 'cast causes pointer to be null'),
         ('null_before_alignment', '*allowzero u8', '*u16', '@alignCast(@ptrCast(p))', 0, 'cast causes pointer to be null'),

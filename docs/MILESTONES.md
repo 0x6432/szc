@@ -125,6 +125,7 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
   - [x] **M5.5h Thin runtime/numeric pointer casts**: child/shape/sentinel changes, combined qualifier/alignment permissions and non-null guards.
   - [x] **M5.5i Slice-source thin pointer casts**: borrow the data address, retain original qualifiers/alignment, and check empty sources too.
   - [x] **M5.5j Symbolic pointer views**: preserve root/offset relocation identity; runtime mutable views and function/data round trips.
+  - [x] **M5.5k Fixed-extent slice destination casts**: infer logical array/scalar extent using ABI strides, with exact divisibility.
 
 ## Phase 6: Aggregates and errors
 
@@ -176,6 +177,32 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
 ## Completed milestone log
 
 (newest first; each entry: what, limitations, interactions)
+
+### M5.5k Fixed-extent slice destination casts
+
+- **What**: @ptrCast from a single pointer to a scalar/array can construct a slice
+  descriptor borrowing its original address. Scalar extent is one; array extent
+  excludes its sentinel. Different element types use ABI byte strides and require
+  exact divisibility. Identical zero-bit children retain logical element count;
+  other zero-bit destinations and uninferable many/C lengths report errors.
+- **Safety**: retain original qualifiers/alignment/allowzero and null-before-align
+  ordering. An empty source array does not exempt address checks. Four new panic
+  cases cover null/alignment for both ordinary and zero-length arrays.
+- **Interactions/limits**: descriptor construction is shared with numeric/symbolic
+  pointer handling; it owns only the pair, not the borrowed elements. Runtime
+  slice-source destinations are NYI here. Unknown storage size and overflowing
+  constant byte extents remain scoped NYI rather than wrapped length guesses.
+- **Validation**: final corrected frozen GCC/Clang Werror ASan/UBSan suites pass
+  1484 units/1053 goldens, 107+4 native programs, 16 driver checks, full C/ABI/
+  storage/alignment suites, 60 volatile sequences and 269 safety cases. Optimized
+  GCC native/safety and both 20000-mutation/stage replays pass (256/256/69/125
+  seeds). Four fresh 60s fuzzers: 989233/27385/28745/33507 inputs. Actual Zig:
+  304 fixed-extent comparisons, including 108 exact primary diagnostics, and
+  the new native fixture pass. Original snapshot's full GCC actual-Zig e2e and
+  optimized native/safety also pass; corrected final full suites use targeted
+  reference coverage separately. Integrated main forced tests pass.
+- **Evidence**: /data/slice-destination-final-v2-{gcc,clang,fuzz}.log,
+  /data/slice-destination-{reference,native}.log, /data/fixed-slice-main-tests-v2.log.
 
 ### M5.5j Symbolic pointer views
 

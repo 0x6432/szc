@@ -1116,6 +1116,14 @@ test_thin_pointer_casts(void)
 		uint32_t null_checks;
 		uint32_t align_checks;
 	} cases[] = {
+		{"fn f(p:*[4]u8) []u16 {return @alignCast(@ptrCast(p));} pub fn main() void {_=f(undefined);}", NULL, 0, 1},
+		{"fn f(p:*allowzero [4]u8) []u16 {return @alignCast(@ptrCast(p));} pub fn main() void {_=f(undefined);}", NULL, 1, 1},
+		{"fn f(p:*[3]u8) []u16 {return @alignCast(@ptrCast(p));} pub fn main() void {_=f(undefined);}", "does not divide exactly", 0, 0},
+		{"fn f(p:*u8) []u0 {return @ptrCast(p);} pub fn main() void {_=f(undefined);}", "cannot infer length of slice of zero-bit", 0, 0},
+		{"fn f(p:*[5]u0) []u0 {return @ptrCast(p);} pub fn main() void {_=f(undefined);}", NULL, 0, 0},
+		{"fn f(p:*u0) []u8 {return @ptrCast(p);} pub fn main() void {_=f(undefined);}", NULL, 0, 0},
+		{"fn f(p:*const [2:0]u8) [:0]const u8 {return @ptrCast(p);} pub fn main() void {_=f(undefined);}", NULL, 0, 0},
+		{"fn f(p:[]u8) []i8 {return @ptrCast(p);} pub fn main() void {_=f(undefined);}", "slice-source to slice-destination", 0, 0},
 		{"fn f(p:[]u8) *u16 {return @alignCast(@ptrCast(p));} pub fn main() void {_=f(undefined);}", NULL, 0, 1},
 		{"fn f(p:[]allowzero u8) *i8 {return @ptrCast(p);} pub fn main() void {_=f(undefined);}", NULL, 1, 0},
 		{"fn f(p:[]allowzero u8) *u16 {return @alignCast(@ptrCast(p));} pub fn main() void {_=f(undefined);}", NULL, 1, 1},
@@ -1144,7 +1152,7 @@ test_thin_pointer_casts(void)
 		{"pub fn main() void {const n:u16=258; const q:*const u8=@ptrCast(&n); _=q;}", NULL, 0, 0},
 		{"pub fn main() void {const n:u16=258; const q:*const u16=@ptrCast(&n); _=q;}", NULL, 0, 0},
 		{"fn f(p:[]u8) *u8 {return @ptrCast(p);} pub fn main() void {_=f(undefined);}", NULL, 0, 0},
-		{"fn f(p:[*]u8) []u8 {return @ptrCast(p);} pub fn main() void {_=f(undefined);}", "slice destination @ptrCast", 0, 0},
+		{"fn f(p:[*]u8) []u8 {return @ptrCast(p);} pub fn main() void {_=f(undefined);}", "cannot infer length of slice from many pointer", 0, 0},
 	};
 	for (uint32_t i = 0; i < sizeof(cases) / sizeof(cases[0]); i++) {
 		Arena arena;
