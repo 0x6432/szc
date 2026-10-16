@@ -1,0 +1,80 @@
+function w $szc.main.1() {
+@start
+	%t0 =l alloc4 1
+	storeb 7, %t0
+	%t3 =l copy %t0
+	%t4 =l call $szc.clear_const.2(l %t3)
+	%t5 =w loadub %t4
+	%t7 =w add %t5, 3
+	%t7 =w and %t7, 255
+	%g7_overflow =w cultw %t7, %t5
+	jnz %g7_overflow, @g7_overflow_panic, @g7_overflow_ok
+@g7_overflow_panic
+	call $szc.panic.0()
+	hlt
+@g7_overflow_ok
+	storeb %t7, %t4
+	%t9 =l copy %t0
+	%t10 =l call $szc.clear_volatile.3(l %t9)
+	%t11 =w loadub %t10
+	%t13 =w add %t11, 5
+	%t13 =w and %t13, 255
+	%g13_overflow =w cultw %t13, %t11
+	jnz %g13_overflow, @g13_overflow_panic, @g13_overflow_ok
+@g13_overflow_panic
+	call $szc.panic.0()
+	hlt
+@g13_overflow_ok
+	storeb %t13, %t10
+	%t15 =l copy %t0
+	%t16 =l call $szc.clear_both.4(l %t15)
+	%t17 =w loadub %t16
+	%t19 =w add %t17, 18
+	%t19 =w and %t19, 255
+	%g19_overflow =w cultw %t19, %t17
+	jnz %g19_overflow, @g19_overflow_panic, @g19_overflow_ok
+@g19_overflow_panic
+	call $szc.panic.0()
+	hlt
+@g19_overflow_ok
+	storeb %t19, %t16
+	%t21 =w loadub %t0
+	ret %t21
+}
+
+function l $szc.clear_const.2(l %t0) {
+@start
+	%t1 =l copy %t0
+	%t2 =l copy %t1
+	%t3 =l copy %t2
+	ret %t3
+}
+
+function l $szc.clear_volatile.3(l %t0) {
+@start
+	%t1 =l copy %t0
+	%t2 =l copy %t1
+	%t3 =l copy %t2
+	ret %t3
+}
+
+function l $szc.clear_both.4(l %t0) {
+@start
+	%t1 =l copy %t0
+	%t2 =l copy %t1
+	ret %t2
+}
+
+data $szc.panic.msg.0 = { b "integer overflow\n", b 0 }
+function $szc.panic.0() {
+@start
+	call $write(w 2, l $szc.panic.msg.0, l 17)
+	call $abort()
+	hlt
+}
+
+export function w $main() {
+@start
+	%status =w call $szc.main.1()
+	ret %status
+}

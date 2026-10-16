@@ -17,6 +17,26 @@ Read this first when resuming work (the sandbox resets often).
    Push after every milestone (and more often during long ones).
    The GitHub token is **never** committed. Restore authenticated Git access if needed.
 
+## Latest follow-up checkpoint
+
+- M5.5c contiguous qualifier-cast diagnostics are complete. Frozen GCC/Clang
+  `/data/cast-chain-final` trees match main source/test/config: 793 units/1002
+  goldens; 92 ordinary/generated + three scoped native; 16 driver checks;
+  all C/ABI/storage/alignment suites; 58 volatile sequences; 248 safety cases.
+  GCC full e2e uses actual Zig; Clang separately references the new native case.
+  Expanded qualifier matrix: 326 actual Zig comparisons. Optimized GCC:
+  92 native/248 safety. Four 60s fuzzers: 2168688/54704/68109/74591;
+  both compilers replay 20000 mutations/stage (61 irgen/117 sema corpus files).
+  All final wrappers exit zero. Evidence: /data/cast-chain-final-* and
+  /data/cast-chain-differential.log. No old reference replay is counted fresh.
+- Next implementation is isolated in /data/align-casts-next: contextual alignCast
+  with combined qualifier flags, numeric checks and empty runtime-slice exemption.
+  Initial 22 actual acceptance probes and seven actual native/guard comparisons
+  pass; broader differential validation is running. It is NOT complete or
+  integrated. Reference probes: /data/align-cast-reference-probes.log;
+  runtime: /data/align-cast-runtime.log; broad matrix: /data/align-casts-differential.log.
+  General ptrCast/bitCast and known-memory reinterpretation remain separate work.
+
 ## Latest integrated checkpoint
 
 - The user approved the previously blocked integration by replying `continue`.

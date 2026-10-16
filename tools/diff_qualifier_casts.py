@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Compare outer const/volatile casts, nested invariance and contextual coercions."""
 import argparse
+import itertools
 from pathlib import Path
 import tempfile
 from compiler_process import run_compiler
@@ -28,6 +29,27 @@ def cases():
     ):
         yield 'pub fn main() void { '+body+' }\n'
     yield 'fn seven() u8 { return 7; } pub fn main() void { _ = @constCast(&seven)(); }\n'
+
+    # Repeated flags in a contiguous cast chain are rejected, even in parentheses.
+    # Contextual casts and named temporaries deliberately break that chain.
+    for length in (2, 3, 4):
+        for chain in itertools.product(('constCast', 'volatileCast'), repeat=length):
+            for grouped in (False, True):
+                expression = 'p'
+                for builtin in chain:
+                    expression = f'@{builtin}({expression})'
+                    if grouped:
+                        expression = f'({expression})'
+                yield (f'fn f(p: *const volatile u8) void {{ _ = {expression}; }} '
+                       'pub fn main() void { f(undefined); }\n')
+                yield ('pub fn main() void { const p: *const volatile u8 = undefined; '
+                       f'_ = {expression}; }}\n')
+    for builtin, qualifier in (('constCast', 'const'), ('volatileCast', 'volatile')):
+        yield (f'fn f(p: *{qualifier} u8) void {{ '
+               f'_ = @{builtin}(@as(*{qualifier} u8, @{builtin}(p))); }} '
+               'pub fn main() void { f(undefined); }\n')
+        yield (f'fn f(p: *{qualifier} u8) void {{ const q: *{qualifier} u8 = @{builtin}(p); '
+               f'_ = @{builtin}(q); }} pub fn main() void {{ f(undefined); }}\n')
 
 
 def main():

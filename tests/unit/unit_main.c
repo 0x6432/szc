@@ -843,6 +843,47 @@ test_sentinel_array_types(void)
 }
 
 static void
+test_qualifier_cast_chains(void)
+{
+	const struct {
+		const char *source;
+		const char *error;
+	} cases[] = {
+		{"fn f(p: *const u8) void { _ = @constCast(@constCast(p)); }", "redundant @constCast"},
+		{"fn f(p: *volatile u8) void { _ = @volatileCast(@volatileCast(p)); }", "redundant @volatileCast"},
+		{"fn f(p: *const volatile u8) void { _ = @constCast((@volatileCast(@constCast(p)))); }", "redundant @constCast"},
+		{"fn f(p: *const volatile u8) void { _ = @volatileCast((@constCast(@volatileCast(p)))); }", "redundant @volatileCast"},
+		{"fn f(p: *const volatile u8) void { _ = (@constCast((@volatileCast(p)))); }", NULL},
+		{"fn f(p: *const volatile u8) void { _ = (@volatileCast((@constCast(p)))); }", NULL},
+		{"fn f(p: *const u8) void { _ = @constCast(@as(*const u8, @constCast(p))); }", NULL},
+		{"fn f(p: *const u8) void { const q: *const u8 = @constCast(p); _ = @constCast(q); }", NULL},
+		{"fn f(p: *const u8) void { _ = @constCast(@constCast(p, p)); }", "expected 1 argument, found 2"},
+		{"fn f() void { _ = @volatileCast(@volatileCast()); }", "expected 1 argument, found 0"},
+	};
+	for (size_t i = 0; i < sizeof(cases) / sizeof(cases[0]); i++) {
+		Arena arena;
+		arena_init(&arena);
+		SourceTable sources;
+		source_table_init(&sources, &arena);
+		Diag diag;
+		diag_init(&diag, &arena, &sources);
+		Interner interner;
+		intern_init(&interner, &arena);
+		FileId file = source_add_memory(&sources, "cast_chain.zig", cases[i].source, strlen(cases[i].source));
+		AstContainerDecl *root = parse_file(&arena, &diag, &sources, file);
+		CHECK(!diag_has_errors(&diag));
+		(void)irgen_file(&arena, &diag, &interner, source_get(&sources, file), file, root);
+		if (cases[i].error == NULL)
+			CHECK(!diag_has_errors(&diag));
+		else {
+			CHECK(diag.error_count == 1);
+			CHECK(diag.count != 0 && strstr(diag.items[0].message, cases[i].error) != NULL);
+		}
+		arena_free(&arena);
+	}
+}
+
+static void
 test_binary_diagnostics(void)
 {
 	Arena arena;
@@ -898,6 +939,7 @@ main(void)
 	test_sentinel_assertion_order();
 	test_integer_pointer_values();
 	test_qualifier_cast_types();
+	test_qualifier_cast_chains();
 	test_binary_diagnostics();
 
 	printf("unit: %u checks, %u failed\n", checks, failures);

@@ -1,0 +1,3 @@
+tests/tir/errors/qualifier_cast_redundant_grouped.zig:1:66: error: redundant @constCast
+fn f(p: *const volatile u8) void { _ = @constCast((@volatileCast(@constCast(p)))); }
+                                                                 ^

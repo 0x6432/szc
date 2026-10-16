@@ -751,3 +751,13 @@ backing wrappers, numeric/function/object pointers retain their value kind).
 Runtime thin casts use TIR_PTR_CAST. Slices retag the borrowed element pointer
 and rebuild the same pointer/length pair with owned descriptor semantics; neither
 cast reads pointee memory or recursively alters pointee element types.
+
+
+### Contiguous qualifier-cast chains
+
+Irgen rejects repeated `@constCast` or `@volatileCast` flags in a contiguous
+pointer-cast chain, matching Zig 0.17.0 AstGen. Redundant parentheses remain
+inside the same chain. An intervening `@as` expression or a named intermediate
+value starts a distinct chain and may legitimately restore a qualifier before
+another explicit cast removes it. Distinct qualifier flags remain independent;
+the existing typed pointer casts and owned slice descriptors are unchanged.

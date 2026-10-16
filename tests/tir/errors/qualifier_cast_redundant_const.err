@@ -1,0 +1,3 @@
+tests/tir/errors/qualifier_cast_redundant_const.zig:1:42: error: redundant @constCast
+fn f(p: *const u8) void { _ = @constCast(@constCast(p)); }
+                                         ^

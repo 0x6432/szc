@@ -1,0 +1,3 @@
+tests/tir/errors/qualifier_cast_redundant_volatile.zig:1:48: error: redundant @volatileCast
+fn f(p: *volatile u8) void { _ = @volatileCast(@volatileCast(p)); }
+                                               ^

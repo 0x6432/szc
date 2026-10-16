@@ -169,6 +169,29 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
 
 (newest first; each entry: what, limitations, interactions)
 
+### M5.5c follow-up: contiguous qualifier-cast diagnostics
+
+- Verified Zig 0.17.0 AstGen's pointer-cast-chain rules and reproduced an
+  acceptance mismatch: repeated `@constCast`/`@volatileCast` flags in a contiguous
+  chain must be diagnosed. Parentheses do not break the chain, but `@as` and
+  named intermediate values do. Irgen now rejects repeats at the inner offending
+  builtin without inspecting token spellings in the parser or changing TIR/ABI.
+- Added four negative goldens, ten unit scenarios (including malformed arities),
+  positive ir/tir/QBE/native boundary checks, two fuzz seeds, and 116 reference
+  comparisons for chains/context boundaries (326 total qualifier comparisons).
+- Frozen `/data/cast-chain-final` GCC/Clang Werror ASan/UBSan sources/test/config
+  match main. Both pass 793 units/1002 goldens, 92 ordinary/generated + three
+  scoped native cases, 16 driver checks, all C/storage/ABI/alignment suites,
+  58 volatile sequences and 248 safety cases. GCC full e2e checks actual Zig;
+  Clang separately reference-checks the new native program. Optimized GCC passes
+  92 native/248 safety cases. Four 60s fuzzers execute
+  2168688/54704/68109/74591 inputs; both compilers replay 20000 mutations/stage
+  with 61 irgen/117 sema corpus files. Every final wrapper exits zero.
+- This is a diagnostic correction, not general `@ptrCast`/`@alignCast` support.
+  No new memory interpretation, implicit qualifier permission, or layout rule
+  is introduced. Logs use `/data/cast-chain-final-*`; reference comparison output
+  is `/data/cast-chain-differential.log`.
+
 ### M5.5c Outer pointer-qualifier casts
 - **What**: `@constCast`/`@volatileCast` infer the source pointer shape and remove
   only its outer const/volatile qualifier. Nested pointee qualifiers, pointer

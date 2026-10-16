@@ -1109,6 +1109,35 @@ lookup_builtin(const char *name, uint32_t length)
 	return NULL;
 }
 
+/* Parentheses do not break a pointer-cast chain; ordinary expressions do. */
+static bool
+check_qualifier_cast_chain(IrGen *gen, AstNode *node)
+{
+	bool seen_const = false;
+	bool seen_volatile = false;
+	for (;;) {
+		if (node->kind == AST_GROUPED) {
+			node = AST_CAST(AstWrap, node, AST_GROUPED)->operand;
+			continue;
+		}
+		if (node->kind != AST_BUILTIN_CALL)
+			return true;
+		AstBuiltinCall *call_node = AST_CAST(AstBuiltinCall, node, AST_BUILTIN_CALL);
+		const char *name = gen->source + call_node->name.start + 1;
+		uint32_t length = call_node->name.end - call_node->name.start - 1;
+		const BuiltinInfo *builtin = lookup_builtin(name, length);
+		if (builtin == NULL || builtin->builtin != BUILTIN_QUALIFIER_CAST || call_node->args.count != 1)
+			return true;
+		bool *seen = builtin->arith_op == IR_CONST_CAST ? &seen_const : &seen_volatile;
+		if (*seen) {
+			error_at(gen, node->offset, "redundant @%s", builtin->name);
+			return false;
+		}
+		*seen = true;
+		node = call_node->args.items[0];
+	}
+}
+
 /*
  * The result type a cast builtin converts to, or NONE (after reporting) if the
  * expression has no result type.
@@ -1178,6 +1207,8 @@ builtin_call(GenBody *body, Scope *scope, ResultInfo info, AstNode *node)
 		return rvalue(body, info, emit_bin(body, builtin->arith_op, node->offset, lhs, rhs), node->offset);
 	}
 	case BUILTIN_QUALIFIER_CAST: {
+		if (!check_qualifier_cast_chain(gen, node))
+			return IR_REF_VOID_VALUE;
 		IrRef operand = expr(body, scope, result_none, args[0]);
 		return rvalue(body, info, emit_un(body, builtin->arith_op, node->offset, operand), node->offset);
 	}
