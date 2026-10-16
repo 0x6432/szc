@@ -1102,7 +1102,7 @@ test_thin_pointer_casts(void)
 		{"fn f(p:[]allowzero u8) *u16 {return @alignCast(@ptrCast(p));} pub fn main() void {_=f(undefined);}", NULL, 1, 1},
 		{"fn f(p:[]allowzero u8) *allowzero u16 {return @alignCast(@ptrCast(p));} pub fn main() void {_=f(undefined);}", NULL, 0, 1},
 		{"fn f(p:[]const volatile u8) *u16 {return @constCast(@volatileCast(@alignCast(@ptrCast(p))));} pub fn main() void {_=f(undefined);}", NULL, 0, 1},
-		{"pub fn main() void {const p:[*]allowzero u8=@ptrFromInt(0); const s:[]allowzero u8=p[0..0]; const q:*i8=@ptrCast(s); _=q;}", "null pointer casted to type", 0, 0},
+		{"pub fn main() void {const p:[*]allowzero u8=@ptrFromInt(0); const s:[]allowzero u8=p[0..0]; const q:*i8=@ptrCast(s); _=q;}", NULL, 0, 0},
 		{"pub fn main() void {const p:[*]u8=@ptrFromInt(17); const s:[]u8=p[0..0]; const q:*u16=@alignCast(@ptrCast(s)); _=q;}", "pointer address 0x11 is not aligned to 2 bytes", 0, 0},
 		{"pub fn main() void {const s:[]u8=undefined; const q:*allowzero i8=@ptrCast(s); _=q;}", NULL, 0, 0},
 		{"pub fn main() void {const s:[]u8=undefined; const q:*i8=@ptrCast(s); _=q;}", "use of undefined", 0, 0},

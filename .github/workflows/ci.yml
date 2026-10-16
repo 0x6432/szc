@@ -109,6 +109,7 @@ jobs:
           - diff_qualifier_casts
           - diff_alignment_casts
           - diff_thin_pointer_casts
+          - diff_known_slice_pointer_casts
           - diff_scalar_bitcasts
           - diff_constant_aggregate_bitcasts
           - diff_runtime_aggregate_bitcasts

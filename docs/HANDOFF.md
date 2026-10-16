@@ -19,13 +19,23 @@ Read this first when resuming work (the sandbox resets often).
 
 ## Latest follow-up checkpoint
 
+- M5.5i.1 corrects known numeric zero-address slice casts to match actual Zig;
+  runtime null/alignment guards are unchanged. Frozen known-slice-fix-final
+  GCC/Clang suites pass 1436 units/1049 goldens, 105+4 native, 16 driver,
+  full C/ABI/storage/alignment, 60 volatile and 265 safety checks; optimized GCC
+  native/safety and both 20000-mutation/stage replays pass. Actual Zig: 48-case
+  correction matrix (16 exact diagnostics) plus updated native fixture pass.
+  Four fresh 60s fuzzers: 1066432/21439/15679/17973. No fresh full reference
+  rerun is claimed for this isolated fix. Symbolic and slice-destination work
+  remains in separate development/validation snapshots until independently ready.
+
 - M5.5i slice-source thin casts are integrated. GCC/Clang sanitized suites pass
   1435 units/1049 goldens, 105+4 native programs, 16 driver checks, full storage/
   ABI/alignment, 60 volatile sequences and 265 safety cases; GCC compares actual
   Zig. Both 20000-mutation/stage replays pass with 256/256/67/123 seeds. Thin-cast
   matrix: 744 matched/138 exact primary diagnostics; four 60s fuzzers:
   1381650/30602/35725/44112. Optimized GCC native plus four new safety cases pass;
-  duplicate full optimized reference/safety run remains in progress at commit
+  duplicate full optimized reference/safety run subsequently passed all 265 cases
   (/data/slice-to-thin-final-gcc.log). Empty slice sources still check null and
   alignment when cast to thin pointers. Slice destinations/symbolic changed-child
   views remain NYI here. Next isolated work: symbolic pointer addresses, then

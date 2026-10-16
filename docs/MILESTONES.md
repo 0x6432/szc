@@ -176,12 +176,37 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
 
 (newest first; each entry: what, limitations, interactions)
 
+### M5.5i.1 Known slice address compatibility
+
+- **What**: preserve Zig 0.17.0's distinction between a known slice value and a
+  known thin null pointer. A known numeric zero data address inside a slice is
+  accepted by @ptrCast; this does not remove runtime null guards, permit thin null
+  pointer constants, or make foreign addresses compiler-owned. Constant increased
+  alignment remains checked even when the slice length is zero.
+- **Reference**: checked actual src/Sema.zig ptrCastFull and 48 actual compiler
+  comparisons (16 exact primary diagnostics), varying address, length, thin
+  destination and cast chain. Updated native fixture matches the official binary.
+- **Validation**: independent final GCC/Clang Werror ASan/UBSan suites pass 1436
+  units/1049 goldens, 105+4 native programs, 16 driver checks, all C/ABI/storage/
+  alignment suites, 60 volatile sequences and 265 safety cases. Both replay
+  20000 mutations/stage with 256/256/67/123 seeds; optimized GCC native/safety
+  pass. Four fresh 60s fuzzers: 1066432/21439/15679/17973 inputs. These final full
+  suites run szc; actual Zig coverage for the correction is the targeted matrix
+  and fixture above, not a newly repeated full reference suite.
+- **Interactions/limits**: record the source representation before extracting its
+  data pointer; exempt only the constant null-address diagnostic for slice sources.
+  Runtime empty-slice thin casts still check null/alignment. This correction does
+  not enable symbolic memory reinterpretation or slice destinations.
+- **Evidence**: /data/known-slice-fix-final-{gcc,clang,fuzz}.log,
+  /data/known-slice-fix-reference.log and /data/known-slice-fix-native.log.
+
 ### M5.5i Slice-source thin pointer casts
 
 - **What**: @ptrCast now accepts a slice as the source of a thin single/many
   pointer. Only its data address is borrowed; descriptor length is not consulted.
   Original alignment and const/volatile permissions remain authoritative. Known
-  numeric slices retain foreign backing; null and misalignment fail at comptime.
+  numeric slices retain foreign backing; misalignment fails at comptime. Known
+  slice data addresses of zero follow the reference behavior corrected in M5.5i.1.
 - **Safety**: unlike slice-to-slice casts, an empty source does not exempt a thin
   result from non-null or increased-alignment checks. Four regressions cover empty
   null, single/many misalignment, and aligned nullable destinations. Guards remain
@@ -193,8 +218,8 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
   20000 mutations/stage with 256/256/67/123 seeds. Four 60s fuzzers execute
   1381650/30602/35725/44112 inputs. The enlarged thin-cast reference matrix matches
   all 744 cases, including 138 exact primary diagnostics. Optimized GCC native
-  programs and the four new safety regressions pass; an additional full optimized
-  safety run with duplicated reference execution is still in progress at commit.
+  programs and the four new safety regressions pass. The additional full optimized
+  safety run with reference execution subsequently completed: all 265 cases pass.
   Main-tree forced tests pass. Evidence: /data/slice-to-thin-final-*.log,
   slice-to-thin-reference.log, slice-to-thin-main-test.log and
   slice-to-thin-optimized-new-safety.log.

@@ -2247,7 +2247,8 @@ analyze_ptr_cast(Block *block, const IrInst *inst)
 	}
 	/* A thin result borrows only the data address. Empty source slices do not
 	 * exempt null or alignment checks, and the source length is not consulted. */
-	if (from.size == POINTER_SLICE) {
+	bool source_slice = from.size == POINTER_SLICE;
+	if (source_slice) {
 		operand = slice_field(block, operand, false, inst->src);
 		if (operand.kind == OPERAND_NONE)
 			return operand_none;
@@ -2256,7 +2257,7 @@ analyze_ptr_cast(Block *block, const IrInst *inst)
 	if (operand.kind == OPERAND_COMPTIME) {
 		if (integer_pointer(block, operand)) {
 			uint64_t address = operand_value(block, operand)->as.address;
-			if (address == 0 && !to.is_allowzero) {
+			if (address == 0 && !to.is_allowzero && !source_slice) {
 				sema_error(block, cast.operand_src, "null pointer casted to type '%s'", sema_type_name(sema, type));
 				return operand_none;
 			}

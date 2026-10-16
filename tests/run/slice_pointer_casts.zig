@@ -26,5 +26,7 @@ pub fn main() u8 {
 	if (@intFromPtr(p) != 0) return 6;
 	const q: [*:17]u8 = @ptrCast(e);
 	if (@intFromPtr(q) != 16) return 7;
+	const known_null: *i8 = @ptrCast(z);
+	if (@intFromPtr(known_null) != 0) return 8;
 	return 0;
 }
