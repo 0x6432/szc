@@ -1,7 +1,10 @@
+#define _POSIX_C_SOURCE 200809L
+
 /*
  * Standalone fuzz driver for compilers without libFuzzer (e.g. gcc).
  * Replays every file in the given directories, then runs mutated
- * variants of them. usage: fuzz_X [-iterations N] dir...
+ * variants of them. Corpus order is bytewise sorted so mutation streams match
+ * across filesystems. usage: fuzz_X [-iterations N] [-save-input path] dir...
  */
 #include <dirent.h>
 #include <stdint.h>
@@ -28,8 +31,34 @@ next_random(void)
 	return rng_state;
 }
 
+/* Preserve the current input before entering the compiler, including on hangs. */
 static void
-load_file(const char *path)
+test_input(const uint8_t *data, size_t size, const char *save_path)
+{
+	if (save_path != NULL) {
+		FILE *file = fopen(save_path, "wb");
+		if (file == NULL) {
+			fprintf(stderr, "cannot save fuzz input: %s\n", save_path);
+			exit(1);
+		}
+		size_t written = fwrite(data, 1, size, file);
+		int status = fclose(file);
+		if (written != size || status != 0) {
+			fprintf(stderr, "cannot save fuzz input: %s\n", save_path);
+			exit(1);
+		}
+	}
+	LLVMFuzzerTestOneInput(data, size);
+}
+
+static int
+compare_entries(const struct dirent **lhs, const struct dirent **rhs)
+{
+	return strcmp((*lhs)->d_name, (*rhs)->d_name);
+}
+
+static void
+load_file(const char *path, const char *save_path)
 {
 	if (corpus_count == 256)
 		return;
@@ -38,28 +67,30 @@ load_file(const char *path)
 		return;
 	size_t got = fread(corpus[corpus_count], 1, MAX_INPUT, file);
 	fclose(file);
-	LLVMFuzzerTestOneInput(corpus[corpus_count], got);
+	test_input(corpus[corpus_count], got, save_path);
 	corpus_size[corpus_count] = got;
 	corpus_count = corpus_count + 1;
 }
 
 static void
-load_directory(const char *path)
+load_directory(const char *path, const char *save_path)
 {
-	DIR *dir = opendir(path);
-	if (dir == NULL) {
-		load_file(path);
+	struct dirent **entries;
+	int count = scandir(path, &entries, NULL, compare_entries);
+	if (count < 0) {
+		load_file(path, save_path);
 		return;
 	}
-	struct dirent *entry;
-	while ((entry = readdir(dir)) != NULL) {
-		if (entry->d_name[0] == '.')
-			continue;
-		char full[4096];
-		snprintf(full, sizeof(full), "%s/%s", path, entry->d_name);
-		load_file(full);
+	for (int i = 0; i < count; i++) {
+		struct dirent *entry = entries[i];
+		if (entry->d_name[0] != '.') {
+			char full[4096];
+			snprintf(full, sizeof(full), "%s/%s", path, entry->d_name);
+			load_file(full, save_path);
+		}
+		free(entry);
 	}
-	closedir(dir);
+	free(entries);
 }
 
 static const char *const interesting[] = {
@@ -71,13 +102,19 @@ int
 main(int argc, char **argv)
 {
 	uint32_t iterations = 20000;
+	const char *save_path = NULL;
 	int first = 1;
-	if (argc >= 3 && strcmp(argv[1], "-iterations") == 0) {
-		iterations = (uint32_t)strtoul(argv[2], NULL, 10);
-		first = 3;
+	while (first + 1 < argc) {
+		if (strcmp(argv[first], "-iterations") == 0)
+			iterations = (uint32_t)strtoul(argv[first + 1], NULL, 10);
+		else if (strcmp(argv[first], "-save-input") == 0)
+			save_path = argv[first + 1];
+		else
+			break;
+		first += 2;
 	}
 	for (int i = first; i < argc; i++)
-		load_directory(argv[i]);
+		load_directory(argv[i], save_path);
 	if (corpus_count == 0) {
 		corpus_size[0] = 0;
 		corpus_count = 1;
@@ -110,7 +147,7 @@ main(int argc, char **argv)
 				size = size + length;
 			}
 		}
-		LLVMFuzzerTestOneInput(buffer, size);
+		test_input(buffer, size, save_path);
 	}
 	printf("fuzz-standalone: %u corpus files, %u mutated inputs, no failures\n", corpus_count, iterations);
 	return 0;

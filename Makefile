@@ -21,7 +21,7 @@ HEADERS     = $(wildcard src/*.h)
 FUZZERS     = lexer parser irgen sema
 GENERATED_RUN_TESTS = build/integer-widths.zig build/conditional-widths.zig build/loop-widths.zig build/block-widths.zig build/for-widths.zig build/defer-widths.zig build/noreturn-widths.zig build/pointer-widths.zig build/global-widths.zig build/function-pointer-widths.zig build/array-widths.zig build/bitcast-widths.zig
 
-.PHONY: all release asan test unit-test golden-test e2e-test e2e-native-test e2e-storage-test e2e-alignment-test e2e-safety-test safety-test fuzz fuzz-run fuzz-standalone clean
+.PHONY: fuzz-driver-test all release asan test unit-test golden-test e2e-test e2e-native-test e2e-storage-test e2e-alignment-test e2e-safety-test safety-test fuzz fuzz-run fuzz-standalone clean
 
 all: build/szc
 
@@ -48,7 +48,7 @@ unit-test: build/asan/unit_tests
 golden-test: build/asan/szc
 	./tests/run_golden.sh build/asan/szc
 
-test: unit-test golden-test
+test: unit-test golden-test fuzz-driver-test
 
 build/integer-widths.zig: tools/generate_integer_tests.py
 	python3 $< $@
@@ -151,7 +151,10 @@ build/asan/fuzz_%: fuzz/fuzz_%.c fuzz/standalone.c $(LIB_SOURCES) $(HEADERS)
 	$(CC) $(ALL_CFLAGS) $(SAN_FLAGS) -Isrc -o $@ $< fuzz/standalone.c $(LIB_SOURCES)
 
 fuzz-standalone: $(addprefix build/asan/fuzz_,$(FUZZERS))
-	@for f in $(FUZZERS); do ./build/asan/fuzz_$$f fuzz/corpus/$$f || exit 1; done
+	@for f in $(FUZZERS); do ./build/asan/fuzz_$$f -save-input build/fuzz-last-$$f.bin fuzz/corpus/$$f || exit 1; done
 
 clean:
 	rm -rf build
+
+fuzz-driver-test:
+	python3 tests/run_standalone_fuzz_driver.py "$(CC)"

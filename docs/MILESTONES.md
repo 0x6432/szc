@@ -171,6 +171,18 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
 
 (newest first; each entry: what, limitations, interactions)
 
+### Standalone fuzz reproducibility follow-up
+
+- Bytewise-sorted corpus replay stabilizes the mutation stream across filesystems.
+  Optional current-input checkpoints are written before compiler entry, and hosted
+  replay is bounded with failure artifact upload. This does not change fuzz targets
+  or reduce the 20000 mutations/stage or scheduled libFuzzer budgets.
+- Driver tests cover creation-order independence, deterministic mutations, corpus
+  cap, empty/single inputs, and checkpoint success/failure under GCC and Clang.
+  Fresh independent Werror ASan/UBSan trees pass 864 units/1028 goldens and full
+  standalone replay under both compilers. An earlier hosted GCC job ended with
+  runner shutdown/143; rerun remains pending, not a confirmed compiler defect.
+
 ### M5.5e Scalar bit casts
 
 - **What**: contextual `@bitCast` preserves equal-width scalar representations

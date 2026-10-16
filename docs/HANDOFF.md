@@ -64,9 +64,19 @@ Read this first when resuming work (the sandbox resets often).
   /data/ptr-cast-next-notes.md and /data/thin-pointer-memory-reference.log.
   Reconcile actual reference memory loads with language-level padding rules;
   narrow acceptance probes alone do not establish a general padding guarantee.
-- Main 866504f hosted CI run 38861433849 completed successfully. Alignment-cast
-  run 38863898754 has had successful job-level progress without reported failures;
-  recheck its overall status and the new bit-cast run before claiming hosted green.
+- Standalone fuzz replay now sorts corpus filenames bytewise, making its seeded
+  mutations independent of filesystem directory order. Optional -save-input saves
+  each current input before compiler entry; CI captures stage inputs on failure
+  and bounds standalone replay to 15 minutes. Driver regression checks are part
+  of make test. Fresh independent GCC/Clang Werror sanitizer trees pass 864 units,
+  1028 goldens, harness checks, and 20000 mutations/stage (63 irgen/119 sema seeds).
+  Logs: /data/fuzz-driver-{gcc,clang}-{tests,replay}.log.
+- Hosted alignment run 38863898754 initially lost its GCC runner during standalone
+  replay (shutdown signal, exit 143; no sanitizer diagnostic). Failed-job rerun
+  requested. Latest check: 33 successes, GCC still running. Scalar run 38866600907:
+  32 successes, two jobs running; Clang build/test is successful. Neither run is
+  claimed green. Sorted local replay completes under both compilers; diagnostic
+  capture improves future failures, not evidence that a compiler hang was fixed.
 
 ## Latest integrated checkpoint
 

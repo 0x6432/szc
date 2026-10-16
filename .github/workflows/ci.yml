@@ -28,7 +28,15 @@ jobs:
       - name: End-to-end and driver tests under ASan + UBSan
         run: make CC=${{ matrix.cc }} EXTRA_CFLAGS=-Werror e2e-test
       - name: Standalone fuzz replay
+        timeout-minutes: 15
         run: make CC=${{ matrix.cc }} fuzz-standalone
+      - name: Upload standalone fuzz inputs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: standalone-fuzz-inputs-${{ matrix.cc }}
+          path: build/fuzz-last-*.bin
+          if-no-files-found: ignore
 
   fuzz:
     runs-on: ubuntu-latest
