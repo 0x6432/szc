@@ -1,0 +1,36 @@
+fn szc.main.1: fn () void {
+  %0: *[3][2]u8 = alloc
+  %1: *const [3][2]u8 = const ref(object.1)
+  %2: void = array_copy %0, %1
+  %3: [*][2]u8 = ptr_cast %0
+  %4: *const [][2]u8 = alloc
+  %5: *[*][2]u8 = ptr_cast %4
+  %6: *usize = slice_len_ptr %4
+  %7: void = store %5, %3
+  %8: usize = const 3
+  %9: void = store %6, %8
+  %10: *const [2]u8 = const ref(object.2)
+  %11: void = call szc.f.2(%4, %10)
+  %12: usize = const 1
+  %13: *[2]u8 = array_elem_ptr %0, %12
+  %14: *const [2]u8 = alloc
+  %15: void = array_copy %14, %13
+  %16: [*][2]u8 = ptr_cast %0
+  %17: usize = const 3
+  %18: void = memset %16, %17, %14
+  %19: noreturn = ret
+}
+fn szc.f.2: fn ([][2]u8, [2]u8) void {
+  %0: *align(1) const [][2]u8 = arg 0
+  %1: *const [][2]u8 = alloc
+  %2: void = array_copy %1, %0
+  %3: *align(1) const [2]u8 = arg 1
+  %4: *const [2]u8 = alloc
+  %5: void = array_copy %4, %3
+  %6: *const [*][2]u8 = ptr_cast %1
+  %7: [*][2]u8 = load %6
+  %8: *const usize = slice_len_ptr %1
+  %9: usize = load %8
+  %10: void = memset %7, %9, %4
+  %11: noreturn = ret
+}

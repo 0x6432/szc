@@ -1277,6 +1277,57 @@ test_scalar_memset(void)
 }
 
 static void
+test_aggregate_memset(void)
+{
+	const struct {
+		const char *body;
+		const char *error;
+	} cases[] = {
+		{"var a:[2][2]u8=undefined; @memset(&a,.{1,2});", NULL},
+		{"@memset(@as(*volatile [0][2]u8,undefined),.{1,2});", NULL},
+		{"@memset(@as([]volatile [2]u0,undefined),undefined);", NULL},
+		{"const p:*[1]anyerror=@ptrFromInt(4096); @memset(p,undefined);", "@memset element type 'anyerror'"},
+		{"var a:[2][2]u33=undefined; @memset(&a,.{1,8589934591});", NULL},
+		{"var a:[2][]const u8=undefined; @memset(&a,\"abc\");", NULL},
+		{"@memset(@as(*[0][2]u8,undefined),.{1,2});", NULL},
+		{"@memset(@as([][2]u0,undefined),undefined);", NULL},
+		{"@memset(@as([][0]type,undefined),undefined);", NULL},
+		{"@memset(@as(*const [0][2]u8,undefined),.{1,2});", "cannot memset constant pointer"},
+		{"@memset(@as(*[1][2]u8,undefined),.{1,2});", "use of undefined"},
+		{"@memset(@as([][2]u8,undefined),.{1,2});", "use of undefined"},
+		{"@memset(@as(*[0][2]u8,undefined),.{1,256});", "cannot represent integer value"},
+		{"@memset(@as([*][0]u8,undefined),.{});", "unknown @memset length"},
+		{"var a:[1][2]u8=undefined; const p:*volatile [1][2]u8=&a; @memset(p,.{1,2});", "volatile aggregate @memset"},
+		{"var a:[1][1]u65=undefined; @memset(&a,.{1});", "runtime array storage layout"},
+
+	};
+	for (uint32_t i = 0; i < sizeof(cases) / sizeof(cases[0]); i++) {
+		Arena arena;
+		arena_init(&arena);
+		SourceTable sources;
+		source_table_init(&sources, &arena);
+		Diag diag;
+		diag_init(&diag, &arena, &sources);
+		Interner interner;
+		intern_init(&interner, &arena);
+		char source[4096];
+		int length = snprintf(source, sizeof(source), "pub fn main() void { %s }", cases[i].body);
+		CHECK(length > 0 && (size_t)length < sizeof(source));
+		FileId file = source_add_memory(&sources, "aggregate_memset.zig", source, (uint32_t)length);
+		AstContainerDecl *root = parse_file(&arena, &diag, &sources, file);
+		CHECK(!diag_has_errors(&diag));
+		IrFile *ir = irgen_file(&arena, &diag, &interner, source_get(&sources, file), file, root);
+		CHECK(!diag_has_errors(&diag));
+		Sema *sema = sema_create(&arena, &diag, &interner, &sources);
+		bool success = sema_analyze_executable(sema, file, ir);
+		CHECK(success == (cases[i].error == NULL));
+		if (cases[i].error != NULL)
+			CHECK(diag.count != 0 && strstr(diag.items[0].message, cases[i].error) != NULL);
+		arena_free(&arena);
+	}
+}
+
+static void
 test_constant_aggregate_bit_casts(void)
 {
 	const struct {
@@ -1588,6 +1639,7 @@ main(void)
 	test_scalar_bit_casts();
 	test_character_literals();
 	test_scalar_memset();
+	test_aggregate_memset();
 	test_scalar_memcpy();
 	test_aggregate_memcpy();
 	test_packed_bits();

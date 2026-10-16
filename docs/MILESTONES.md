@@ -173,6 +173,7 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
   - [x] **M9.4f Scalar runtime `@memset`**: typed logical-element fills, zero ranges and volatile stores.
   - [x] **M9.4g Scalar runtime `@memcpy`**: length inference/equality, alias guards, ABI strides and volatile accesses.
   - [x] **M9.4h Nonvolatile aggregate `@memcpy`**: supported array layouts and borrowed slice descriptors.
+  - [x] **M9.4i Nonvolatile aggregate `@memset`**: one owned fill snapshot, ABI strides and borrowed descriptors.
 - [ ] **M9.5 Inline asm for x86_64-linux std usage.**
 
 ## Phase 10: std tests and bootstrap
@@ -187,6 +188,38 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
 ## Completed milestone log
 
 (newest first; each entry: what, limitations, interactions)
+
+### M9.4i Nonvolatile aggregate memory fills
+
+- **What**: accepts the existing supported runtime array and slice-descriptor
+  element layouts. `TirMemset.value` holds a scalar value or a pointer to one
+  owned runtime aggregate snapshot/immutable constant. QBE copies that snapshot
+  at each logical ABI-stride element, never reloading an aliased fill source.
+  Empty runtime ranges execute no libc call. Odd-width integer strides, nested
+  scalar sentinels and shallow borrowed descriptors retain existing layouts.
+  Destination-data checks precede unsupported-layout diagnostics after the
+  known-zero-length early return, matching actual Zig's undefined ordering.
+- **Validation**: 154 actual-Zig cases/44 exact primary diagnostics, original
+  scalar memset 158/69, aggregate memcpy 127/26 and scalar memcpy 312/138.
+  Native aggregate-fill fixture passes Zig Debug/ReleaseFast; two new bounds
+  panic comparisons pass. Frozen GCC/Clang Werror ASan/UBSan: 1844 unit checks,
+  1124 goldens, 119+4 native, 16 driver, full C/ABI/storage/alignment suites,
+  96 volatile sequences and 298 safety cases. Optimized GCC native/safety passes.
+  Both compilers pass 20000 standalone mutations/stage (256/256/82/138 seeds).
+  Four fresh 60s libFuzzer runs pass (2250875/60586/37463/49965);
+  forced main unit/golden tests pass.
+  Coverage includes once-evaluated destination/fill, partially overlapping source
+  snapshots, nested arrays/sentinels, odd-width integers, pointers, low-alignment
+  storage, sentinel descriptors, borrowed backing, runtime null empty ranges,
+  OPV/const/coercion ordering, IR/TIR/QBE and five error goldens, sixteen unit
+  cases, two analysis-stage seeds each and an independent hosted reference matrix.
+- **Interactions/limits**: nonempty volatile aggregates, floats/vectors,
+  unsupported layouts and general comptime mutable-memory fills remain NYI.
+  Nonvolatile undefined fills may leave prior representations. Aggregate-valued
+  sentinels remain unsupported; scalar sentinel storage inside array elements
+  is supported. Existing local storage for empty arrays of comptime-only children
+  is still a separate limitation, despite memory builtins accepting their OPV
+  no-ops without materializing storage. M9.4 and Phase 5 parents remain partial.
 
 ### M9.4h Nonvolatile aggregate memory copies
 

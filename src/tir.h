@@ -138,7 +138,7 @@ typedef struct TirMemcpy {
 typedef struct TirMemset {
 	TirRef pointer;
 	TirRef length;
-	TirRef value;
+	TirRef value;	/* scalar value, or pointer to one owned/immutable aggregate */
 } TirMemset;
 
 typedef struct TirCondbr {

@@ -1,0 +1,3 @@
+tests/tir/errors/memset_volatile_aggregate.zig:1:33: error: not supported by szc yet: volatile aggregate @memset
+fn f(p:[]volatile [2]u8) void { @memset(p,.{1,2}); }
+                                ^

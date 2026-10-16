@@ -24,6 +24,12 @@ def binary_case(name, integer_type, operator, lhs, rhs, message="integer overflo
 
 
 def cases():
+    yield 'memset_aggregate_destination_bounds', (
+        'fn operation(d:[][2]u8,n:usize) void { @memset(d[0..n],.{1,2}); } '
+        'pub fn main() void { var a:[2][2]u8=undefined; operation(&a,3); }\n'), 'index out of bounds'
+    yield 'memset_aggregate_fill_bounds', (
+        'fn operation(d:[][2]u8,s:[]const [2]u8,n:usize) void { @memset(d,s[n]); } '
+        'pub fn main() void { var a:[2][2]u8=undefined; const b:[1][2]u8=.{.{1,2}}; operation(&a,&b,1); }\n'), 'index out of bounds'
     for label, ty, initial in (('array', '[3]u8', '.{1,2,3}'), ('descriptor', '[]const u8', '"abc"')):
         yield 'memcpy_aggregate_alias_'+label, (
             f'fn operation(d:[]{ty},s:[]const {ty}) void {{ @memcpy(d,s); }} '

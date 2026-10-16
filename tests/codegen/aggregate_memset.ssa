@@ -1,0 +1,65 @@
+function $szc.main.1() {
+@start
+	%t0 =l alloc4 6
+	%t4 =l alloc8 16
+	%t14 =l alloc4 2
+	call $memmove(l %t0, l $szc.const.1, l 6)
+	%t3 =l copy %t0
+	%t5 =l copy %t4
+	%t6 =l add %t4, 8
+	storel %t3, %t5
+	storel 3, %t6
+	call $szc.f.2(l %t4, l $szc.const.2)
+	%e13_offset =l mul 1, 2
+	%t13 =l add %t0, %e13_offset
+	call $memmove(l %t14, l %t13, l 2)
+	%t16 =l copy %t0
+	%ms18_pointer =l copy %t16
+	%ms18_index =l copy 0
+	jmp @ms18_loop
+@ms18_loop
+	%ms18_more =w cultl %ms18_index, 3
+	jnz %ms18_more, @ms18_body, @ms18_done
+@ms18_body
+	call $memcpy(l %ms18_pointer, l %t14, l 2)
+	%ms18_pointer =l add %ms18_pointer, 2
+	%ms18_index =l add %ms18_index, 1
+	jmp @ms18_loop
+@ms18_done
+	ret
+}
+
+function $szc.f.2(l %t0, l %t3) {
+@start
+	%t1 =l alloc8 16
+	%t4 =l alloc4 2
+	call $memmove(l %t1, l %t0, l 16)
+	call $memmove(l %t4, l %t3, l 2)
+	%t6 =l copy %t1
+	%t7 =l loadl %t6
+	%t8 =l add %t1, 8
+	%t9 =l loadl %t8
+	%ms10_pointer =l copy %t7
+	%ms10_index =l copy 0
+	jmp @ms10_loop
+@ms10_loop
+	%ms10_more =w cultl %ms10_index, %t9
+	jnz %ms10_more, @ms10_body, @ms10_done
+@ms10_body
+	call $memcpy(l %ms10_pointer, l %t4, l 2)
+	%ms10_pointer =l add %ms10_pointer, 2
+	%ms10_index =l add %ms10_index, 1
+	jmp @ms10_loop
+@ms10_done
+	ret
+}
+
+section ".rodata"
+data $szc.const.1 = align 1 { b 1, b 2, b 3, b 4, b 5, b 6 }
+section ".rodata"
+data $szc.const.2 = align 1 { b 7, b 9 }
+export function w $main() {
+@start
+	call $szc.main.1()
+	ret 0
+}

@@ -1,0 +1,99 @@
+%79 = struct_decl (flags=0) {
+  decl fn "f" value {
+    %19 = func "f" {
+      %7 = param "p" type {
+        %0 = int 2
+        %1 = as @type_usize, %0
+        %2 = array_type %1, @type_u8
+        %3 = as @type_type, %2
+        %4 = ptr_type %3, @false slice
+        %5 = as @type_type, %4
+        %6 = break_inline result, %5
+      }
+      %13 = param "v" type {
+        %8 = int 2
+        %9 = as @type_usize, %8
+        %10 = array_type %9, @type_u8
+        %11 = as @type_type, %10
+        %12 = break_inline result, %11
+      }
+      ret type {
+        %14 = break_inline result, @type_void
+      }
+      body insts {
+        %15 = memset_elem_type %7
+        %16 = as %15, %13
+        %17 = memset %7, %16
+        %18 = ret_implicit
+      }
+    }
+    %20 = break_inline result, %19
+  }
+  decl fn "main" pub value {
+    %77 = func "main" {
+      ret type {
+        %21 = break_inline result, @type_void
+      }
+      body insts {
+        %22 = int 3
+        %23 = as @type_usize, %22
+        %24 = int 2
+        %25 = as @type_usize, %24
+        %26 = array_type %25, @type_u8
+        %27 = as @type_type, %26
+        %28 = array_type %23, %27
+        %29 = as @type_type, %28
+        %30 = array_elem_type %29
+        %31 = array_elem_type %30
+        %32 = int 1
+        %33 = as %31, %32
+        %34 = int 2
+        %35 = as %31, %34
+        %36 = array_init %30, %33, %35
+        %37 = as %30, %36
+        %38 = array_elem_type %30
+        %39 = int 3
+        %40 = as %38, %39
+        %41 = int 4
+        %42 = as %38, %41
+        %43 = array_init %30, %40, %42
+        %44 = as %30, %43
+        %45 = array_elem_type %30
+        %46 = int 5
+        %47 = as %45, %46
+        %48 = int 6
+        %49 = as %45, %48
+        %50 = array_init %30, %47, %49
+        %51 = as %30, %50
+        %52 = array_init %29, %37, %44, %51
+        %53 = as %29, %52
+        %54 = alloc type=%29 init=%53
+        %55 = decl_val "f"
+        %56 = call %55 arg0 {
+          %57 = arg_type %56, 0
+          %58 = as %57, %54
+          %59 = break_inline result, %58
+        } arg1 {
+          %60 = arg_type %56, 1
+          %61 = array_elem_type %60
+          %62 = int 7
+          %63 = as %61, %62
+          %64 = int 9
+          %65 = as %61, %64
+          %66 = array_init %60, %63, %65
+          %67 = as %60, %66
+          %68 = break_inline result, %67
+        }
+        %69 = memset_elem_type %54
+        %70 = array_base_ptr %54
+        %71 = int 1
+        %72 = as @type_usize, %71
+        %73 = array_index %70, %72
+        %74 = as %69, %73
+        %75 = memset %54, %74
+        %76 = ret_implicit
+      }
+    }
+    %78 = break_inline result, %77
+  }
+}

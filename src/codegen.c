@@ -1128,7 +1128,8 @@ emit_inst(Codegen *cg, TirRef ref)
 		memcpy(&fill, &cg->tir->extra[inst->data.payload], sizeof(fill));
 		TypePointer pointer = sema_type(cg->sema, inst_at(cg, fill.pointer)->type)->as.pointer;
 		TypeId child = pointer.child;
-		QbeClass value_class = type_class(cg, child, inst->src);
+		bool aggregate = sema_type_is_aggregate(cg->sema, child);
+		QbeClass value_class = aggregate ? QBE_L : type_class(cg, child, inst->src);
 		uint64_t stride = storage_size(cg, child, inst->src);
 		if (value_class == QBE_NONE || stride == 0)
 			return;
@@ -1138,7 +1139,11 @@ emit_inst(Codegen *cg, TirRef ref)
 		fprintf(out, "\t%%ms%u_more =w cultl %%ms%u_index, ", ref, ref);
 		print_operand(cg, fill.length);
 		fprintf(out, "\n\tjnz %%ms%u_more, @ms%u_body, @ms%u_done\n@ms%u_body\n", ref, ref, ref, ref);
-		if (pointer.is_volatile) {
+		if (aggregate) {
+			fprintf(out, "\tcall $memcpy(l %%ms%u_pointer, l ", ref);
+			print_operand(cg, fill.value);
+			fprintf(out, ", l %" PRIu64 ")\n", stride);
+		} else if (pointer.is_volatile) {
 			MemoryWidth width = memory_width(cg, child);
 			cg->volatile_stores[width] = true;
 			fprintf(out, "\tcall $szc.volatile.store.%u(l %%ms%u_pointer, %c ", (unsigned)(8u << width), ref, class_char(value_class));

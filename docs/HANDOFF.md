@@ -22,6 +22,40 @@ Read this first when resuming work (the sandbox resets often).
 - **Development resumed at the user's explicit request on 2026-10-16.** The
   earlier pause is superseded. Continue coherent implementation, validation,
   documentation, commit/push and subsequent milestones; Q6 remains M10.2.
+- M9.4i nonvolatile aggregate @memset is integrated. Supported array and slice
+  descriptor fills reuse one owned runtime snapshot/immutable backing value.
+  ABI-stride element copies cannot reload an aliased source after earlier stores;
+  descriptors retain borrowed backing. Runtime empty ranges skip all libc calls.
+  Nonempty volatile aggregates, floats/vectors, unsupported layouts, aggregate
+  sentinels and general comptime mutable-memory fills remain NYI. Undefined
+  nonvolatile fills may retain previous representations, not guaranteed poisoning.
+  Reference: 154 aggregate cases/44 exact primary diagnostics; existing scalar
+  memset 158/69, aggregate memcpy 127/26 and scalar memcpy 312/138 pass. New
+  native fixture passes Zig Debug/ReleaseFast and two bounds panic cases match.
+  Frozen /data/fill-verified/{gcc,clang,optimized}: GCC/Clang Werror ASan/UBSan
+  1844 units/1124 goldens, 119+4 native, 16 driver, full C/ABI/storage/alignment,
+  96 volatile sequences/298 safety; optimized native/safety and both 20000
+  standalone mutations/stage pass (256/256/82/138 seeds).
+  Four fresh 60s libFuzzer runs pass: 2250875/60586/37463/49965.
+  Forced main Werror unit/golden tests pass; /data/fill-main-final.log.
+  Evidence: /data/fill-reference-final.log, /data/fill-scalar-reference.log,
+  /data/fill-copy-reference.log, /data/fill-scalar-copy-reference.log,
+  /data/fill-native-final.log, /data/fill-fast-reference.log,
+  /data/fill-safety-reference.log and /data/fill-verified-{gcc,clang,optimized,fuzz}.log.
+  Next scoped work: empty runtime array storage, including nested [0]type and
+  [0]u128 children; actual Zig accepts these zero-bit layouts, but the existing
+  storage predicate peels through empty arrays and rejects their unused child.
+  This is distinct from accepting nonempty unsupported/comptime-only elements.
+- Hosted recheck during M9.4i: bedaf69 most recently has 58 successful jobs/one
+  running; scalar-copy 6c3ea34 finished 56 success/two failures. GCC job
+  117038003440 and Clang job 117038003443 both report "hosted runner lost
+  communication" in their check annotations, not compiler/sanitizer diagnostics;
+  downloadable logs were unavailable (404). Evidence is
+  /data/ci-copy-{117038003440,117038003443}-annotations.json. After completion,
+  the targeted GCC rerun returned 201. Clang rerun then returned HTTP 403 because
+  the workflow was running again; retry after completion. Neither rerun is
+  confirmed green. a56409d's old jobs endpoint still returns HTTP 502, so its
+  pending rerun remains unverified.
 - M9.4h nonvolatile aggregate @memcpy is integrated and validated in
   /data/aggregate-verified/{gcc,clang,optimized}. Supported nested arrays
   and slice descriptors use byte extents based on ABI stride, with the existing

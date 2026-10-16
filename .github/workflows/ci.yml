@@ -119,6 +119,7 @@ jobs:
           - diff_scalar_memset
           - diff_scalar_memcpy
           - diff_aggregate_memcpy
+          - diff_aggregate_memset
           - diff_bit_transforms
           - diff_bit_counts
           - diff_character_literals

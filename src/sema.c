@@ -5182,22 +5182,37 @@ analyze_memset(Block *block, const IrInst *inst)
 		return operand_none;
 	if (length.kind == OPERAND_COMPTIME && bigint_is_zero(&operand_value(block, length)->as.integer))
 		return void_operand(sema);
-	TypeKind kind = sema->types[child].kind;
-	if (sema_type_is_aggregate(sema, child) || (kind != TYPE_INT && kind != TYPE_BOOL && kind != TYPE_POINTER)) {
-		sema_error(block, inst->src, "not supported by szc yet: @memset element type '%s'", sema_type_name(sema, child));
-		return operand_none;
-	}
 	if (!check_defined(block, data, inst->src) || !require_runtime(block, inst->src))
 		return operand_none;
 	if (!pointer_operand(block, data, inst->src))
 		return operand_none;
+	TypeKind kind = sema->types[child].kind;
+	bool aggregate = sema_type_is_aggregate(sema, child);
+	if ((aggregate && !array_storage_allowed(sema, child))
+		|| (!aggregate && kind != TYPE_INT && kind != TYPE_BOOL && kind != TYPE_POINTER)) {
+		sema_error(block, inst->src, "not supported by szc yet: @memset element type '%s'", sema_type_name(sema, child));
+		return operand_none;
+	}
+	if (aggregate && shape.is_volatile) {
+		sema_error(block, inst->src, "not supported by szc yet: volatile aggregate @memset");
+		return operand_none;
+	}
 	/* A nonvolatile undefined fill may leave any previous representation. */
 	if (operand_is_undefined(block, value) && !shape.is_volatile)
 		return void_operand(sema);
 	TirMemset fill;
 	fill.pointer = materialize(block, data, inst->src);
 	fill.length = materialize(block, length, inst->src);
-	fill.value = materialize(block, value, inst->src);
+	/* Runtime aggregate values already own snapshots, independent of destination
+	 * storage. Constants have immutable backing. Reuse that single fill value. */
+	if (aggregate) {
+		Operand source = analyze_ref(block, value, inst->src, 0, 0);
+		if (source.kind == OPERAND_NONE)
+			return operand_none;
+		fill.value = materialize(block, source, inst->src);
+	} else {
+		fill.value = materialize(block, value, inst->src);
+	}
 	TirRef ref = emit_tir(block, TIR_MEMSET, T_VOID, inst->src);
 	block->tir->insts[ref].data.payload = tir_extra(block->tir, sema->arena, &fill, TIR_WORDS(TirMemset));
 	return void_operand(sema);

@@ -1,0 +1,3 @@
+tests/tir/errors/memset_aggregate_empty_coercion.zig:1:59: error: type 'u8' cannot represent integer value '256'
+pub fn main() void { @memset(@as(*[0][2]u8,undefined),.{1,256}); }
+                                                          ^

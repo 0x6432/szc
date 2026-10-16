@@ -865,3 +865,22 @@ a runtime (not comptime-only) layout. A zero returned by the partial ABI layout
 helper is not proof: unsupported types and nested comptime-only children must not
 silently become no-ops. The recursive layout predicate intentionally exempts empty
 arrays, whose elements need no runtime representation.
+
+
+## Nonvolatile aggregate memory fills (M9.4i)
+
+IR_MEMSET still evaluates destination and its contextually typed fill once.
+TIR_MEMSET uses TirMemset { pointer, length, value }: scalar elements carry a
+scalar value, while supported array/slice elements carry a pointer to their
+owned runtime snapshot or immutable constant backing. The fill pointer never
+borrows mutable destination storage. Slice descriptors retain borrowed backing
+pointers; filling descriptors is not cloning their elements.
+
+The backend loops over logical elements at ABI strides and calls libc memcpy
+from that one fill snapshot in each iteration. A zero iteration count skips all
+calls, including runtime empty allowzero ranges. Nested scalar sentinels are
+part of each element's ABI storage. Nonempty volatile aggregates and unsupported
+runtime layouts remain explicit errors. Const/unknown-length checks and fill
+coercion precede empty/one-value elision. Known zero lengths do not require defined
+destination data; nonzero-bit nonempty fills do. Nonvolatile undefined fills may
+leave prior memory representations; no Debug poisoning behavior is promised.
