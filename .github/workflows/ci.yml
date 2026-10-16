@@ -112,6 +112,7 @@ jobs:
           - diff_known_slice_pointer_casts
           - diff_symbolic_pointer_casts
           - diff_fixed_slice_casts
+          - diff_equal_slice_casts
           - diff_scalar_bitcasts
           - diff_constant_aggregate_bitcasts
           - diff_runtime_aggregate_bitcasts

@@ -798,6 +798,15 @@ emit_inst(Codegen *cg, TirRef ref)
 		emit_guard(cg, ref, "alignment", PANIC_ALIGNMENT);
 		return;
 	}
+	case TIR_SLICE_NULL_CHECK:
+		fprintf(out, "\t%%g%u_is_null =w ceql ", (unsigned)ref);
+		print_operand(cg, inst->data.bin.lhs);
+		fprintf(out, ", 0\n\t%%g%u_nonempty =w ceqw ", (unsigned)ref);
+		print_operand(cg, inst->data.bin.rhs);
+		fprintf(out, ", 0\n\t%%g%u_null =w and %%g%u_is_null, %%g%u_nonempty\n",
+			(unsigned)ref, (unsigned)ref, (unsigned)ref);
+		emit_guard(cg, ref, "null", PANIC_NULL_CAST);
+		return;
 	case TIR_NULL_CHECK:
 		emit_bound_check(cg, ref, inst->data.un.operand, "null", "ceq", 0, PANIC_NULL_CAST);
 		return;

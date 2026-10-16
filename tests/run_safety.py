@@ -74,6 +74,17 @@ def cases():
             f'fn f(s: {source_type}) void {{ const p: {destination} = {expression}; _ = p; }} '
             f'pub fn main() void {{ const p: {many_type} = @ptrFromInt({address}); f(p[0..0]); }}\n'), message
 
+    for label, source_type, destination, address, message in (
+        ('null', '[]allowzero u8', '[]i8', 0, 'cast causes pointer to be null'),
+        ('null_before_alignment', '[]align(1) allowzero u16', '[]u16', 0, 'cast causes pointer to be null'),
+        ('alignment', '[]align(1) u16', '[]u16', 17, 'incorrect alignment'),
+        ('nullable_alignment', '[]align(1) allowzero u16', '[]allowzero u16', 17, 'incorrect alignment'),
+    ):
+        many_type = source_type.replace('[]', '[*]', 1)
+        yield 'equal_slice_cast_' + label, (
+            f'fn f(s: {source_type}) void {{ const p: {destination} = @alignCast(@ptrCast(s)); _ = p; }} '
+            f'pub fn main() void {{ const p: {many_type} = @ptrFromInt({address}); f(p[0..1]); }}\n'), message
+
     for label, ty, address, message in (
         ('null', '*u8', 0, 'cast causes pointer to be null'),
         ('aligned_null', '*u32', 0, 'cast causes pointer to be null'),

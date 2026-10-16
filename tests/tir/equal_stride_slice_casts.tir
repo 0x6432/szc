@@ -1,0 +1,436 @@
+global szc.g.1: [2]u16 align(16) = array(2 elements)
+fn szc.main.1: fn () u8 {
+  %0: *const []u16 = const ref(object.1)
+  %1: *[]i16 = alloc
+  %2: void = call szc.signed.2(%0, %1)
+  %3: *const []i16 = ptr_cast %1
+  %4: *const usize = slice_len_ptr %3
+  %5: usize = load %4
+  %6: usize = const 2
+  %7: bool = cmp_neq %5, %6
+  %8: bool = block {
+    %23: noreturn = condbr %7 then {
+      %21: bool = const true
+      %22: noreturn = br %8, %21
+    } else {
+      %9: *const usize = slice_len_ptr %3
+      %10: usize = load %9
+      %11: *const [*]i16 = ptr_cast %3
+      %12: [*]i16 = load %11
+      %13: usize = const 0
+      %14: void = index_check %13, %10
+      %15: usize = const 0
+      %16: *i16 = ptr_elem_ptr %12, %15
+      %17: i16 = load %16
+      %18: i16 = const -1
+      %19: bool = cmp_neq %17, %18
+      %20: noreturn = br %8, %19
+    }
+  }
+  %24: bool = block {
+    %39: noreturn = condbr %8 then {
+      %37: bool = const true
+      %38: noreturn = br %24, %37
+    } else {
+      %25: *const usize = slice_len_ptr %3
+      %26: usize = load %25
+      %27: *const [*]i16 = ptr_cast %3
+      %28: [*]i16 = load %27
+      %29: usize = const 1
+      %30: void = index_check %29, %26
+      %31: usize = const 1
+      %32: *i16 = ptr_elem_ptr %28, %31
+      %33: i16 = load %32
+      %34: i16 = const -32768
+      %35: bool = cmp_neq %33, %34
+      %36: noreturn = br %24, %35
+    }
+  }
+  %40: void = block {
+    %44: noreturn = condbr %24 then {
+      %41: u8 = const 1
+      %42: noreturn = ret %41
+    } else {
+      %43: noreturn = br %40
+    }
+  }
+  %45: *const []i16 = alloc
+  %46: void = array_copy %45, %3
+  %47: *const usize = slice_len_ptr %45
+  %48: usize = load %47
+  %49: *const [*]i16 = ptr_cast %45
+  %50: [*]i16 = load %49
+  %51: usize = const 0
+  %52: void = index_check %51, %48
+  %53: usize = const 0
+  %54: *i16 = ptr_elem_ptr %50, %53
+  %55: i16 = const 7
+  %56: void = store %54, %55
+  %57: *align(16) u16 = const elem(base.16, index.0, offset.0)
+  %58: u16 = load %57
+  %59: u16 = const 7
+  %60: bool = cmp_neq %58, %59
+  %61: void = block {
+    %65: noreturn = condbr %60 then {
+      %62: u8 = const 2
+      %63: noreturn = ret %62
+    } else {
+      %64: noreturn = br %61
+    }
+  }
+  %66: *const []const i8 = const ref(object.3)
+  %67: *[]const u8 = alloc
+  %68: void = call szc.bytes.3(%66, %67)
+  %69: *const []const u8 = ptr_cast %67
+  %70: *const usize = slice_len_ptr %69
+  %71: usize = load %70
+  %72: usize = const 2
+  %73: bool = cmp_neq %71, %72
+  %74: bool = block {
+    %93: noreturn = condbr %73 then {
+      %91: bool = const true
+      %92: noreturn = br %74, %91
+    } else {
+      %75: *const []const i8 = const ref(object.3)
+      %76: *[]const u8 = alloc
+      %77: void = call szc.bytes.3(%75, %76)
+      %78: *const []const u8 = ptr_cast %76
+      %79: *const usize = slice_len_ptr %78
+      %80: usize = load %79
+      %81: *const [*]const u8 = ptr_cast %78
+      %82: [*]const u8 = load %81
+      %83: usize = const 0
+      %84: void = index_check %83, %80
+      %85: usize = const 0
+      %86: *const u8 = ptr_elem_ptr %82, %85
+      %87: u8 = load %86
+      %88: u8 = const 255
+      %89: bool = cmp_neq %87, %88
+      %90: noreturn = br %74, %89
+    }
+  }
+  %94: void = block {
+    %98: noreturn = condbr %74 then {
+      %95: u8 = const 3
+      %96: noreturn = ret %95
+    } else {
+      %97: noreturn = br %94
+    }
+  }
+  %99: *const []align(1) allowzero u16 = const ref(object.5)
+  %100: *[]u16 = alloc
+  %101: void = call szc.checked.4(%99, %100)
+  %102: *const []u16 = ptr_cast %100
+  %103: *const usize = slice_len_ptr %102
+  %104: usize = load %103
+  %105: usize = const 0
+  %106: bool = cmp_neq %104, %105
+  %107: bool = block {
+    %116: noreturn = condbr %106 then {
+      %114: bool = const true
+      %115: noreturn = br %107, %114
+    } else {
+      %108: *const [*]u16 = ptr_cast %102
+      %109: [*]u16 = load %108
+      %110: usize = ptr_to_int %109
+      %111: usize = const 17
+      %112: bool = cmp_neq %110, %111
+      %113: noreturn = br %107, %112
+    }
+  }
+  %117: void = block {
+    %121: noreturn = condbr %107 then {
+      %118: u8 = const 4
+      %119: noreturn = ret %118
+    } else {
+      %120: noreturn = br %117
+    }
+  }
+  %122: *const []align(1) allowzero u16 = const ref(object.7)
+  %123: *[]u16 = alloc
+  %124: void = call szc.checked.4(%122, %123)
+  %125: *const []u16 = ptr_cast %123
+  %126: *const usize = slice_len_ptr %125
+  %127: usize = load %126
+  %128: usize = const 0
+  %129: bool = cmp_neq %127, %128
+  %130: bool = block {
+    %139: noreturn = condbr %129 then {
+      %137: bool = const true
+      %138: noreturn = br %130, %137
+    } else {
+      %131: *const [*]u16 = ptr_cast %125
+      %132: [*]u16 = load %131
+      %133: usize = ptr_to_int %132
+      %134: usize = const 0
+      %135: bool = cmp_neq %133, %134
+      %136: noreturn = br %130, %135
+    }
+  }
+  %140: void = block {
+    %144: noreturn = condbr %130 then {
+      %141: u8 = const 5
+      %142: noreturn = ret %141
+    } else {
+      %143: noreturn = br %140
+    }
+  }
+  %145: *const []align(1) allowzero u16 = const ref(object.9)
+  %146: *[]u16 = alloc
+  %147: void = call szc.checked.4(%145, %146)
+  %148: *const []u16 = ptr_cast %146
+  %149: *const usize = slice_len_ptr %148
+  %150: usize = load %149
+  %151: *const [*]u16 = ptr_cast %148
+  %152: [*]u16 = load %151
+  %153: usize = const 0
+  %154: void = index_check %153, %150
+  %155: usize = const 0
+  %156: *u16 = ptr_elem_ptr %152, %155
+  %157: u16 = load %156
+  %158: u16 = const 7
+  %159: bool = cmp_neq %157, %158
+  %160: void = block {
+    %164: noreturn = condbr %159 then {
+      %161: u8 = const 6
+      %162: noreturn = ret %161
+    } else {
+      %163: noreturn = br %160
+    }
+  }
+  %165: *const []const u8 = const ref(object.10)
+  %166: *[:0]const u8 = alloc
+  %167: void = call szc.promise.5(%165, %166)
+  %168: *const [:0]const u8 = ptr_cast %166
+  %169: *const usize = slice_len_ptr %168
+  %170: usize = load %169
+  %171: usize = const 2
+  %172: bool = cmp_neq %170, %171
+  %173: bool = block {
+    %192: noreturn = condbr %172 then {
+      %190: bool = const true
+      %191: noreturn = br %173, %190
+    } else {
+      %174: *const []const u8 = const ref(object.10)
+      %175: *[:0]const u8 = alloc
+      %176: void = call szc.promise.5(%174, %175)
+      %177: *const [:0]const u8 = ptr_cast %175
+      %178: *const usize = slice_len_ptr %177
+      %179: usize = load %178
+      %180: *const [*:0]const u8 = ptr_cast %177
+      %181: [*:0]const u8 = load %180
+      %182: usize = const 2
+      %183: void = slice_end_check %182, %179
+      %184: usize = const 2
+      %185: *const u8 = ptr_elem_ptr %181, %184
+      %186: u8 = load %185
+      %187: u8 = const 0
+      %188: bool = cmp_neq %186, %187
+      %189: noreturn = br %173, %188
+    }
+  }
+  %193: void = block {
+    %197: noreturn = condbr %173 then {
+      %194: u8 = const 7
+      %195: noreturn = ret %194
+    } else {
+      %196: noreturn = br %193
+    }
+  }
+  %198: *[2]u8 = alloc
+  %199: *const [2]u8 = const ref(object.11)
+  %200: void = array_copy %198, %199
+  %201: [*]const volatile u8 = ptr_cast %198
+  %202: *const []const volatile u8 = alloc
+  %203: *[*]const volatile u8 = ptr_cast %202
+  %204: *usize = slice_len_ptr %202
+  %205: void = store %203, %201
+  %206: usize = const 2
+  %207: void = store %204, %206
+  %208: *[]i8 = alloc
+  %209: void = call szc.flags.6(%202, %208)
+  %210: *const []i8 = ptr_cast %208
+  %211: *const usize = slice_len_ptr %210
+  %212: usize = load %211
+  %213: usize = const 2
+  %214: bool = cmp_neq %212, %213
+  %215: bool = block {
+    %230: noreturn = condbr %214 then {
+      %228: bool = const true
+      %229: noreturn = br %215, %228
+    } else {
+      %216: *const usize = slice_len_ptr %210
+      %217: usize = load %216
+      %218: *const [*]i8 = ptr_cast %210
+      %219: [*]i8 = load %218
+      %220: usize = const 0
+      %221: void = index_check %220, %217
+      %222: usize = const 0
+      %223: *i8 = ptr_elem_ptr %219, %222
+      %224: i8 = load %223
+      %225: i8 = const -1
+      %226: bool = cmp_neq %224, %225
+      %227: noreturn = br %215, %226
+    }
+  }
+  %231: void = block {
+    %235: noreturn = condbr %215 then {
+      %232: u8 = const 8
+      %233: noreturn = ret %232
+    } else {
+      %234: noreturn = br %231
+    }
+  }
+  %236: *[3]u0 = alloc
+  %237: *const [3]u0 = const ref(object.12)
+  %238: void = array_copy %236, %237
+  %239: [*]u0 = ptr_cast %236
+  %240: *const []u0 = alloc
+  %241: *[*]u0 = ptr_cast %240
+  %242: *usize = slice_len_ptr %240
+  %243: void = store %241, %239
+  %244: usize = const 3
+  %245: void = store %242, %244
+  %246: *[]u0 = alloc
+  %247: void = call szc.zero.7(%240, %246)
+  %248: *const []u0 = ptr_cast %246
+  %249: *const usize = slice_len_ptr %248
+  %250: usize = load %249
+  %251: usize = const 3
+  %252: bool = cmp_neq %250, %251
+  %253: void = block {
+    %257: noreturn = condbr %252 then {
+      %254: u8 = const 9
+      %255: noreturn = ret %254
+    } else {
+      %256: noreturn = br %253
+    }
+  }
+  %258: [*]const i8 = const ptr_view(value.85)
+  %259: usize = ptr_to_int %258
+  %260: [*]const u8 = const ptr_cast(value.84)
+  %261: usize = ptr_to_int %260
+  %262: bool = cmp_neq %259, %261
+  %263: void = block {
+    %267: noreturn = condbr %262 then {
+      %264: u8 = const 10
+      %265: noreturn = ret %264
+    } else {
+      %266: noreturn = br %263
+    }
+  }
+  %268: u8 = const 0
+  %269: noreturn = ret %268
+}
+fn szc.signed.2: fn ([]u16) []i16 {
+  %0: *align(1) const []u16 = arg 0
+  %1: *const []u16 = alloc
+  %2: void = array_copy %1, %0
+  %3: *[]i16 = arg 1
+  %4: *const usize = slice_len_ptr %1
+  %5: usize = load %4
+  %6: *const [*]u16 = ptr_cast %1
+  %7: [*]u16 = load %6
+  %8: [*]i16 = ptr_cast %7
+  %9: *const []i16 = alloc
+  %10: *[*]i16 = ptr_cast %9
+  %11: *usize = slice_len_ptr %9
+  %12: void = store %10, %8
+  %13: void = store %11, %5
+  %14: void = array_copy %3, %9
+  %15: noreturn = ret
+}
+fn szc.bytes.3: fn ([]const i8) []const u8 {
+  %0: *align(1) const []const i8 = arg 0
+  %1: *const []const i8 = alloc
+  %2: void = array_copy %1, %0
+  %3: *[]const u8 = arg 1
+  %4: *const usize = slice_len_ptr %1
+  %5: usize = load %4
+  %6: *const [*]const i8 = ptr_cast %1
+  %7: [*]const i8 = load %6
+  %8: [*]const u8 = ptr_cast %7
+  %9: *const []const u8 = alloc
+  %10: *[*]const u8 = ptr_cast %9
+  %11: *usize = slice_len_ptr %9
+  %12: void = store %10, %8
+  %13: void = store %11, %5
+  %14: void = array_copy %3, %9
+  %15: noreturn = ret
+}
+fn szc.checked.4: fn ([]align(1) allowzero u16) []u16 {
+  %0: *align(1) const []align(1) allowzero u16 = arg 0
+  %1: *const []align(1) allowzero u16 = alloc
+  %2: void = array_copy %1, %0
+  %3: *[]u16 = arg 1
+  %4: *const usize = slice_len_ptr %1
+  %5: usize = load %4
+  %6: *const [*]align(1) allowzero u16 = ptr_cast %1
+  %7: [*]align(1) allowzero u16 = load %6
+  %8: usize = const 0
+  %9: bool = cmp_eq %5, %8
+  %10: void = slice_null_check %7, %9
+  %11: [*]u16 = align_check %7, %9
+  %12: [*]u16 = ptr_cast %7
+  %13: *const []u16 = alloc
+  %14: *[*]u16 = ptr_cast %13
+  %15: *usize = slice_len_ptr %13
+  %16: void = store %14, %12
+  %17: void = store %15, %5
+  %18: void = array_copy %3, %13
+  %19: noreturn = ret
+}
+fn szc.promise.5: fn ([]const u8) [:0]const u8 {
+  %0: *align(1) const []const u8 = arg 0
+  %1: *const []const u8 = alloc
+  %2: void = array_copy %1, %0
+  %3: *[:0]const u8 = arg 1
+  %4: *const usize = slice_len_ptr %1
+  %5: usize = load %4
+  %6: *const [*]const u8 = ptr_cast %1
+  %7: [*]const u8 = load %6
+  %8: [*:0]const u8 = ptr_cast %7
+  %9: *const [:0]const u8 = alloc
+  %10: *[*:0]const u8 = ptr_cast %9
+  %11: *usize = slice_len_ptr %9
+  %12: void = store %10, %8
+  %13: void = store %11, %5
+  %14: void = array_copy %3, %9
+  %15: noreturn = ret
+}
+fn szc.flags.6: fn ([]const volatile u8) []i8 {
+  %0: *align(1) const []const volatile u8 = arg 0
+  %1: *const []const volatile u8 = alloc
+  %2: void = array_copy %1, %0
+  %3: *[]i8 = arg 1
+  %4: *const usize = slice_len_ptr %1
+  %5: usize = load %4
+  %6: *const [*]const volatile u8 = ptr_cast %1
+  %7: [*]const volatile u8 = load %6
+  %8: [*]i8 = ptr_cast %7
+  %9: *const []i8 = alloc
+  %10: *[*]i8 = ptr_cast %9
+  %11: *usize = slice_len_ptr %9
+  %12: void = store %10, %8
+  %13: void = store %11, %5
+  %14: void = array_copy %3, %9
+  %15: noreturn = ret
+}
+fn szc.zero.7: fn ([]u0) []u0 {
+  %0: *align(1) const []u0 = arg 0
+  %1: *const []u0 = alloc
+  %2: void = array_copy %1, %0
+  %3: *[]u0 = arg 1
+  %4: *const usize = slice_len_ptr %1
+  %5: usize = load %4
+  %6: *const [*]u0 = ptr_cast %1
+  %7: [*]u0 = load %6
+  %8: [*]u0 = ptr_cast %7
+  %9: *const []u0 = alloc
+  %10: *[*]u0 = ptr_cast %9
+  %11: *usize = slice_len_ptr %9
+  %12: void = store %10, %8
+  %13: void = store %11, %5
+  %14: void = array_copy %3, %9
+  %15: noreturn = ret
+}

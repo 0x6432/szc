@@ -2246,8 +2246,24 @@ ptr_cast_slice_length(Block *block, Operand operand, TypeId destination, uint32_
 		return operand_none;
 	}
 	if (from.size == POINTER_SLICE) {
-		sema_error(block, src, "not supported by szc yet: slice-source to slice-destination @ptrCast");
-		return operand_none;
+		TypeId target = sema->types[destination].as.pointer.child;
+		if (child != target) {
+			uint64_t source_size, target_size;
+			if (!sema_type_size(sema, child, &source_size) || !sema_type_size(sema, target, &target_size)) {
+				sema_error(block, src, "not supported by szc yet: slice cast of type with unknown storage size");
+				return operand_none;
+			}
+			if (target_size == 0) {
+				sema_error(block, src, "cannot infer length of slice of zero-bit '%s' from '%s'",
+					sema_type_name(sema, target), sema_type_name(sema, operand.type));
+				return operand_none;
+			}
+			if (source_size != target_size) {
+				sema_error(block, src, "not supported by szc yet: slice @ptrCast with changed element stride");
+				return operand_none;
+			}
+		}
+		return slice_field(block, operand, true, src);
 	}
 	if (sema->types[child].kind == TYPE_ARRAY) {
 		count = sema->types[child].as.array.length;
@@ -2335,8 +2351,9 @@ analyze_ptr_cast(Block *block, const IrInst *inst)
 			return operand_none;
 		return comptime_operand(type, value_undefined(&sema->values, type));
 	}
-	/* A thin result borrows only the data address. Empty source slices do not
-	 * exempt null or alignment checks, and the source length is not consulted. */
+	/* Only runtime slice-to-slice casts exempt an empty source from address
+	 * checks. Constant casts and thin results still validate their data address. */
+	bool slice_to_slice = from.size == POINTER_SLICE && length.kind != OPERAND_NONE;
 	bool source_slice = from.size == POINTER_SLICE;
 	if (source_slice) {
 		operand = slice_field(block, operand, false, inst->src);
@@ -2368,11 +2385,23 @@ analyze_ptr_cast(Block *block, const IrInst *inst)
 	}
 	if (!require_runtime(block, inst->src))
 		return operand_none;
+	Operand empty = operand_none;
+	if (target_alignment > source_alignment || (slice_to_slice && from.is_allowzero && !to.is_allowzero)) {
+		empty = comptime_operand(T_BOOL, value_bool(&sema->values, T_BOOL, false));
+		if (slice_to_slice) {
+			Operand zero = comptime_operand(T_USIZE, value_int_u64(&sema->values, T_USIZE, 0));
+			empty = runtime_operand(T_BOOL, emit_tir_bin(block, TIR_CMP_EQ, T_BOOL, inst->src,
+				materialize(block, length, inst->src), materialize(block, zero, inst->src)));
+		}
+	}
 	TirRef pointer = materialize(block, operand, inst->src);
-	if (from.is_allowzero && !to.is_allowzero)
-		emit_tir_un(block, TIR_NULL_CHECK, T_VOID, inst->src, pointer);
+	if (from.is_allowzero && !to.is_allowzero) {
+		if (slice_to_slice)
+			emit_tir_bin(block, TIR_SLICE_NULL_CHECK, T_VOID, inst->src, pointer, materialize(block, empty, inst->src));
+		else
+			emit_tir_un(block, TIR_NULL_CHECK, T_VOID, inst->src, pointer);
+	}
 	if (target_alignment > source_alignment) {
-		Operand empty = comptime_operand(T_BOOL, value_bool(&sema->values, T_BOOL, false));
 		emit_tir_bin(block, TIR_ALIGN_CHECK, pointer_type, inst->src, pointer, materialize(block, empty, inst->src));
 	}
 	Operand result = runtime_operand(pointer_type, emit_tir_un(block, TIR_PTR_CAST, pointer_type, inst->src, pointer));

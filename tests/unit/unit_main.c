@@ -1116,6 +1116,13 @@ test_thin_pointer_casts(void)
 		uint32_t null_checks;
 		uint32_t align_checks;
 	} cases[] = {
+		{"fn f(p:[]u8) []i8 {return @ptrCast(p);} pub fn main() void {_=f(undefined);}", NULL, 0, 0},
+		{"fn f(p:[]allowzero u8) []i8 {return @ptrCast(p);} pub fn main() void {_=f(undefined);}", NULL, 1, 0},
+		{"fn f(p:[]align(1) allowzero u16) []u16 {return @alignCast(@ptrCast(p));} pub fn main() void {_=f(undefined);}", NULL, 1, 1},
+		{"fn f(p:[]const volatile u8) []i8 {return @volatileCast(@constCast(@ptrCast(p)));} pub fn main() void {_=f(undefined);}", NULL, 0, 0},
+		{"fn f(p:[]u0) []u0 {return @ptrCast(p);} pub fn main() void {_=f(undefined);}", NULL, 0, 0},
+		{"pub fn main() void {const p:[*]allowzero u8=@ptrFromInt(0); const s:[]allowzero u8=p[0..0]; const q:[]i8=@ptrCast(s); _=q;}", NULL, 0, 0},
+		{"pub fn main() void {const p:[*]align(1) u16=@ptrFromInt(17); const s:[]align(1) u16=p[0..0]; const q:[]u16=@alignCast(@ptrCast(s)); _=q;}", "pointer address 0x11 is not aligned to 2 bytes", 0, 0},
 		{"fn f(p:*[4]u8) []u16 {return @alignCast(@ptrCast(p));} pub fn main() void {_=f(undefined);}", NULL, 0, 1},
 		{"fn f(p:*allowzero [4]u8) []u16 {return @alignCast(@ptrCast(p));} pub fn main() void {_=f(undefined);}", NULL, 1, 1},
 		{"fn f(p:*[3]u8) []u16 {return @alignCast(@ptrCast(p));} pub fn main() void {_=f(undefined);}", "does not divide exactly", 0, 0},
@@ -1123,7 +1130,7 @@ test_thin_pointer_casts(void)
 		{"fn f(p:*[5]u0) []u0 {return @ptrCast(p);} pub fn main() void {_=f(undefined);}", NULL, 0, 0},
 		{"fn f(p:*u0) []u8 {return @ptrCast(p);} pub fn main() void {_=f(undefined);}", NULL, 0, 0},
 		{"fn f(p:*const [2:0]u8) [:0]const u8 {return @ptrCast(p);} pub fn main() void {_=f(undefined);}", NULL, 0, 0},
-		{"fn f(p:[]u8) []i8 {return @ptrCast(p);} pub fn main() void {_=f(undefined);}", "slice-source to slice-destination", 0, 0},
+		{"fn f(p:[]u8) []u16 {return @alignCast(@ptrCast(p));} pub fn main() void {_=f(undefined);}", "changed element stride", 0, 0},
 		{"fn f(p:[]u8) *u16 {return @alignCast(@ptrCast(p));} pub fn main() void {_=f(undefined);}", NULL, 0, 1},
 		{"fn f(p:[]allowzero u8) *i8 {return @ptrCast(p);} pub fn main() void {_=f(undefined);}", NULL, 1, 0},
 		{"fn f(p:[]allowzero u8) *u16 {return @alignCast(@ptrCast(p));} pub fn main() void {_=f(undefined);}", NULL, 1, 1},
@@ -1179,7 +1186,7 @@ test_thin_pointer_casts(void)
 			for (FuncId f = 1; f < sema_func_count(sema); f++) {
 				const TirFunc *tir = &sema_func(sema, f)->tir;
 				for (TirRef j = 0; j < tir->inst_count; j++) {
-					null_checks += tir->insts[j].op == TIR_NULL_CHECK;
+					null_checks += tir->insts[j].op == TIR_NULL_CHECK || tir->insts[j].op == TIR_SLICE_NULL_CHECK;
 					align_checks += tir->insts[j].op == TIR_ALIGN_CHECK;
 				}
 			}

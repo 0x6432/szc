@@ -19,6 +19,16 @@ Read this first when resuming work (the sandbox resets often).
 
 ## Latest follow-up checkpoint
 
+- M5.5l equal-stride slice casts are integrated. Runtime empty slices exempt
+  null/alignment checks; nonempty slices retain ordered guards. Known constant
+  alignment still checks empty slices, with M5.5i.1 numeric-null behavior.
+  Corrected frozen GCC/Clang: 1518 units/1054 goldens, 108+4 native, 16 driver,
+  full C/ABI/storage/alignment, 60 volatile, 273 safety; optimized GCC native/
+  safety and both 20000-mutation/stage replays pass (256/256/70/126 seeds).
+  Actual Zig: 224 cases/35 exact diagnostics, native fixture and four new safety
+  cases pass. Fresh 60s fuzz counts: 1004998/21235/12868/19448. Main forced
+  tests pass. Next: changed-stride resizing; no full physical comptime memory.
+
 - M5.5k fixed-extent slice destinations are integrated. ABI-stride/divisibility
   inference borrows single-pointer scalar/array backing, excluding sentinels;
   empty arrays still check null/alignment. Runtime slice-source destinations

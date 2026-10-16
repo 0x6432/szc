@@ -126,6 +126,7 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
   - [x] **M5.5i Slice-source thin pointer casts**: borrow the data address, retain original qualifiers/alignment, and check empty sources too.
   - [x] **M5.5j Symbolic pointer views**: preserve root/offset relocation identity; runtime mutable views and function/data round trips.
   - [x] **M5.5k Fixed-extent slice destination casts**: infer logical array/scalar extent using ABI strides, with exact divisibility.
+  - [x] **M5.5l Equal-stride slice casts**: preserve counts and exempt empty runtime slices from address checks.
 
 ## Phase 6: Aggregates and errors
 
@@ -177,6 +178,33 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
 ## Completed milestone log
 
 (newest first; each entry: what, limitations, interactions)
+
+### M5.5l Equal-stride slice casts
+
+- **What**: slice-to-slice @ptrCast supports identical children or equal ABI
+  element strides, retaining the source count. Different zero-bit destinations
+  are rejected; equal zero-bit children preserve logical count. Qualifier,
+  alignment and sentinel promises use the existing combined-cast rules.
+- **Safety**: runtime empty slices exempt data null/alignment checks, unlike thin
+  destinations or fixed-extent array sources. Nonempty slices still check null
+  before alignment. The empty predicate is generated only if a guard needs it.
+  Constant increased alignment remains checked even for an empty slice; known
+  numeric zero data addresses retain the M5.5i.1 reference behavior.
+- **Validation**: frozen corrected GCC/Clang Werror ASan/UBSan suites pass 1518
+  units/1054 goldens, 108+4 native, 16 driver checks, full C/ABI/storage/alignment,
+  60 volatile sequences and 273 safety cases. Optimized GCC native/safety and
+  both 20000-mutation/stage replays pass (256/256/70/126 seeds). Four 60s fuzzers:
+  1004998/21235/12868/19448 inputs. Actual Zig: 224 comparisons (35 exact primary
+  diagnostics), the native fixture, and all four new panic regressions pass.
+  Full final suites execute szc; targeted actual-Zig evidence is separate.
+  Main forced tests pass. Superseded snapshots with the eager-predicate golden
+  regression are not counted as final evidence.
+- **Interactions/limits**: TIR_SLICE_NULL_CHECK combines data nullness with source
+  emptiness; descriptor construction borrows backing. Changed element strides
+  remain explicit NYI here, pending ordered divisibility lowering.
+- **Evidence**: /data/equal-slice-final-v4-{gcc,clang,fuzz}.log,
+  /data/equal-slice-{reference,native,new-safety}-v4.log,
+  /data/equal-slice-main-tests-v4.log.
 
 ### M5.5k Fixed-extent slice destination casts
 
