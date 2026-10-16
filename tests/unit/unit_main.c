@@ -1636,6 +1636,77 @@ test_has_field(void)
 }
 
 static void
+test_typeof(void)
+{
+	const struct {
+		const char *source;
+		const char *error;
+	} cases[] = {
+		{"pub fn main() void { const n:u8=if(@TypeOf(1)==comptime_int)0 else 256; _=n; }", NULL},
+		{"pub fn main() void { const n:u8=if(@TypeOf(true)==bool)0 else 256; _=n; }", NULL},
+		{"pub fn main() void { const n:u8=if(@TypeOf(u8)==type)0 else 256; _=n; }", NULL},
+		{"pub fn main() void { const n:u8=if(@TypeOf(struct {})==type)0 else 256; _=n; }", NULL},
+		{"pub fn main() void { const n:u8=if(@TypeOf(@as(u33,undefined))==u33)0 else 256; _=n; }", NULL},
+		{"pub fn main() void { const n:u8=if(@TypeOf(@as(f32,undefined))==f32)0 else 256; _=n; }", NULL},
+		{"pub fn main() void { const n:u8=if(@TypeOf(@as([2]u8,undefined))==[2]u8)0 else 256; _=n; }", NULL},
+		{"pub fn main() void { const n:u8=if(@TypeOf(@as([]u8,undefined))==[]u8)0 else 256; _=n; }", NULL},
+		{"pub fn main() void { const n:u8=if(@TypeOf(\"abc\")==*const [3:0]u8)0 else 256; _=n; }", NULL},
+		{"pub fn main() void { const n:u8=if(@TypeOf(@TypeOf(undefined))==type)0 else 256; _=n; }", NULL},
+		{"pub fn main() void { const n:u8=if(@TypeOf(@as(u8,undefined),@as(i8,undefined))==u8)0 else 256; _=n; }", NULL},
+		{"pub fn main() void { const n:u8=if(@TypeOf(@as(i8,undefined),@as(u8,undefined))==i8)0 else 256; _=n; }", NULL},
+		{"pub fn main() void { const n:u8=if(@TypeOf(@as(u8,undefined),@as(i8,undefined),@as(i16,undefined))==i16)0 else 256; _=n; }", NULL},
+		{"pub fn main() void { const n:u8=if(@TypeOf(1,@as(u8,2),@as(u16,3))==u16)0 else 256; _=n; }", NULL},
+		{"pub fn main() void { const n:u8=if(@TypeOf(@as(u8,1),256)==u8)0 else 256; _=n; }", NULL},
+		{"pub fn main() void { const n:u8=if(@TypeOf(\"a\",\"abc\")==[:0]const u8)0 else 256; _=n; }", NULL},
+		{"pub fn main() void { const n:u8=if(@TypeOf(@as(f32,undefined),@as(f64,undefined))==f64)0 else 256; _=n; }", NULL},
+		{"pub fn main() void { const n:u8=if(@TypeOf(@as(f32,undefined),@as(u64,undefined))==f32)0 else 256; _=n; }", NULL},
+		{"const T=@TypeOf(f()); fn f() [2]u8 { return .{1,2}; } pub fn main() void { const a:T=.{3,4}; _=a; }", NULL},
+		{"fn f(a:u8,b:u16) u16 { _=@TypeOf(a+b); return a+b; } pub fn main() void { _=f(1,2); }", NULL},
+		{"fn f(a:[2]u8) [2]u8 { _=@TypeOf(a[0..]); return a; } pub fn main() void { _=f(.{1,2}); }", NULL},
+		{"fn f(b:bool) u8 { _=@TypeOf(if(b) return 99 else @as(u8,3)); return 4; } pub fn main() void { _=f(true); }", NULL},
+		{"fn f(b:bool) void { out: { _=@TypeOf(if(b) break :out else @as(u8,3)); } } pub fn main() void { f(true); }", NULL},
+		{"pub fn main() void { var a:u8=1; _=@TypeOf({ a=2; }); _=&a; }", NULL},
+		{"pub fn main() void { _=@TypeOf(blk: { var a:[9000000]u8=undefined; _=&a; break :blk @as(u8,1); }); _=@TypeOf(blk: { var a:[9000000]u8=undefined; _=&a; break :blk @as(u8,1); }); }", NULL},
+		{"pub fn main() void { _=@TypeOf(); }", "expected at least 1 argument"},
+		{"pub fn main() void { _=@TypeOf(unreachable); }", "unreachable code"},
+		{"pub fn main() void { _=@TypeOf(return); }", "unreachable code"},
+		{"fn bad() u8 { return 256; } pub fn main() void { _=@TypeOf(bad()); }", "cannot represent integer value '256'"},
+		{"fn bad() u8 { return 256; } pub fn main() void { _=@TypeOf(&bad); }", "cannot represent integer value '256'"},
+		{"var x:u8=256; pub fn main() void { _=@TypeOf(x); }", "cannot represent integer value '256'"},
+		{"pub fn main() void { _=@TypeOf(@as(*u8,undefined).*); }", "cannot dereference undefined"},
+		{"pub fn main() void { _=@TypeOf(@as(u8,255)+1); }", "overflow of integer type"},
+		{"pub fn main() void { _=@TypeOf(1,true); }", "incompatible types"},
+		{"pub fn main() void { _=@TypeOf(@as(comptime_int,undefined),@as(u8,1)); }", "incompatible types"},
+		{"fn f(a:u8,b:i8) void { _=@TypeOf(a,b); } pub fn main() void { f(1,2); }", "incompatible types"},
+		{"pub fn main() void { _=@TypeOf(null,true); }", "not supported by szc yet: optional peer"},
+	};
+	for (uint32_t i = 0; i < sizeof(cases) / sizeof(cases[0]); i++) {
+		Arena arena;
+		arena_init(&arena);
+		SourceTable sources;
+		source_table_init(&sources, &arena);
+		Diag diag;
+		diag_init(&diag, &arena, &sources);
+		Interner interner;
+		intern_init(&interner, &arena);
+		const char *source = cases[i].source;
+		FileId file = source_add_memory(&sources, "typeof.zig", source, (uint32_t)strlen(source));
+		AstContainerDecl *root = parse_file(&arena, &diag, &sources, file);
+		CHECK(!diag_has_errors(&diag));
+		IrFile *ir = irgen_file(&arena, &diag, &interner, source_get(&sources, file), file, root);
+		bool success = false;
+		if (!diag_has_errors(&diag)) {
+			Sema *sema = sema_create(&arena, &diag, &interner, &sources);
+			success = sema_analyze_executable(sema, file, ir);
+		}
+		CHECK(success == (cases[i].error == NULL));
+		if (cases[i].error != NULL)
+			CHECK(diag.count != 0 && strstr(diag.items[0].message, cases[i].error) != NULL);
+		arena_free(&arena);
+	}
+}
+
+static void
 test_quoted_identifiers(void)
 {
 	const struct {
@@ -2005,6 +2076,7 @@ main(void)
 	test_quoted_identifiers();
 	test_has_decl();
 	test_has_field();
+	test_typeof();
 	test_field();
 	test_scalar_memcpy();
 	test_aggregate_memcpy();

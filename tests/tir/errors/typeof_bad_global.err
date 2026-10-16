@@ -1,0 +1,3 @@
+tests/tir/errors/typeof_bad_global.zig:1:12: error: type 'u8' cannot represent integer value '256'
+var bad:u8=256;
+           ^

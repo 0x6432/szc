@@ -149,7 +149,8 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
 
 - [ ] **M7.1 Big integers for comptime_int.**
 - [ ] **M7.2 Comptime interpreter over IR**: const decls, arithmetic, control flow.
-- [ ] **M7.3 Types as values**: `type`, `@TypeOf`, returning types from functions.
+- [~] **M7.3 Types as values**: `type`, `@TypeOf`, returning types from functions.
+  - [x] **M7.3a Unevaluated type queries**: single/multiple `@TypeOf` operands on existing values/types, isolated runtime analysis and bounded peer rules.
 - [ ] **M7.4 Generic functions**: comptime params, `anytype`, monomorphization + memoization.
 - [ ] **M7.5 `inline for` / `inline while` / inline switch prongs.**
 - [~] **M7.6 `@typeInfo` / `@Type` / `@This` / `@hasDecl` / `@field` / `@hasField`.**
@@ -196,6 +197,45 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
 ## Completed milestone log
 
 (newest first; each entry: what, limitations, interactions)
+
+### M7.3a Unevaluated type queries
+
+- **What**: `@TypeOf` accepts one or more ordinary expressions, returning a
+  comptime type without executing their runtime effects. `IrTypeOf` owns an
+  isolated query body and operand refs. Sema temporarily appends to the current
+  builder so outer runtime refs stay valid, then rolls back instruction AND
+  extra-data counts. Query body lists and copied non-local control exit lists
+  cannot leak into the parent; aggregate query slots do not charge its stack
+  budget. Nested queries and global/type initializer queries work. Referenced
+  functions/global initializers remain subject to normal validation/liveness.
+- **Peer semantics**: n-ary integer resolution follows the reference's largest
+  signed/unsigned strategy, known-value compatibility rule and operand order;
+  typed undefined counts as known, while undefined comptime_int cannot refine
+  to a fixed integer. Fixed-float type peers use widest type and runtime integer
+  precision checks, not a floating-point backend. Existing pointer/function
+  merging retains qualifiers, alignments and sentinels. Zero arguments,
+  unreachable operands and invalid referenced bodies/initializers diagnose.
+- **Coverage**: focused official comparisons and native Debug/ReleaseFast;
+  37 unit scenarios, IR/TIR/QBE and seven error goldens, three seeds per
+  irgen/sema stage, hosted differential matrix. Native checks discarded calls,
+  volatile/global/aggregate stores, memset/memcpy, conditional return/break/
+  continue, aggregate return storage and ordinary captures/argument slots.
+  Final independent GCC/Clang Werror ASan/UBSan: 2363 units/1198 goldens,
+  126+4 native, 16 driver, 54 compiler-runner checks, full C/ABI/storage/
+  alignment, 102 observed volatile sequences, 300 safety cases. Optimized
+  native/safety and forced main tests pass. Both compilers pass 20000 standalone
+  mutations/stage, 256/256/104/160 seeds. Four fresh 60s libFuzzer runs:
+  2493128/66065/52123/41358. Official TypeOf 207 comparisons/51 exact primary
+  diagnostics and native Debug/ReleaseFast pass. Reflection regression evidence
+  and the nonsemantic final-style snapshot distinction are in the handoff.
+- **Interactions/limits**: M6.1/M7.3/M7.6 remain partial. No optional-result
+  peer synthesis (explicit NYI), field-bearing struct/tuple/enum/union metadata,
+  @typeInfo/@Type, imports, generic instantiation, general comptime calls,
+  type-returning functions or mutable-memory interpreter are introduced.
+  Existing expression/layout/runtime-width restrictions still apply inside
+  queries; type-only float queries do not add float computation or permit
+  incorrect f16/f80/f128 lowering. Full e2e remains szc-only; targeted official
+  comparisons are separate, not a full std/bootstrap differential.
 
 ### M7.6c Supported field membership
 

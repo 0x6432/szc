@@ -1,0 +1,159 @@
+%115 = struct_decl (flags=0) {
+  decl var "calls" type {
+    %0 = break_inline result, @type_u8
+  } value {
+    %1 = decl_type
+    %2 = int 0
+    %3 = as %1, %2
+    %4 = break_inline result, %3
+  }
+  decl const "T" value {
+    %8 = typeof_builtin %6 query {
+      %5 = decl_val "value"
+      %6 = call %5
+      %7 = break_inline result, @void_value
+    }
+    %9 = break_inline result, %8
+  }
+  decl fn "value" value {
+    %24 = func "value" {
+      ret type {
+        %10 = break_inline result, @type_u8
+      }
+      body insts {
+        %11 = decl_ref "calls"
+        %12 = load %11
+        %13 = add_sub_rhs_type %12
+        %14 = int 1
+        %15 = as %13, %14
+        %16 = add %12, %15
+        %17 = elem_type %11
+        %18 = as %17, %16
+        %19 = store %11, %18
+        %20 = ret_type
+        %21 = int 7
+        %22 = as_return %20, %21
+        %23 = ret %22
+      }
+    }
+    %25 = break_inline result, %24
+  }
+  decl fn "query" value {
+    %70 = func "query" {
+      %27 = param "a" type {
+        %26 = break_inline result, @type_u8
+      }
+      %29 = param "b" type {
+        %28 = break_inline result, @type_u16
+      }
+      %33 = param "p" type {
+        %30 = ptr_type @type_u8, @false volatile
+        %31 = as @type_type, %30
+        %32 = break_inline result, %31
+      }
+      ret type {
+        %34 = break_inline result, @type_u16
+      }
+      body insts {
+        %37 = typeof_builtin %35 query {
+          %35 = deref %33
+          %36 = break_inline result, @void_value
+        }
+        %44 = typeof_builtin @void_value query {
+          %38 = ref_deref %33
+          %39 = int 99
+          %40 = elem_type %38
+          %41 = as %40, %39
+          %42 = store %38, %41
+          %43 = break_inline result, @void_value
+        }
+        %48 = typeof_builtin %46 query {
+          %45 = decl_val "value"
+          %46 = call %45
+          %47 = break_inline result, @void_value
+        }
+        %61 = typeof_builtin %59 query {
+          %49 = int 2
+          %50 = as @type_usize, %49
+          %51 = array_type %50, @type_u8
+          %52 = as @type_type, %51
+          %53 = array_elem_type %52
+          %54 = int 1
+          %55 = as %53, %54
+          %56 = int 2
+          %57 = as %53, %56
+          %58 = array_init %52, %55, %57
+          %59 = as %52, %58
+          %60 = break_inline result, @void_value
+        }
+        %63 = typeof_builtin %27, %29 query {
+          %62 = break_inline result, @void_value
+        }
+        %64 = as @type_type, %63
+        %65 = as %64, %27
+        %66 = ret_type
+        %67 = add %65, %29
+        %68 = as_return %66, %67
+        %69 = ret %68
+      }
+    }
+    %71 = break_inline result, %70
+  }
+  decl fn "main" pub value {
+    %113 = func "main" {
+      ret type {
+        %72 = break_inline result, @type_u8
+      }
+      body insts {
+        %73 = decl_val "T"
+        %74 = as @type_type, %73
+        %75 = int 3
+        %76 = as %74, %75
+        %77 = alloc type=%74 init=%76
+        %78 = decl_val "query"
+        %79 = call %78 arg0 {
+          %80 = arg_type %79, 0
+          %81 = int 1
+          %82 = as %80, %81
+          %83 = break_inline result, %82
+        } arg1 {
+          %84 = arg_type %79, 1
+          %85 = int 2
+          %86 = as %84, %85
+          %87 = break_inline result, %86
+        } arg2 {
+          %88 = arg_type %79, 2
+          %89 = as %88, %77
+          %90 = break_inline result, %89
+        }
+        %91 = int 3
+        %92 = cmp_neq %79, %91
+        %97 = bool_or %92 rhs {
+          %93 = load %77
+          %94 = int 3
+          %95 = cmp_neq %93, %94
+          %96 = break_inline result, %95
+        }
+        %102 = bool_or %97 rhs {
+          %98 = decl_val "calls"
+          %99 = int 0
+          %100 = cmp_neq %98, %99
+          %101 = break_inline result, %100
+        }
+        %108 = if %102 then {
+          %103 = ret_type
+          %104 = int 1
+          %105 = as_return %103, %104
+          %106 = ret %105
+        } else {
+          %107 = break_inline result, @void_value
+        }
+        %109 = ret_type
+        %110 = int 0
+        %111 = as_return %109, %110
+        %112 = ret %111
+      }
+    }
+    %114 = break_inline result, %113
+  }
+}

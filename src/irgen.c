@@ -1234,6 +1234,7 @@ typedef enum Builtin {
 	BUILTIN_PTR_CAST,
 	BUILTIN_LAYOUT,
 	BUILTIN_THIS,
+	BUILTIN_TYPEOF,
 	BUILTIN_HAS_MEMBER,
 	BUILTIN_FIELD,
 	BUILTIN_ARITH,
@@ -1252,6 +1253,7 @@ typedef struct BuiltinInfo {
 
 static const BuiltinInfo builtin_table[] = {
 	{"This", BUILTIN_THIS, 0, IR_THIS},
+	{"TypeOf", BUILTIN_TYPEOF, UINT32_MAX, IR_TYPEOF_BUILTIN},
 	{"hasDecl", BUILTIN_HAS_MEMBER, 2, IR_HAS_DECL},
 	{"hasField", BUILTIN_HAS_MEMBER, 2, IR_HAS_FIELD},
 	{"field", BUILTIN_FIELD, 2, IR_FIELD_NAMED_VAL},
@@ -1446,7 +1448,7 @@ builtin_call(GenBody *body, Scope *scope, ResultInfo info, AstNode *node)
 		return IR_REF_VOID_VALUE;
 	}
 	AstNode **args = call_node->args.items;
-	if (call_node->args.count != builtin->arg_count) {
+	if (builtin->builtin != BUILTIN_TYPEOF && call_node->args.count != builtin->arg_count) {
 		char message[64];
 		snprintf(message, sizeof(message), "expected %u argument%s, found %u", (unsigned)builtin->arg_count, builtin->arg_count == 1 ? "" : "s", (unsigned)call_node->args.count);
 		error_at(gen, node->offset, "%s", message);
@@ -1463,6 +1465,31 @@ builtin_call(GenBody *body, Scope *scope, ResultInfo info, AstNode *node)
 	case BUILTIN_ALIGN_CAST:
 	case BUILTIN_PTR_CAST:
 		return IR_REF_VOID_VALUE;
+	case BUILTIN_TYPEOF: {
+		uint32_t count = call_node->args.count;
+		if (count == 0) {
+			error_at(gen, node->offset, "%s", "expected at least 1 argument, found 0");
+			return IR_REF_VOID_VALUE;
+		}
+		/* Type queries analyze ordinary expressions, even in a constant context,
+		 * but their runtime instructions are never retained by sema. */
+		GenBody query;
+		body_init(&query, gen, scope, false);
+		IrRef *values = ARENA_ARRAY(gen->arena, IrRef, count);
+		for (uint32_t i = 0; i < count; i++) {
+			values[i] = expr(&query, &query.base, result_none, args[i]);
+			if (body_is_terminated(&query)) {
+				error_at(gen, node->offset, "%s", "unreachable code");
+				return IR_REF_VOID_VALUE;
+			}
+		}
+		emit_break(&query, IR_BREAK_INLINE, node->offset, IR_BODY_RESULT, IR_REF_VOID_VALUE);
+		IrTypeOf header = {body_finish(&query), count};
+		uint32_t payload = APPEND_EXTRA(gen, header);
+		uint32_t operands = reserve_extra(gen, count);
+		memcpy(gen->ir->extra + operands, values, count * sizeof(IrRef));
+		return rvalue(body, info, emit_payload(body, IR_TYPEOF_BUILTIN, node->offset, payload), node->offset);
+	}
 	case BUILTIN_FIELD:
 		return rvalue(body, info, builtin_field(body, scope, node, false), node->offset);
 	case BUILTIN_HAS_MEMBER: {
@@ -2958,6 +2985,17 @@ dump_inst(const IrDumper *dumper, IrInstIndex index, uint32_t depth)
 		fputc(' ', out);
 		dump_ref(dumper, payload.base);
 		dump_labeled_body(dumper, "name", payload.name_body, depth);
+		break;
+	}
+	case IR_TYPEOF_BUILTIN: {
+		IrTypeOf header;
+		IR_READ(ir, inst->data.payload, &header);
+		const IrRef *args = ir->extra + inst->data.payload + IR_WORDS(IrTypeOf);
+		for (uint32_t i = 0; i < header.arg_count; i++) {
+			fputs(i == 0 ? " " : ", ", out);
+			dump_ref(dumper, args[i]);
+		}
+		dump_labeled_body(dumper, "query", header.body, depth);
 		break;
 	}
 	case IR_HAS_DECL:

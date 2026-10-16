@@ -19,6 +19,76 @@ Read this first when resuming work (the sandbox resets often).
 
 ## Latest follow-up checkpoint
 
+- M7.3a unevaluated type queries: `@TypeOf` with one or more arguments
+  returns a comptime type from ordinary runtime expression analysis. Dedicated
+  `IrTypeOf` body/refs, isolated operand/instruction maps, cloned enclosing
+  control exit lists and TIR instruction/extra count rollback prevent calls,
+  reads/stores, memory builtins, returns/breaks/continues and aggregate slots
+  from escaping into execution or consuming the parent's stack budget. Nested
+  and global-initializer queries work; normal declaration/function/global
+  validation is deliberately retained. A bad function called/addressed solely
+  inside the query still fails; a discarded bare function value stays lazy.
+  Integer peer resolution is n-ary and follows official source/binary rules:
+  largest signed/unsigned widths, known-value compatibility (typed undefined
+  counts as known), original-order ties and no undefined comptime_int refinement.
+  Fixed-float type peers retain the widest float and check runtime integer
+  precision. Pointer/function peer merging preserves qualifiers and sentinels;
+  different string lengths can yield a sentinel slice, not a plain slice.
+  Reference: 207 actual-Zig comparisons, 51 exact primary diagnostics; native
+  Debug/ReleaseFast pass. Thirty-seven unit scenarios, IR/TIR/QBE and seven error
+  goldens, three seeds each irgen/sema, hosted matrix. Native covers discarded
+  calls/volatile/global stores/memcpy/memset, conditional non-local control,
+  aggregate returns and captured runtime refs. Repeated 9MB query-only arrays
+  exercise frame budget isolation without emitting real allocations.
+  Final independent immutable trees /data/typeof-final-v2/{gcc,clang,optimized}
+  pass Werror ASan/UBSan: 2363 unit checks, 1198 goldens, 126+4 native,
+  16 driver, 54 compiler-runner checks, full C/ABI/storage/alignment, 102
+  observed volatile sequences and 300 safety cases. Optimized native/safety
+  and forced main tests pass. Both compilers pass 20000 standalone mutations
+  per stage, 256/256/104/160 seeds. Fresh four 60s libFuzzer runs pass:
+  2493128/66065/52123/41358. Final v2 TypeOf matrix and native reference modes
+  pass. Reflection regressions pass on the initial /data/typeof-final snapshot:
+  field 201/92, hasDecl 136/70, hasField 220/68, namespaces 76/40. That snapshot
+  differs from final v2 only by braces around one single-statement if; v2
+  repeats the complete independent validation after the required style cleanup.
+  All main compiler C/headers, unit/native/matrix/golden/seed files match final
+  v2 sources. Evidence: /data/typeof-final-v2-{gcc,clang,optimized,fuzz}.log,
+  /data/typeof-final-v2-reference.log,
+  /data/typeof-final-v2-native-reference.log,
+  /data/typeof-final-reference-*.log, /data/typeof-main-final{,-native}.log.
+  New-turn baseline restored missing sanitizer/compiler packages, then passed
+  forced baseline tests and all four standalone mutation stages before coding.
+  Hosted CI inspection: c380c28 GCC job 117151387658 lost runner communication
+  (log blob unavailable), Clang 117151387826 passed all 300 safety cases then
+  runner shutdown during cleanup. 83e7064 Clang 117144802271 timed out two safety
+  compiler invocations (120s), then runner shutdown/exit143. Exact-source frozen
+  Clang replay of those two cases repeated ten times passes all 20 with unchanged
+  compiler/native deadlines. No semantic/sanitizer CI failure was observed.
+  Targeted c380c28 GCC rerun returned 201; the subsequent rerun request returned
+  403, so further rerun requests were not confirmed. Latest read of 83e7064
+  still shows 64 successful jobs and that failure. After two 502 responses from
+  c380c28's 100-job endpoint, smaller 50-job pages succeeded: attempt 2 is
+  complete with 65 successes and one Clang failure (117221446479). This new
+  job again passes every test, including safety 300/300, then fails solely in
+  Post Run actions/checkout@v4 after runner shutdown. Its log is saved in
+  /data/typeof-ci-rerun-clang.log; do not change compiler semantics or weaken
+  test deadlines to mask post-job infrastructure failures. These runs are NOT
+  called green. 35e4d66 was previously confirmed GREEN/64.
+  Evidence: /data/typeof-ci-*-annotations.json, /data/typeof-ci-*.log,
+  /data/typeof-ci-exact-field-safety-replay.log. Do not blindly rerun genuine
+  failures or weaken timeouts; recheck job conclusions after a new CI snapshot.
+  M6.1/M7.3/M7.6 remain partial. No optional peer synthesis (explicit NYI),
+  field-bearing structs/tuple/enum/union layouts/metadata, typeInfo/Type, imports,
+  generic instantiation, type-returning functions, general comptime calls/
+  mutable-memory evaluation or float computation/lowering are added. Existing
+  unsupported expression/layout/runtime-width limits still apply inside queries.
+  Full e2e is szc-only, not a full official-Zig/std/bootstrap differential.
+  Next bounded candidate: @inComptime; AstGen rejects redundant use in a known
+  comptime scope, otherwise Sema.zirInComptime returns block.isComptime(). Query
+  bodies must remain ordinary analysis even within a comptime parent. Read the
+  actual source/binary before implementing; no next implementation has begun.
+  Q6 still MUST be asked at M10.2, not silently decided earlier.
+
 - M7.6c supported field membership is integrated: `@hasField` returns a
   comptime bool for array `len`, slice `len`/`ptr`, and no fields on the existing
   fieldless structs/root, regardless of their namespace declarations. It does

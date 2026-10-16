@@ -93,6 +93,29 @@ binding; unused namespaces and their non-exported declarations remain lazy.
 There are no new runtime namespace or `this` instructions. Field-bearing struct
 values, initialization, instance fields and layouts remain unsupported.
 
+`typeof_builtin` carries `IrTypeOf { body, arg_count }` followed by
+`arg_count` operand refs. Its body has ordinary (not forced-comptime) expression
+analysis even when the query appears in a type/global constant initializer.
+Sema uses an isolated operand map/instruction body and a transactional suffix
+of the enclosing TIR builder so captured runtime refs remain valid. It rolls
+back both instruction and extra-data lengths: the backend scans the whole
+instruction table for argument/allocation slots, not just the executable body.
+Non-local control targets are cloned with private exit lists, and discarded
+aggregate slots do not consume the enclosing function's stack budget. Nested
+queries inherit this isolation. Declaration/global/function worklists are NOT
+rolled back; referenced invalid bodies/initializers still diagnose as in Zig.
+
+A single query operand returns its exact type. Multiple fixed-width integer
+peers use the official n-ary largest-signed/largest-unsigned strategy, including
+its legacy known-value tie rule and original operand order (typed undefined
+counts as known; undefined comptime_int cannot refine to a fixed integer).
+Fixed-float peers preserve the widest float type and check runtime integer
+precision without coercing/evaluating query values. Existing pointer/function
+peer rules retain qualifiers/sentinels. There is no new typed-IR opcode or
+runtime query evaluation. Optional-result peer synthesis reports explicit NYI;
+this does not add optionals, tuples, generics, general comptime function calls
+or floating-point computation/lowering.
+
 `has_decl` / `has_field` carry
 `IrHasMember { container, name_body, type_src, name_src }`.
 The name body has a contextual `[]const u8` result and is generated/analyzed in

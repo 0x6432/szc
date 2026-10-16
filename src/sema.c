@@ -137,6 +137,7 @@ typedef struct Block {
 	const IrFile  *ir;
 	InstMap       *map;
 	bool          is_comptime;
+	bool          is_typeof;	/* runtime analysis whose emitted body is discarded */
 	bool comptime_value_required;	/* a builtin argument must be resolved, not emitted */
 	StringId      decl_name;	/* declaration whose value is analysed (names structs) */
 	SemaFunc      *func;	/* function whose body is analysed, or NULL */
@@ -4408,11 +4409,12 @@ array_slot(Block *block, TypeId pointer, uint32_t src)
 		size = 1;
 	uint64_t padding = alignment > 16 ? alignment - 1 : 0;
 	const uint64_t limit = 16777216;
-	if (size > limit || padding > limit - size || block->func->array_stack_bytes > limit - size - padding) {
+	if (!block->is_typeof && (size > limit || padding > limit - size || block->func->array_stack_bytes > limit - size - padding)) {
 		sema_error(block, src, "not supported by szc yet: aggregate stack storage exceeds 16777216 bytes");
 		return TIR_REF_NONE;
 	}
-	block->func->array_stack_bytes += size + padding;
+	if (!block->is_typeof)
+		block->func->array_stack_bytes += size + padding;
 	return emit_tir(block, TIR_ALLOC, pointer, src);
 }
 
@@ -6255,6 +6257,168 @@ unsupported_inst(Block *block, const IrInst *inst)
 	return operand_none;
 }
 
+static Operand
+typeof_conflict(Block *block, const Operand *operands, uint32_t a, uint32_t b, uint32_t src)
+{
+	uint32_t first = a < b ? a : b;
+	uint32_t second = a < b ? b : a;
+	sema_error(block, src, "incompatible types: '%s' and '%s'",
+		sema_type_name(block->sema, operands[first].type),
+		sema_type_name(block->sema, operands[second].type));
+	return operand_none;
+}
+
+/* Integer peer selection is n-ary and intentionally value-dependent in Zig.
+ * In particular, a known value (including typed undefined) enables its legacy
+ * signed/unsigned tie rule; folding pairs would lose both that fact and order. */
+static Operand
+typeof_peer(Block *block, const IrRef *args, uint32_t count, uint32_t src)
+{
+	Sema *sema = block->sema;
+	Operand *operands = ARENA_ARRAY(sema->arena, Operand, count);
+	uint32_t signed_index = UINT32_MAX;
+	uint32_t unsigned_index = UINT32_MAX;
+	uint32_t float_index = UINT32_MAX;
+	uint32_t undefined_int = UINT32_MAX;
+	bool numeric = true;
+	bool integers = true;
+	bool known = false;
+	for (uint32_t i = 0; i < count; i++) {
+		Operand operand = resolve_ref(block, args[i]);
+		if (operand.kind == OPERAND_NONE)
+			return operand_none;
+		operands[i] = operand;
+		Type type = sema->types[operand.type];
+		if (type.kind == TYPE_UNDEFINED || type.kind == TYPE_NORETURN)
+			continue;
+		if (type.kind == TYPE_COMPTIME_INT) {
+			if (operand.kind != OPERAND_COMPTIME || operand_is_undefined(block, operand))
+				undefined_int = i;
+			known = true;
+			continue;
+		}
+		if (type.kind == TYPE_FLOAT) {
+			integers = false;
+			if (float_index == UINT32_MAX || type.as.floating.bits > sema->types[operands[float_index].type].as.floating.bits)
+				float_index = i;
+			continue;
+		}
+		if (type.kind == TYPE_COMPTIME_FLOAT) {
+			integers = false;
+			continue;
+		}
+		if (type.kind != TYPE_INT) {
+			integers = false;
+			numeric = false;
+			continue;
+		}
+		known |= operand.kind == OPERAND_COMPTIME;
+		uint32_t *index = type.as.integer.is_signed ? &signed_index : &unsigned_index;
+		if (*index == UINT32_MAX || type.as.integer.bits > sema->types[operands[*index].type].as.integer.bits)
+			*index = i;
+	}
+	if (numeric && float_index != UINT32_MAX) {
+		TypeId type = operands[float_index].type;
+		uint32_t bits = sema->types[type].as.floating.bits;
+		uint32_t precision = bits == 16 ? 11 : bits == 32 ? 24 : bits == 64 ? 53 : bits == 80 ? 64 : 113;
+		for (uint32_t i = 0; i < count; i++) {
+			Type peer = sema->types[operands[i].type];
+			if (peer.kind == TYPE_INT && operands[i].kind != OPERAND_COMPTIME
+				&& peer.as.integer.bits > precision + (uint32_t)peer.as.integer.is_signed)
+				return typeof_conflict(block, operands, float_index, i, src);
+		}
+		return type_operand(sema, type);
+	}
+	if (integers && (signed_index != UINT32_MAX || unsigned_index != UINT32_MAX)) {
+		if (undefined_int != UINT32_MAX) {
+			uint32_t index = signed_index == UINT32_MAX ? unsigned_index
+				: unsigned_index == UINT32_MAX ? signed_index
+				: signed_index < unsigned_index ? signed_index : unsigned_index;
+			return typeof_conflict(block, operands, index, undefined_int, src);
+		}
+		uint32_t index;
+		if (signed_index == UINT32_MAX)
+			index = unsigned_index;
+		else if (unsigned_index == UINT32_MAX)
+			index = signed_index;
+		else {
+			uint32_t signed_bits = sema->types[operands[signed_index].type].as.integer.bits;
+			uint32_t unsigned_bits = sema->types[operands[unsigned_index].type].as.integer.bits;
+			if (signed_bits > unsigned_bits)
+				index = signed_index;
+			else if (known)
+				index = unsigned_bits > signed_bits ? unsigned_index
+					: signed_index < unsigned_index ? signed_index : unsigned_index;
+			else
+				return typeof_conflict(block, operands, unsigned_index, signed_index, src);
+		}
+		return type_operand(sema, operands[index].type);
+	}
+	Operand peer = operands[0];
+	for (uint32_t i = 1; i < count; i++) {
+		if ((sema->types[peer.type].kind == TYPE_NULL && sema->types[operands[i].type].kind != TYPE_NULL && operands[i].type != T_UNDEFINED)
+			|| (sema->types[operands[i].type].kind == TYPE_NULL && sema->types[peer.type].kind != TYPE_NULL && peer.type != T_UNDEFINED)) {
+			sema_error(block, src, "not supported by szc yet: optional peer type resolution");
+			return operand_none;
+		}
+		TypeId type;
+		if (!peer_type(block, peer, operands[i], src, &type))
+			return operand_none;
+		peer.type = type;
+	}
+	return type_operand(sema, peer.type);
+}
+
+/* Analyze on the existing builder so captured runtime refs keep their types.
+ * The private instruction body never reaches the parent body, and both builder
+ * lengths roll back afterwards (including slots scanned by the backend).
+ * Declaration/function reachability is deliberately not rolled back: Zig still
+ * validates the bodies/initializers referenced only inside @TypeOf. */
+static Operand
+analyze_typeof(Block *block, const IrInst *inst)
+{
+	Sema *sema = block->sema;
+	IrTypeOf header;
+	IR_READ(block->ir, inst->data.payload, &header);
+	InstMap map;
+	inst_map_init(&map, sema->arena);
+	map.parent = block->map;
+	Block query;
+	block_init_child(&query, block);
+	query.map = &map;
+	query.is_comptime = false;
+	query.is_typeof = true;
+	query.comptime_value_required = false;
+	/* Break/continue validation must not append exits to enclosing targets. */
+	ControlTarget **link = &query.control;
+	for (ControlTarget *target = block->control; target != NULL; target = target->parent) {
+		ControlTarget *copy = ARENA_NEW(sema->arena, ControlTarget);
+		*copy = *target;
+		copy->exits = NULL;
+		copy->count = 0;
+		copy->capacity = 0;
+		*link = copy;
+		link = &copy->parent;
+	}
+	*link = NULL;
+	TirFunc temporary = {0};
+	if (query.tir == NULL)
+		query.tir = &temporary;
+	uint32_t inst_count = query.tir->inst_count;
+	uint32_t extra_count = query.tir->extra_count;
+	BodyResult body = analyze_body(&query, header.body);
+	Operand result = operand_none;
+	if (body.end == BODY_NORETURN)
+		sema_error(block, inst->src, "unreachable code");
+	else if (body.end == BODY_BREAK_RESULT) {
+		const IrRef *args = block->ir->extra + inst->data.payload + IR_WORDS(IrTypeOf);
+		result = typeof_peer(&query, args, header.arg_count, inst->src);
+	}
+	query.tir->inst_count = inst_count;
+	query.tir->extra_count = extra_count;
+	return result;
+}
+
 static InstOutcome
 analyze_inst(Block *block, IrInstIndex index, Operand *break_value)
 {
@@ -6441,6 +6605,9 @@ analyze_inst(Block *block, IrInstIndex index, Operand *break_value)
 	case IR_FUNC:
 	case IR_FN_TYPE:
 		result = analyze_func_inst(block, index);
+		break;
+	case IR_TYPEOF_BUILTIN:
+		result = analyze_typeof(block, inst);
 		break;
 	case IR_HAS_DECL:
 	case IR_HAS_FIELD:

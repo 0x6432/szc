@@ -124,6 +124,7 @@ jobs:
           - diff_struct_namespaces
           - diff_field
           - diff_has_field
+          - diff_typeof
           - diff_has_decl
           - diff_quoted_identifiers
           - diff_bit_transforms
