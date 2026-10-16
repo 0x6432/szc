@@ -1,0 +1,114 @@
+%80 = struct_decl (flags=0) {
+  decl fn "reverse" value {
+    %9 = func "reverse" {
+      %2 = param "n" type {
+        %0 = int_type i5
+        %1 = break_inline result, %0
+      }
+      ret type {
+        %3 = int_type i5
+        %4 = break_inline result, %3
+      }
+      body insts {
+        %5 = ret_type
+        %6 = bit_reverse %2
+        %7 = as_return %5, %6
+        %8 = ret %7
+      }
+    }
+    %10 = break_inline result, %9
+  }
+  decl fn "swap" value {
+    %20 = func "swap" {
+      %13 = param "n" type {
+        %11 = int_type i24
+        %12 = break_inline result, %11
+      }
+      ret type {
+        %14 = int_type i24
+        %15 = break_inline result, %14
+      }
+      body insts {
+        %16 = ret_type
+        %17 = byte_swap %13
+        %18 = as_return %16, %17
+        %19 = ret %18
+      }
+    }
+    %21 = break_inline result, %20
+  }
+  decl fn "main" pub value {
+    %78 = func "main" {
+      ret type {
+        %22 = break_inline result, @type_u8
+      }
+      body insts {
+        %23 = decl_val "reverse"
+        %24 = call %23 arg0 {
+          %25 = arg_type %24, 0
+          %26 = int 1
+          %27 = as %25, %26
+          %28 = break_inline result, %27
+        }
+        %29 = int 16
+        %30 = negate %29
+        %31 = cmp_neq %24, %30
+        %42 = bool_or %31 rhs {
+          %32 = decl_val "swap"
+          %33 = call %32 arg0 {
+            %34 = arg_type %33, 0
+            %35 = int 128
+            %36 = as %34, %35
+            %37 = break_inline result, %36
+          }
+          %38 = int 8388608
+          %39 = negate %38
+          %40 = cmp_neq %33, %39
+          %41 = break_inline result, %40
+        }
+        %48 = if %42 then {
+          %43 = ret_type
+          %44 = int 1
+          %45 = as_return %43, %44
+          %46 = ret %45
+        } else {
+          %47 = break_inline result, @void_value
+        }
+        %49 = int_type u257
+        %50 = int 1
+        %51 = as %49, %50
+        %52 = bit_reverse %51
+        %53 = int_big 0x10000000000000000000000000000000000000000000000000000000000000000
+        %54 = cmp_eq %52, %53
+        %61 = if %54 then {
+          %55 = int 0
+          %56 = as @type_u8, %55
+          %57 = break_inline result, %56
+        } else {
+          %58 = int 256
+          %59 = as @type_u8, %58
+          %60 = break_inline result, %59
+        }
+        %62 = int 1
+        %63 = as @type_i128, %62
+        %64 = byte_swap %63
+        %65 = int_big 0x1000000000000000000000000000000
+        %66 = cmp_eq %64, %65
+        %73 = if %66 then {
+          %67 = int 0
+          %68 = as @type_u8, %67
+          %69 = break_inline result, %68
+        } else {
+          %70 = int 256
+          %71 = as @type_u8, %70
+          %72 = break_inline result, %71
+        }
+        %74 = ret_type
+        %75 = int 0
+        %76 = as_return %74, %75
+        %77 = ret %76
+      }
+    }
+    %79 = break_inline result, %78
+  }
+}

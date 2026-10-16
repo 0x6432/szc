@@ -769,6 +769,31 @@ emit_inst(Codegen *cg, TirRef ref)
 		emit_binary(cg, ref, QBE_W, op, inst->data.bin.lhs, inst->data.bin.rhs);
 		return;
 	}
+	case TIR_BIT_REVERSE:
+	case TIR_BYTE_SWAP: {
+		TirRef operand = inst->data.un.operand;
+		uint32_t bits = type_bits(cg, inst->type);
+		QbeClass operand_class = type_class(cg, inst->type, inst->src);
+		if (operand_class == QBE_NONE)
+			return;
+		uint32_t step = inst->op == TIR_BIT_REVERSE ? 1 : 8;
+		fprintf(out, "\t%%bt%u_bits =l %s ", ref, operand_class == QBE_W ? "extuw" : "copy");
+		print_operand(cg, operand);
+		fprintf(out, "\n\t%%bt%u_result =l copy 0\n\t%%bt%u_count =w copy 0\n", ref, ref);
+		fprintf(out, "\tjmp @bt%u_loop\n@bt%u_loop\n", ref, ref);
+		fprintf(out, "\t%%bt%u_more =w cultw %%bt%u_count, %u\n", ref, ref, bits);
+		fprintf(out, "\tjnz %%bt%u_more, @bt%u_body, @bt%u_done\n", ref, ref, ref);
+		fprintf(out, "@bt%u_body\n\t%%bt%u_result =l shl %%bt%u_result, %u\n", ref, ref, ref, step);
+		fprintf(out, "\t%%bt%u_low =l and %%bt%u_bits, %u\n", ref, ref, (1u << step) - 1);
+		fprintf(out, "\t%%bt%u_result =l or %%bt%u_result, %%bt%u_low\n", ref, ref, ref);
+		fprintf(out, "\t%%bt%u_bits =l shr %%bt%u_bits, %u\n", ref, ref, step);
+		fprintf(out, "\t%%bt%u_count =w add %%bt%u_count, %u\n", ref, ref, step);
+		fprintf(out, "\tjmp @bt%u_loop\n@bt%u_done\n", ref, ref);
+		print_dest(cg, ref, cls);
+		fprintf(out, "copy %%bt%u_result\n", ref);
+		normalize(cg, ref, inst->type, cls);
+		return;
+	}
 	case TIR_CLZ:
 	case TIR_CTZ:
 	case TIR_POP_COUNT: {

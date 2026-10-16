@@ -115,6 +115,7 @@ jobs:
           - diff_equal_slice_casts
           - diff_resized_slice_casts
           - diff_pointer_roundtrips
+          - diff_bit_transforms
           - diff_bit_counts
           - diff_character_literals
           - diff_scalar_bitcasts

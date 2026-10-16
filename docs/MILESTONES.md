@@ -167,6 +167,8 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
 - [~] **M9.4 Labeled switch `continue :sw`, `@fieldParentPtr`, `@memcpy`/`@memset`, remaining builtins.**
   - [x] **M9.4a `@sizeOf`/`@alignOf` for supported type layouts.**
   - [x] **M9.4b `@bitSizeOf` for supported bit representations.**
+  - [x] **M9.4c Integer bit counts**: `@clz`, `@ctz`, `@popCount`, native runtime and arbitrary-width constants.
+  - [x] **M9.4d Integer permutations**: `@bitReverse`, `@byteSwap`, signed bit patterns and exact logical widths.
 - [ ] **M9.5 Inline asm for x86_64-linux std usage.**
 
 ## Phase 10: std tests and bootstrap
@@ -181,6 +183,29 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
 ## Completed milestone log
 
 (newest first; each entry: what, limitations, interactions)
+
+### M9.4d Bit reversal and byte swapping
+
+- **What**: typed scalar `@bitReverse` and `@byteSwap` preserve the exact input
+  type and logical bit width. Constant permutations run on finite two's-complement
+  limbs before restoring signed interpretation. Runtime native-width permutations
+  use bounded QBE loops and canonicalize narrow signed results. Byte swapping
+  rejects widths not divisible by eight before handling undefined values.
+- **Validation**: actual Zig matches 296 cases/92 exact primary diagnostics,
+  including signed minima, arbitrary-width constants, exact result-pointer types,
+  undefined, zero-width and malformed calls. Native fixture checks every legal
+  width through 64, every byte pattern, explicit expected permutations, involution
+  and one-time argument evaluation. Frozen GCC/Clang Werror ASan/UBSan pass
+  1620 units/1084 goldens, 113+4 native, 16 driver, full C/ABI/storage/alignment,
+  60 volatile and 280 safety cases. Optimized GCC native/safety and both 20000
+  mutations/stage pass (256/256/75/131 seeds). Four fresh 60s fuzz counts:
+  2214783/59987/57108/78840. Main forced unit/golden tests pass.
+- **Interactions/limits**: byte order here is a logical integer permutation, not
+  a host-memory reinterpretation. No vector implementation, inline assembly or
+  external runtime dependency is introduced. Runtime integers wider than 64 bits
+  remain an explicit backend limitation; their constant permutations work.
+- **Evidence**: /data/bit-transform-{reference,native-v2,main-tests}.log and
+  /data/bit-transform-final-{gcc,clang,fuzz}.log.
 
 ### M9.4c Integer bit-count builtins
 

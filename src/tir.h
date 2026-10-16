@@ -55,6 +55,8 @@ typedef uint32_t TirBody;	/* extra index of a body, 0 = none */
 	X(BIT_CAST, "bit_cast")	/* un: equal-width scalar bit representation */ \
 	X(INT_CAST, "int_cast")	/* un: widen/narrow integer to `type` */ \
 	X(TRUNCATE, "truncate")	/* un: discard high integer bits */ \
+	X(BIT_REVERSE, "bit_reverse") /* un: reverse operand logical bits */ \
+	X(BYTE_SWAP, "byte_swap") /* un: reverse operand bytes; width divisible by 8 */ \
 	X(CLZ, "clz") /* un: unsigned count of leading zeros in operand width */ \
 	X(CTZ, "ctz") /* un: unsigned count of trailing zeros in operand width */ \
 	X(POP_COUNT, "pop_count") /* un: unsigned population count */ \

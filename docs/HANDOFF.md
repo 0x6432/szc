@@ -19,6 +19,17 @@ Read this first when resuming work (the sandbox resets often).
 
 ## Latest follow-up checkpoint
 
+- M9.4d bitReverse/byteSwap are integrated: exact typed finite-bit permutations,
+  signed canonicalization, byte-width diagnostics and portable QBE loops. Actual
+  Zig: 296 cases/92 exact diagnostics, native all-width/byte-pattern/evaluation
+  fixture pass. Frozen GCC/Clang Werror ASan/UBSan: 1620 units/1084 goldens,
+  113+4 native, 16 driver, full C/ABI/storage/alignment, 60 volatile, 280 safety;
+  optimized GCC native/safety and both 20000 mutations/stage pass (256/256/75/131).
+  Four 60s fuzz counts: 2214783/59987/57108/78840. Main forced tests pass.
+  Hosted 38fca14, 87c95ef and 2654c96 are now green; newer runs are still pending.
+  Next scoped work: integer absolute values, including unsigned signed-minimum
+  magnitudes; active isolated implementation is /data/abs-next.
+
 - M9.4c integer bit counts are integrated: clz/ctz/popCount, finite signed
   two's-complement comptime bits, smallest unsigned result type and portable QBE
   runtime loops. Canonical u0 handling preserves call side effects. Actual Zig:

@@ -1,0 +1,38 @@
+fn szc.main.1: fn () u8 {
+  %0: i5 = const 1
+  %1: i5 = call szc.reverse.2(%0)
+  %2: i5 = const -16
+  %3: bool = cmp_neq %1, %2
+  %4: bool = block {
+    %12: noreturn = condbr %3 then {
+      %10: bool = const true
+      %11: noreturn = br %4, %10
+    } else {
+      %5: i24 = const 128
+      %6: i24 = call szc.swap.3(%5)
+      %7: i24 = const -8388608
+      %8: bool = cmp_neq %6, %7
+      %9: noreturn = br %4, %8
+    }
+  }
+  %13: void = block {
+    %17: noreturn = condbr %4 then {
+      %14: u8 = const 1
+      %15: noreturn = ret %14
+    } else {
+      %16: noreturn = br %13
+    }
+  }
+  %18: u8 = const 0
+  %19: noreturn = ret %18
+}
+fn szc.reverse.2: fn (i5) i5 {
+  %0: i5 = arg 0
+  %1: i5 = bit_reverse %0
+  %2: noreturn = ret %1
+}
+fn szc.swap.3: fn (i24) i24 {
+  %0: i24 = arg 0
+  %1: i24 = byte_swap %0
+  %2: noreturn = ret %1
+}

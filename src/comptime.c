@@ -6,6 +6,7 @@
  */
 #include "comptime.h"
 
+#include <assert.h>
 #include <stdalign.h>
 #include <stdio.h>
 #include <string.h>
@@ -1035,4 +1036,20 @@ bigint_bit_count(Arena *arena, const BigInt *value, uint32_t bits, BigIntCountOp
 		count++;
 	}
 	return count;
+}
+
+/* Permute finite two's-complement bits, then restore signed interpretation. */
+BigInt
+bigint_transform(Arena *arena, const BigInt *value, bool is_signed, uint32_t bits, BigIntTransformOp op)
+{
+	assert(op != BIGINT_BYTE_SWAP || bits % 8 == 0);
+	BigInt raw = bigint_wrap(arena, value, false, bits);
+	BigInt result = bigint_alloc(arena, (bits + 31) / 32);
+	for (uint32_t i = 0; i < bits; i++) {
+		if (i / 32 >= raw.limb_count || (raw.limbs[i / 32] & (UINT32_C(1) << (i % 32))) == 0)
+			continue;
+		uint32_t destination = op == BIGINT_BIT_REVERSE ? bits - i - 1 : bits - 8 - (i & ~UINT32_C(7)) + (i & 7);
+		result.limbs[destination / 32] |= UINT32_C(1) << (destination % 32);
+	}
+	return bigint_wrap(arena, &result, is_signed, bits);
 }

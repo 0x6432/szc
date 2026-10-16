@@ -1139,7 +1139,7 @@ typedef enum Builtin {
 	BUILTIN_PTR_CAST,
 	BUILTIN_LAYOUT,
 	BUILTIN_ARITH,
-	BUILTIN_BIT_COUNT,
+	BUILTIN_INT_BITS,
 	BUILTIN_PANIC,
 } Builtin;
 
@@ -1166,9 +1166,11 @@ static const BuiltinInfo builtin_table[] = {
 	{"sizeOf", BUILTIN_LAYOUT, 1, IR_SIZE_OF},
 	{"bitSizeOf", BUILTIN_LAYOUT, 1, IR_BIT_SIZE_OF},
 	{"alignOf", BUILTIN_LAYOUT, 1, IR_ALIGN_OF},
-	{"clz", BUILTIN_BIT_COUNT, 1, IR_CLZ},
-	{"ctz", BUILTIN_BIT_COUNT, 1, IR_CTZ},
-	{"popCount", BUILTIN_BIT_COUNT, 1, IR_POP_COUNT},
+	{"bitReverse", BUILTIN_INT_BITS, 1, IR_BIT_REVERSE},
+	{"byteSwap", BUILTIN_INT_BITS, 1, IR_BYTE_SWAP},
+	{"clz", BUILTIN_INT_BITS, 1, IR_CLZ},
+	{"ctz", BUILTIN_INT_BITS, 1, IR_CTZ},
+	{"popCount", BUILTIN_INT_BITS, 1, IR_POP_COUNT},
 	{"divTrunc", BUILTIN_ARITH, 2, IR_DIV_TRUNC},
 	{"divFloor", BUILTIN_ARITH, 2, IR_DIV_FLOOR},
 	{"divCeil", BUILTIN_ARITH, 2, IR_DIV_CEIL},
@@ -1348,7 +1350,7 @@ builtin_call(GenBody *body, Scope *scope, ResultInfo info, AstNode *node)
 		IrRef operand = expr(body, scope, result_none, args[0]);
 		return rvalue(body, info, emit_un(body, builtin->arith_op, node->offset, operand), node->offset);
 	}
-	case BUILTIN_BIT_COUNT: {
+	case BUILTIN_INT_BITS: {
 		IrRef operand = expr(body, scope, result_none, args[0]);
 		return rvalue(body, info, emit_un(body, builtin->arith_op, node->offset, operand), node->offset);
 	}

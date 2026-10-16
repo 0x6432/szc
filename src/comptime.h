@@ -147,6 +147,14 @@ ValueId value_function(ValueTable *table, TypeId fn_type, FuncId function);
 
 /* ---------- Big integers (results are allocated in `arena`) ---------- */
 
+typedef enum BigIntTransformOp {
+	BIGINT_BIT_REVERSE,
+	BIGINT_BYTE_SWAP,
+} BigIntTransformOp;
+
+/* Byte swapping requires `bits` divisible by 8; both operations preserve width. */
+BigInt bigint_transform(Arena *arena, const BigInt *value, bool is_signed, uint32_t bits, BigIntTransformOp op);
+
 typedef enum BigIntCountOp {
 	BIGINT_CLZ,
 	BIGINT_CTZ,

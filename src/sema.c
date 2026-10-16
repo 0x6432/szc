@@ -3314,6 +3314,39 @@ analyze_bit_count(Block *block, const IrInst *inst)
 	return runtime_operand(type, emit_tir_un(block, op, type, inst->src, operand.inst));
 }
 
+/* Width-preserving integer permutations; vectors are a separate milestone. */
+static Operand
+analyze_integer_transform(Block *block, const IrInst *inst)
+{
+	Sema *sema = block->sema;
+	Operand operand = resolve_ref(block, inst->data.un.operand);
+	if (operand.kind == OPERAND_NONE)
+		return operand_none;
+	TypeId type = operand.type;
+	if (!is_int(sema, type)) {
+		sema_error(block, inst->src, "expected integer or vector, found '%s'", sema_type_name(sema, type));
+		return operand_none;
+	}
+	uint32_t bits = sema->types[type].as.integer.bits;
+	if (inst->op == IR_BYTE_SWAP && bits % 8 != 0) {
+		sema_error(block, inst->src, "@byteSwap requires the number of bits to be evenly divisible by 8, but %s has %u bits", sema_type_name(sema, type), bits);
+		return operand_none;
+	}
+	if (bits == 0)
+		return comptime_operand(type, value_int_u64(&sema->values, type, 0));
+	if (operand_is_undefined(block, operand))
+		return comptime_operand(type, value_undefined(&sema->values, type));
+	if (operand.kind == OPERAND_COMPTIME) {
+		BigIntTransformOp op = inst->op == IR_BIT_REVERSE ? BIGINT_BIT_REVERSE : BIGINT_BYTE_SWAP;
+		BigInt result = bigint_transform(sema->arena, &operand_value(block, operand)->as.integer, is_signed_type(sema, type), bits, op);
+		return comptime_operand(type, value_int(&sema->values, type, &result));
+	}
+	if (!require_runtime(block, inst->src))
+		return operand_none;
+	TirOp op = inst->op == IR_BIT_REVERSE ? TIR_BIT_REVERSE : TIR_BYTE_SWAP;
+	return runtime_operand(type, emit_tir_un(block, op, type, inst->src, operand.inst));
+}
+
 /* <<, >>, <<|. */
 static Operand
 analyze_shift(Block *block, const IrInst *inst)
@@ -6066,6 +6099,10 @@ analyze_inst(Block *block, IrInstIndex index, Operand *break_value)
 	case IR_INT_FROM_PTR:
 		result = analyze_int_from_ptr(block, inst);
 		break;
+	case IR_BIT_REVERSE:
+	case IR_BYTE_SWAP:
+		result = analyze_integer_transform(block, inst);
+		break;
 	case IR_CLZ:
 	case IR_CTZ:
 	case IR_POP_COUNT:
@@ -6618,6 +6655,8 @@ dump_tir_inst(FILE *out, Sema *sema, const TirFunc *tir, TirRef ref, uint32_t de
 	case TIR_BIT_CAST:
 	case TIR_INT_CAST:
 	case TIR_TRUNCATE:
+	case TIR_BIT_REVERSE:
+	case TIR_BYTE_SWAP:
 	case TIR_CLZ:
 	case TIR_CTZ:
 	case TIR_POP_COUNT:

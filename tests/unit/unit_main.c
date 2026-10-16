@@ -330,6 +330,53 @@ test_bigint_bit_counts(void)
 }
 
 static void
+test_bigint_transforms(void)
+{
+	Arena arena;
+	arena_init(&arena);
+	uint64_t state = 885522;
+	uint32_t mismatches = 0;
+	for (uint32_t width = 0; width <= 64; width++) {
+		for (uint32_t round = 0; round < 16; round++) {
+			uint64_t raw = next_random(&state);
+			if (width < 64)
+				raw &= (UINT64_C(1) << width) - 1;
+			uint64_t expected = 0;
+			for (uint32_t i = 0; i < width; i++)
+				expected |= (raw >> i & 1) << (width - i - 1);
+			BigInt value = bigint_from_u64(&arena, raw);
+			BigInt actual = bigint_transform(&arena, &value, false, width, BIGINT_BIT_REVERSE);
+			mismatches += bigint_to_i128(&actual) != (Int128)expected;
+			BigInt restored = bigint_transform(&arena, &actual, false, width, BIGINT_BIT_REVERSE);
+			mismatches += bigint_compare(&restored, &value) != 0;
+			if (width % 8 == 0) {
+				expected = 0;
+				for (uint32_t i = 0; i < width; i += 8)
+					expected |= (raw >> i & 255) << (width - i - 8);
+				actual = bigint_transform(&arena, &value, false, width, BIGINT_BYTE_SWAP);
+				mismatches += bigint_to_i128(&actual) != (Int128)expected;
+				restored = bigint_transform(&arena, &actual, false, width, BIGINT_BYTE_SWAP);
+				mismatches += bigint_compare(&restored, &value) != 0;
+			}
+		}
+	}
+	CHECK(mismatches == 0);
+	BigInt one = bigint_from_u64(&arena, 1);
+	BigInt negative = bigint_negate(&arena, &one);
+	BigInt reversed = bigint_transform(&arena, &negative, true, 257, BIGINT_BIT_REVERSE);
+	CHECK(bigint_compare(&reversed, &negative) == 0);
+	BigInt high = bigint_shl(&arena, &one, 256);
+	reversed = bigint_transform(&arena, &one, false, 257, BIGINT_BIT_REVERSE);
+	CHECK(bigint_compare(&reversed, &high) == 0);
+	BigInt swapped = bigint_transform(&arena, &negative, true, 512, BIGINT_BYTE_SWAP);
+	CHECK(bigint_compare(&swapped, &negative) == 0);
+	high = bigint_shl(&arena, &one, 504);
+	swapped = bigint_transform(&arena, &one, false, 512, BIGINT_BYTE_SWAP);
+	CHECK(bigint_compare(&swapped, &high) == 0);
+	arena_free(&arena);
+}
+
+static void
 test_bigint_div_zero(void)
 {
 	Arena arena;
@@ -1383,6 +1430,7 @@ main(void)
 	test_bigint_random();
 	test_bigint_div_zero();
 	test_bigint_bit_counts();
+	test_bigint_transforms();
 	test_byte_values();
 	test_constant_references();
 	test_global_references();
