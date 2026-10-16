@@ -1,0 +1,3 @@
+tests/tir/errors/ptr_from_int_underflow.zig:1:60: error: pointer computation here causes illegal behavior
+pub fn main() void { const p: [*]u8 = @ptrFromInt(1); _ = p-2; }
+                                                           ^

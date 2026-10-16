@@ -716,3 +716,26 @@ physical sentinel via borrowed many-pointer element loads; canonical offset-zero
 casts need not have their containing root's extent. Runtime assertion volatile
 loads are retained once by szc. Zig ReleaseFast removes safety reads entirely;
 that distinction is explicit in the observer fixture, while Debug checks one.
+
+
+## Integer-to-pointer conversion (M5.5b)
+
+IR_PTR_FROM_INT is binary: contextual destination type and address expression.
+Sema coerces the address to usize, rejects slice/non-pointer destinations and
+validates defined constants against allowzero and the effective pointer alignment.
+TIR_PTR_FROM_INT preserves a runtime usize value after ordered null/alignment
+checks, then a QBE long-word copy. Panic messages match actual Zig.
+
+VALUE_INT_PTR is a typed uint64 absolute address, not a relocation, immutable
+object or fabricated backing allocation. Numeric casts and subobject addresses
+canonicalize to the same form. PointerAddress.offset carries the numeric address
+for this root kind, so comparison/difference use the common numeric address space.
+Runtime loads, stores and aggregate snapshots use the numeric pointer directly;
+comptime memory cannot be read from an address alone. Known numeric-backed
+sentinel views therefore follow Zig's known runtime-memory bypass. Runtime-length
+explicit assertions still read/check the end element after bounds guards.
+
+Numeric addition wraps at usize width; subtraction must not precede address zero.
+Known absolute `@intFromPtr` values fold, while symbolic roots retain relocations
+and runtime address conversion. None of this implements general `@ptrCast` memory
+reinterpretation or optional/vector/C-pointer types.

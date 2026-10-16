@@ -1,0 +1,3 @@
+tests/tir/errors/ptr_from_int_zero.zig:1:37: error: pointer type '*u8' does not allow address zero
+pub fn main() void { const p: *u8 = @ptrFromInt(0); _ = p; }
+                                    ^

@@ -36,6 +36,17 @@ def cases():
     ):
         yield "panic_slice_" + label, source + "\n", message
 
+    for label, ty, address, message in (
+        ('null', '*u8', 0, 'cast causes pointer to be null'),
+        ('aligned_null', '*u32', 0, 'cast causes pointer to be null'),
+        ('alignment', '*u32', 1, 'incorrect alignment'),
+        ('allowzero_alignment', '*allowzero u32', 1, 'incorrect alignment'),
+        ('overaligned', '*align(256) u8', 16, 'incorrect alignment'),
+    ):
+        yield 'ptr_from_int_'+label, (
+            f'fn operation(n: usize) void {{ const p: {ty} = @ptrFromInt(n); _ = p; }} '
+            f'pub fn main() void {{ operation({address}); }}\n'), message
+
     for label, child, values, sentinel, end in (
         ('array', 'u16', '7,9,18', '17', 2),
         ('boolean', 'bool', 'true,true,false', 'true', 2),

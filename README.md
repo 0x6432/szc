@@ -31,7 +31,9 @@ owned snapshots, function arguments/returns and scalar-element mutation. Integer
 sentinel arrays support explicit types/literals, physical sentinel storage and
 compatible coercions/concatenation. Single/many
 pointers support qualifiers, array-to-many coercion, borrowed indexing, element offsets,
-differences and `@intFromPtr` addresses. `@sizeOf`/`@alignOf`/`@bitSizeOf` query supported layouts and representations;
+differences and `@intFromPtr` addresses. `@ptrFromInt` supports numeric scalar
+pointers with constant validation and runtime null/alignment guards; absolute
+addresses are not treated as compiler-owned memory. `@sizeOf`/`@alignOf`/`@bitSizeOf` query supported layouts and representations;
 integer/boolean-sentinel many-pointers preserve promises through arithmetic;
 integer/bool-sentinel and unsentinelled slices have pointer/length descriptors, writable/addressable `.ptr`/`.len`
 fields (including individual volatile word access), indexing,

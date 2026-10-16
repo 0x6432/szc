@@ -34,6 +34,8 @@ typedef enum PanicKind {
 	PANIC_INDEX,
 	PANIC_SLICE_ORDER,
 	PANIC_SENTINEL,
+	PANIC_NULL_CAST,
+	PANIC_ALIGNMENT,
 	PANIC_COUNT,
 } PanicKind;
 
@@ -201,6 +203,9 @@ print_operand(Codegen *cg, TirRef ref)
 			fprintf(cg->out, "%" PRId64, (int64_t)bits);
 		return;
 	}
+	case VALUE_INT_PTR:
+		fprintf(cg->out, "%" PRIu64, value->as.address);
+		return;
 	case VALUE_GLOBAL:
 		fprintf(cg->out, "$%s", sema_global(cg->sema, value->as.global)->symbol);
 		return;
@@ -288,6 +293,8 @@ static const char *const panic_messages[PANIC_COUNT] = {
 	"index out of bounds",
 	"start index is larger than end index",
 	"sentinel mismatch",
+	"cast causes pointer to be null",
+	"incorrect alignment",
 };
 
 /* Bounds as canonical 64-bit bit patterns; wider types have already errored. */
@@ -772,6 +779,25 @@ emit_inst(Codegen *cg, TirRef ref)
 		fputs("\n", out);
 		normalize(cg, ref, inst->type, cls);
 		return;
+	case TIR_PTR_FROM_INT: {
+		TypePointer pointer = sema_type(cg->sema, inst->type)->as.pointer;
+		TirRef operand = inst->data.un.operand;
+		if (!pointer.is_allowzero)
+			emit_bound_check(cg, ref, operand, "null", "ceq", 0, PANIC_NULL_CAST);
+		uint32_t alignment = pointer.alignment != 0 ? pointer.alignment : sema_type_align(cg->sema, pointer.child);
+		if (alignment > 1) {
+			fprintf(out, "\t%%g%u_align_bits =l and ", (unsigned)ref);
+			print_operand(cg, operand);
+			fprintf(out, ", %u\n\t%%g%u_alignment =w cnel %%g%u_align_bits, 0\n",
+				(unsigned)(alignment - 1), (unsigned)ref, (unsigned)ref);
+			emit_guard(cg, ref, "alignment", PANIC_ALIGNMENT);
+		}
+		print_dest(cg, ref, QBE_L);
+		fputs("copy ", out);
+		print_operand(cg, operand);
+		fputc('\n', out);
+		return;
+	}
 	case TIR_PTR_TO_INT:
 	case TIR_PTR_CAST:
 		print_dest(cg, ref, QBE_L);
@@ -1235,6 +1261,9 @@ emit_data_value(Codegen *cg, FILE *out, ValueId stored, bool outlined, bool *fir
 		break;
 	case VALUE_BOOL:
 		fputs(value->as.boolean ? "1" : "0", out);
+		break;
+	case VALUE_INT_PTR:
+		fprintf(out, "%" PRIu64, value->as.address);
 		break;
 	case VALUE_FUNCTION:
 		fprintf(out, "%s%s", outlined ? "" : "$", sema_func(cg->sema, value->as.function)->symbol);

@@ -115,6 +115,7 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
   - [x] **M5.4d Explicit sentinel assertions**: contextual typing, constant checks and ordered runtime guards (validated in isolated checkout).
 - [~] **M5.5 Casting builtins**: `@intCast`, `@truncate`, `@ptrCast`, `@intFromPtr`, `@ptrFromInt`, `@bitCast`, `@as`.
   - [x] **M5.5a Pointer address conversion (`@intFromPtr`).**
+  - [x] **M5.5b Integer-to-pointer conversion (`@ptrFromInt`)**: constant/numeric addresses and runtime guards (locally validated).
 
 ## Phase 6: Aggregates and errors
 
@@ -166,6 +167,41 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
 ## Completed milestone log
 
 (newest first; each entry: what, limitations, interactions)
+
+### M5.5b Integer-to-pointer conversion
+- **What**: contextual scalar pointer destinations, usize coercion, rejection of
+  invalid zero/misaligned constants and runtime null/alignment checks. Absolute
+  VALUE_INT_PTR values intern by pointer type/address, preserve numeric identity
+  through qualifier casts, element/field addresses, slicing and globals, and
+  never claim compiler-owned contents. `@intFromPtr` folds absolute values.
+  Addition wraps numeric usize addresses like actual Zig; underflowing subtraction
+  is rejected. Numeric backing reads/writes/snapshots occur only at runtime.
+- **Validation**: immutable /data/int-pointer-final GCC/Clang Werror ASan/UBSan
+  source/test/config match development (5375 checked files). All final wrappers,
+  matrices and fuzz scripts exit zero. 739 units/984 goldens; 90 ordinary/generated
+  + three scoped native programs; 16 driver checks; all C/ABI/alignment suites;
+  54 volatile sequences; 248 safety cases. GCC full e2e runs actual Zig; both
+  builds additionally reference-check the new native fixture, three mmap-backed
+  C layouts and volatile Debug/ReleaseFast. Fresh actual matrices pass 225 numeric
+  pointers + 178 assertions + 256 sentinel slices + 313 sentinel arrays + 209
+  sentinel pointers + 168 fields + 87 dereference + 204 slicing + 252 slices +
+  168 pointer coercions + 1035 pointer alignment + 864 allowzero + 240 volatile
+  pointer cases (4199 total). Optimized GCC passes 90 native/248 safety; 949
+  unchanged array/layout checks replay the source-hash-verified prior actual
+  reference oracle, not fresh Zig compilations. Four 60s fuzzers execute
+  1589115/40732/38438/46299 inputs; both builds replay 20000 mutations/stage
+  (59 irgen/115 sema seeds). Logs: /data/int-pointer-final-*. CI adds the numeric
+  pointer matrix (28 suites). Integration/push remains approval-blocked.
+- **Interactions/limits**: IR_PTR_FROM_INT carries destination type/address;
+  TIR_PTR_FROM_INT lowers to guards plus a long-word copy. Numeric pointers remain
+  distinct from relocation roots. Existing borrowed-layout/zero-bit rules apply.
+  Slice destinations cannot infer a length; optional/vector/C-pointer destinations
+  and general casts are separate work. Known numeric-backed sentinel views follow
+  actual Zig's constant runtime-memory bypass, not a fictitious memory read.
+  `-fno-emit-bin` comparisons cover known numeric-slice scalar dereference; trying
+  that scalar result in the actual C runtime fixture triggered Zig's backend
+  `genSetReg called with a value larger than dst_reg` error. The shared native
+  C fixture does not claim that known-bug path as a successful reference run.
 
 ### M5.4d Explicit sentinel assertions
 - **What**: `a[first..last:S]` obtains S's scalar type from the borrowed base,

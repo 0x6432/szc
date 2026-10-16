@@ -1,0 +1,221 @@
+function w $szc.main.1() {
+@start
+	%t38 =l alloc4 6
+	%t59 =l alloc8 8
+	%t0 =w call $szc.known.2()
+	%t0 =w and %t0, 255
+	%t2 =w cnew %t0, 0
+	jnz %t2, @c7_then, @c7_else
+@c7_then
+	ret 1
+@c7_else
+	jmp @b3
+@b3
+	%t9 =l loadl $szc.g.1
+	%t10 =l copy %t9
+	%t12 =w cnel %t10, -1
+	jnz %t12, @c17_then, @c17_else
+@c17_then
+	ret 5
+@c17_else
+	jmp @b13
+@b13
+	%t19 =l call $szc.restore_zero.3(l 0)
+	%t20 =l copy %t19
+	%t22 =w cnel %t20, 0
+	jnz %t22, @c32_then, @c32_else
+@c32_then
+	%t23 =w copy 1
+	jmp @b23
+@c32_else
+	%t25 =l call $szc.restore_packed.4(l 1)
+	%t26 =l copy %t25
+	%t28 =w cnel %t26, 1
+	%t23 =w copy %t28
+	jmp @b23
+@b23
+	jnz %t23, @c37_then, @c37_else
+@c37_then
+	ret 6
+@c37_else
+	jmp @b33
+@b33
+	call $memmove(l %t38, l $szc.const.1, l 6)
+	%e42_offset =l mul 0, 2
+	%t42 =l add %t38, %e42_offset
+	%t43 =l copy %t42
+	%t44 =l call $szc.restore.5(l %t43)
+	storeh 13, %t44
+	%e48_offset =l mul 0, 2
+	%t48 =l add %t38, %e48_offset
+	%t49 =w loaduh %t48
+	%t51 =w cnew %t49, 13
+	jnz %t51, @c56_then, @c56_else
+@c56_then
+	ret 2
+@c56_else
+	jmp @b52
+@b52
+	%t57 =l copy %t38
+	%t58 =l call $szc.restore_many.6(l %t57)
+	storel %t58, %t59
+	%t61 =l loadl %t59
+	%e63_offset =l mul 1, 2
+	%t63 =l add %t61, %e63_offset
+	storeh 15, %t63
+	%e67_offset =l mul 1, 2
+	%t67 =l add %t38, %e67_offset
+	%t68 =w loaduh %t67
+	%t70 =w cnew %t68, 15
+	jnz %t70, @c80_then, @c80_else
+@c80_then
+	%t71 =w copy 1
+	jmp @b71
+@c80_else
+	%e73_offset =l mul 2, 2
+	%t73 =l add %t58, %e73_offset
+	%t74 =w loaduh %t73
+	%t76 =w cnew %t74, 11
+	%t71 =w copy %t76
+	jmp @b71
+@b71
+	jnz %t71, @c85_then, @c85_else
+@c85_then
+	ret 3
+@c85_else
+	jmp @b81
+@b81
+	%t87 =l copy $szc.seven.8
+	%t88 =l call $szc.restore_function.7(l %t87)
+	%t89 =w call %t88()
+	%t89 =w and %t89, 255
+	%t91 =w cnew %t89, 7
+	jnz %t91, @c96_then, @c96_else
+@c96_then
+	ret 4
+@c96_else
+	jmp @b92
+@b92
+	ret 0
+}
+
+function w $szc.known.2() {
+@start
+	%t0 =l add $szc.g.2, 8
+	%t1 =l loadl %t0
+	%t2 =l copy %t1
+	%t4 =w cnel %t2, 32
+	jnz %t4, @c9_then, @c9_else
+@c9_then
+	ret 4
+@c9_else
+	jmp @b5
+@b5
+	ret 0
+}
+
+function l $szc.restore_zero.3(l %t0) {
+@start
+	%g1_align_bits =l and %t0, 3
+	%g1_alignment =w cnel %g1_align_bits, 0
+	jnz %g1_alignment, @g1_alignment_panic, @g1_alignment_ok
+@g1_alignment_panic
+	call $szc.panic.11()
+	hlt
+@g1_alignment_ok
+	%t1 =l copy %t0
+	ret %t1
+}
+
+function l $szc.restore_packed.4(l %t0) {
+@start
+	%g1_null =w ceql %t0, 0
+	jnz %g1_null, @g1_null_panic, @g1_null_ok
+@g1_null_panic
+	call $szc.panic.10()
+	hlt
+@g1_null_ok
+	%t1 =l copy %t0
+	ret %t1
+}
+
+function l $szc.restore.5(l %t0) {
+@start
+	%g1_null =w ceql %t0, 0
+	jnz %g1_null, @g1_null_panic, @g1_null_ok
+@g1_null_panic
+	call $szc.panic.10()
+	hlt
+@g1_null_ok
+	%g1_align_bits =l and %t0, 1
+	%g1_alignment =w cnel %g1_align_bits, 0
+	jnz %g1_alignment, @g1_alignment_panic, @g1_alignment_ok
+@g1_alignment_panic
+	call $szc.panic.11()
+	hlt
+@g1_alignment_ok
+	%t1 =l copy %t0
+	ret %t1
+}
+
+function l $szc.restore_many.6(l %t0) {
+@start
+	%g1_null =w ceql %t0, 0
+	jnz %g1_null, @g1_null_panic, @g1_null_ok
+@g1_null_panic
+	call $szc.panic.10()
+	hlt
+@g1_null_ok
+	%g1_align_bits =l and %t0, 1
+	%g1_alignment =w cnel %g1_align_bits, 0
+	jnz %g1_alignment, @g1_alignment_panic, @g1_alignment_ok
+@g1_alignment_panic
+	call $szc.panic.11()
+	hlt
+@g1_alignment_ok
+	%t1 =l copy %t0
+	ret %t1
+}
+
+function l $szc.restore_function.7(l %t0) {
+@start
+	%g1_null =w ceql %t0, 0
+	jnz %g1_null, @g1_null_panic, @g1_null_ok
+@g1_null_panic
+	call $szc.panic.10()
+	hlt
+@g1_null_ok
+	%t1 =l copy %t0
+	ret %t1
+}
+
+function w $szc.seven.8() {
+@start
+	ret 7
+}
+
+section ".rodata"
+data $szc.const.1 = align 2 { h 7, h 9, h 11 }
+data $szc.g.1 = align 8 { l 18446744073709551615 }
+data $szc.g.2 = align 8 { l 16, l 32 }
+data $szc.panic.msg.10 = { b "cast causes pointer to be null\n", b 0 }
+function $szc.panic.10() {
+@start
+	call $write(w 2, l $szc.panic.msg.10, l 31)
+	call $abort()
+	hlt
+}
+
+data $szc.panic.msg.11 = { b "incorrect alignment\n", b 0 }
+function $szc.panic.11() {
+@start
+	call $write(w 2, l $szc.panic.msg.11, l 20)
+	call $abort()
+	hlt
+}
+
+export function w $main() {
+@start
+	%status =w call $szc.main.1()
+	ret %status
+}

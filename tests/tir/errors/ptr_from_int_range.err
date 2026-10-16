@@ -1,0 +1,3 @@
+tests/tir/errors/ptr_from_int_range.zig:1:37: error: type 'usize' cannot represent integer value '18446744073709551616'
+pub fn main() void { const p: *u8 = @ptrFromInt(18446744073709551616); _ = p; }
+                                    ^

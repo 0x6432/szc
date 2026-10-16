@@ -1825,6 +1825,52 @@ analyze_scalar_sentinel(Block *block, Operand operand, TypeId child, uint32_t sr
 	return true;
 }
 
+/* Numeric addresses have no compiler-owned contents or symbolic relocation. */
+static bool
+integer_pointer(Block *block, Operand pointer)
+{
+	return pointer.kind == OPERAND_COMPTIME && operand_value(block, pointer)->kind == VALUE_INT_PTR;
+}
+
+static Operand
+analyze_ptr_from_int(Block *block, const IrInst *inst)
+{
+	Sema *sema = block->sema;
+	TypeId type;
+	if (!operand_to_type(block, resolve_ref(block, inst->data.bin.lhs), inst->src, &type))
+		return operand_none;
+	Operand operand = coerce(block, resolve_ref(block, inst->data.bin.rhs), T_USIZE, inst->src);
+	if (operand.kind == OPERAND_NONE)
+		return operand_none;
+	if (sema->types[type].kind != TYPE_POINTER) {
+		sema_error(block, inst->src, "expected pointer type, found '%s'", sema_type_name(sema, type));
+		return operand_none;
+	}
+	TypePointer shape = sema->types[type].as.pointer;
+	if (shape.size == POINTER_SLICE) {
+		sema_error(block, inst->src, "integer cannot be converted to slice type '%s'", sema_type_name(sema, type));
+		return operand_none;
+	}
+	if (!check_defined(block, operand, inst->src))
+		return operand_none;
+	uint32_t alignment = pointer_alignment(sema, shape);
+	if (operand.kind == OPERAND_COMPTIME) {
+		uint64_t address = bigint_to_u64_bits(&operand_value(block, operand)->as.integer);
+		if (address == 0 && !shape.is_allowzero) {
+			sema_error(block, inst->src, "pointer type '%s' does not allow address zero", sema_type_name(sema, type));
+			return operand_none;
+		}
+		if (alignment > 1 && (address & (alignment - 1)) != 0) {
+			sema_error(block, inst->src, "pointer type '%s' requires aligned address", sema_type_name(sema, type));
+			return operand_none;
+		}
+		return comptime_operand(type, value_int_pointer(&sema->values, type, address));
+	}
+	if (!require_runtime(block, inst->src))
+		return operand_none;
+	return runtime_operand(type, emit_tir_un(block, TIR_PTR_FROM_INT, type, inst->src, operand.inst));
+}
+
 /* Symbolic pointers have runtime addresses; undefined pointers retain undefined. */
 static Operand
 analyze_int_from_ptr(Block *block, const IrInst *inst)
@@ -1839,10 +1885,12 @@ analyze_int_from_ptr(Block *block, const IrInst *inst)
 	}
 	if (operand_is_undefined(block, pointer))
 		return comptime_operand(T_USIZE, value_undefined(&sema->values, T_USIZE));
+	if (integer_pointer(block, pointer))
+		return comptime_operand(T_USIZE, value_int_u64(&sema->values, T_USIZE, operand_value(block, pointer)->as.address));
 	TypeId leaf = sema->types[pointer.type].as.pointer.child;
 	while (sema->types[leaf].kind == TYPE_ARRAY)
 		leaf = sema->types[leaf].as.array.child;
-	if (is_comptime_only_type(sema, leaf) && sema->types[leaf].kind != TYPE_FN) {
+	if (pointer.kind == OPERAND_COMPTIME && is_comptime_only_type(sema, leaf) && sema->types[leaf].kind != TYPE_FN) {
 		sema_error(block, inst->src, "not supported by szc yet: runtime address of comptime-only backing");
 		return operand_none;
 	}
@@ -2104,6 +2152,8 @@ pointer_same_root(const Sema *sema, PointerAddress left, PointerAddress right)
 	if (a->kind != b->kind)
 		return false;
 	switch (a->kind) {
+	case VALUE_INT_PTR:
+		return true;
 	case VALUE_FUNCTION:
 		return a->as.function == b->as.function;
 	case VALUE_GLOBAL:
@@ -2208,6 +2258,15 @@ analyze_pointer_offset(Block *block, IrOp op, Operand base, Operand offset, uint
 		if (index == 0)
 			return base;
 		PointerAddress address = value_pointer_address(&sema->values, base.value);
+		if (integer_pointer(block, base)) {
+			uint64_t delta = index * stride;
+			if (op == IR_SUB && (index > UINT64_MAX / stride || delta > address.offset)) {
+				sema_error(block, src, "pointer computation here causes illegal behavior");
+				return operand_none;
+			}
+			uint64_t result = op == IR_SUB ? address.offset - delta : address.offset + delta;
+			return comptime_operand(type, value_int_pointer(&sema->values, type, result));
+		}
 		/* Upstream subtraction uses ABI bytes, even for logical comptime pointers. */
 		if (op == IR_SUB && logical)
 			return comptime_operand(type, value_pointer_cast(&sema->values, type, base.value));
@@ -3691,7 +3750,8 @@ pointer_operand(Block *block, Operand operand, uint32_t src)
 		return false;
 	if (operand.kind == OPERAND_COMPTIME) {
 		PointerAddress address = value_pointer_address(&block->sema->values, operand.value);
-		if (value_get(&block->sema->values, address.root)->kind == VALUE_GLOBAL)
+		if (value_get(&block->sema->values, address.root)->kind == VALUE_GLOBAL
+			|| value_get(&block->sema->values, address.root)->kind == VALUE_INT_PTR)
 			return true;
 	}
 	if (operand.kind != OPERAND_RUNTIME) {
@@ -3734,7 +3794,7 @@ load_pointer(Block *block, Operand pointer, uint32_t src)
 			sema_error(block, src, "unable to resolve comptime value");
 		return operand_none;
 	}
-	if (pointer.kind == OPERAND_COMPTIME && !mutable_global) {
+	if (pointer.kind == OPERAND_COMPTIME && !mutable_global && !integer_pointer(block, pointer)) {
 		const Value *value = operand_value(block, pointer);
 		if (value->kind == VALUE_FUNCTION && sema->types[child].kind == TYPE_FN)
 			return comptime_operand(child, value_function(&sema->values, child, value->as.function));
@@ -3992,7 +4052,7 @@ analyze_deref(Block *block, const IrInst *inst)
 		}
 		/* analyzeLoad's runtime fallback loads the slice element type, not
 		 * an array. A known descriptor need not have known backing contents. */
-		if (inst->op == IR_DEREF && mutable_global_pointer(block, data)) {
+		if (inst->op == IR_DEREF && (mutable_global_pointer(block, data) || integer_pointer(block, data))) {
 			Type element_pointer = sema->types[data.type];
 			element_pointer.as.pointer.size = POINTER_ONE;
 			TypeId element_pointer_type = type_intern(sema, &element_pointer);
@@ -4455,7 +4515,7 @@ check_slice_sentinel(Block *block, Operand pointer, Operand length, ValueId sent
 	if (sentinel == VALUE_NONE)
 		return true;
 	bool runtime = pointer.kind != OPERAND_COMPTIME || length.kind != OPERAND_COMPTIME;
-	if ((!explicit && runtime) || (!runtime && mutable_global_pointer(block, pointer)))
+	if ((!explicit && runtime) || (!runtime && (mutable_global_pointer(block, pointer) || integer_pointer(block, pointer))))
 		return true;
 	Operand actual = analyze_many_index(block, pointer, length, src, false, false);
 	if (actual.kind == OPERAND_NONE || !check_defined(block, actual, src))
@@ -4725,7 +4785,7 @@ analyze_array_index(Block *block, const IrInst *inst, bool address_only, bool bo
 		if (base.kind == OPERAND_COMPTIME) {
 			if (address_only || (borrow && sema->types[array.child].kind == TYPE_ARRAY))
 				return constant_array_pointer(block, base, index, array, inst->src);
-			if (mutable_global_pointer(block, base)) {
+			if (mutable_global_pointer(block, base) || integer_pointer(block, base)) {
 				Operand pointer = constant_array_pointer(block, base, index, array, inst->src);
 				return load_pointer(block, pointer, inst->src);
 			}
@@ -5250,6 +5310,9 @@ analyze_inst(Block *block, IrInstIndex index, Operand *break_value)
 	case IR_ALIGN_OF:
 		result = analyze_type_layout(block, inst);
 		break;
+	case IR_PTR_FROM_INT:
+		result = analyze_ptr_from_int(block, inst);
+		break;
 	case IR_INT_FROM_PTR:
 		result = analyze_int_from_ptr(block, inst);
 		break;
@@ -5729,6 +5792,8 @@ value_text(Sema *sema, ValueId id)
 		snprintf(text, 32, "ref(object.%u)", (unsigned)value->as.object);
 		return text;
 	}
+	case VALUE_INT_PTR:
+		return arena_sprintf(sema->arena, "ptr(0x%" PRIx64 ")", value->as.address);
 	case VALUE_PTR_CAST:
 		return arena_sprintf(sema->arena, "ptr_cast(value.%u)", (unsigned)value->as.pointer);
 	case VALUE_ELEMENT_PTR:
@@ -5789,6 +5854,7 @@ dump_tir_inst(FILE *out, Sema *sema, const TirFunc *tir, TirRef ref, uint32_t de
 	case TIR_NEGATE:
 	case TIR_NEGATE_WRAP:
 	case TIR_SLICE_LEN_PTR:
+	case TIR_PTR_FROM_INT:
 	case TIR_PTR_TO_INT:
 	case TIR_PTR_CAST:
 	case TIR_INT_CAST:

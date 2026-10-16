@@ -1,0 +1,3 @@
+tests/tir/errors/ptr_from_int_destination.zig:1:37: error: expected pointer type, found 'u64'
+pub fn main() void { const p: u64 = @ptrFromInt(16); _ = p; }
+                                    ^

@@ -537,6 +537,10 @@ value_hash(const Value *value)
 	case VALUE_REF:
 		hash = hash_mix(hash, value->as.object);
 		break;
+	case VALUE_INT_PTR:
+		hash = hash_mix(hash, (uint32_t)value->as.address);
+		hash = hash_mix(hash, (uint32_t)(value->as.address >> 32));
+		break;
 	case VALUE_PTR_CAST:
 		hash = hash_mix(hash, value->as.pointer);
 		break;
@@ -594,6 +598,8 @@ value_equal(const Value *a, const Value *b)
 		return a->as.global == b->as.global;
 	case VALUE_REF:
 		return a->as.object == b->as.object;
+	case VALUE_INT_PTR:
+		return a->as.address == b->as.address;
 	case VALUE_PTR_CAST:
 		return a->as.pointer == b->as.pointer;
 	case VALUE_ELEMENT_PTR:
@@ -860,8 +866,18 @@ value_ref(ValueTable *table, TypeId type, ValueId pointee, uint32_t identity, ui
 }
 
 ValueId
+value_int_pointer(ValueTable *table, TypeId type, uint64_t address)
+{
+	Value value = make_value(VALUE_INT_PTR, type);
+	value.as.address = address;
+	return value_intern(table, &value);
+}
+
+ValueId
 value_element_pointer(ValueTable *table, TypeId type, ValueId base, uint64_t index, uint64_t offset, bool logical)
 {
+	if (value_get(table, base)->kind == VALUE_INT_PTR)
+		return value_int_pointer(table, type, offset);
 	Value value = make_value(VALUE_ELEMENT_PTR, type);
 	value.as.element = (ElementPointer){base, index, offset, logical};
 	return value_intern(table, &value);
@@ -870,6 +886,8 @@ value_element_pointer(ValueTable *table, TypeId type, ValueId base, uint64_t ind
 ValueId
 value_slice_field_pointer(ValueTable *table, TypeId type, ValueId base, uint64_t offset, bool length)
 {
+	if (value_get(table, base)->kind == VALUE_INT_PTR)
+		return value_int_pointer(table, type, offset);
 	Value value = make_value(VALUE_SLICE_FIELD_PTR, type);
 	value.as.field = (SliceFieldPointer){base, offset, length};
 	return value_intern(table, &value);
@@ -878,6 +896,8 @@ value_slice_field_pointer(ValueTable *table, TypeId type, ValueId base, uint64_t
 ValueId
 value_pointer_cast(ValueTable *table, TypeId type, ValueId pointer)
 {
+	if (value_get(table, pointer)->kind == VALUE_INT_PTR)
+		return value_int_pointer(table, type, value_get(table, pointer)->as.address);
 	if (value_get(table, pointer)->kind == VALUE_PTR_CAST)
 		pointer = value_get(table, pointer)->as.pointer;
 	Value value = make_value(VALUE_PTR_CAST, type);
@@ -911,6 +931,8 @@ value_pointer_address(const ValueTable *table, ValueId id)
 		}
 		value = value_get(table, address.root);
 	}
+	if (value->kind == VALUE_INT_PTR)
+		address.offset += value->as.address;
 	return address;
 }
 

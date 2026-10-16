@@ -85,13 +85,23 @@ Read this first when resuming work (the sandbox resets often).
   1592533/52095/49368/68597; both builds 20000 mutations/stage, 58 irgen/114 sema
   seeds. All final processes exit zero. Logs: /data/sentinel-assertions-final-*.
   This milestone, like M5.4c, is not integrated or pushed while approval is pending.
-- Next M5.5b integer-to-pointer conversion is isolated in /data/int-pointer-next.
-  Numeric VALUE_INT_PTR addresses are not compiler-owned memory; runtime null/
-  alignment checks, constants, pointer arithmetic and storage are under test.
-  Initial 217 actual semantic comparisons, one reference native, three mapped-C
-  storage variants and five reference panic cases pass. Follow-on numeric-backed
-  descriptor/source probes are being integrated and the expanded matrix is
-  running. Do not claim the milestone complete yet. See /data/ptr-from-int-*.
+- M5.5b integer-to-pointer conversion is locally complete in /data/int-pointer-next.
+  /data/int-pointer-final GCC/Clang source/test/config match (5375 files).
+  Werror ASan/UBSan: 739 units/984 goldens; 90 ordinary/generated + three scoped
+  native programs, 16 driver checks, every C/ABI/alignment suite, 54 volatile
+  sequences and 248 safety cases. Both builds reference new native/three C mmap
+  variants/volatile Debug+ReleaseFast; GCC full e2e also runs actual Zig. All
+  thirteen fresh semantic matrices pass: 225 numeric pointers + 178 assertions +
+  256 sentinel slices + 313 arrays + 209 sentinel pointers + 168 fields + 87
+  dereference + 204 slicing + 252 slices + 168 coercions + 1035 alignment +
+  864 allowzero + 240 volatile pointers. Optimized GCC passes 90 native/248 safety;
+  949 unchanged array/layout checks replay the source-hash-verified prior oracle.
+  Four 60s fuzzers: 1589115/40732/38438/46299. Both builds replay 20000 mutations
+  per stage, 59 irgen/115 sema seeds. Every final process exits zero. Logs:
+  /data/int-pointer-final-*. Integration remains blocked pending user approval.
+  Known numeric-slice scalar dereference triggers a Zig genSetReg backend error
+  in the C runtime fixture: compile-only comparisons test that semantic path;
+  the shared native reference fixture does not pretend the backend bug passes.
 - CI 768cdb9/run 38790363308 completed failure in safety; its annotation reports
   hosted runner lost communication, not a proven semantic regression. M5.4b
   09e535e/run 38796178970 failed in the old safety job (annotation:

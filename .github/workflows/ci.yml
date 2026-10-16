@@ -82,6 +82,7 @@ jobs:
           - diff_sentinel_pointers
           - diff_sentinel_slices
           - diff_sentinel_assertions
+          - diff_ptr_from_int
           - diff_slice_fields
           - diff_slice_deref
           - diff_slicing

@@ -677,6 +677,34 @@ test_sentinel_slice_types(void)
 }
 
 static void
+test_integer_pointer_values(void)
+{
+	Arena arena;
+	arena_init(&arena);
+	ValueTable values;
+	value_table_init(&values, &arena);
+	ValueId pointer = value_int_pointer(&values, 100, 4096);
+	CHECK(pointer == value_int_pointer(&values, 100, 4096));
+	CHECK(pointer != value_int_pointer(&values, 100, 8192));
+	CHECK(pointer != value_int_pointer(&values, 101, 4096));
+	CHECK(value_get(&values, pointer)->kind == VALUE_INT_PTR);
+	CHECK(value_get(&values, pointer)->as.address == 4096);
+	ValueId cast = value_pointer_cast(&values, 101, pointer);
+	CHECK(value_get(&values, cast)->kind == VALUE_INT_PTR);
+	CHECK(value_get(&values, cast)->type == 101);
+	CHECK(value_get(&values, cast)->as.address == 4096);
+	ValueId element = value_element_pointer(&values, 102, cast, 3, 4102, false);
+	CHECK(value_get(&values, element)->kind == VALUE_INT_PTR);
+	PointerAddress address = value_pointer_address(&values, element);
+	CHECK(address.root == element && address.offset == 4102 && !address.logical);
+	ValueId field = value_slice_field_pointer(&values, 103, pointer, 4104, true);
+	CHECK(value_get(&values, field)->kind == VALUE_INT_PTR);
+	CHECK(value_get(&values, field)->as.address == 4104);
+	CHECK(values.object_count == 0);
+	arena_free(&arena);
+}
+
+static void
 test_sentinel_assertion_order(void)
 {
 	Arena arena;
@@ -823,6 +851,7 @@ main(void)
 	test_sentinel_array_types();
 	test_sentinel_slice_types();
 	test_sentinel_assertion_order();
+	test_integer_pointer_values();
 	test_binary_diagnostics();
 
 	printf("unit: %u checks, %u failed\n", checks, failures);

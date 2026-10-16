@@ -35,6 +35,7 @@ typedef enum ValueKind {
 	VALUE_FUNCTION,
 	VALUE_GLOBAL,	/* stable declaration address; contents resolve separately */
 	VALUE_REF,	/* immutable address of an interned value */
+	VALUE_INT_PTR,	/* absolute address; not compiler-owned memory */
 	VALUE_PTR_CAST,	/* pointer qualification preserving the original byte backing */
 	VALUE_ELEMENT_PTR,	/* subobject path into real backing, never a copied element */
 	VALUE_SLICE_FIELD_PTR,	/* address of one descriptor word in original backing */
@@ -94,6 +95,7 @@ typedef struct Value {
 		ElementPointer element;
 		SliceFieldPointer field;
 		ValueId pointer;
+		uint64_t address;
 	} as;
 } Value;
 
@@ -127,6 +129,7 @@ ValueId value_global(ValueTable *table, TypeId type, GlobalId global);
 ValueId value_ref(ValueTable *table, TypeId type, ValueId pointee, uint32_t identity, uint32_t alignment);
 ValueId value_element_pointer(ValueTable *table, TypeId type, ValueId base, uint64_t index, uint64_t offset, bool logical);
 ValueId value_slice_field_pointer(ValueTable *table, TypeId type, ValueId base, uint64_t offset, bool length);
+ValueId value_int_pointer(ValueTable *table, TypeId type, uint64_t address);
 ValueId value_pointer_cast(ValueTable *table, TypeId type, ValueId pointer);
 PointerAddress value_pointer_address(const ValueTable *table, ValueId id);
 ValueId value_slice(ValueTable *table, TypeId type, ValueId pointer, ValueId length);
