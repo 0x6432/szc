@@ -156,6 +156,7 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
   - [x] Lexical `@This()` for the root and fieldless struct namespaces (M6.1a).
   - [x] **M7.6a Public declaration membership**: `@hasDecl` on existing namespaces, with constant byte-slice names.
   - [x] **M7.6b Dynamic field projection**: `@field` values/lvalues on existing namespaces and array/slice descriptor fields.
+  - [x] **M7.6c Supported field membership**: `@hasField` for arrays/slices and existing fieldless structs/root.
 - [ ] **M7.7 comptime_float (f64-backed for now; f16/f80/f128 = hard error).**
 
 ## Phase 8: Modules and std
@@ -195,6 +196,35 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
 ## Completed milestone log
 
 (newest first; each entry: what, limitations, interactions)
+
+### M7.6c Supported field membership
+
+- **What**: `@hasField` returns a comptime bool for array `len`, slice `len`/`ptr`
+  and no instance fields on existing fieldless structs/root. Namespace
+  declarations do not count as fields and their invalid unused values/bodies
+  remain lazy. Unlike field access, membership does not auto-dereference thin/
+  many pointers, including pointers to arrays/slices. Type resolution precedes
+  contextual constant-name resolution, which precedes target-kind validation.
+  Unsupported kinds use the official primary diagnostic. Shared `IrHasMember`
+  carries both membership queries; contextual name bodies, decoding/provenance
+  limits and verified NUL rules are reused without runtime TIR/backend changes.
+- **Validation**: 220 actual-Zig comparisons/68 exact primary diagnostics,
+  official native Debug/ReleaseFast, 29 focused unit cases, IR/TIR/QBE and five
+  diagnostic goldens, three seeds per irgen/sema stage, hosted matrix. The full
+  native harness caught the new matrix's missing SZC_MODE contract; fixed in
+  the tool (not the harness), then rebuilt fresh independent v2 snapshots.
+  GCC/Clang Werror ASan/UBSan: 2277 units/1188 goldens, 125+4 native, 16 driver,
+  53 compiler-runner checks, full C/ABI/storage/alignment, 102 observed volatile
+  sequences, 300 safety cases. Optimized native/safety and forced main tests
+  pass. Both compilers pass 20000 standalone mutations/stage with
+  256/256/101/157 seeds. Fresh 60s fuzz runs: 2517342/58212/71843/78592.
+  Final-source reference regressions: field 201/92, hasDecl 136/70, namespaces
+  76/40. Full e2e is szc-only; focused official comparisons are separate.
+- **Interactions/limits**: M6.1/M7.3/M7.6 remain partial. No field-bearing
+  structs/tuple/enum/union metadata or layouts, typeInfo/Type/TypeOf, imports,
+  general comptime calls/mutable-memory evaluation or namespace captures.
+  Existing array type validation remains in force; this does not introduce
+  otherwise-invalid child types or bypass pointer/constant-name restrictions.
 
 ### M7.6b Dynamic field projection
 

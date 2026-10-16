@@ -4940,13 +4940,26 @@ resolve_name_body(Block *block, IrBody body, uint32_t src, StringId *out)
 	return result.end == BODY_BREAK_RESULT && resolve_const_string(&inner, result.result, src, out);
 }
 
-/* Zig 0.17 hasDecl tests public declarations only, even in the same lexical
- * namespace. Do not resolve the member value or search parent namespaces. */
+/* Zig's NullTerminatedString.eqlSlice checks a literal prefix followed by NUL,
+ * even if the interned name has more logical bytes. Namespace keys above must
+ * still compare the complete StringId, never this built-in-field predicate. */
+static bool
+builtin_field_name(Sema *sema, StringId name, const char *literal)
+{
+	size_t length = strlen(literal);
+	const char *bytes = intern_text(sema->interner, name);
+	return intern_length(sema->interner, name) >= length
+		&& memcmp(bytes, literal, length) == 0 && bytes[length] == '\0';
+}
+
+/* Resolve type and name before either membership kind check. hasDecl tests
+ * public declarations only, even in the same lexical namespace; neither query
+ * resolves a member value or searches parent namespaces. */
 static Operand
-analyze_has_decl(Block *block, const IrInst *inst)
+analyze_has_member(Block *block, const IrInst *inst)
 {
 	Sema *sema = block->sema;
-	IrHasDecl payload;
+	IrHasMember payload;
 	IR_READ(block->ir, inst->data.payload, &payload);
 	Operand container = resolve_ref(block, payload.container);
 	TypeId type;
@@ -4956,6 +4969,29 @@ analyze_has_decl(Block *block, const IrInst *inst)
 	StringId name;
 	if (!resolve_name_body(block, payload.name_body, payload.name_src, &name))
 		return operand_none;
+	if (inst->op == IR_HAS_FIELD) {
+		/* Supported structs are fieldless: declarations do not count as fields.
+		 * Unlike @field, @hasField never implicitly dereferences pointers. */
+		bool found;
+		switch (sema->types[type].kind) {
+		case TYPE_STRUCT:
+			found = false;
+			break;
+		case TYPE_ARRAY:
+			found = builtin_field_name(sema, name, "len");
+			break;
+		case TYPE_POINTER:
+			if (is_slice(sema, type)) {
+				found = builtin_field_name(sema, name, "len") || builtin_field_name(sema, name, "ptr");
+				break;
+			}
+			/* fall through */
+		default:
+			sema_error(block, payload.type_src, "type '%s' does not support '@hasField'", sema_type_name(sema, type));
+			return operand_none;
+		}
+		return bool_operand(sema, found);
+	}
 	if (sema->types[type].kind == TYPE_ANYOPAQUE)
 		return bool_operand(sema, false);
 	if (sema->types[type].kind != TYPE_STRUCT) {
@@ -5000,18 +5036,6 @@ slice_field_address(Block *block, Operand storage, bool length, uint32_t src)
 		return operand_none;
 	return runtime_operand(type, emit_tir_un(block, length ? TIR_SLICE_LEN_PTR : TIR_PTR_CAST,
 		type, src, materialize(block, storage, src)));
-}
-
-/* Zig's NullTerminatedString.eqlSlice checks a literal prefix followed by NUL,
- * even if the interned name has more logical bytes. Namespace keys above must
- * still compare the complete StringId, never this built-in-field predicate. */
-static bool
-builtin_field_name(Sema *sema, StringId name, const char *literal)
-{
-	size_t length = strlen(literal);
-	const char *bytes = intern_text(sema->interner, name);
-	return intern_length(sema->interner, name) >= length
-		&& memcmp(bytes, literal, length) == 0 && bytes[length] == '\0';
 }
 
 static Operand
@@ -6419,7 +6443,8 @@ analyze_inst(Block *block, IrInstIndex index, Operand *break_value)
 		result = analyze_func_inst(block, index);
 		break;
 	case IR_HAS_DECL:
-		result = analyze_has_decl(block, inst);
+	case IR_HAS_FIELD:
+		result = analyze_has_member(block, inst);
 		break;
 	case IR_THIS:
 		result = type_operand(sema, block->namespace_scope->type);

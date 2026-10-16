@@ -1573,6 +1573,69 @@ test_field(void)
 }
 
 static void
+test_has_field(void)
+{
+	const struct {
+		const char *source;
+		const char *error;
+	} cases[] = {
+		{"pub fn main() void { const n:u8=if(@hasField([3]u8,\"len\"))0 else 256; _=n; }", NULL},
+		{"pub fn main() void { const n:u8=if(@hasField([0]u0,\"len\"))0 else 256; _=n; }", NULL},
+		{"pub fn main() void { const n:u8=if(!@hasField([3:0]u8,\"ptr\"))0 else 256; _=n; }", NULL},
+		{"pub fn main() void { const n:u8=if(@hasField([]u8,\"ptr\"))0 else 256; _=n; }", NULL},
+		{"pub fn main() void { const n:u8=if(@hasField([:0]const u8,\"len\"))0 else 256; _=n; }", NULL},
+		{"pub fn main() void { const n:u8=if(@hasField([]align(4) volatile u8,\"ptr\"))0 else 256; _=n; }", NULL},
+		{"pub fn main() void { const n:u8=if(@hasField([]allowzero u8,\"len\"))0 else 256; _=n; }", NULL},
+		{"pub fn main() void { const n:u8=if(@hasField([]u8,\"len\\x00tail\"))0 else 256; _=n; }", NULL},
+		{"pub fn main() void { const n:u8=if(@hasField([]u8,\"len\\x00\\x00\"))0 else 256; _=n; }", NULL},
+		{"pub fn main() void { const n:u8=if(!@hasField([]u8,\"\\x00len\"))0 else 256; _=n; }", NULL},
+		{"pub fn main() void { const n:u8=if(!@hasField([3]u8,\"\"))0 else 256; _=n; }", NULL},
+		{"pub fn main() void { const n:u8=if(!@hasField([3]u8,\"Len\"))0 else 256; _=n; }", NULL},
+		{"pub fn main() void { const n:u8=if(!@hasField(struct {pub const len:u8=256;},\"len\"))0 else 256; _=n; }", NULL},
+		{"pub fn main() void { const n:u8=if(!@hasField(@This(),\"main\"))0 else 256; _=n; }", NULL},
+		{"pub fn main() void { const n:u8=if(@hasField([3]u8,&.{108,101,110}))0 else 256; _=n; }", NULL},
+		{"pub fn main() void { const name:[]const u8=\".len.\"[1..4]; const n:u8=if(@hasField([3]u8,name))0 else 256; _=n; }", NULL},
+		{"pub fn main() void { _=@hasField(u8,\"len\"); }", "does not support '@hasField'"},
+		{"pub fn main() void { _=@hasField(anyopaque,\"len\"); }", "does not support '@hasField'"},
+		{"pub fn main() void { _=@hasField(*[3]u8,\"len\"); }", "does not support '@hasField'"},
+		{"pub fn main() void { _=@hasField(*[]u8,\"len\"); }", "does not support '@hasField'"},
+		{"pub fn main() void { _=@hasField([*]u8,\"len\"); }", "does not support '@hasField'"},
+		{"pub fn main() void { _=@hasField(fn() void,\"len\"); }", "does not support '@hasField'"},
+		{"pub fn main() void { _=@hasField(3,\"len\"); }", "expected type 'type'"},
+		{"pub fn main() void { _=@hasField(@as(type,undefined),3); }", "use of undefined"},
+		{"pub fn main() void { _=@hasField(u8,3); }", "expected type '[]const u8'"},
+		{"pub fn main() void { _=@hasField([3]u8,undefined); }", "use of undefined"},
+		{"pub fn main() void { _=@hasField([3]u8,[_]u8{108,101,110}); }", "array literal requires address-of"},
+		{"fn f(name:[]const u8) bool { return @hasField([3]u8,name); } pub fn main() void { _=f(\"len\"); }", "unable to resolve comptime value"},
+		{"pub fn main() void { _=@hasField([3]u8); }", "expected 2 arguments"},
+	};
+	for (uint32_t i = 0; i < sizeof(cases) / sizeof(cases[0]); i++) {
+		Arena arena;
+		arena_init(&arena);
+		SourceTable sources;
+		source_table_init(&sources, &arena);
+		Diag diag;
+		diag_init(&diag, &arena, &sources);
+		Interner interner;
+		intern_init(&interner, &arena);
+		const char *source = cases[i].source;
+		FileId file = source_add_memory(&sources, "has_field.zig", source, (uint32_t)strlen(source));
+		AstContainerDecl *root = parse_file(&arena, &diag, &sources, file);
+		CHECK(!diag_has_errors(&diag));
+		IrFile *ir = irgen_file(&arena, &diag, &interner, source_get(&sources, file), file, root);
+		bool success = false;
+		if (!diag_has_errors(&diag)) {
+			Sema *sema = sema_create(&arena, &diag, &interner, &sources);
+			success = sema_analyze_executable(sema, file, ir);
+		}
+		CHECK(success == (cases[i].error == NULL));
+		if (cases[i].error != NULL)
+			CHECK(diag.count != 0 && strstr(diag.items[0].message, cases[i].error) != NULL);
+		arena_free(&arena);
+	}
+}
+
+static void
 test_quoted_identifiers(void)
 {
 	const struct {
@@ -1941,6 +2004,7 @@ main(void)
 	test_struct_namespaces();
 	test_quoted_identifiers();
 	test_has_decl();
+	test_has_field();
 	test_field();
 	test_scalar_memcpy();
 	test_aggregate_memcpy();

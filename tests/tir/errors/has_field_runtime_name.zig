@@ -1,0 +1,2 @@
+fn check(name:[]const u8) bool { return @hasField([3]u8,name); }
+pub fn main() void { _=check("len"); }

@@ -1,0 +1,1 @@
+pub fn main() void { const n:u8=if(@hasField([0]u0,"len") and @hasField([]const u8,"ptr"))0 else 256; _=n; }

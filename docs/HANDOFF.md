@@ -19,6 +19,56 @@ Read this first when resuming work (the sandbox resets often).
 
 ## Latest follow-up checkpoint
 
+- M7.6c supported field membership is integrated: `@hasField` returns a
+  comptime bool for array `len`, slice `len`/`ptr`, and no fields on the existing
+  fieldless structs/root, regardless of their namespace declarations. It does
+  NOT auto-dereference thin/many pointers (including pointers to arrays/slices).
+  The type resolves before the name; the name resolves before target-kind
+  validation. Unsupported kinds, including builtin anyopaque, use the exact
+  official primary diagnostic. Declaration and field membership share
+  `IrHasMember` and the isolated contextual byte-slice name body, provenance/
+  work limits and verified NUL rules. There is no runtime TIR/backend change.
+  The initial native fixture incorrectly used still-unsupported @TypeOf; it now
+  uses the existing type alias directly. Initial frozen e2e also caught a
+  differential-tool contract error: missing SZC_MODE meant the runner's mocked
+  mode check assumed tir instead of emit-qbe. The tool now declares and uses
+  SZC_MODE, all 53 runner checks pass, and fresh v2 snapshots validate everything
+  again without changing or weakening the harness.
+  Reference: 220 actual-Zig comparisons, 68 exact primary diagnostics; native
+  Debug/ReleaseFast pass. Twenty-nine focused unit cases, IR/TIR/QBE and five
+  error goldens, three seeds each irgen/sema and a hosted matrix. Final immutable
+  copies: /data/hasfield-final-v2/{gcc,clang,optimized}. /data/hasfield-final is
+  superseded (its compiler C source is identical, but its Python adapter lacks
+  the runner-contract fix); /data/hasfield-next is integrated development only.
+  Final GCC/Clang Werror ASan/UBSan pass 2277 units/1188 goldens, 125+4 native,
+  16 driver, 53 compiler-runner checks, full C/ABI/storage/alignment, 102 observed
+  volatile sequences and 300 safety cases. Optimized GCC native/safety and
+  forced main tests pass. Both compilers pass 20000 standalone mutations/stage
+  with 256/256/101/157 seeds. Four fresh 60s libFuzzer runs pass:
+  2517342/58212/71843/78592. Final-source reference regressions pass: field
+  201/92, hasDecl 136/70, namespaces 76/40. The reference binaries in the initial
+  frozen Clang tree have identical C source to final v2/main; only the Python
+  adapter fix required the fresh full-validation snapshot. Main source/unit/
+  native/matrix files match final v2 copies. Full e2e is szc-only; targeted
+  official comparisons remain separate, not a full std/bootstrap differential.
+  Evidence: /data/hasfield-final-v2-{gcc,clang,optimized,fuzz}.log,
+  /data/hasfield-final-reference-*.log, /data/hasfield-final-native-reference.log,
+  /data/hasfield-main-final{,-native}.log and
+  /data/hasfield-compiler-runner-fix.log. Latest hosted snapshot: 83e7064 has
+  37 successful/four running/23 queued jobs, no observed failures yet; not called
+  green. 35e4d66 remains confirmed GREEN, all 64 jobs successful. Older runner
+  failures and exact-source safety replays remain documented below.
+  M6.1/M7.3/M7.6 remain partial. No field-bearing struct values/layout/init,
+  tuple/enum/union field metadata, @typeInfo/@Type/@TypeOf, imports, general
+  comptime calls/mutable-memory evaluation or namespace captures are added.
+  No subsequent main-tree implementation has started. A natural next dependency
+  is @TypeOf: read AstGen.typeOf and Sema.zirTypeofBuiltin/zirTypeofPeer first;
+  it needs an unevaluated analysis scope (not forced-comptime evaluation or
+  retained runtime effects), and multiple arguments use peer type resolution.
+  Alternatively choose the next bounded M6.1 field-bearing-struct dependency.
+  Do not mistake current namespace reflection for complete struct/type metadata.
+  Q6 still MUST be asked at M10.2, not silently decided earlier.
+
 - M7.6b dynamic field projection is integrated: `@field` reads, addresses,
   assignment and compound assignment on the existing namespaces and array/slice
   descriptor fields. The base is evaluated exactly once as an address; the

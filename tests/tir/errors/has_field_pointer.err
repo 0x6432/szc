@@ -1,0 +1,3 @@
+tests/tir/errors/has_field_pointer.zig:1:34: error: type '*[3]u8' does not support '@hasField'
+pub fn main() void { _=@hasField(*[3]u8,"len"); }
+                                 ^

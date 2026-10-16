@@ -1,0 +1,1 @@
+const N=struct {pub const len:u8=256;}; pub fn main() void { const n:u8=if(!@hasField(N,"len") and @hasField([]u8,"len\x00tail") and @hasField([3]u8,&.{108,101,110}))0 else 256; _=n; }

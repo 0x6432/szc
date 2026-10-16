@@ -93,15 +93,17 @@ binding; unused namespaces and their non-exported declarations remain lazy.
 There are no new runtime namespace or `this` instructions. Field-bearing struct
 values, initialization, instance fields and layouts remain unsupported.
 
-`has_decl` carries `IrHasDecl { container, name_body, type_src, name_src }`.
+`has_decl` / `has_field` carry
+`IrHasMember { container, name_body, type_src, name_src }`.
 The name body has a contextual `[]const u8` result and is generated/analyzed in
 an isolated comptime context, with an operand-map parent for outer constants.
 Sema resolves the container type, then all logical name bytes, then validates
-that the type has namespace semantics. Lookup tests only `pub` declarations in
+that the type supports the selected query. Declaration lookup tests only `pub` declarations in
 the selected namespace: Zig 0.17 returns false for private declarations even
 inside the same namespace. It never resolves a found member's initializer or
-function body. Empty/NUL-containing lookup strings are valid and miss; they
-are not identifier tokens and are not truncated as C strings. Constant strings,
+function body. Empty names and unmatched interior-NUL names miss; single-final-
+NUL normalization is described below. Names are not identifier tokens and are
+not truncated at the first NUL for namespace lookup. Constant strings,
 byte arrays, subranges and concatenations use the existing pointer provenance.
 Runtime backing, undefined descriptors/pointers and integer-address backing
 cannot supply names, even for empty ranges. Name decoding charges the shared
@@ -140,6 +142,19 @@ pointer is discarded; `ref`, `decl_ref`, `field_ptr`, `field_named_ptr` and `as`
 queue such addresses. The temporary address used internally by
 `field_named_val` does not force body analysis. Extern ABI liveness continues
 to wait for runtime use; generic instantiation retains its existing rules.
+
+`has_field` returns a comptime bool for supported instance-field metadata:
+arrays have `len`, slices have `len` and `ptr`, and existing fieldless structs
+(including the root) have no instance fields, regardless of their declarations.
+This is distinct from accessing a declaration on a type with `field_named_*`.
+No pointer auto-dereference applies to membership queries; thin/many pointers,
+including pointers to arrays/slices, and other unsupported target kinds receive
+the official `type '...' does not support '@hasField'` primary diagnostic.
+The type resolves before the name, and the name resolves before target-kind
+validation. Both membership builtins share contextual constant-name decoding,
+its work/provenance limits and NUL rules; no runtime TIR or backend operation
+is introduced. Field-bearing structs, tuples, enum/union field metadata and
+other type-reflection builtins remain unsupported.
 
 ## Control flow
 

@@ -129,7 +129,8 @@ typedef enum IrDataKind {
 	X(FUNC, "func", IR_DATA_PAYLOAD)	/* IrFuncHeader, params, bodies */ \
 	X(PARAM, "param", IR_DATA_PAYLOAD)	/* name, flags, type body */ \
 	X(PARAM_ANYTYPE, "param_anytype", IR_DATA_NAME)	/* name */ \
-	X(HAS_DECL, "has_decl", IR_DATA_PAYLOAD) /* IrHasDecl: type and comptime name body */ \
+	X(HAS_DECL, "has_decl", IR_DATA_PAYLOAD) /* IrHasMember: type and comptime name body */ \
+	X(HAS_FIELD, "has_field", IR_DATA_PAYLOAD) /* IrHasMember: type and comptime name body */ \
 	X(THIS, "this", IR_DATA_NONE)	/* nearest lexical container type */ \
 	X(DECL_TYPE, "decl_type", IR_DATA_NONE)	/* explicit mutable global initializer result type */ \
 	X(DECL_VAL, "decl_val", IR_DATA_NAME)	/* value of the declaration `name` */ \
@@ -460,12 +461,12 @@ typedef struct IrSlice {
 	uint32_t sentinel_src;
 } IrSlice;
 
-typedef struct IrHasDecl {
+typedef struct IrHasMember {
 	IrRef container;
 	IrBody name_body;
 	uint32_t type_src;
 	uint32_t name_src;
-} IrHasDecl;
+} IrHasMember;
 
 typedef struct IrNamedField {
 	IrRef base;

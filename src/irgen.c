@@ -1234,7 +1234,7 @@ typedef enum Builtin {
 	BUILTIN_PTR_CAST,
 	BUILTIN_LAYOUT,
 	BUILTIN_THIS,
-	BUILTIN_HAS_DECL,
+	BUILTIN_HAS_MEMBER,
 	BUILTIN_FIELD,
 	BUILTIN_ARITH,
 	BUILTIN_INT_BITS,
@@ -1252,7 +1252,8 @@ typedef struct BuiltinInfo {
 
 static const BuiltinInfo builtin_table[] = {
 	{"This", BUILTIN_THIS, 0, IR_THIS},
-	{"hasDecl", BUILTIN_HAS_DECL, 2, IR_HAS_DECL},
+	{"hasDecl", BUILTIN_HAS_MEMBER, 2, IR_HAS_DECL},
+	{"hasField", BUILTIN_HAS_MEMBER, 2, IR_HAS_FIELD},
 	{"field", BUILTIN_FIELD, 2, IR_FIELD_NAMED_VAL},
 	{"panic", BUILTIN_PANIC, 1, IR_OP_COUNT},
 	{"as", BUILTIN_AS, 2, IR_OP_COUNT},
@@ -1464,13 +1465,13 @@ builtin_call(GenBody *body, Scope *scope, ResultInfo info, AstNode *node)
 		return IR_REF_VOID_VALUE;
 	case BUILTIN_FIELD:
 		return rvalue(body, info, builtin_field(body, scope, node, false), node->offset);
-	case BUILTIN_HAS_DECL: {
-		IrHasDecl payload;
+	case BUILTIN_HAS_MEMBER: {
+		IrHasMember payload;
 		payload.container = type_expr(body, scope, args[0]);
 		payload.type_src = args[0]->offset;
 		payload.name_src = args[1]->offset;
 		payload.name_body = const_name_expr(body, scope, args[1]);
-		return rvalue(body, info, emit_payload(body, IR_HAS_DECL, node->offset, APPEND_EXTRA(gen, payload)), node->offset);
+		return rvalue(body, info, emit_payload(body, builtin->arith_op, node->offset, APPEND_EXTRA(gen, payload)), node->offset);
 	}
 	case BUILTIN_THIS:
 		return rvalue(body, info, emit_none(body, IR_THIS, node->offset), node->offset);
@@ -2959,8 +2960,9 @@ dump_inst(const IrDumper *dumper, IrInstIndex index, uint32_t depth)
 		dump_labeled_body(dumper, "name", payload.name_body, depth);
 		break;
 	}
-	case IR_HAS_DECL: {
-		IrHasDecl payload;
+	case IR_HAS_DECL:
+	case IR_HAS_FIELD: {
+		IrHasMember payload;
 		IR_READ(ir, inst->data.payload, &payload);
 		fputc(' ', out);
 		dump_ref(dumper, payload.container);
