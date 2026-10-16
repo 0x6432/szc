@@ -125,6 +125,7 @@ jobs:
           - diff_field
           - diff_has_field
           - diff_typeof
+          - diff_in_comptime
           - diff_has_decl
           - diff_quoted_identifiers
           - diff_bit_transforms

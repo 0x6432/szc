@@ -1,0 +1,70 @@
+%44 = struct_decl (flags=0) {
+  decl const "T" value {
+    %2 = typeof_builtin %0 query {
+      %0 = in_comptime
+      %1 = break_inline result, @void_value
+    }
+    %3 = break_inline result, %2
+  }
+  decl fn "query" value {
+    %15 = func "query" {
+      %5 = param "a" type {
+        %4 = break_inline result, @type_bool
+      }
+      ret type {
+        %6 = break_inline result, @type_bool
+      }
+      body insts {
+        %7 = ret_type
+        %8 = as @type_bool, %5
+        %12 = bool_or %8 rhs {
+          %9 = in_comptime
+          %10 = as @type_bool, %9
+          %11 = break_inline result, %10
+        }
+        %13 = as_return %7, %12
+        %14 = ret %13
+      }
+    }
+    %16 = break_inline result, %15
+  }
+  decl fn "main" pub value {
+    %42 = func "main" {
+      ret type {
+        %17 = break_inline result, @type_u8
+      }
+      body insts {
+        %18 = in_comptime
+        %19 = as @type_bool, %18
+        %27 = bool_or %19 rhs {
+          %20 = decl_val "query"
+          %21 = call %20 arg0 {
+            %22 = arg_type %21, 0
+            %23 = as %22, @false
+            %24 = break_inline result, %23
+          }
+          %25 = as @type_bool, %21
+          %26 = break_inline result, %25
+        }
+        %31 = bool_or %27 rhs {
+          %28 = decl_val "T"
+          %29 = cmp_neq %28, @type_bool
+          %30 = break_inline result, %29
+        }
+        %37 = if %31 then {
+          %32 = ret_type
+          %33 = int 1
+          %34 = as_return %32, %33
+          %35 = ret %34
+        } else {
+          %36 = break_inline result, @void_value
+        }
+        %38 = ret_type
+        %39 = int 0
+        %40 = as_return %38, %39
+        %41 = ret %40
+      }
+    }
+    %43 = break_inline result, %42
+  }
+}

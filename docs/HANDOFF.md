@@ -19,6 +19,54 @@ Read this first when resuming work (the sandbox resets often).
 
 ## Latest follow-up checkpoint
 
+- M9.4j comptime context queries: `@inComptime()` uses a sema-only
+  `in_comptime` instruction and resolves the current block's comptime state to
+  a known bool. Irgen matches official redundant-use errors in syntactically
+  known scopes, with arity checked first. Lexical generation guards now cover
+  forced type operands, array lengths, array/pointer type sentinels and local
+  comptime variable initializers; existing semantic consumers still require
+  known values. Guards restore the parent context, including nested branches/
+  call modifiers; @TypeOf deliberately resets to ordinary analysis even under
+  a comptime parent. Slice sentinel assertions remain ordinary expressions,
+  unlike type sentinels. No runtime TIR/backend context lookup is introduced.
+  Reference: 94 actual-Zig comparisons/81 exact primary diagnostics; native
+  Debug/ReleaseFast pass. Forty-two focused unit scenarios, IR/TIR/QBE and six
+  error goldens, three seeds each irgen/sema and a hosted matrix. No pre-existing
+  golden changes. The first native fixture inferred a pointer-to-array and
+  queried unsupported .ptr; it now explicitly uses the intended [:false]bool
+  slice descriptor rather than claiming this milestone adds pointer .ptr.
+  Final immutable snapshots /data/incomptime-final/{gcc,clang,optimized} pass
+  Werror ASan/UBSan: 2476 units/1207 goldens, 127+4 native, 16 driver,
+  55 compiler-runner checks, full C/ABI/storage/alignment, 102 observed volatile
+  sequences and 300 safety cases. Optimized native/safety and forced main tests
+  pass. Both compilers pass 20000 standalone mutations/stage, with
+  256/256/107/163 seeds. Four fresh 60s libFuzzer runs pass: 2535671/66744/57396/61976.
+  Final-source reference regressions pass: TypeOf 207/51, field 201/92,
+  hasDecl 136/70, hasField 220/68, namespaces 76/40. Both new native fixtures
+  pass final-source Debug references; the inComptime fixture also passes
+  ReleaseFast. Main implementation/unit/native/matrix/golden/seed files match
+  all three frozen copies. Evidence: /data/incomptime-final-{gcc,clang,
+  optimized,fuzz}.log, /data/incomptime-final-reference-*.log,
+  /data/incomptime-final-native-reference.log,
+  /data/incomptime-main-final{,-native}.log.
+  Latest hosted TypeOf snapshot: f576c2f run 38978396028 has 40 successful,
+  six running and 20 queued jobs, no observed failures; not called green.
+  Earlier post-job runner failures and unchanged-deadline replays are recorded
+  in the next checkpoint; do not mistake runner cleanup failures for a compiler
+  semantic regression or hide them by changing test deadlines.
+  M7.2/M7.3/M9.4 remain partial. This does not add comptime function calls,
+  generic instantiation, explicit comptime expressions/blocks, mutable comptime
+  storage or inline-loop execution; those retain existing NYI paths. Known
+  generation scopes can report redundant queries before unsupported semantic
+  work, but the general interpreter is not implemented by this boolean builtin.
+  A next dependency-aware candidate is M6.1b declared struct-field metadata:
+  inspect official hasField/FieldType behavior before choosing scope, then audit
+  all struct layout/value/runtime gates before admitting nonempty types. Current
+  IR already records field headers/bodies, but sema rejects field_count > 0.
+  No field-bearing struct implementation has begun. Full e2e remains szc-only,
+  not a complete official-Zig/std/bootstrap differential. Q6 is still mandatory
+  at M10.2, not earlier.
+
 - M7.3a unevaluated type queries: `@TypeOf` with one or more arguments
   returns a comptime type from ordinary runtime expression analysis. Dedicated
   `IrTypeOf` body/refs, isolated operand/instruction maps, cloned enclosing

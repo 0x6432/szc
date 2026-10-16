@@ -6606,6 +6606,9 @@ analyze_inst(Block *block, IrInstIndex index, Operand *break_value)
 	case IR_FN_TYPE:
 		result = analyze_func_inst(block, index);
 		break;
+	case IR_IN_COMPTIME:
+		result = bool_operand(sema, block->is_comptime);
+		break;
 	case IR_TYPEOF_BUILTIN:
 		result = analyze_typeof(block, inst);
 		break;

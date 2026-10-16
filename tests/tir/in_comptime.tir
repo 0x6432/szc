@@ -1,0 +1,36 @@
+fn szc.main.1: fn () u8 {
+  %0: bool = const false
+  %1: bool = call szc.query.2(%0)
+  %2: bool = block {
+    %7: noreturn = condbr %1 then {
+      %5: bool = const true
+      %6: noreturn = br %2, %5
+    } else {
+      %3: bool = const false
+      %4: noreturn = br %2, %3
+    }
+  }
+  %8: void = block {
+    %12: noreturn = condbr %2 then {
+      %9: u8 = const 1
+      %10: noreturn = ret %9
+    } else {
+      %11: noreturn = br %8
+    }
+  }
+  %13: u8 = const 0
+  %14: noreturn = ret %13
+}
+fn szc.query.2: fn (bool) bool {
+  %0: bool = arg 0
+  %1: bool = block {
+    %6: noreturn = condbr %0 then {
+      %4: bool = const true
+      %5: noreturn = br %1, %4
+    } else {
+      %2: bool = const false
+      %3: noreturn = br %1, %2
+    }
+  }
+  %7: noreturn = ret %1
+}

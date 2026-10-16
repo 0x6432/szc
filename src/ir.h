@@ -131,6 +131,7 @@ typedef enum IrDataKind {
 	X(PARAM_ANYTYPE, "param_anytype", IR_DATA_NAME)	/* name */ \
 	X(HAS_DECL, "has_decl", IR_DATA_PAYLOAD) /* IrHasMember: type and comptime name body */ \
 	X(HAS_FIELD, "has_field", IR_DATA_PAYLOAD) /* IrHasMember: type and comptime name body */ \
+	X(IN_COMPTIME, "in_comptime", IR_DATA_NONE) /* semantic analysis context */ \
 	X(TYPEOF_BUILTIN, "typeof_builtin", IR_DATA_PAYLOAD) /* IrTypeOf + operands; unevaluated body */ \
 	X(THIS, "this", IR_DATA_NONE)	/* nearest lexical container type */ \
 	X(DECL_TYPE, "decl_type", IR_DATA_NONE)	/* explicit mutable global initializer result type */ \

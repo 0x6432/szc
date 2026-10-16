@@ -540,6 +540,7 @@ local_init(LocalScope *local, Scope *parent, StringId name, LocalKind kind, IrRe
 
 static IrRef expr(GenBody *body, Scope *scope, ResultInfo info, AstNode *node);
 static IrRef type_expr(GenBody *body, Scope *scope, AstNode *node);
+static IrRef comptime_expr(GenBody *body, Scope *scope, ResultInfo info, AstNode *node);
 static bool is_field_builtin(GenBody *body, AstNode *node);
 static IrRef builtin_field(GenBody *body, Scope *scope, AstNode *node, bool as_reference);
 static IrRef address_of(GenBody *body, Scope *scope, ResultInfo info, AstNode *node);
@@ -1055,7 +1056,7 @@ pointer_type(GenBody *body, Scope *scope, AstPointerType *node)
 	IrRef child = type_expr(body, scope, node->child);
 	IrPointerType payload = {child, node->size == AST_POINTER_MANY ? IR_POINTER_MANY : node->size == AST_POINTER_SLICE ? IR_POINTER_SLICE : 0, 0, 0, IR_REF_NONE, 0};
 	if (node->sentinel != NULL) {
-		payload.sentinel = expr(body, scope, result_type(child), node->sentinel);
+		payload.sentinel = comptime_expr(body, scope, result_type(child), node->sentinel);
 		payload.sentinel_src = node->sentinel->offset;
 	}
 	if (node->align != NULL) {
@@ -1235,6 +1236,7 @@ typedef enum Builtin {
 	BUILTIN_LAYOUT,
 	BUILTIN_THIS,
 	BUILTIN_TYPEOF,
+	BUILTIN_IN_COMPTIME,
 	BUILTIN_HAS_MEMBER,
 	BUILTIN_FIELD,
 	BUILTIN_ARITH,
@@ -1253,6 +1255,7 @@ typedef struct BuiltinInfo {
 
 static const BuiltinInfo builtin_table[] = {
 	{"This", BUILTIN_THIS, 0, IR_THIS},
+	{"inComptime", BUILTIN_IN_COMPTIME, 0, IR_IN_COMPTIME},
 	{"TypeOf", BUILTIN_TYPEOF, UINT32_MAX, IR_TYPEOF_BUILTIN},
 	{"hasDecl", BUILTIN_HAS_MEMBER, 2, IR_HAS_DECL},
 	{"hasField", BUILTIN_HAS_MEMBER, 2, IR_HAS_FIELD},
@@ -1465,6 +1468,12 @@ builtin_call(GenBody *body, Scope *scope, ResultInfo info, AstNode *node)
 	case BUILTIN_ALIGN_CAST:
 	case BUILTIN_PTR_CAST:
 		return IR_REF_VOID_VALUE;
+	case BUILTIN_IN_COMPTIME:
+		if (body->is_comptime) {
+			error_at(gen, node->offset, "%s", "redundant '@inComptime' in comptime scope");
+			return IR_REF_VOID_VALUE;
+		}
+		return rvalue(body, info, emit_none(body, IR_IN_COMPTIME, node->offset), node->offset);
 	case BUILTIN_TYPEOF: {
 		uint32_t count = call_node->args.count;
 		if (count == 0) {
@@ -1956,11 +1965,11 @@ array_type(GenBody *body, Scope *scope, AstArrayType *node, bool infer, uint32_t
 		data.integer = count;
 		length = rvalue(body, result_type(IR_REF_TYPE_USIZE), emit(body, IR_INT, node->length->offset, data), node->length->offset);
 	} else {
-		length = expr(body, scope, result_type(IR_REF_TYPE_USIZE), node->length);
+		length = comptime_expr(body, scope, result_type(IR_REF_TYPE_USIZE), node->length);
 	}
 	IrRef child = type_expr(body, scope, node->child);
 	if (node->sentinel != NULL) {
-		IrRef sentinel = expr(body, scope, result_type(child), node->sentinel);
+		IrRef sentinel = comptime_expr(body, scope, result_type(child), node->sentinel);
 		IrArrayType payload = {length, child, sentinel, node->sentinel->offset};
 		return emit_payload(body, IR_ARRAY_TYPE_SENTINEL, node->child->offset, APPEND_EXTRA(body->gen, payload));
 	}
@@ -2146,10 +2155,24 @@ expr(GenBody *body, Scope *scope, ResultInfo info, AstNode *node)
 	}
 }
 
+/* Syntactically forced-comptime operands share the caller's instruction list;
+ * their existing semantic consumer still requires a known value. Keep this
+ * generation context lexical, including nested branches/call modifiers, while
+ * @TypeOf deliberately starts a fresh ordinary-expression context. */
+static IrRef
+comptime_expr(GenBody *body, Scope *scope, ResultInfo info, AstNode *node)
+{
+	bool saved = body->is_comptime;
+	body->is_comptime = true;
+	IrRef value = expr(body, scope, info, node);
+	body->is_comptime = saved;
+	return value;
+}
+
 static IrRef
 type_expr(GenBody *body, Scope *scope, AstNode *node)
 {
-	return expr(body, scope, result_type(IR_REF_TYPE_TYPE), node);
+	return comptime_expr(body, scope, result_type(IR_REF_TYPE_TYPE), node);
 }
 
 /* ---------- Statements ---------- */
@@ -2174,7 +2197,8 @@ local_var_decl(GenBody *body, Scope *scope, AstVarDecl *decl)
 	if (decl->align != NULL)
 		alignment = emit_payload(body, IR_ALIGN, decl->align->offset, alignment_body(gen, scope, decl->align));
 	ResultInfo info = type == IR_REF_NONE ? result_none : result_type(type);
-	IrRef init = expr(body, scope, info, decl->init);
+	IrRef init = decl->is_comptime ? comptime_expr(body, scope, info, decl->init)
+		: expr(body, scope, info, decl->init);
 
 	LocalScope *local = ARENA_NEW(gen->arena, LocalScope);
 	if (decl->is_const && !decl->is_comptime) {

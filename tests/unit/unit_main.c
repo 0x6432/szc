@@ -1636,6 +1636,82 @@ test_has_field(void)
 }
 
 static void
+test_in_comptime(void)
+{
+	const struct {
+		const char *source;
+		const char *error;
+	} cases[] = {
+		{"pub fn main() void { const n:u8=if((@inComptime())==false)0 else 256; _=n; }", NULL},
+		{"pub fn main() void { const n:u8=if((!@inComptime())==true)0 else 256; _=n; }", NULL},
+		{"pub fn main() void { const n:u8=if(((@inComptime()))==false)0 else 256; _=n; }", NULL},
+		{"pub fn main() void { const n:u8=if((if(true) @inComptime() else true)==false)0 else 256; _=n; }", NULL},
+		{"pub fn main() void { const n:u8=if((@inComptime() or @inComptime())==false)0 else 256; _=n; }", NULL},
+		{"const x=@inComptime(); pub fn main() void { _=x; }", "redundant '@inComptime'"},
+		{"var x=@inComptime(); pub fn main() void { _=&x; }", "redundant '@inComptime'"},
+		{"const x=@inComptime(); pub fn main() void {}", "redundant '@inComptime'"},
+		{"pub fn main() void { const x:if(@inComptime())u8 else u16=0; _=x; }", "redundant '@inComptime'"},
+		{"pub fn main() void { _=@sizeOf(if(@inComptime())u8 else u16); }", "redundant '@inComptime'"},
+		{"pub fn main() void { _=@alignOf(if(@inComptime())u8 else u16); }", "redundant '@inComptime'"},
+		{"pub fn main() void { _=@bitSizeOf(if(@inComptime())u8 else u16); }", "redundant '@inComptime'"},
+		{"pub fn main() void { _=@as(if(@inComptime())u8 else u16,0); }", "redundant '@inComptime'"},
+		{"pub fn main() void { _=[if(@inComptime())1 else 2]u8; }", "redundant '@inComptime'"},
+		{"pub fn main() void { _=[2]if(@inComptime())u8 else u16; }", "redundant '@inComptime'"},
+		{"pub fn main() void { _=*if(@inComptime())u8 else u16; }", "redundant '@inComptime'"},
+		{"pub fn main() void { _=[2:if(@inComptime())0 else 1]u8; }", "redundant '@inComptime'"},
+		{"pub fn main() void { _=[:if(@inComptime())0 else 1]u8; }", "redundant '@inComptime'"},
+		{"pub fn main() void { _=[*:if(@inComptime())0 else 1]u8; }", "redundant '@inComptime'"},
+		{"pub fn main() void { _=*align(if(@inComptime())4 else 8)u8; }", "redundant '@inComptime'"},
+		{"pub fn main() void { var x:u8 align(if(@inComptime())4 else 8)=0; _=&x; }", "redundant '@inComptime'"},
+		{"pub fn main() void { _=@hasField([]u8,if(@inComptime())\"ptr\" else \"len\"); }", "redundant '@inComptime'"},
+		{"pub fn main() void { _=@hasDecl(struct {},if(@inComptime())\"a\" else \"b\"); }", "redundant '@inComptime'"},
+		{"pub fn main() void { _=@hasField(if(@inComptime())[]u8 else []u16,\"len\"); }", "redundant '@inComptime'"},
+		{"pub fn main() void { const x=[_]u8{1}; _=@field(x,if(@inComptime())\"len\" else \"len\"); }", "redundant '@inComptime'"},
+		{"pub fn main() void { comptime var x=@inComptime(); _=&x; }", "redundant '@inComptime'"},
+		{"fn f() if(@inComptime())u8 else u16 { return 0; } pub fn main() void { _=f(); }", "redundant '@inComptime'"},
+		{"fn f(x:if(@inComptime())u8 else u16) void { _=x; } pub fn main() void { f(0); }", "redundant '@inComptime'"},
+		{"pub fn main() void { _=@TypeOf(@as(if(@inComptime())u8 else u16,0)); }", "redundant '@inComptime'"},
+		{"pub fn main() void { _=@TypeOf([if(@inComptime())1 else 2]u8); }", "redundant '@inComptime'"},
+		{"const N=struct { const x=@inComptime(); }; pub fn main() void { _=N; }", "redundant '@inComptime'"},
+		{"pub fn main() void { _=@TypeOf(@inComptime()); }", NULL},
+		{"pub fn main() void { _=@TypeOf(blk: { const n:u8=if(!@inComptime())0 else 256; _=n; break :blk false; }); }", NULL},
+		{"const T=@TypeOf(blk: { const n:u8=if(!@inComptime())0 else 256; _=n; break :blk false; }); pub fn main() void { _=@TypeOf(blk: { const n:u8=if(!@inComptime())0 else 256; _=n; break :blk false; }); }", NULL},
+		{"pub fn main() void { _=@as(bool,@inComptime()); }", NULL},
+		{"pub fn main() void { const a=[_]bool{@inComptime(),true}; _=a; }", NULL},
+		{"pub fn main() void { var a=[_]bool{true,false}; const s=a[0..1:@inComptime()]; _=s; }", NULL},
+		{"pub fn main() void { const T=@TypeOf(@inComptime()); const n:u8=if(T==bool)0 else 256; _=n; }", NULL},
+		{"pub fn main() void { const a:u8=if(@inComptime())256 else 0; _=a; }", NULL},
+		{"pub fn main() void { _=@inComptime(1); }", "expected 0 arguments"},
+		{"pub fn main() void { _=@inComptime(1,2); }", "expected 0 arguments"},
+		{"const x=@inComptime(1); pub fn main() void { _=x; }", "expected 0 arguments"},
+	};
+	for (uint32_t i = 0; i < sizeof(cases) / sizeof(cases[0]); i++) {
+		Arena arena;
+		arena_init(&arena);
+		SourceTable sources;
+		source_table_init(&sources, &arena);
+		Diag diag;
+		diag_init(&diag, &arena, &sources);
+		Interner interner;
+		intern_init(&interner, &arena);
+		const char *source = cases[i].source;
+		FileId file = source_add_memory(&sources, "in_comptime.zig", source, (uint32_t)strlen(source));
+		AstContainerDecl *root = parse_file(&arena, &diag, &sources, file);
+		CHECK(!diag_has_errors(&diag));
+		IrFile *ir = irgen_file(&arena, &diag, &interner, source_get(&sources, file), file, root);
+		bool success = false;
+		if (!diag_has_errors(&diag)) {
+			Sema *sema = sema_create(&arena, &diag, &interner, &sources);
+			success = sema_analyze_executable(sema, file, ir);
+		}
+		CHECK(success == (cases[i].error == NULL));
+		if (cases[i].error != NULL)
+			CHECK(diag.count != 0 && strstr(diag.items[0].message, cases[i].error) != NULL);
+		arena_free(&arena);
+	}
+}
+
+static void
 test_typeof(void)
 {
 	const struct {
@@ -2077,6 +2153,7 @@ main(void)
 	test_has_decl();
 	test_has_field();
 	test_typeof();
+	test_in_comptime();
 	test_field();
 	test_scalar_memcpy();
 	test_aggregate_memcpy();

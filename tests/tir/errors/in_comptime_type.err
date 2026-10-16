@@ -1,0 +1,3 @@
+tests/tir/errors/in_comptime_type.zig:1:33: error: redundant '@inComptime' in comptime scope
+pub fn main() void { const x:if(@inComptime())u8 else u16=0; _=x; }
+                                ^

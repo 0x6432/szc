@@ -183,6 +183,7 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
   - [x] **M9.4g Scalar runtime `@memcpy`**: length inference/equality, alias guards, ABI strides and volatile accesses.
   - [x] **M9.4h Nonvolatile aggregate `@memcpy`**: supported array layouts and borrowed slice descriptors.
   - [x] **M9.4i Nonvolatile aggregate `@memset`**: one owned fill snapshot, ABI strides and borrowed descriptors.
+  - [x] **M9.4j Comptime context query**: `@inComptime`, lexical known-comptime diagnostics and ordinary `@TypeOf` scopes.
 - [ ] **M9.5 Inline asm for x86_64-linux std usage.**
 
 ## Phase 10: std tests and bootstrap
@@ -197,6 +198,38 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
 ## Completed milestone log
 
 (newest first; each entry: what, limitations, interactions)
+
+### M9.4j Comptime context query
+
+- **What**: `@inComptime()` lowers to `in_comptime`, a sema-only bool from
+  the current analysis context, with no runtime/backend opcode. Like official
+  AstGen, calls in a syntactically known comptime scope report the redundant-use
+  diagnostic (including unused global initializers). Arity is checked first.
+  Forced type operands, array lengths and array/pointer type sentinels now
+  preserve their lexical generation context, including nested branches/call
+  modifiers; the existing semantic consumers still require known values.
+  The context guard restores the parent afterwards, and @TypeOf explicitly
+  starts ordinary analysis even inside a comptime parent. Slice sentinel
+  assertions remain ordinary expressions, matching AstGen rather than being
+  incorrectly treated like pointer/array type sentinels.
+- **Coverage**: 94 actual-Zig comparisons/81 exact primary diagnostics; native
+  Debug/ReleaseFast. Forty-two focused unit scenarios, IR/TIR/QBE and six error
+  goldens, three seeds each irgen/sema and hosted matrix. No old golden changes.
+  Native covers ordinary/inline calls, inferred type values, query bodies in
+  global/local contexts, slice sentinel assertions and context restoration.
+  Independent frozen GCC/Clang Werror ASan/UBSan: 2476 units/1207 goldens,
+  127+4 native, 16 driver, 55 compiler-runner checks, full C/ABI/storage/
+  alignment, 102 observed volatile sequences and 300 safety cases. Optimized
+  native/safety and forced main tests pass. Both compilers pass 20000 standalone
+  mutations/stage with 256/256/107/163 seeds. Four fresh 60s libFuzzer runs:
+  2535671/66744/57396/61976. Final-source reference regressions: TypeOf
+  207/51, field 201/92, hasDecl 136/70, hasField 220/68, namespaces 76/40.
+  Full e2e remains szc-only; targeted official comparisons are separate.
+- **Interactions/limits**: no comptime function-call interpreter, generics,
+  explicit comptime expressions/blocks, mutable comptime storage or inline-loop
+  execution is introduced. Those constructs retain existing NYI paths; supported
+  syntactically known scopes diagnose redundant queries before semantic work.
+  This does not complete M7.2/M7.3/M9.4 or add any runtime context lookup.
 
 ### M7.3a Unevaluated type queries
 

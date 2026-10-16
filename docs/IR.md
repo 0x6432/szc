@@ -93,6 +93,16 @@ binding; unused namespaces and their non-exported declarations remain lazy.
 There are no new runtime namespace or `this` instructions. Field-bearing struct
 values, initialization, instance fields and layouts remain unsupported.
 
+`in_comptime` has no payload and resolves to a comptime bool from the current
+semantic block's comptime state. It never reaches runtime TIR. Irgen rejects
+its use in syntactically known comptime scopes with the official redundant-use
+error. Type expressions, array lengths and pointer/array type sentinels preserve
+that lexical generation context; their existing semantic consumers still enforce
+known values. A generation guard restores the caller context on every return.
+Slice sentinel assertions are ordinary expressions, not type sentinels. TypeOf
+query bodies deliberately reset the context even under a comptime parent.
+This is not general comptime function-call or mutable-memory interpretation.
+
 `typeof_builtin` carries `IrTypeOf { body, arg_count }` followed by
 `arg_count` operand refs. Its body has ordinary (not forced-comptime) expression
 analysis even when the query appears in a type/global constant initializer.

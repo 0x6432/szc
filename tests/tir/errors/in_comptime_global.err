@@ -1,0 +1,3 @@
+tests/tir/errors/in_comptime_global.zig:1:9: error: redundant '@inComptime' in comptime scope
+const x=@inComptime();
+        ^
