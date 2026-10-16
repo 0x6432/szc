@@ -3764,9 +3764,18 @@ load_pointer(Block *block, Operand pointer, uint32_t src)
 		}
 		if (value->kind == VALUE_PTR_CAST) {
 			ValueId parent = value->as.pointer;
-			TypeId parent_type = value_get(&sema->values, parent)->type;
-			if (sema->types[child].kind == TYPE_ARRAY && sema->types[parent_type].as.pointer.size == POINTER_MANY) {
+			if (sema->types[child].kind == TYPE_ARRAY) {
 				TypeArray array = sema->types[child].as.array;
+				/* A view can begin at offset zero without having its root's extent.
+				 * Reconstruct the requested physical elements instead of coercing the
+				 * entire containing array after canonical pointer casts collapse. */
+				Type many_type = make_type(TYPE_POINTER);
+				many_type.as.pointer = pointer_type;
+				many_type.as.pointer.size = POINTER_MANY;
+				many_type.as.pointer.child = array.child;
+				many_type.as.pointer.sentinel = VALUE_NONE;
+				TypeId many = type_intern(sema, &many_type);
+				Operand elements = comptime_operand(many, value_pointer_cast(&sema->values, many, pointer.value));
 				uint64_t extra = array.sentinel != VALUE_NONE ? 1u : 0u;
 				if (array.length > UINT32_MAX - extra) {
 					sema_error(block, src, "not supported by szc yet: array constant with this many elements");
@@ -3778,7 +3787,7 @@ load_pointer(Block *block, Operand pointer, uint32_t src)
 				ValueId *items = ARENA_ARRAY(sema->arena, ValueId, count);
 				for (uint32_t i = 0; i < count; i++) {
 					Operand index = comptime_operand(T_USIZE, value_int_u64(&sema->values, T_USIZE, i));
-					Operand item = analyze_many_index(block, comptime_operand(parent_type, parent), index, src, false, false);
+					Operand item = analyze_many_index(block, elements, index, src, false, false);
 					if (item.kind == OPERAND_NONE)
 						return operand_none;
 					if (item.kind != OPERAND_COMPTIME) {
@@ -4438,6 +4447,34 @@ analyze_many_index(Block *block, Operand base, Operand index, uint32_t src, bool
 		? pointer : load_pointer(block, pointer, src);
 }
 
+/* Constant backing is checked during analysis; explicit runtime assertions read
+ * the physical end only after the slice bounds checks have succeeded. */
+static bool
+check_slice_sentinel(Block *block, Operand pointer, Operand length, ValueId sentinel, bool explicit, uint32_t src)
+{
+	if (sentinel == VALUE_NONE)
+		return true;
+	bool runtime = pointer.kind != OPERAND_COMPTIME || length.kind != OPERAND_COMPTIME;
+	if ((!explicit && runtime) || (!runtime && mutable_global_pointer(block, pointer)))
+		return true;
+	Operand actual = analyze_many_index(block, pointer, length, src, false, false);
+	if (actual.kind == OPERAND_NONE || !check_defined(block, actual, src))
+		return false;
+	if (actual.kind == OPERAND_COMPTIME) {
+		if (actual.value == sentinel)
+			return true;
+		sema_error(block, src, "value in memory does not match slice sentinel");
+		return false;
+	}
+	if (!explicit || !require_runtime(block, src))
+		return false;
+	Operand expected = comptime_operand(actual.type, sentinel);
+	TirRef actual_ref = materialize(block, actual, src);
+	TirRef expected_ref = materialize(block, expected, src);
+	emit_tir_bin(block, TIR_SENTINEL_CHECK, T_VOID, src, actual_ref, expected_ref);
+	return true;
+}
+
 /* Slicing borrows storage; a known resulting length produces an array pointer. */
 static Operand
 analyze_slice(Block *block, const IrInst *inst)
@@ -4500,9 +4537,24 @@ analyze_slice(Block *block, const IrInst *inst)
 	}
 	if (data.kind == OPERAND_NONE || !check_defined(block, start, slice.start_src))
 		return operand_none;
+	ValueId asserted_sentinel = VALUE_NONE;
+	if (slice.sentinel != IR_REF_NONE) {
+		if (single_item) {
+			sema_error(block, slice.sentinel_src, "slice of single-item pointer cannot have sentinel");
+			return operand_none;
+		}
+		if (!analyze_scalar_sentinel(block, resolve_ref(block, slice.sentinel), shape.child,
+			slice.sentinel_src, &asserted_sentinel))
+			return operand_none;
+	}
 	if (end.kind == OPERAND_NONE) {
-		if (available.kind == OPERAND_NONE)
+		if (available.kind == OPERAND_NONE) {
+			if (asserted_sentinel != VALUE_NONE && asserted_sentinel != shape.sentinel) {
+				sema_error(block, slice.sentinel_src, "sentinel-terminated slicing of many-item pointer must match existing sentinel");
+				return operand_none;
+			}
 			return analyze_pointer_offset(block, IR_ADD, data, start, inst->src);
+		}
 		end = available;
 	}
 	if (!check_defined(block, end, slice.end_src))
@@ -4518,6 +4570,8 @@ analyze_slice(Block *block, const IrInst *inst)
 	ValueId sentinel = slice.end == IR_REF_NONE
 		|| (known_end && available.kind == OPERAND_COMPTIME && last == bigint_to_u64_bits(&operand_value(block, available)->as.integer))
 		? inherited_sentinel : VALUE_NONE;
+	if (asserted_sentinel != VALUE_NONE)
+		sentinel = asserted_sentinel;
 	Operand bound = available;
 	if (inherited_sentinel != VALUE_NONE) {
 		/* Zig uses wrapping usize addition for the physical sentinel bound. */
@@ -4553,17 +4607,35 @@ analyze_slice(Block *block, const IrInst *inst)
 		emit_tir_bin(block, TIR_SLICE_START_CHECK, T_VOID, inst->src, start_ref, end_ref);
 	}
 	bool runtime_sentinel = inherited_sentinel != VALUE_NONE && (!known_start || !known_end);
+	bool runtime_assertion = asserted_sentinel != VALUE_NONE
+		&& (data.kind != OPERAND_COMPTIME || !known_start || !known_end);
 	/* Zig's dynamic-result path uses a known descriptor's logical length,
 	 * but runtime descriptors and array backing include the physical sentinel. */
 	Operand runtime_bound = runtime_sentinel && is_slice(sema, base.type)
 		&& available.kind == OPERAND_COMPTIME ? available : bound;
-	if (runtime_bound.kind != OPERAND_NONE && (runtime_sentinel
+	if (runtime_bound.kind != OPERAND_NONE && (runtime_sentinel || runtime_assertion
 		|| (slice.end != IR_REF_NONE && !(known_end && runtime_bound.kind == OPERAND_COMPTIME)))) {
 		if (!require_runtime(block, inst->src))
 			return operand_none;
-		TirRef end_ref = materialize(block, end, inst->src);
-		TirRef bound_ref = materialize(block, runtime_bound, inst->src);
-		emit_tir_bin(block, TIR_SLICE_END_CHECK, T_VOID, inst->src, end_ref, bound_ref);
+		Operand physical_end = end;
+		if (runtime_assertion) {
+			if (known_end)
+				physical_end = comptime_operand(T_USIZE, value_int_u64(&sema->values, T_USIZE, last + 1));
+			else {
+				Operand one = comptime_operand(T_USIZE, value_int_u64(&sema->values, T_USIZE, 1));
+				TirRef end_ref = materialize(block, end, inst->src);
+				TirRef one_ref = materialize(block, one, inst->src);
+				physical_end = runtime_operand(T_USIZE, emit_tir_bin(block, TIR_ADD_WRAP, T_USIZE, inst->src, end_ref, one_ref));
+			}
+		}
+		/* Zig's known-length result path elides a constant physical-end check;
+		 * runtime lengths/descriptors retain their dynamic bounds guard. */
+		if (!(known_start && known_end && physical_end.kind == OPERAND_COMPTIME
+			&& runtime_bound.kind == OPERAND_COMPTIME)) {
+			TirRef end_ref = materialize(block, physical_end, inst->src);
+			TirRef bound_ref = materialize(block, runtime_bound, inst->src);
+			emit_tir_bin(block, TIR_SLICE_END_CHECK, T_VOID, inst->src, end_ref, bound_ref);
+		}
 	}
 	Operand pointer = analyze_pointer_offset(block, IR_ADD, data, start, inst->src);
 	if (pointer.kind == OPERAND_NONE)
@@ -4571,6 +4643,9 @@ analyze_slice(Block *block, const IrInst *inst)
 	Type result = sema->types[pointer.type];
 	if (known_start && known_end) {
 		uint64_t count = last - first;
+		Operand length = comptime_operand(T_USIZE, value_int_u64(&sema->values, T_USIZE, count));
+		if (!check_slice_sentinel(block, pointer, length, sentinel, asserted_sentinel != VALUE_NONE, inst->src))
+			return operand_none;
 		result.as.pointer.size = POINTER_ONE;
 		result.as.pointer.sentinel = VALUE_NONE;
 		result.as.pointer.child = array_type_id(sema, result.as.pointer.child, count, sentinel);
@@ -4588,6 +4663,9 @@ analyze_slice(Block *block, const IrInst *inst)
 	}
 	TirRef length = emit_tir_bin(block, TIR_SUB_WRAP, T_USIZE, inst->src,
 		materialize(block, end, inst->src), materialize(block, start, inst->src));
+	if (!check_slice_sentinel(block, pointer, runtime_operand(T_USIZE, length), sentinel,
+		asserted_sentinel != VALUE_NONE, inst->src))
+		return operand_none;
 	result.as.pointer.size = POINTER_SLICE;
 	result.as.pointer.sentinel = sentinel;
 	return make_slice(block, type_intern(sema, &result), pointer, runtime_operand(T_USIZE, length), inst->src);
@@ -4794,6 +4872,24 @@ analyze_inst(Block *block, IrInstIndex index, Operand *break_value)
 	case IR_ARRAY_TYPE_SENTINEL:
 		result = analyze_array_type(block, inst);
 		break;
+	case IR_SLICE_ELEM_TYPE: {
+		Operand base = resolve_ref(block, inst->data.un.operand);
+		if (!pointer_type_operand(block, base, src))
+			break;
+		TypeId type = sema->types[base.type].as.pointer.child;
+		if (sema->types[type].kind == TYPE_POINTER) {
+			TypePointer pointer = sema->types[type].as.pointer;
+			type = pointer.child;
+			if (pointer.size != POINTER_ONE) {
+				result = type_operand(sema, type);
+				break;
+			}
+		}
+		if (sema->types[type].kind == TYPE_ARRAY)
+			type = sema->types[type].as.array.child;
+		result = type_operand(sema, type);
+		break;
+	}
 	case IR_ARRAY_ELEM_TYPE: {
 		TypeId type;
 		if (!operand_to_type(block, resolve_ref(block, inst->data.un.operand), src, &type))

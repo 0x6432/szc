@@ -1,0 +1,3 @@
+tests/tir/errors/sentinel_assertion_memory.zig:1:52: error: value in memory does not match slice sentinel
+pub fn main() void { const a = [3]u8{7,9,18}; _ = a[0..2:17]; }
+                                                   ^

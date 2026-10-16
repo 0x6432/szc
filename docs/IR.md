@@ -694,3 +694,25 @@ An empty array may discard const/alignment only under Zig's physical-empty or
 unsentinelled-empty destination rules. Known zero-bit array view loads fold the
 requested view type, not the canonical cast root's extent. Explicit assertions
 and non-integer/bool sentinel values remain separate work.
+
+
+## Explicit sentinel assertions (M5.4d)
+
+IrSlice carries optional sentinel/sentinel_src refs. IR_SLICE_ELEM_TYPE extracts
+the borrowed base's element type without an actual descriptor word access, so
+assertion expressions get a result type. An open many-pointer assertion checks
+its existing promise, rather than scanning; a bounded assertion creates the
+requested promise only after validating any known immutable end element.
+
+TIR_SENTINEL_CHECK has actual/expected scalar refs and void type. For runtime
+memory, start <= end and physical-end <= available guards precede the end load;
+comparison failure calls the sentinel-mismatch panic. Known-length results retain
+Zig's constant guard elision. Known mutable global backing does not supply a
+comptime memory value; follow Zig's runtime-load bypass in that path. Never treat
+an inability to read known-address memory as a known sentinel value.
+
+Constant array-pointer views reconstruct the requested logical elements and
+physical sentinel via borrowed many-pointer element loads; canonical offset-zero
+casts need not have their containing root's extent. Runtime assertion volatile
+loads are retained once by szc. Zig ReleaseFast removes safety reads entirely;
+that distinction is explicit in the observer fixture, while Debug checks one.

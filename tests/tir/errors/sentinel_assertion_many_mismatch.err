@@ -1,0 +1,3 @@
+tests/tir/errors/sentinel_assertion_many_mismatch.zig:1:37: error: sentinel-terminated slicing of many-item pointer must match existing sentinel
+fn f(p: [*:18]u8) void { _ = p[0.. :17]; } pub fn main() void { f(undefined); }
+                                    ^

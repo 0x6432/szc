@@ -1,0 +1,308 @@
+function w $szc.main.1() {
+@start
+	%t1 =w call $szc.run.2(l 2)
+	%t1 =w and %t1, 255
+	ret %t1
+}
+
+function w $szc.run.2(l %t0) {
+@start
+	%t1 =l alloc4 10
+	%t5 =l alloc8 16
+	%t12 =l alloc8 16
+	%t56 =l alloc8 16
+	%t91 =l alloc8 16
+	call $memmove(l %t1, l $szc.const.2, l 10)
+	%t4 =l copy %t1
+	%t6 =l copy %t5
+	%t7 =l add %t5, 8
+	storel %t4, %t6
+	storel 5, %t7
+	call $szc.cut.3(l %t5, l 1, l %t0, l %t12)
+	%t14 =l copy %t12
+	%t15 =l add %t14, 8
+	%t16 =l loadl %t15
+	%t18 =w cnel %t16, 1
+	jnz %t18, @c34_then, @c34_else
+@c34_then
+	%t19 =w copy 1
+	jmp @b19
+@c34_else
+	%t20 =l add %t14, 8
+	%t21 =l loadl %t20
+	%t22 =l copy %t14
+	%t23 =l loadl %t22
+	%g25_slice =w cugtl 0, %t21
+	jnz %g25_slice, @g25_slice_panic, @g25_slice_ok
+@g25_slice_panic
+	call $szc.panic.7()
+	hlt
+@g25_slice_ok
+	%e27_offset =l mul 0, 2
+	%t27 =l add %t23, %e27_offset
+	%t28 =w loaduh %t27
+	%t30 =w cnew %t28, 9
+	%t19 =w copy %t30
+	jmp @b19
+@b19
+	jnz %t19, @c50_then, @c50_else
+@c50_then
+	%t35 =w copy 1
+	jmp @b35
+@c50_else
+	%t36 =l add %t14, 8
+	%t37 =l loadl %t36
+	%t38 =l copy %t14
+	%t39 =l loadl %t38
+	%g41_slice =w cugtl 1, %t37
+	jnz %g41_slice, @g41_slice_panic, @g41_slice_ok
+@g41_slice_panic
+	call $szc.panic.7()
+	hlt
+@g41_slice_ok
+	%e43_offset =l mul 1, 2
+	%t43 =l add %t39, %e43_offset
+	%t44 =w loaduh %t43
+	%t46 =w cnew %t44, 17
+	%t35 =w copy %t46
+	jmp @b35
+@b35
+	jnz %t35, @c55_then, @c55_else
+@c55_then
+	ret 2
+@c55_else
+	jmp @b51
+@b51
+	call $memmove(l %t56, l %t14, l 16)
+	%t58 =l add %t56, 8
+	%t59 =l loadl %t58
+	%t60 =l copy %t56
+	%t61 =l loadl %t60
+	%g63_slice =w cugtl 0, %t59
+	jnz %g63_slice, @g63_slice_panic, @g63_slice_ok
+@g63_slice_panic
+	call $szc.panic.7()
+	hlt
+@g63_slice_ok
+	%e65_offset =l mul 0, 2
+	%t65 =l add %t61, %e65_offset
+	storeh 13, %t65
+	%e69_offset =l mul 1, 2
+	%t69 =l add %t1, %e69_offset
+	%t70 =w loaduh %t69
+	%t72 =w cnew %t70, 13
+	jnz %t72, @c77_then, @c77_else
+@c77_then
+	ret 3
+@c77_else
+	jmp @b73
+@b73
+	%t78 =l call $szc.array_cut.4(l %t1)
+	%e80_offset =l mul 2, 2
+	%t80 =l add %t78, %e80_offset
+	%t81 =w loaduh %t80
+	%t83 =w cnew %t81, 17
+	jnz %t83, @c88_then, @c88_else
+@c88_then
+	ret 4
+@c88_else
+	jmp @b84
+@b84
+	%t89 =l copy %t1
+	call $szc.many_cut.5(l %t89, l 4, l %t91)
+	%t93 =l copy %t91
+	%t94 =l add %t93, 8
+	%t95 =l loadl %t94
+	%t97 =w cnel %t95, 4
+	jnz %t97, @c113_then, @c113_else
+@c113_then
+	%t98 =w copy 1
+	jmp @b98
+@c113_else
+	%t99 =l add %t93, 8
+	%t100 =l loadl %t99
+	%t101 =l copy %t93
+	%t102 =l loadl %t101
+	%g104_slice =w cugtl 4, %t100
+	jnz %g104_slice, @g104_slice_panic, @g104_slice_ok
+@g104_slice_panic
+	call $szc.panic.7()
+	hlt
+@g104_slice_ok
+	%e106_offset =l mul 4, 2
+	%t106 =l add %t102, %e106_offset
+	%t107 =w loaduh %t106
+	%t109 =w cnew %t107, 17
+	%t98 =w copy %t109
+	jmp @b98
+@b98
+	jnz %t98, @c118_then, @c118_else
+@c118_then
+	ret 5
+@c118_else
+	jmp @b114
+@b114
+	%t119 =l copy %t1
+	%e121_offset =l mul 1, 2
+	%t121 =l add %t119, %e121_offset
+	%e123_offset =l mul 1, 2
+	%t123 =l add %t121, %e123_offset
+	%t124 =w loaduh %t123
+	%g126_sentinel =w cnew %t124, 17
+	jnz %g126_sentinel, @g126_sentinel_panic, @g126_sentinel_ok
+@g126_sentinel_panic
+	call $szc.panic.9()
+	hlt
+@g126_sentinel_ok
+	%t127 =l copy %t121
+	%e129_offset =l mul 0, 2
+	%t129 =l add %t127, %e129_offset
+	%t130 =w loaduh %t129
+	%t132 =w cnew %t130, 13
+	jnz %t132, @c142_then, @c142_else
+@c142_then
+	%t133 =w copy 1
+	jmp @b133
+@c142_else
+	%e135_offset =l mul 1, 2
+	%t135 =l add %t127, %e135_offset
+	%t136 =w loaduh %t135
+	%t138 =w cnew %t136, 17
+	%t133 =w copy %t138
+	jmp @b133
+@b133
+	jnz %t133, @c147_then, @c147_else
+@c147_then
+	ret 6
+@c147_else
+	jmp @b143
+@b143
+	ret 0
+}
+
+function $szc.cut.3(l %t0, l %t3, l %t4, l %t5) {
+@start
+	%t1 =l alloc8 16
+	%t6 =l alloc8 16
+	%t22 =l alloc8 16
+	call $memmove(l %t1, l %t0, l 16)
+	call $memmove(l %t6, l %t1, l 16)
+	%t8 =l copy %t6
+	%t9 =l loadl %t8
+	%t10 =l add %t6, 8
+	%t11 =l loadl %t10
+	%g12_slice =w cugtl %t3, %t4
+	jnz %g12_slice, @g12_slice_panic, @g12_slice_ok
+@g12_slice_panic
+	call $szc.panic.8()
+	hlt
+@g12_slice_ok
+	%t14 =l add %t4, 1
+	%g15_slice =w cugtl %t14, %t11
+	jnz %g15_slice, @g15_slice_panic, @g15_slice_ok
+@g15_slice_panic
+	call $szc.panic.7()
+	hlt
+@g15_slice_ok
+	%e16_offset =l mul %t3, 2
+	%t16 =l add %t9, %e16_offset
+	%t17 =l sub %t4, %t3
+	%e18_offset =l mul %t17, 2
+	%t18 =l add %t16, %e18_offset
+	%t19 =w loaduh %t18
+	%g21_sentinel =w cnew %t19, 17
+	jnz %g21_sentinel, @g21_sentinel_panic, @g21_sentinel_ok
+@g21_sentinel_panic
+	call $szc.panic.9()
+	hlt
+@g21_sentinel_ok
+	%t23 =l copy %t22
+	%t24 =l add %t22, 8
+	storel %t16, %t23
+	storel %t17, %t24
+	call $memmove(l %t5, l %t22, l 16)
+	ret
+}
+
+function l $szc.array_cut.4(l %t0) {
+@start
+	%t1 =l alloc8 8
+	storel %t0, %t1
+	%t3 =l loadl %t1
+	%t4 =l copy %t3
+	%e6_offset =l mul 0, 2
+	%t6 =l add %t4, %e6_offset
+	%e8_offset =l mul 2, 2
+	%t8 =l add %t6, %e8_offset
+	%t9 =w loaduh %t8
+	%g11_sentinel =w cnew %t9, 17
+	jnz %g11_sentinel, @g11_sentinel_panic, @g11_sentinel_ok
+@g11_sentinel_panic
+	call $szc.panic.9()
+	hlt
+@g11_sentinel_ok
+	%t12 =l copy %t6
+	ret %t12
+}
+
+function $szc.many_cut.5(l %t0, l %t1, l %t2) {
+@start
+	%t3 =l alloc8 8
+	%t14 =l alloc8 16
+	storel %t0, %t3
+	%t5 =l loadl %t3
+	%e7_offset =l mul 0, 2
+	%t7 =l add %t5, %e7_offset
+	%t9 =l sub %t1, 0
+	%e10_offset =l mul %t9, 2
+	%t10 =l add %t7, %e10_offset
+	%t11 =w loaduh %t10
+	%g13_sentinel =w cnew %t11, 17
+	jnz %g13_sentinel, @g13_sentinel_panic, @g13_sentinel_ok
+@g13_sentinel_panic
+	call $szc.panic.9()
+	hlt
+@g13_sentinel_ok
+	%t15 =l copy %t14
+	%t16 =l add %t14, 8
+	storel %t7, %t15
+	storel %t9, %t16
+	call $memmove(l %t2, l %t14, l 16)
+	ret
+}
+
+section ".rodata"
+data $szc.const.1 = align 2 { h 7, h 9, h 17, h 21, h 17 }
+section ".rodata"
+data $szc.const.2 = align 2 { h 7, h 9, h 17, h 21, h 17 }
+section ".data.rel.ro"
+data $szc.g.1 = align 8 { l $szc.const.1, l 2 }
+data $szc.panic.msg.7 = { b "index out of bounds\n", b 0 }
+function $szc.panic.7() {
+@start
+	call $write(w 2, l $szc.panic.msg.7, l 20)
+	call $abort()
+	hlt
+}
+
+data $szc.panic.msg.8 = { b "start index is larger than end index\n", b 0 }
+function $szc.panic.8() {
+@start
+	call $write(w 2, l $szc.panic.msg.8, l 37)
+	call $abort()
+	hlt
+}
+
+data $szc.panic.msg.9 = { b "sentinel mismatch\n", b 0 }
+function $szc.panic.9() {
+@start
+	call $write(w 2, l $szc.panic.msg.9, l 18)
+	call $abort()
+	hlt
+}
+
+export function w $main() {
+@start
+	%status =w call $szc.main.1()
+	ret %status
+}

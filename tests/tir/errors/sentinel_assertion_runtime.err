@@ -1,0 +1,3 @@
+tests/tir/errors/sentinel_assertion_runtime.zig:1:40: error: unable to resolve comptime value
+fn f(p: []u8, n: u8) void { _ = p[0..2:n]; } pub fn main() void { f(undefined,17); }
+                                       ^

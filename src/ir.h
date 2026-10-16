@@ -151,6 +151,7 @@ typedef enum IrDataKind {
 	X(ARRAY_INIT_PTR, "array_init_ptr", IR_DATA_BIN)	/* validate anonymous initializer destination and count */ \
 	X(ARRAY_INIT_SENTINEL, "array_init_sentinel", IR_DATA_UN) /* finalize in-place literal */ \
 	X(ARRAY_INDEX, "array_index", IR_DATA_BIN)	/* array/pointer value, usize index */ \
+	X(SLICE_ELEM_TYPE, "slice_elem_type", IR_DATA_UN)	/* base address -> scalar child type */ \
 	X(SLICE, "slice", IR_DATA_PAYLOAD)	/* IrSlice: borrowed view with optional end */ \
 	X(ARRAY_CAT, "array_cat", IR_DATA_BIN)	/* concatenate indexable constants */ \
 	X(FIELD_PTR, "field_ptr", IR_DATA_NAME)	/* named field address, borrowing the base */ \
@@ -422,6 +423,8 @@ typedef struct IrSlice {
 	IrRef end;	/* NONE for an omitted bound */
 	uint32_t start_src;
 	uint32_t end_src;
+	IrRef sentinel;	/* NONE without an explicit assertion */
+	uint32_t sentinel_src;
 } IrSlice;
 
 typedef struct IrPanic {

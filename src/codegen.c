@@ -33,6 +33,7 @@ typedef enum PanicKind {
 	PANIC_UNREACHABLE,
 	PANIC_INDEX,
 	PANIC_SLICE_ORDER,
+	PANIC_SENTINEL,
 	PANIC_COUNT,
 } PanicKind;
 
@@ -286,6 +287,7 @@ static const char *const panic_messages[PANIC_COUNT] = {
 	"reached unreachable code",
 	"index out of bounds",
 	"start index is larger than end index",
+	"sentinel mismatch",
 };
 
 /* Bounds as canonical 64-bit bit patterns; wider types have already errored. */
@@ -830,6 +832,17 @@ emit_inst(Codegen *cg, TirRef ref)
 		fputc('\n', out);
 		emit_guard(cg, ref, "slice", inst->op == TIR_SLICE_START_CHECK ? PANIC_SLICE_ORDER : PANIC_INDEX);
 		return;
+	case TIR_SENTINEL_CHECK: {
+		TypeId operand_type = inst_at(cg, inst->data.bin.lhs)->type;
+		QbeClass operand_class = type_class(cg, operand_type, inst->src);
+		fprintf(out, "\t%%g%u_sentinel =w cne%c ", (unsigned)ref, class_char(operand_class));
+		print_operand(cg, inst->data.bin.lhs);
+		fputs(", ", out);
+		print_operand(cg, inst->data.bin.rhs);
+		fputc('\n', out);
+		emit_guard(cg, ref, "sentinel", PANIC_SENTINEL);
+		return;
+	}
 	case TIR_INDEX_CHECK:
 		fprintf(out, "\t%%g%u_index =w cugel ", (unsigned)ref);
 		print_operand(cg, inst->data.bin.lhs);

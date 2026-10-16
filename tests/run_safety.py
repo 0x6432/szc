@@ -36,6 +36,25 @@ def cases():
     ):
         yield "panic_slice_" + label, source + "\n", message
 
+    for label, child, values, sentinel, end in (
+        ('array', 'u16', '7,9,18', '17', 2),
+        ('boolean', 'bool', 'true,true,false', 'true', 2),
+        ('signed', 'i16', '7,9,-18', '-17', 2),
+        ('wide', 'i33', '7,9,-18', '-17', 2),
+        ('empty', 'u16', '18,9,17', '17', 0),
+    ):
+        for kind, ty in (('array', f'*[3]{child}'), ('slice', f'[]{child}'), ('many', f'[*]{child}')):
+            source = (f'fn operation(p: {ty}, n: usize) void {{ _ = p[0..n:{sentinel}]; }} '
+                      f'pub fn main() void {{ var a = [3]{child}{{{values}}}; operation(&a,{end}); }}\n')
+            yield 'sentinel_assertion_'+label+'_'+kind, source, 'sentinel mismatch'
+    yield 'sentinel_assertion_bounds', (
+        'fn operation(p: []u16, n: usize) void { _ = p[0..n:17]; } '
+        'pub fn main() void { var a = [3]u16{7,9,17}; operation(&a,3); }\n'), 'index out of bounds'
+    yield 'sentinel_assertion_order', (
+        'fn operation(p: []u16, first: usize, last: usize) void { _ = p[first..last:17]; } '
+        'pub fn main() void { var a = [3]u16{7,9,17}; operation(&a,2,1); }\n'), (
+        'start index is larger than end index'), 'start index 2 is larger than end index 1'
+
     for label, expression, index in (
         ('read', '_ = s[n]', 4),
         ('write', 's[n] = 9', 4),

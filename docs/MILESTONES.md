@@ -112,7 +112,7 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
   - [x] **M5.4a Scalar-sentinel many-pointers**: integer/bool promises, coercions and arithmetic.
   - [x] **M5.4b Scalar-sentinel arrays**: explicit syntax, storage, initialization and coercions.
   - [x] **M5.4c Scalar-sentinel slices**: descriptors, inference, inherited slicing and element bounds.
-  - [~] **M5.4d Explicit sentinel assertions**: isolated implementation and focused tests; full validation pending.
+  - [x] **M5.4d Explicit sentinel assertions**: contextual typing, constant checks and ordered runtime guards (validated in isolated checkout).
 - [~] **M5.5 Casting builtins**: `@intCast`, `@truncate`, `@ptrCast`, `@intFromPtr`, `@ptrFromInt`, `@bitCast`, `@as`.
   - [x] **M5.5a Pointer address conversion (`@intFromPtr`).**
 
@@ -166,6 +166,40 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
 ## Completed milestone log
 
 (newest first; each entry: what, limitations, interactions)
+
+### M5.4d Explicit sentinel assertions
+- **What**: `a[first..last:S]` obtains S's scalar type from the borrowed base,
+  including nested `@intCast`. Known immutable backing is validated at analysis;
+  runtime assertions check ordering and physical bounds before reading one end
+  element, then compare it to the exact integer/bool sentinel. Mismatch panics
+  with `sentinel mismatch`. Open many-pointer assertions must match the existing
+  promise; single-item pointer assertions are rejected. Known array views at
+  offset zero reconstruct the requested physical extent, not their cast root's
+  full extent. One-value zero-bit views retain their existing special handling.
+- **Validation**: /data/sentinel-assertions-final immutable GCC/Clang Werror
+  ASan/UBSan snapshots match development source/test/config. Every final wrapper,
+  matrix and fuzz process exits zero. 726 units/972 goldens; 89 ordinary/generated
+  + three scoped native programs, 16 driver checks, every C/ABI/alignment suite,
+  54 observed volatile sequences and 243 safety cases. All 17 added panic cases
+  pass actual Zig; GCC full e2e also runs Zig. Both builds separately reference
+  the native fixture, four C descriptor variants and volatile Debug/ReleaseFast.
+  Fresh actual comparisons: 178 assertions + 256 sentinel slices + 313 sentinel
+  arrays + 209 sentinel pointers + 168 fields + 87 dereference + 204 slicing +
+  252 slices. Optimized GCC passes 89 native/243 safety; 949 unchanged array/layout
+  checks replay the source-hash-verified prior actual-reference oracle. Four 60s
+  fuzzers execute 1592533/52095/49368/68597 inputs; both builds replay 20000
+  mutations/stage (58 irgen/114 sema seeds). Logs use
+  /data/sentinel-assertions-final-*. CI adds the assertion matrix (27 suites).
+- **Interactions/limits**: IR_SLICE gains sentinel refs/source and
+  IR_SLICE_ELEM_TYPE provides contextual metadata without reading the descriptor.
+  TIR_SENTINEL_CHECK follows the actual scalar load; a unit test verifies the
+  order/bounds/load/assertion sequence and one volatile load. Actual Zig elides
+  the assertion (including volatile reads) in ReleaseFast; reference fixtures
+  explicitly expect zero assertion reads there, not one. Known mutable global
+  views and known-result constant-bound guard elision follow actual Zig behavior;
+  tests do not execute out-of-backing cases with nondeterministic memory contents.
+  Non-integer/bool sentinels, C-pointer types and general casts remain separate.
+  Integration/push is pending the environment-block approval, not test completion.
 
 ### M5.4c Scalar-sentinel slices
 - **What**: integer/bool sentinel descriptors use the existing owned pointer/usize

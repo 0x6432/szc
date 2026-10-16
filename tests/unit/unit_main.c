@@ -677,6 +677,58 @@ test_sentinel_slice_types(void)
 }
 
 static void
+test_sentinel_assertion_order(void)
+{
+	Arena arena;
+	arena_init(&arena);
+	SourceTable sources;
+	source_table_init(&sources, &arena);
+	Diag diag;
+	diag_init(&diag, &arena, &sources);
+	Interner interner;
+	intern_init(&interner, &arena);
+	static const char source[] =
+		"fn consume(p: []volatile u16, first: usize, last: usize) void { _ = p[first..last:17]; } "
+		"pub fn main() void { consume(undefined,0,1); }";
+	FileId file = source_add_memory(&sources, "sentinel_assertion_order.zig", source, sizeof(source) - 1);
+	AstContainerDecl *root = parse_file(&arena, &diag, &sources, file);
+	CHECK(!diag_has_errors(&diag));
+	IrFile *ir = irgen_file(&arena, &diag, &interner, source_get(&sources, file), file, root);
+	CHECK(!diag_has_errors(&diag));
+	Sema *sema = sema_create(&arena, &diag, &interner, &sources);
+	CHECK(sema_analyze_executable(sema, file, ir));
+	CHECK(sema_func_count(sema) == 3);
+	const TirFunc *tir = &sema_func(sema, 2)->tir;
+	TirRef order = TIR_REF_NONE;
+	TirRef bounds = TIR_REF_NONE;
+	TirRef load = TIR_REF_NONE;
+	TirRef assertion = TIR_REF_NONE;
+	uint32_t loads = 0;
+	uint32_t assertions = 0;
+	for (TirRef i = 0; i < tir->inst_count; i++) {
+		TirOp op = tir->insts[i].op;
+		if (op == TIR_SLICE_START_CHECK)
+			order = i;
+		if (op == TIR_SLICE_END_CHECK)
+			bounds = i;
+		if (op == TIR_LOAD_VOLATILE) {
+			load = i;
+			loads++;
+		}
+		if (op == TIR_SENTINEL_CHECK) {
+			assertion = i;
+			assertions++;
+		}
+	}
+	CHECK(order != TIR_REF_NONE && bounds != TIR_REF_NONE);
+	CHECK(order < bounds && bounds < load && load < assertion);
+	CHECK(loads == 1 && assertions == 1);
+	if (assertion != TIR_REF_NONE)
+		CHECK(tir->insts[assertion].data.bin.lhs == load);
+	arena_free(&arena);
+}
+
+static void
 test_sentinel_array_types(void)
 {
 	Arena arena;
@@ -770,6 +822,7 @@ main(void)
 	test_sentinel_pointer_types();
 	test_sentinel_array_types();
 	test_sentinel_slice_types();
+	test_sentinel_assertion_order();
 	test_binary_diagnostics();
 
 	printf("unit: %u checks, %u failed\n", checks, failures);

@@ -63,6 +63,7 @@ typedef uint32_t TirBody;	/* extra index of a body, 0 = none */
 	X(SLICE_LEN_PTR, "slice_len_ptr")	/* un: pair address -> length field address */ \
 	X(SLICE_START_CHECK, "slice_start_check")	/* bin: start <= end */ \
 	X(SLICE_END_CHECK, "slice_end_check")	/* bin: end <= available length */ \
+	X(SENTINEL_CHECK, "sentinel_check")	/* bin: actual element equals sentinel */ \
 	X(INDEX_CHECK, "index_check")	/* bin: usize index < dynamic length */ \
 	X(ARRAY_COPY, "array_copy")	/* bin: destination and source array pointers; overlap-safe */ \
 	X(ALLOC, "alloc")	/* type is the pointer type; stack slot */ \

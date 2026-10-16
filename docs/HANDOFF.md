@@ -72,16 +72,32 @@ Read this first when resuming work (the sandbox resets often).
   safety block on the bulk-copy operation. No C changes are integrated or pushed.
   Do not retry the blocked integration without user approval. Development is
   preserved separately in /data/sentinel-slices-next.
-- Next M5.4d is /data/sentinel-assertions-next with frozen full validation in
-  /data/sentinel-assertions-final. Initial 178 actual semantic comparisons,
-  17 new panic cases, four C storage variants and 54 volatile sequences pass;
-  stage/unit checks pass 726/972. Full wrappers and fresh regression matrices
-  are running; do not claim the milestone complete until all exit zero.
+- M5.4d explicit assertions is locally complete in /data/sentinel-assertions-next.
+  Frozen /data/sentinel-assertions-final GCC/Clang source/test/config match:
+  726 units/972 goldens; 89 ordinary/generated + three scoped native programs,
+  16 driver checks, all C/ABI/alignment suites, 54 volatile sequences, 243 safety.
+  Both builds separately reference new native/four C descriptor variants/volatile
+  Debug+ReleaseFast; GCC full e2e runs Zig. All eight fresh matrices pass:
+  178 assertions + 256 sentinel slices + 313 arrays + 209 sentinel pointers +
+  168 fields + 87 dereference + 204 slicing + 252 slices. Optimized GCC passes
+  89 native/243 safety. The 949 old array/layout cases are exact-source-hash
+  oracle replays, not fresh Zig runs. Four 60s fuzzers:
+  1592533/52095/49368/68597; both builds 20000 mutations/stage, 58 irgen/114 sema
+  seeds. All final processes exit zero. Logs: /data/sentinel-assertions-final-*.
+  This milestone, like M5.4c, is not integrated or pushed while approval is pending.
+- Next M5.5b integer-to-pointer conversion is isolated in /data/int-pointer-next.
+  Numeric VALUE_INT_PTR addresses are not compiler-owned memory; runtime null/
+  alignment checks, constants, pointer arithmetic and storage are under test.
+  Initial 217 actual semantic comparisons, one reference native, three mapped-C
+  storage variants and five reference panic cases pass. Follow-on numeric-backed
+  descriptor/source probes are being integrated and the expanded matrix is
+  running. Do not claim the milestone complete yet. See /data/ptr-from-int-*.
 - CI 768cdb9/run 38790363308 completed failure in safety; its annotation reports
   hosted runner lost communication, not a proven semantic regression. M5.4b
   09e535e/run 38796178970 failed in the old safety job (annotation:
   operation canceled); safety partitioning 51372be/run
-  38796715747 queued at the latest check. None is counted green.
+  38796715747 completed success (all jobs/aggregate green). The older array run
+  failed and is not counted green; the successor includes its compiler changes.
 - CI 7aeb3e5/run 38786030355 failed with runner shutdown/exit143 after native
   run/build timeouts; both reported cases pass with the original frozen compiler
   and unchanged deadlines (/data/ci-slice-fields-native-reproduction.log).

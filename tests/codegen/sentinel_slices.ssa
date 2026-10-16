@@ -433,9 +433,9 @@ data $szc.const.5 = align 1 { b 0 }
 section ".data.rel.ro"
 data $szc.const.6 = align 8 { l $szc.const.5, l 2 }
 section ".data.rel.ro"
-data $szc.const.7 = align 8 { l $szc.bytes.110, l 1 }
+data $szc.const.7 = align 8 { l $szc.bytes.113, l 1 }
 section ".data.rel.ro"
-data $szc.const.8 = align 8 { l $szc.bytes.111, l 4 }
+data $szc.const.8 = align 8 { l $szc.bytes.114, l 4 }
 section ".data.rel.ro"
 data $szc.g.1 = align 8 { l $szc.bytes.13, l 5 }
 section ".data.rel.ro"
@@ -445,9 +445,9 @@ data $szc.g.4 = align 2 { h 7, h 11, h 13, h 17 }
 section ".rodata"
 data $szc.bytes.13 = { b 104, b 101, b 108, b 108, b 111, b 0 }
 section ".rodata"
-data $szc.bytes.110 = { b 97, b 0 }
+data $szc.bytes.113 = { b 97, b 0 }
 section ".rodata"
-data $szc.bytes.111 = { b 108, b 111, b 110, b 103, b 0 }
+data $szc.bytes.114 = { b 108, b 111, b 110, b 103, b 0 }
 data $szc.panic.msg.7 = { b "index out of bounds\n", b 0 }
 function $szc.panic.7() {
 @start

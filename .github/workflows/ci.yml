@@ -81,6 +81,7 @@ jobs:
           - diff_function_pointers
           - diff_sentinel_pointers
           - diff_sentinel_slices
+          - diff_sentinel_assertions
           - diff_slice_fields
           - diff_slice_deref
           - diff_slicing

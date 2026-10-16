@@ -12,7 +12,7 @@ TYPES = ('u8', 'i8', 'u16', 'i16', 'u32', 'i32', 'u64', 'i64', 'u3', 'i5',
          'u17', 'i33', 'u40', 'i63', 'bool', '*u8', '*const fn () u8')
 
 
-def fixtures():
+def fixtures(safety=True):
     declarations, checks = [], []
     for index, ty in enumerate(TYPES):
         declarations.append(f'extern fn memory_{index}(offset: usize) *align(1) volatile {ty};')
@@ -81,6 +81,15 @@ def fixtures():
             f'_ = &sentinel_fields_{offset}.len;', f'_ = &sentinel_fields_{offset}.ptr;',
             'if (!observe_finish(0, 0)) return 15;',
         ])
+    assertion_index = sentinel_index + 1
+    declarations.append(f'extern fn memory_{assertion_index}(offset: usize) *align(1) volatile [3]u8;')
+    for offset in (0, 1):
+        checks.extend([
+            f'const assertion_{offset} = memory_{assertion_index}({offset});',
+            f'assertion_{offset}[2] = 17;',
+            f'_ = assertion_{offset}[0..2:17];',
+            f'if (!observe_finish({1 if safety else 0}, 1)) return 16;',
+        ])
     source = ('extern fn observe_finish(reads: u32, writes: u32) bool;\n'
               'extern fn observe_finish_compound() bool;\n'
               'var left: u8 = 1;\nvar right: u8 = 2;\n'
@@ -89,7 +98,7 @@ def fixtures():
               'fn seven() u8 { return 7; }\nfn nine() u8 { return 9; }\n'
               + '\n'.join(declarations) + '\npub fn main() u8 {\n' + '\n'.join(checks) + '\nreturn 0;\n}\n')
     aliases = []
-    for index in range(len(TYPES) + 4):
+    for index in range(len(TYPES) + 5):
         aliases.extend(['.text', f'.globl memory_{index}', f'memory_{index}:', 'jmp observe_memory'])
     assembly = '\n'.join(aliases) + '\n.section .note.GNU-stack,"",@progbits\n'
     return source, assembly
@@ -123,12 +132,14 @@ def main():
         assert not result.stdout and not result.stderr
         if os.environ.get('ZIG'):
             for mode in ('Debug', 'ReleaseFast'):
+                # ReleaseFast removes safety assertions, including their volatile load.
+                source.write_text(fixtures(safety=mode == 'Debug')[0])
                 executable = root / ('reference-' + mode)
                 run([os.environ['ZIG'], 'build-exe', str(source), str(assembly), str(object_),
                      '-O' + mode, '-j2', '-lc', f'-femit-bin={executable}'])
                 result = run([str(executable)])
                 assert not result.stdout and not result.stderr
-    print(f'volatile accesses: {2 * (len(TYPES) + 9)} observed sequences, 0 failed', flush=True)
+    print(f'volatile accesses: {2 * (len(TYPES) + 10)} observed sequences, 0 failed', flush=True)
 
 
 if __name__ == '__main__':
