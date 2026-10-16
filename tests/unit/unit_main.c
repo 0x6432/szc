@@ -1501,6 +1501,78 @@ test_has_decl(void)
 }
 
 static void
+test_field(void)
+{
+	const struct {
+		const char *source;
+		const char *error;
+	} cases[] = {
+		{"const N=struct { const x:u8=7; var n:u8=1; const Byte=u8; const Self=@This(); fn f(arg:u8) u8 { return arg; } }; pub fn main() void { const n:u8=if(@field(N,\"x\")==7)0 else 256; _=n; }", NULL},
+		{"const N=struct { const x:u8=7; var n:u8=1; const Byte=u8; const Self=@This(); fn f(arg:u8) u8 { return arg; } }; pub fn main() void { const n:u8=if(@field(&N,\"x\")==7)0 else 256; _=n; }", NULL},
+		{"const N=struct { const x:u8=7; var n:u8=1; const Byte=u8; const Self=@This(); fn f(arg:u8) u8 { return arg; } }; pub fn main() void { const n:u8=if(@field(N,\"Self\")==N)0 else 256; _=n; }", NULL},
+		{"const N=struct { const x:u8=7; var n:u8=1; const Byte=u8; const Self=@This(); fn f(arg:u8) u8 { return arg; } }; pub fn main() void { const n:@field(N,\"Byte\")=7; _=n; }", NULL},
+		{"const N=struct { const x:u8=7; var n:u8=1; const Byte=u8; const Self=@This(); fn f(arg:u8) u8 { return arg; } }; pub fn main() void { const n:u8=if(&@field(N,\"x\")==&N.x)0 else 256; _=n; }", NULL},
+		{"const N=struct { const x:u8=7; var n:u8=1; const Byte=u8; const Self=@This(); fn f(arg:u8) u8 { return arg; } }; pub fn main() void { @field(N,\"n\")=3; @field(N,\"n\")+=1; }", NULL},
+		{"const N=struct { const x:u8=7; var n:u8=1; const Byte=u8; const Self=@This(); fn f(arg:u8) u8 { return arg; } }; pub fn main() void { const p=&@field(N,\"n\"); p.*=3; }", NULL},
+		{"const N=struct { const x:u8=7; var n:u8=1; const Byte=u8; const Self=@This(); fn f(arg:u8) u8 { return arg; } }; pub fn main() void { const cb:*const fn(u8) u8=&@field(N,\"f\"); _=cb(3); }", NULL},
+		{"const N=struct { const x:u8=7; var n:u8=1; const Byte=u8; const Self=@This(); fn f(arg:u8) u8 { return arg; } }; pub fn main() void { const name:[]const u8=\".x.\"[1..2]; _=@field(N,name); }", NULL},
+		{"const N=struct { const x:u8=7; var n:u8=1; const Byte=u8; const Self=@This(); fn f(arg:u8) u8 { return arg; } }; pub fn main() void { const a:[2]u8=undefined; const n:u8=if(@field(a,\"len\")==2)0 else 256; _=n; }", NULL},
+		{"const N=struct { const x:u8=7; var n:u8=1; const Byte=u8; const Self=@This(); fn f(arg:u8) u8 { return arg; } }; pub fn main() void { const p:*volatile [2]u8=undefined; const n:u8=if(@field(p,\"len\")==2)0 else 256; _=n; }", NULL},
+		{"const N=struct { const x:u8=7; var n:u8=1; const Byte=u8; const Self=@This(); fn f(arg:u8) u8 { return arg; } }; pub fn main() void { var s:[]const u8=\"xx\"; @field(s,\"len\")=1; }", NULL},
+		{"const N=struct { const x:u8=7; var n:u8=1; const Byte=u8; const Self=@This(); fn f(arg:u8) u8 { return arg; } }; pub fn main() void { const s:[]const u8=undefined; _=&@field(s,\"ptr\"); }", NULL},
+		{"const N=struct { const x:u8=7; var n:u8=1; const Byte=u8; const Self=@This(); fn f(arg:u8) u8 { return arg; } }; pub fn main() void { _= @field(N,&.{120}); }", NULL},
+		{"const N=struct { const x:u8=7; var n:u8=1; const Byte=u8; const Self=@This(); fn f(arg:u8) u8 { return arg; } }; pub fn main() void { _=@field(N,\"missing\"); }", "has no member named"},
+		{"const N=struct { const x:u8=7; var n:u8=1; const Byte=u8; const Self=@This(); fn f(arg:u8) u8 { return arg; } }; pub fn main() void { _=@field(N,\"x\\x00suffix\"); }", "has no member named 'x"},
+		{"const N=struct { const x:u8=7; var n:u8=1; const Byte=u8; const Self=@This(); fn f(arg:u8) u8 { return arg; } }; pub fn main() void { _=@field(u8,\"x\"); }", "type 'u8' has no members"},
+		{"const N=struct { const x:u8=7; var n:u8=1; const Byte=u8; const Self=@This(); fn f(arg:u8) u8 { return arg; } }; pub fn main() void { _=@field(3,\"x\"); }", "does not support field access"},
+		{"const N=struct { const x:u8=7; var n:u8=1; const Byte=u8; const Self=@This(); fn f(arg:u8) u8 { return arg; } }; pub fn main() void { _=@field(3,3); }", "expected type '[]const u8'"},
+		{"const N=struct { const x:u8=7; var n:u8=1; const Byte=u8; const Self=@This(); fn f(arg:u8) u8 { return arg; } }; pub fn main() void { _=@field(N,undefined); }", "use of undefined"},
+		{"const N=struct { const x:u8=7; var n:u8=1; const Byte=u8; const Self=@This(); fn f(arg:u8) u8 { return arg; } }; pub fn main() void { const p:*const type=undefined; _=@field(p,\"x\"); }", "use of undefined"},
+		{"const N=struct { const x:u8=7; var n:u8=1; const Byte=u8; const Self=@This(); fn f(arg:u8) u8 { return arg; } }; pub fn main() void { @field(N,\"x\")=3; }", "cannot assign to constant"},
+		{"const N=struct { const x:u8=7; var n:u8=1; const Byte=u8; const Self=@This(); fn f(arg:u8) u8 { return arg; } }; pub fn main() void { var s:[]u8=undefined; @field(s,\"missing\")=1; }", "no member named"},
+		{"const N=struct { const x:u8=7; var n:u8=1; const Byte=u8; const Self=@This(); fn f(arg:u8) u8 { return arg; } }; pub fn main() void { var a=[_]u8{120}; _=&a; _=@field(N,&a); }", "unable to resolve comptime value"},
+		{"const N=struct { const x:u8=7; var n:u8=1; const Byte=u8; const Self=@This(); fn f(arg:u8) u8 { return arg; } }; pub fn main() void { _=&@field(N); }", "expected 2 arguments"},
+		{"const N=struct { const x:u8=7; var n:u8=1; const Byte=u8; const Self=@This(); fn f(arg:u8) u8 { return arg; } }; pub fn main() void { @field(N)=3; }", "expected 2 arguments"},
+		{"pub fn main() void { const n:u8=if(!@hasDecl(anyopaque,\"x\"))0 else 256; _=n; }", NULL},
+		{"pub fn main() void { _=@hasDecl(anyopaque,3); }", "expected type '[]const u8'"},
+		{"pub fn main() void { _=@field(anyopaque,\"x\"); }", "opaque 'anyopaque' has no member named"},
+		{"const N=struct { fn bad() u8 { return 256; } }; pub fn main() void { _=@field(N,\"bad\"); }", NULL},
+		{"const N=struct { fn bad() u8 { return 256; } }; pub fn main() void { _=&@field(N,\"bad\"); }", "cannot represent"},
+		{"const N=struct { fn bad() u8 { return 256; } }; pub fn main() void { _=&N.bad; }", "cannot represent"},
+		{"fn bad() u8 { return 256; } pub fn main() void { _=&bad; }", "cannot represent"},
+		{"const N=struct { fn bad() u8 { return 256; } }; pub fn main() void { const p:*const fn() u8=@field(N,\"bad\"); _=p; }", "cannot represent"},
+		{"pub fn main() void { const a:[3]u8=undefined; const n:u8=if(@field(a,\"len\\x00tail\")==3)0 else 256; _=n; }", NULL},
+		{"pub fn main() void { const s:[]const u8=\"abc\"; const n:u8=if(@field(s,\"ptr\\x00tail\")[0]==97)0 else 256; _=n; }", NULL},
+		{"const N=struct { const len:u8=7; }; pub fn main() void { _=@field(N,\"len\\x00tail\"); }", "has no member named"},
+		{"const N=struct { pub const x:u8=7; }; pub fn main() void { const n:u8=if(@hasDecl(N,\"x\\x00\") and @field(N,\"x\\x00\")==7 and !@hasDecl(N,\"x\\x00\\x00\"))0 else 256; _=n; }", NULL},
+	};
+	for (uint32_t i = 0; i < sizeof(cases) / sizeof(cases[0]); i++) {
+		Arena arena;
+		arena_init(&arena);
+		SourceTable sources;
+		source_table_init(&sources, &arena);
+		Diag diag;
+		diag_init(&diag, &arena, &sources);
+		Interner interner;
+		intern_init(&interner, &arena);
+		const char *source = cases[i].source;
+		FileId file = source_add_memory(&sources, "field.zig", source, (uint32_t)strlen(source));
+		AstContainerDecl *root = parse_file(&arena, &diag, &sources, file);
+		CHECK(!diag_has_errors(&diag));
+		IrFile *ir = irgen_file(&arena, &diag, &interner, source_get(&sources, file), file, root);
+		bool success = false;
+		if (!diag_has_errors(&diag)) {
+			Sema *sema = sema_create(&arena, &diag, &interner, &sources);
+			success = sema_analyze_executable(sema, file, ir);
+		}
+		CHECK(success == (cases[i].error == NULL));
+		if (cases[i].error != NULL)
+			CHECK(diag.count != 0 && strstr(diag.items[0].message, cases[i].error) != NULL);
+		arena_free(&arena);
+	}
+}
+
+static void
 test_quoted_identifiers(void)
 {
 	const struct {
@@ -1869,6 +1941,7 @@ main(void)
 	test_struct_namespaces();
 	test_quoted_identifiers();
 	test_has_decl();
+	test_field();
 	test_scalar_memcpy();
 	test_aggregate_memcpy();
 	test_packed_bits();

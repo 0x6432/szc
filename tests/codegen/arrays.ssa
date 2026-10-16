@@ -34,6 +34,11 @@ function w $szc.add.2(w %t0, w %t1) {
 	ret %t2
 }
 
+function w $szc.target.3() {
+@start
+	ret 23
+}
+
 function w $szc.other.4() {
 @start
 	ret 29

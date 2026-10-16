@@ -155,6 +155,7 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
 - [~] **M7.6 `@typeInfo` / `@Type` / `@This` / `@hasDecl` / `@field` / `@hasField`.**
   - [x] Lexical `@This()` for the root and fieldless struct namespaces (M6.1a).
   - [x] **M7.6a Public declaration membership**: `@hasDecl` on existing namespaces, with constant byte-slice names.
+  - [x] **M7.6b Dynamic field projection**: `@field` values/lvalues on existing namespaces and array/slice descriptor fields.
 - [ ] **M7.7 comptime_float (f64-backed for now; f16/f80/f128 = hard error).**
 
 ## Phase 8: Modules and std
@@ -194,6 +195,43 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
 ## Completed milestone log
 
 (newest first; each entry: what, limitations, interactions)
+
+### M7.6b Dynamic field projection
+
+- **What**: `@field` lowers a single base-address evaluation and an isolated
+  contextual comptime byte-slice name to `field_named_ptr` / `field_named_val`.
+  Existing namespace and descriptor projection/load paths implement reads,
+  address-taking, assignments and compound assignments, preserving storage
+  identity, alignment, qualifiers, volatile accesses and argument effects.
+  Undefined arrays/pointers retain type-only length access. Builtin anyopaque
+  declaration membership is false; field lookup reports its opaque diagnostic.
+  Name interning consumes exactly one final NUL, not every trailing NUL or the
+  first embedded NUL, as verified from official source/binary. Namespace lookup
+  uses the complete normalized key, while array/slice built-in fields also
+  mirror `NullTerminatedString.eqlSlice`'s literal-prefix-plus-NUL rule. Long and
+  embedded-NUL missing-member rendering follows the reference binary.
+  Explicit/coerced internal non-generic function addresses now make bodies
+  reachable even when discarded; ordinary discarded function values stay lazy.
+- **Validation**: 201 actual-Zig comparisons/92 exact primary diagnostics;
+  shared hasDecl matrix expanded to 136/70. Native official Debug/ReleaseFast,
+  38 focused unit cases, IR/TIR/QBE and eleven error goldens, three seeds per
+  irgen/sema stage, hosted differential matrix. Six new volatile sequences
+  preserve direct access counts, address-only no-access and compound behavior;
+  reference compound checks allow the existing x86 RMW observation convention.
+  Frozen GCC/Clang Werror ASan/UBSan: 2206 units/1180 goldens, 124+4 native,
+  16 driver, 52 compiler-runner, full C/ABI/storage/alignment, 102 observed
+  volatile sequences and 300 safety cases. Optimized native/safety and forced
+  main tests pass. Both compilers pass 20000 standalone mutations/stage with
+  256/256/98/154 seeds. Fresh 60s fuzz runs: 2575766/66350/54684/56264. Final
+  frozen reference regressions: namespaces 76/40, identifiers 89/29, slice
+  fields 168, function pointers 486. Full e2e remains szc-only.
+- **Interactions/limits**: M6.1/M7.6 remain partial. No field-bearing struct
+  values/layout/initialization, enum/union fields, hasField/typeInfo/Type/TypeOf,
+  imports or general comptime calls/mutable-memory evaluation. Namespace
+  captures, other container types and existing name-budget/provenance limits
+  remain. Extern ABI liveness and generic instantiation rules are unchanged.
+  Historical NUL-name blanket-miss notes are superseded by the verified
+  single-final-NUL normalization above.
 
 ### M7.6a Public declaration membership
 

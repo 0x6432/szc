@@ -64,6 +64,26 @@ def fixtures(safety=True, include_memset=True, include_memcpy=True):
             f'const field_only_{offset} = memory_{slice_index}({offset});',
             f'_ = &field_only_{offset}.len;', f'_ = &field_only_{offset}.ptr;',
             'if (!observe_finish(0, 0)) return 12;',
+            f'const dynamic_descriptor_{offset} = memory_{slice_index}({offset});',
+            f'@field(dynamic_descriptor_{offset},"len") = 1;',
+            f'@field(dynamic_descriptor_{offset},"ptr") = &byte_left;',
+            f'_ = @field(dynamic_descriptor_{offset},"len");',
+            f'_ = @field(dynamic_descriptor_{offset},"len");',
+            f'@field(dynamic_descriptor_{offset},"ptr") = &byte_right;',
+            f'const dynamic_data_{offset} = @field(dynamic_descriptor_{offset},"ptr");',
+            'if (!observe_finish(3, 3)) return 27;',
+            f'if (dynamic_data_{offset}[0] != 9) return 28;',
+            f'const dynamic_address_{offset} = memory_{slice_index}({offset});',
+            f'_ = &@field(dynamic_address_{offset},"len");',
+            f'_ = &@field(dynamic_address_{offset},"ptr");',
+            'if (!observe_finish(0, 0)) return 29;',
+            f'const dynamic_compound_{offset} = memory_{slice_index}({offset});',
+            f'@field(dynamic_compound_{offset},"len") = 1;',
+            f'@field(dynamic_compound_{offset},"len") += 1;',
+            f'const dynamic_len_{offset} = @field(dynamic_compound_{offset},"len");',
+            'if (!observe_finish_compound()) return 30;',
+            f'if (dynamic_len_{offset} != 2) return 31;',
+
         ])
     sentinel_index = slice_index + 1
     declarations.append(f'extern fn memory_{sentinel_index}(offset: usize) *align(1) volatile [:17]u8;')
@@ -190,7 +210,7 @@ def main():
                      '-O' + mode, '-j2', '-lc', f'-femit-bin={executable}'])
                 result = run([str(executable)])
                 assert not result.stdout and not result.stderr
-    print(f'volatile accesses: {2 * (len(TYPES) + 13) + 12 + 24} observed sequences, 0 failed', flush=True)
+    print(f'volatile accesses: {2 * (len(TYPES) + 13) + 12 + 24 + 6} observed sequences, 0 failed', flush=True)
 
 
 if __name__ == '__main__':

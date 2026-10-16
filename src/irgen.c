@@ -540,6 +540,8 @@ local_init(LocalScope *local, Scope *parent, StringId name, LocalKind kind, IrRe
 
 static IrRef expr(GenBody *body, Scope *scope, ResultInfo info, AstNode *node);
 static IrRef type_expr(GenBody *body, Scope *scope, AstNode *node);
+static bool is_field_builtin(GenBody *body, AstNode *node);
+static IrRef builtin_field(GenBody *body, Scope *scope, AstNode *node, bool as_reference);
 static IrRef address_of(GenBody *body, Scope *scope, ResultInfo info, AstNode *node);
 static IrRef emit_usize(GenBody *body, uint32_t src, uint32_t value);
 static IrRef index_base_expr(GenBody *body, Scope *scope, AstNode *node);
@@ -974,7 +976,7 @@ lvalue(GenBody *body, Scope *scope, AstNode *node)
 		error_at(gen, node->offset, "use of undeclared identifier '%s'", intern_text(gen->interner, name));
 		return IR_REF_VOID_VALUE;
 	}
-	if (node->kind == AST_INDEX || node->kind == AST_FIELD_ACCESS)
+	if (node->kind == AST_INDEX || node->kind == AST_FIELD_ACCESS || is_field_builtin(body, node))
 		return address_of(body, scope, result_none, node);
 	if (node->kind == AST_DEREF)
 		return emit_un(body, IR_REF_DEREF, node->offset, expr(body, scope, result_none, AST_CAST(AstWrap, node, AST_DEREF)->operand));
@@ -996,6 +998,8 @@ address_of(GenBody *body, Scope *scope, ResultInfo info, AstNode *node)
 		IrRef item = expr(body, scope, result_type(IR_REF_TYPE_USIZE), index->index);
 		return emit_bin(body, IR_ARRAY_INDEX_PTR, node->offset, base, item);
 	}
+	if (is_field_builtin(body, node))
+		return builtin_field(body, scope, node, true);
 	if (node->kind == AST_FIELD_ACCESS) {
 		AstFieldAccess *field = AST_CAST(AstFieldAccess, node, AST_FIELD_ACCESS);
 		IrRef base = address_of(body, scope, result_none, field->lhs);
@@ -1231,6 +1235,7 @@ typedef enum Builtin {
 	BUILTIN_LAYOUT,
 	BUILTIN_THIS,
 	BUILTIN_HAS_DECL,
+	BUILTIN_FIELD,
 	BUILTIN_ARITH,
 	BUILTIN_INT_BITS,
 	BUILTIN_MEMCPY,
@@ -1248,6 +1253,7 @@ typedef struct BuiltinInfo {
 static const BuiltinInfo builtin_table[] = {
 	{"This", BUILTIN_THIS, 0, IR_THIS},
 	{"hasDecl", BUILTIN_HAS_DECL, 2, IR_HAS_DECL},
+	{"field", BUILTIN_FIELD, 2, IR_FIELD_NAMED_VAL},
 	{"panic", BUILTIN_PANIC, 1, IR_OP_COUNT},
 	{"as", BUILTIN_AS, 2, IR_OP_COUNT},
 	{"bitCast", BUILTIN_BIT_CAST, 1, IR_OP_COUNT},
@@ -1287,6 +1293,49 @@ lookup_builtin(const char *name, uint32_t length)
 			return &builtin_table[i];
 	}
 	return NULL;
+}
+
+/* Builtin recognition stays in irgen, never in the parser. */
+static bool
+is_field_builtin(GenBody *body, AstNode *node)
+{
+	if (node->kind != AST_BUILTIN_CALL)
+		return false;
+	AstBuiltinCall *call = AST_CAST(AstBuiltinCall, node, AST_BUILTIN_CALL);
+	Span span = call->name;
+	const BuiltinInfo *builtin = lookup_builtin(body->gen->source + span.start + 1, span.end - span.start - 1);
+	return builtin != NULL && builtin->builtin == BUILTIN_FIELD;
+}
+
+/* Both declaration membership and dynamic fields require a comptime byte slice. */
+static IrBody
+const_name_expr(GenBody *body, Scope *scope, AstNode *node)
+{
+	GenBody name_body;
+	body_init(&name_body, body->gen, scope, true);
+	IrPointerType slice = {IR_REF_TYPE_U8, IR_POINTER_SLICE | IR_POINTER_CONST, 0, 0, IR_REF_NONE, 0};
+	IrRef type = emit_payload(&name_body, IR_PTR_TYPE, node->offset, APPEND_EXTRA(body->gen, slice));
+	IrRef name_ref = expr(&name_body, &name_body.base, result_type(type), node);
+	emit_break(&name_body, IR_BREAK_INLINE, node->offset, IR_BODY_RESULT, name_ref);
+	return body_finish(&name_body);
+}
+
+/* The base is evaluated once as an address; loads and lvalues share its storage. */
+static IrRef
+builtin_field(GenBody *body, Scope *scope, AstNode *node, bool as_reference)
+{
+	AstBuiltinCall *call = AST_CAST(AstBuiltinCall, node, AST_BUILTIN_CALL);
+	if (call->args.count != 2) {
+		char message[64];
+		snprintf(message, sizeof(message), "expected 2 arguments, found %u", (unsigned)call->args.count);
+		error_at(body->gen, node->offset, "%s", message);
+		return IR_REF_VOID_VALUE;
+	}
+	IrNamedField payload;
+	payload.base = address_of(body, scope, result_none, call->args.items[0]);
+	payload.name_body = const_name_expr(body, scope, call->args.items[1]);
+	payload.name_src = call->args.items[1]->offset;
+	return emit_payload(body, as_reference ? IR_FIELD_NAMED_PTR : IR_FIELD_NAMED_VAL, node->offset, APPEND_EXTRA(body->gen, payload));
 }
 
 /* Parentheses do not break a pointer-cast chain; ordinary expressions do. */
@@ -1413,18 +1462,14 @@ builtin_call(GenBody *body, Scope *scope, ResultInfo info, AstNode *node)
 	case BUILTIN_ALIGN_CAST:
 	case BUILTIN_PTR_CAST:
 		return IR_REF_VOID_VALUE;
+	case BUILTIN_FIELD:
+		return rvalue(body, info, builtin_field(body, scope, node, false), node->offset);
 	case BUILTIN_HAS_DECL: {
 		IrHasDecl payload;
 		payload.container = type_expr(body, scope, args[0]);
 		payload.type_src = args[0]->offset;
 		payload.name_src = args[1]->offset;
-		GenBody name_body;
-		body_init(&name_body, gen, scope, true);
-		IrPointerType slice = {IR_REF_TYPE_U8, IR_POINTER_SLICE | IR_POINTER_CONST, 0, 0, IR_REF_NONE, 0};
-		IrRef type = emit_payload(&name_body, IR_PTR_TYPE, args[1]->offset, APPEND_EXTRA(gen, slice));
-		IrRef name_ref = expr(&name_body, &name_body.base, result_type(type), args[1]);
-		emit_break(&name_body, IR_BREAK_INLINE, args[1]->offset, IR_BODY_RESULT, name_ref);
-		payload.name_body = body_finish(&name_body);
+		payload.name_body = const_name_expr(body, scope, args[1]);
 		return rvalue(body, info, emit_payload(body, IR_HAS_DECL, node->offset, APPEND_EXTRA(gen, payload)), node->offset);
 	}
 	case BUILTIN_THIS:
@@ -2903,6 +2948,15 @@ dump_inst(const IrDumper *dumper, IrInstIndex index, uint32_t depth)
 			fputs(" sentinel ", out);
 			dump_ref(dumper, slice.sentinel);
 		}
+		break;
+	}
+	case IR_FIELD_NAMED_PTR:
+	case IR_FIELD_NAMED_VAL: {
+		IrNamedField payload;
+		IR_READ(ir, inst->data.payload, &payload);
+		fputc(' ', out);
+		dump_ref(dumper, payload.base);
+		dump_labeled_body(dumper, "name", payload.name_body, depth);
 		break;
 	}
 	case IR_HAS_DECL: {

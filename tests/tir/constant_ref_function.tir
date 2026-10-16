@@ -1,3 +1,6 @@
 fn szc.main.1: fn () void {
   %0: noreturn = ret
 }
+fn szc.f.2: fn () void {
+  %0: noreturn = ret
+}

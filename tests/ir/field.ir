@@ -1,0 +1,115 @@
+%81 = struct_decl (flags=0) {
+  decl const "N" value {
+    %20 = struct_decl (flags=0) {
+      decl const "space name" type {
+        %0 = break_inline result, @type_u8
+      } value {
+        %1 = decl_type
+        %2 = int 7
+        %3 = as %1, %2
+        %4 = break_inline result, %3
+      }
+      decl var "counter" type {
+        %5 = break_inline result, @type_u8
+      } value {
+        %6 = decl_type
+        %7 = int 1
+        %8 = as %6, %7
+        %9 = break_inline result, %8
+      }
+      decl fn "add" value {
+        %18 = func "add" {
+          %11 = param "arg" type {
+            %10 = break_inline result, @type_u8
+          }
+          ret type {
+            %12 = break_inline result, @type_u8
+          }
+          body insts {
+            %13 = ret_type
+            %14 = int 1
+            %15 = add %11, %14
+            %16 = as_return %13, %15
+            %17 = ret %16
+          }
+        }
+        %19 = break_inline result, %18
+      }
+    }
+    %21 = break_inline result, %20
+  }
+  decl fn "main" pub value {
+    %79 = func "main" {
+      ret type {
+        %22 = break_inline result, @type_u8
+      }
+      body insts {
+        %23 = decl_ref "N"
+        %28 = field_named_ptr %23 name {
+          %24 = ptr_type @type_u8, @true slice
+          %25 = str "counter"
+          %26 = as %24, %25
+          %27 = break_inline result, %26
+        }
+        %29 = load %28
+        %30 = add_sub_rhs_type %29
+        %31 = int 2
+        %32 = as %30, %31
+        %33 = add %29, %32
+        %34 = elem_type %28
+        %35 = as %34, %33
+        %36 = store %28, %35
+        %37 = decl_ref "N"
+        %42 = field_named_ptr %37 name {
+          %38 = ptr_type @type_u8, @true slice
+          %39 = str "counter"
+          %40 = as %38, %39
+          %41 = break_inline result, %40
+        }
+        %43 = decl_ref "N"
+        %44 = field_ptr "counter", %43
+        %45 = cmp_neq %42, %44
+        %50 = bool_or %45 rhs {
+          %46 = deref %42
+          %47 = int 3
+          %48 = cmp_neq %46, %47
+          %49 = break_inline result, %48
+        }
+        %56 = if %50 then {
+          %51 = ret_type
+          %52 = int 1
+          %53 = as_return %51, %52
+          %54 = ret %53
+        } else {
+          %55 = break_inline result, @void_value
+        }
+        %57 = ret_type
+        %58 = decl_ref "N"
+        %59 = ref %58
+        %64 = field_named_val %59 name {
+          %60 = ptr_type @type_u8, @true slice
+          %61 = str "add"
+          %62 = as %60, %61
+          %63 = break_inline result, %62
+        }
+        %65 = call %64 arg0 {
+          %66 = arg_type %65, 0
+          %67 = decl_ref "N"
+          %72 = field_named_val %67 name {
+            %68 = ptr_type @type_u8, @true slice
+            %69 = str "space name"
+            %70 = as %68, %69
+            %71 = break_inline result, %70
+          }
+          %73 = as %66, %72
+          %74 = break_inline result, %73
+        }
+        %75 = int 8
+        %76 = sub %65, %75
+        %77 = as_return %57, %76
+        %78 = ret %77
+      }
+    }
+    %80 = break_inline result, %79
+  }
+}

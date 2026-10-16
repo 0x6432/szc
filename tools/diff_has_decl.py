@@ -56,6 +56,9 @@ def cases():
     yield 'const N=struct { pub const a=@hasDecl(@This(),"a"); }; pub fn main() void { const n:u8=if(N.a)0 else 256; _=n; }'
     yield 'const N=struct { pub const x:u8=x; }; pub fn main() void { const n:u8=if(@hasDecl(N,"x"))0 else 256; _=n; }'
     yield 'pub const x:u8=256; pub fn main() void { const n:u8=if(@hasDecl(@This(),"x"))0 else 256; _=n; }'
+    for name in ('"x"', '""', '3'):
+        test = f'@hasDecl(anyopaque,{name})'
+        yield f'pub fn main() void {{ const n:u8=if(!{test})0 else 256; _=n; }}'
     for base in ('u8','bool','void','type','usize','u0','i129','comptime_int','comptime_float',
                  '[3]u8','[0]u8','*u8','[]const u8','[*]u8','fn() void','anyerror','noreturn','f32','f64'):
         yield f'pub fn main() void {{ _=@hasDecl({base},"x"); }}'
@@ -86,6 +89,17 @@ def cases():
         'var name:[]const u8="x"; pub fn main() void { _=@hasDecl(N,name); }',
     ):
         yield prefix + source
+    # The reference consumes exactly one final NUL when interning a name.
+    for name, present in (
+        ('"x\\x00"', True), ('".x\\x00."[1..3]', True),
+        ('&[_]u8{120,0}', True), ('&[_:0]u8{120,0}', True),
+        ('"x\\x00\\x00"', False), ('"x\\x00suffix\\x00"', False),
+        ('&[_]u8{120,0,0}', False),
+    ):
+        test = f'@hasDecl(N,{name})'
+        if not present:
+            test = '!' + test
+        yield prefix + f'pub fn main() void {{ const n:u8=if({test})0 else 256; _=n; }}'
     for args in ('','N','N,"x",3'):
         yield prefix + f'pub fn main() void {{ _=@hasDecl({args}); }}'
 

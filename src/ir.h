@@ -156,6 +156,8 @@ typedef enum IrDataKind {
 	X(SLICE_ELEM_TYPE, "slice_elem_type", IR_DATA_UN)	/* base address -> scalar child type */ \
 	X(SLICE, "slice", IR_DATA_PAYLOAD)	/* IrSlice: borrowed view with optional end */ \
 	X(ARRAY_CAT, "array_cat", IR_DATA_BIN)	/* concatenate indexable constants */ \
+	X(FIELD_NAMED_PTR, "field_named_ptr", IR_DATA_PAYLOAD) /* IrNamedField: address */ \
+	X(FIELD_NAMED_VAL, "field_named_val", IR_DATA_PAYLOAD) /* IrNamedField: load */ \
 	X(FIELD_PTR, "field_ptr", IR_DATA_NAME)	/* named field address, borrowing the base */ \
 	X(FIELD_REF, "field_ref", IR_DATA_NAME)	/* type-only array .len through an expression address */ \
 	X(FIELD_VAL, "field_val", IR_DATA_NAME)	/* field name, base operand (array .len initially) */ \
@@ -464,6 +466,12 @@ typedef struct IrHasDecl {
 	uint32_t type_src;
 	uint32_t name_src;
 } IrHasDecl;
+
+typedef struct IrNamedField {
+	IrRef base;
+	IrBody name_body;
+	uint32_t name_src;
+} IrNamedField;
 
 typedef struct IrPanic {
 	IrRef message;

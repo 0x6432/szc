@@ -1,0 +1,63 @@
+// exit: 0
+const N=struct {
+	const x:u8=7;
+	const aligned:u8 align(32)=9;
+	const Byte=u8;
+	const Self=@This();
+	const @"space name":u8=11;
+	const @"\u{e9}":u8=13;
+	var counter:u8=1;
+	var data:[3]u8=.{1,2,3};
+	fn add(n:u8) u8 { return n+1; }
+};
+var data:[4]u16=.{3,5,7,9};
+var view:[]u16=data[0..3];
+var calls:u8=0;
+fn descriptor() *[]u16 { calls+=1; return &view; }
+fn array_value() [2]u8 { calls+=1; return .{1,2}; }
+pub fn main() u8 {
+	if(@field(N,"x")!=7 or @field(N,"space\x20name")!=11 or @field(N,"\xc3\xa9")!=13) return 1;
+	if(@field(N,"Self")!=N or @field(&N,"x")!=7) return 2;
+	if(&@field(N,"x")!=&N.x or @intFromPtr(&@field(N,"aligned"))&31!=0) return 3;
+	const n:@field(N,"Byte")=17;
+	if(n!=17 or @field(N,"add")(3)!=4) return 4;
+	const callback:*const fn(u8) u8=&@field(N,"add");
+	if(callback(5)!=6) return 5;
+	@field(N,"counter")=7;
+	@field(N,"counter")+=2;
+	const pointer=&@field(&N,"counter");
+	pointer.*+=1;
+	if(N.counter!=10 or pointer!=&N.counter) return 6;
+	@field(N,"data")[1]=19;
+	@field(N,"data")[2]+=1;
+	if(N.data[1]!=19 or N.data[2]!=4) return 7;
+	const a:[3]u8=undefined;
+	const p:*volatile [3]u8=undefined;
+	if(@field(a,"len")!=3 or @field(p,"len")!=3) return 8;
+	const len=&@field(a,"len");
+	if(len.*!=3) return 9;
+	const name:[]const u8=".counter."[1..8];
+	if(@field(N,name)!=10 or @field(N,""++"x")!=7 or @field(N,&[_]u8{'x'})!=7) return 10;
+	if(@field(descriptor(),"len")!=3 or calls!=1) return 11;
+	const length=&@field(descriptor(),"len");
+	if(length!=&view.len or calls!=2) return 12;
+	@field(descriptor(),"len")=2;
+	if(view.len!=2 or calls!=3) return 13;
+	@field(descriptor(),"ptr")+=1;
+	if(view.ptr[0]!=5 or calls!=4) return 14;
+	@field(view,"len")-=1;
+	if(view.len!=1) return 15;
+	if(@field(array_value(),"len")!=2 or calls!=5) return 16;
+	const bytes=[_]u8{'x'};
+	if(@field(N,&bytes)!=7 or @field(N,&.{'x'})!=7) return 17;
+	const s:[]const u8="abcd";
+	if(@field(s,"len")!=4 or @field(s,"ptr")[1]!='b') return 18;
+	if(@hasDecl(anyopaque,"x")) return 19;
+	if(@field(a,"len\x00tail")!=3 or @field(s,"len\x00tail")!=4) return 20;
+	if(@field(s,"ptr\x00tail")[2]!='c') return 21;
+	@field(view,"len\x00tail")=2;
+	if(view.len!=2) return 22;
+	if(@field(N,"x\x00")!=7 or @field(N,&[_]u8{120,0})!=7) return 23;
+	if(@hasDecl(N,"x\x00") or @hasDecl(N,"x\x00\x00")) return 24;
+	return 0;
+}

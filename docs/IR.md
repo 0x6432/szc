@@ -107,8 +107,39 @@ Runtime backing, undefined descriptors/pointers and integer-address backing
 cannot supply names, even for empty ranges. Name decoding charges the shared
 constant-array work budget and has an explicit 16 MiB per-name ceiling.
 No runtime TIR instruction or backend lowering is needed. General comptime
-function calls/mutable-memory evaluation, field-bearing structs, other container
-kinds and imports retain their existing unsupported diagnostics.
+function calls/mutable-memory evaluation, field-bearing structs, other user-declared
+container kinds and imports retain their existing unsupported diagnostics.
+
+`field_named_ptr` / `field_named_val` carry
+`IrNamedField { base, name_body, name_src }`. Irgen evaluates the base once as
+an expression address, then generates the same isolated contextual comptime
+name body used by `has_decl`. Sema projects the address through existing
+namespace/array/slice rules; the value form then loads it. This preserves global
+storage identity, constant alignment and slice descriptor const/volatile/allowzero
+qualifiers without new runtime TIR or backend operations. Assignment, compound
+assignment and address-taking use the pointer form. Undefined array values and
+array pointers can expose their type-only length without reading memory, while
+runtime base argument effects are retained.
+
+Name resolution reads every logical byte, then consumes exactly one final NUL,
+matching `Value.arrayToIpString`/`getOrPutTrailingString`. This is not first-NUL
+truncation: two final NULs leave one, and an interior NUL is retained. Namespace
+lookup compares all normalized name bytes. Built-in array `len` and slice
+`len`/`ptr` instead mirror Zig 0.17's `NullTerminatedString.eqlSlice`: a literal
+prefix followed by NUL also matches when more logical bytes follow. This
+predicate is deliberately not used for namespace lookup. Missing-member
+diagnostics preserve long names; presentation stops at an embedded NUL, as
+verified against the official binary, without changing lookup semantics.
+Builtin `anyopaque` has no namespace: `has_decl` returns false and field lookup
+reports its opaque missing-member diagnostic. General opaque declarations are
+still unsupported.
+
+Discarding a function value does not make its body reachable. Taking or
+coercing an internal, non-generic function's code address does, even if that
+pointer is discarded; `ref`, `decl_ref`, `field_ptr`, `field_named_ptr` and `as`
+queue such addresses. The temporary address used internally by
+`field_named_val` does not force body analysis. Extern ABI liveness continues
+to wait for runtime use; generic instantiation retains its existing rules.
 
 ## Control flow
 

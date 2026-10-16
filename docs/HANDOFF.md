@@ -19,6 +19,57 @@ Read this first when resuming work (the sandbox resets often).
 
 ## Latest follow-up checkpoint
 
+- M7.6b dynamic field projection is integrated: `@field` reads, addresses,
+  assignment and compound assignment on the existing namespaces and array/slice
+  descriptor fields. The base is evaluated exactly once as an address; the
+  constant contextual byte-slice name is resolved in the existing isolated
+  comptime body. Projection/load reuse the static field machinery, retaining
+  storage identity, alignment, const/volatile/allowzero qualifiers and argument
+  effects. Undefined arrays/pointers expose type-only `.len` without a memory
+  read. Builtin `anyopaque` has no declarations (`@hasDecl` false) and reports
+  its official opaque missing-member diagnostic for field access.
+  Shared name decoding reads every logical byte, then consumes exactly ONE
+  trailing NUL, matching `Value.arrayToIpString`/`getOrPutTrailingString` and
+  binary probes. This corrects the previous checkpoint's blanket statement that
+  NUL-containing names miss: `"x\x00"` can find `x`, but `"x\x00\x00"` and
+  interior-NUL names still do not. Built-in array `len` and slice `len`/`ptr`
+  additionally use Zig's `NullTerminatedString.eqlSlice` prefix-plus-NUL rule;
+  namespace lookup still compares the complete normalized name. Missing-member
+  diagnostics support long names and mirror the binary's first-NUL rendering.
+  Explicit/coerced internal non-generic function addresses make bodies reachable
+  even when discarded; discarded function values remain lazy. Extern ABI
+  liveness and generic instantiation retain their prior rules. Four old goldens
+  changed deliberately: three newly reachable function bodies and the official
+  unknown-slice-field diagnostic.
+  Reference matrices: field 201 comparisons/92 exact primary diagnostics;
+  hasDecl now 136/70. Native Debug/ReleaseFast and the strict volatile observer
+  pass (102 szc sequences, including six new dynamic-field sequences; 66
+  reference sequences in each mode). Thirty-eight focused unit cases, IR/TIR/QBE
+  and eleven error goldens, three seeds each irgen/sema and hosted matrix.
+  Final immutable source copies: /data/field-final-v2/{gcc,clang,optimized};
+  /data/field-final is an earlier, superseded snapshot. Final GCC/Clang Werror
+  ASan/UBSan pass 2206 units/1180 goldens, 124+4 native, 16 driver, 52 compiler-
+  runner checks, full C/ABI/storage/alignment, 102 volatile and 300 safety cases.
+  Optimized GCC native/safety and forced main tests pass. Both compilers pass
+  20000 standalone mutations/stage with 256/256/98/154 seeds. Four fresh 60s
+  libFuzzer runs pass: 2575766/66350/54684/56264. Final frozen reference regressions
+  pass: namespaces 76/40, identifiers 89/29, slice fields 168, function pointers
+  486. Full e2e remains szc-only; targeted official comparisons are separate.
+  Evidence: /data/field-final-v2-{gcc,clang,optimized,fuzz}.log,
+  /data/field-final-v2-reference-*.log, /data/field-reference-v3.log,
+  /data/field-reference-has_decl-v3.log, /data/field-main-v3.log and
+  /data/field-final-v2-{native,volatile}-reference.log. Official normalization
+  probes: /data/name-normalization-probes.log. Main source matches all three
+  final frozen builds. Hosted 35e4d66 is confirmed GREEN, all 64 jobs successful;
+  older lost-runner failures/replays remain documented below, not called green.
+  M6.1/M7.6 remain partial: field-bearing struct values/layout/initialization,
+  enums/unions, @hasField, @typeInfo/@Type/@TypeOf, imports, general comptime
+  calls/mutable-memory evaluation and namespace captures are still unsupported.
+  Next scoped work: @hasField on existing arrays, slices and fieldless
+  namespaces. /data/hasfield-next contains isolated development/tests, NOT an
+  unfinished main-tree implementation; integrate only after this checkpoint is
+  committed, and validate the final merged source independently.
+
 - M7.6a public declaration membership is integrated: `@hasDecl` on the root
   and existing fieldless namespaces, using contextual constant byte-slice names.
   This supersedes older checkpoints saying hasDecl is not started. Zig 0.17

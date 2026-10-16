@@ -931,6 +931,23 @@ queue_value_functions(Block *block, ValueId id, uint32_t src)
 	func_queue(sema, value->as.function);
 }
 
+/* A function value may be discarded without analyzing its body. An explicit
+ * or coerced code address makes an internal, non-generic body reachable even
+ * when the pointer is discarded. Extern ABI liveness still waits for use. */
+static void
+queue_function_address(Block *block, Operand operand)
+{
+	Sema *sema = block->sema;
+	if (operand.kind != OPERAND_COMPTIME || sema->types[operand.type].kind != TYPE_POINTER)
+		return;
+	const Value *value = operand_value(block, operand);
+	if (value->kind != VALUE_FUNCTION)
+		return;
+	SemaFunc *func = sema->funcs[value->as.function];
+	if (!func->is_extern && !func->is_generic)
+		func_queue(sema, value->as.function);
+}
+
 /* Turns an operand into a typed-IR instruction (materializing constants). */
 static TirRef
 materialize(Block *block, Operand operand, uint32_t src)
@@ -4789,6 +4806,27 @@ namespace_name(Sema *sema, SemaNamespace *ns)
 	return arena_sprintf(sema->arena, "%s.%s", namespace_name(sema, ns->parent), name);
 }
 
+/* Lookup keeps every byte. Zig's diagnostic renderer stops the message at an
+ * embedded NUL; mirror presentation only, never C-string-prefix lookup. */
+static void
+sema_name_error(Block *block, uint32_t src, const char *prefix, StringId name, const char *suffix)
+{
+	Sema *sema = block->sema;
+	const char *bytes = intern_text(sema->interner, name);
+	size_t length = intern_length(sema->interner, name);
+	const char *zero = memchr(bytes, '\0', length);
+	if (zero != NULL)
+		length = (size_t)(zero - bytes);
+	size_t head = strlen(prefix);
+	size_t tail = zero == NULL ? strlen(suffix) : 0;
+	char *text = arena_alloc(sema->arena, head + length + tail + 1, 1);
+	memcpy(text, prefix, head);
+	memcpy(text + head, bytes, length);
+	memcpy(text + head + length, suffix, tail);
+	text[head + length + tail] = '\0';
+	diag_report_bytes(sema->diag, DIAG_ERROR, block->ir->file, src, text, head + length + tail);
+}
+
 /* Address-oriented IR passes a pointer to the type binding. Do not confuse
  * namespace declarations with instance fields or an array value's .len. */
 static bool
@@ -4799,6 +4837,10 @@ namespace_member(Block *block, Operand base, StringId name, bool as_reference, u
 		TypePointer pointer = sema->types[base.type].as.pointer;
 		if (pointer.size != POINTER_ONE || pointer.child != T_TYPE)
 			return false;
+		if (!check_defined(block, base, src)) {
+			*out = operand_none;
+			return true;
+		}
 		base = load_pointer(block, base, src);
 		if (base.kind == OPERAND_NONE) {
 			*out = operand_none;
@@ -4813,6 +4855,10 @@ namespace_member(Block *block, Operand base, StringId name, bool as_reference, u
 	TypeId type;
 	if (!operand_to_type(block, base, src, &type))
 		return true;
+	if (sema->types[type].kind == TYPE_ANYOPAQUE) {
+		sema_name_error(block, src, "opaque 'anyopaque' has no member named '", name, "'");
+		return true;
+	}
 	if (sema->types[type].kind != TYPE_STRUCT) {
 		sema_error(block, src, "type '%s' has no members", sema_type_name(sema, type));
 		return true;
@@ -4820,8 +4866,9 @@ namespace_member(Block *block, Operand base, StringId name, bool as_reference, u
 	SemaNamespace *ns = sema->types[type].as.structure;
 	SemaDecl *decl = namespace_find(ns, name);
 	if (decl == NULL) {
-		sema_error(block, src, "%sstruct '%s' has no member named '%s'",
-			ns->parent == NULL ? "root source file " : "", namespace_name(sema, ns), intern_text(sema->interner, name));
+		const char *prefix = arena_sprintf(sema->arena, "%sstruct '%s' has no member named '",
+			ns->parent == NULL ? "root source file " : "", namespace_name(sema, ns));
+		sema_name_error(block, src, prefix, name, "'");
 		return true;
 	}
 	*out = read_declaration(block, ns, decl, as_reference, src);
@@ -4869,9 +4916,28 @@ resolve_const_string(Block *block, Operand name, uint32_t src, StringId *out)
 		}
 		text[i] = (char)bigint_to_u64_bits(&operand_value(block, byte)->as.integer);
 	}
+	/* Value.arrayToIpString/getOrPutTrailingString consume one trailing NUL,
+	 * not the first embedded NUL and not every trailing NUL. Read all bytes
+	 * above before normalization so undefined backing is still diagnosed. */
+	if (length != 0 && text[length - 1] == '\0')
+		length--;
 	text[length] = '\0';
 	*out = intern(sema->interner, text, (uint32_t)length);
 	return true;
+}
+
+/* Name expressions must not inherit a runtime builder or control-flow target. */
+static bool
+resolve_name_body(Block *block, IrBody body, uint32_t src, StringId *out)
+{
+	InstMap map;
+	inst_map_init(&map, block->sema->arena);
+	map.parent = block->map;
+	Block inner;
+	block_init_comptime(&inner, block->sema, block->namespace_scope, &map, block->decl_name);
+	inner.comptime_value_required = true;
+	BodyResult result = analyze_body(&inner, body);
+	return result.end == BODY_BREAK_RESULT && resolve_const_string(&inner, result.result, src, out);
 }
 
 /* Zig 0.17 hasDecl tests public declarations only, even in the same lexical
@@ -4887,16 +4953,11 @@ analyze_has_decl(Block *block, const IrInst *inst)
 	if (container.kind == OPERAND_NONE || !check_defined(block, container, payload.type_src)
 		|| !operand_to_type(block, container, payload.type_src, &type))
 		return operand_none;
-	InstMap map;
-	inst_map_init(&map, sema->arena);
-	map.parent = block->map;
-	Block inner;
-	block_init_comptime(&inner, sema, block->namespace_scope, &map, block->decl_name);
-	inner.comptime_value_required = true;
-	BodyResult result = analyze_body(&inner, payload.name_body);
 	StringId name;
-	if (result.end != BODY_BREAK_RESULT || !resolve_const_string(&inner, result.result, payload.name_src, &name))
+	if (!resolve_name_body(block, payload.name_body, payload.name_src, &name))
 		return operand_none;
+	if (sema->types[type].kind == TYPE_ANYOPAQUE)
+		return bool_operand(sema, false);
 	if (sema->types[type].kind != TYPE_STRUCT) {
 		sema_error(block, payload.type_src, "expected struct, enum, union, or opaque; found '%s'", sema_type_name(sema, type));
 		return operand_none;
@@ -4941,19 +5002,42 @@ slice_field_address(Block *block, Operand storage, bool length, uint32_t src)
 		type, src, materialize(block, storage, src)));
 }
 
+/* Zig's NullTerminatedString.eqlSlice checks a literal prefix followed by NUL,
+ * even if the interned name has more logical bytes. Namespace keys above must
+ * still compare the complete StringId, never this built-in-field predicate. */
+static bool
+builtin_field_name(Sema *sema, StringId name, const char *literal)
+{
+	size_t length = strlen(literal);
+	const char *bytes = intern_text(sema->interner, name);
+	return intern_length(sema->interner, name) >= length
+		&& memcmp(bytes, literal, length) == 0 && bytes[length] == '\0';
+}
+
 static Operand
 analyze_field_pointer(Block *block, Operand base, StringId name, uint32_t src)
 {
 	Sema *sema = block->sema;
 	if (base.kind == OPERAND_NONE)
 		return operand_none;
+	/* The base is an expression address. One pointer-valued object may itself
+	 * point to a type binding; load its slot before namespace projection. */
+	TypeId object = sema->types[base.type].kind == TYPE_POINTER
+		? sema->types[base.type].as.pointer.child : 0;
+	if (object != 0 && sema->types[object].kind == TYPE_POINTER
+		&& sema->types[object].as.pointer.size == POINTER_ONE
+		&& sema->types[object].as.pointer.child == T_TYPE) {
+		base = load_pointer(block, base, src);
+		if (base.kind == OPERAND_NONE)
+			return operand_none;
+	}
 	Operand member;
 	if (namespace_member(block, base, name, true, src, &member))
 		return member;
 	if (!pointer_type_operand(block, base, src))
 		return operand_none;
 	TypeId child = sema->types[base.type].as.pointer.child;
-	bool length = name == intern_cstr(sema->interner, "len");
+	bool length = builtin_field_name(sema, name, "len");
 	TypeId array = indexable_array_type(sema, child);
 	if (array != 0 && length) {
 		Operand count = comptime_operand(T_USIZE, value_int_u64(&sema->values, T_USIZE, sema->types[array].as.array.length));
@@ -4966,8 +5050,12 @@ analyze_field_pointer(Block *block, Operand base, StringId name, uint32_t src)
 			return operand_none;
 		child = sema->types[base.type].as.pointer.child;
 	}
-	if (!is_slice(sema, child) || (!length && name != intern_cstr(sema->interner, "ptr"))) {
-		sema_error(block, src, "type '%s' has no member named '%s'", sema_type_name(sema, child), intern_text(sema->interner, name));
+	if (!is_slice(sema, child) || (!length && !builtin_field_name(sema, name, "ptr"))) {
+		if (is_slice(sema, child) || array != 0) {
+			const char *suffix = arena_sprintf(sema->arena, "' in '%s'", sema_type_name(sema, child));
+			sema_name_error(block, src, "no member named '", name, suffix);
+		} else
+			sema_error(block, src, "type '%s' does not support field access", sema_type_name(sema, child));
 		return operand_none;
 	}
 	return slice_field_address(block, base, length, src);
@@ -6254,6 +6342,19 @@ analyze_inst(Block *block, IrInstIndex index, Operand *break_value)
 	case IR_ARRAY_CAT:
 		result = analyze_array_cat(block, inst);
 		break;
+	case IR_FIELD_NAMED_PTR:
+	case IR_FIELD_NAMED_VAL: {
+		IrNamedField payload;
+		IR_READ(block->ir, inst->data.payload, &payload);
+		Operand base = resolve_ref(block, payload.base);
+		StringId name;
+		if (base.kind == OPERAND_NONE || !resolve_name_body(block, payload.name_body, payload.name_src, &name))
+			break;
+		Operand address = analyze_field_pointer(block, base, name, src);
+		result = address.kind == OPERAND_NONE || inst->op == IR_FIELD_NAMED_PTR
+			? address : load_pointer(block, address, src);
+		break;
+	}
 	case IR_FIELD_PTR:
 		result = analyze_field_pointer(block, resolve_ref(block, inst->data.name.operand), inst->data.name.name, src);
 		break;
@@ -6803,6 +6904,9 @@ analyze_inst(Block *block, IrInstIndex index, Operand *break_value)
 	case IR_OP_COUNT:
 		break;
 	}
+	if (inst->op == IR_REF || inst->op == IR_DECL_REF || inst->op == IR_FIELD_PTR
+		|| inst->op == IR_FIELD_NAMED_PTR || inst->op == IR_AS)
+		queue_function_address(block, result);
 	inst_map_put(block->map, sema->arena, index, result);
 	return INST_CONTINUE;
 }

@@ -1,0 +1,62 @@
+function w $szc.main.1() {
+@start
+	%t1 =w loadub $szc.g.1
+	%t3 =w add %t1, 2
+	%t3 =w and %t3, 255
+	%g3_overflow =w cultw %t3, %t1
+	jnz %g3_overflow, @g3_overflow_panic, @g3_overflow_ok
+@g3_overflow_panic
+	call $szc.panic.0()
+	hlt
+@g3_overflow_ok
+	storeb %t3, $szc.g.1
+	%t7 =w loadub $szc.g.1
+	%t9 =w cnew %t7, 3
+	jnz %t9, @c14_then, @c14_else
+@c14_then
+	ret 1
+@c14_else
+	jmp @b10
+@b10
+	%t16 =w call $szc.add.2(w 7)
+	%t16 =w and %t16, 255
+	%t18 =w sub %t16, 8
+	%t18 =w and %t18, 255
+	%g18_overflow =w cultw %t16, 8
+	jnz %g18_overflow, @g18_overflow_panic, @g18_overflow_ok
+@g18_overflow_panic
+	call $szc.panic.0()
+	hlt
+@g18_overflow_ok
+	ret %t18
+}
+
+function w $szc.add.2(w %t0) {
+@start
+	%t2 =w add %t0, 1
+	%t2 =w and %t2, 255
+	%g2_overflow =w cultw %t2, %t0
+	jnz %g2_overflow, @g2_overflow_panic, @g2_overflow_ok
+@g2_overflow_panic
+	call $szc.panic.0()
+	hlt
+@g2_overflow_ok
+	ret %t2
+}
+
+data $szc.g.1 = align 1 { b 1 }
+section ".rodata"
+data $szc.g.2 = align 1 { b 7 }
+data $szc.panic.msg.0 = { b "integer overflow\n", b 0 }
+function $szc.panic.0() {
+@start
+	call $write(w 2, l $szc.panic.msg.0, l 17)
+	call $abort()
+	hlt
+}
+
+export function w $main() {
+@start
+	%status =w call $szc.main.1()
+	ret %status
+}
