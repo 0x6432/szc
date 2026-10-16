@@ -16,6 +16,7 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
   - [x] **M0.5a Bounded parallel reference CI**: independent semantic/native/parser suites and aggregate status.
   - [x] **M0.5b Independent native reference suites**: native/storage/alignment/safety partitions with exact coverage.
   - [x] **M0.5c Exact-coverage safety reference partitions**: four balanced jobs, unchanged checks/deadlines.
+  - [x] **M0.5d Independent standalone fuzz partitions**: eight compiler/stage jobs, unchanged replay coverage and build-check dependency.
 
 ## Phase 1: Lexer (`src/lexer.c`)
 
@@ -172,6 +173,34 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
 ## Completed milestone log
 
 (newest first; each entry: what, limitations, interactions)
+
+### M0.5d Independent standalone fuzz partitions
+
+- **What**: run each GCC/Clang lexer/parser/irgen/sema standalone replay in an
+  independent matrix job, max four concurrent. Each retains every seed and 20000
+  deterministic mutations, Werror, ASan/UBSan, its 15-minute step deadline and a
+  distinct last-input artifact. The build-and-test matrix depends on all eight
+  jobs and runs an explicit success gate even if a dependency failed. Build
+  checks fail red instead of merely skipping on failed dependencies. The ordinary
+  make fuzz-standalone target still replays all four stages by default.
+- **Why**: the previous combined build/native/four-stage jobs repeatedly lost
+  hosted runners during replay with a shutdown signal, not a sanitizer report.
+  Separating stages shortens each runner lifetime and isolates failures without
+  reducing iterations, corpus coverage or native/reference tests. This is an
+  infrastructure change, not a claim that a compiler hang or runner issue is fixed.
+- **Validation**: frozen /data/fuzz-partition-final2 GCC/Clang trees pass 1301 units,
+  1043 goldens, driver and new partition checks. All eight exact CI replay commands
+  pass 20000 mutations each (256 lexer/256 parser/65 irgen/121 sema seeds per
+  compiler). Source/tools/fuzz match the runtime milestone byte-for-byte; its full
+  native/reference/release/four-60s-fuzzer evidence remains unchanged, not rerun
+  or misrepresented as a new compiler validation. The metatest checks exact matrix
+  coverage, unique artifacts, unchanged mutation counts/deadlines, dependency
+  gating, sanitizer/Werror flags and one-stage make dry runs. Workflow YAML was
+  separately parsed. Hosted results are pending until their actual runs finish.
+- **Interactions/limits**: only CI/Makefile and a Python metatest change executable
+  behavior; stage selection uses the existing FUZZERS override. No runtime or
+  language semantics change. The test joins make test without extra dependencies.
+  Logs: /data/fuzz-partition-final2-{gcc,clang}-{test,lexer,parser,irgen,sema}.log.
 
 ### M5.5g Native-width runtime aggregate bit casts
 

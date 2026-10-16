@@ -21,7 +21,7 @@ HEADERS     = $(wildcard src/*.h)
 FUZZERS     = lexer parser irgen sema
 GENERATED_RUN_TESTS = build/integer-widths.zig build/conditional-widths.zig build/loop-widths.zig build/block-widths.zig build/for-widths.zig build/defer-widths.zig build/noreturn-widths.zig build/pointer-widths.zig build/global-widths.zig build/function-pointer-widths.zig build/array-widths.zig build/bitcast-widths.zig build/aggregate-bitcast-1-widths.zig build/aggregate-bitcast-2-widths.zig build/aggregate-bitcast-3-widths.zig build/aggregate-bitcast-4-widths.zig build/aggregate-bitcast-5-widths.zig build/aggregate-bitcast-8-widths.zig
 
-.PHONY: fuzz-driver-test all release asan test unit-test golden-test e2e-test e2e-native-test e2e-storage-test e2e-alignment-test e2e-safety-test safety-test fuzz fuzz-run fuzz-standalone clean
+.PHONY: fuzz-driver-test fuzz-partition-test all release asan test unit-test golden-test e2e-test e2e-native-test e2e-storage-test e2e-alignment-test e2e-safety-test safety-test fuzz fuzz-run fuzz-standalone clean
 
 all: build/szc
 
@@ -48,7 +48,7 @@ unit-test: build/asan/unit_tests
 golden-test: build/asan/szc
 	./tests/run_golden.sh build/asan/szc
 
-test: unit-test golden-test fuzz-driver-test
+test: unit-test golden-test fuzz-driver-test fuzz-partition-test
 
 build/integer-widths.zig: tools/generate_integer_tests.py
 	python3 $< $@
@@ -161,3 +161,6 @@ clean:
 
 fuzz-driver-test:
 	python3 tests/run_standalone_fuzz_driver.py "$(CC)"
+
+fuzz-partition-test:
+	python3 tests/run_standalone_fuzz_partition.py

@@ -19,6 +19,19 @@ Read this first when resuming work (the sandbox resets often).
 
 ## Latest follow-up checkpoint
 
+- M0.5d standalone CI replay partitions are complete: eight independent GCC/Clang
+  stage jobs, max four concurrent, each with unchanged seeds/20000 mutations,
+  Werror+ASan/UBSan, 15-minute step deadline and distinct last-input capture.
+  Build/test jobs always run after all eight and explicitly require success,
+  making failures red rather than relying on skipped dependency checks.
+  Frozen /data/fuzz-partition-final2 trees pass 1301 units/1043 goldens, both
+  driver/partition metatests, and all eight full replays (256/256/65/121 seeds).
+  Source/tools/fuzz match M5.5g exactly. Its full native/reference/fuzzer evidence
+  is retained, not claimed freshly rerun for this CI-only change. Hosted runner
+  shutdowns are infrastructure evidence, not proof of a fixed compiler hang.
+  Check new hosted runs before claiming this partitioning fixes runner reliability.
+- Integration copies preserve file timestamps; force a rebuild (make -B ... test)
+  when switching compiler snapshots, rather than trusting newer stale binaries.
 - M5.5c contiguous qualifier-cast diagnostics are complete. Frozen GCC/Clang
   `/data/cast-chain-final` trees match main source/test/config: 793 units/1002
   goldens; 92 ordinary/generated + three scoped native; 16 driver checks;
@@ -105,7 +118,7 @@ Read this first when resuming work (the sandbox resets often).
 - Standalone fuzz replay now sorts corpus filenames bytewise, making its seeded
   mutations independent of filesystem directory order. Optional -save-input saves
   each current input before compiler entry; CI captures stage inputs on failure
-  and bounds standalone replay to 15 minutes. Driver regression checks are part
+  and bounds each standalone stage to 15 minutes (partitioned by M0.5d). Driver regression checks are part
   of make test. Fresh independent GCC/Clang Werror sanitizer trees pass 864 units,
   1028 goldens, harness checks, and 20000 mutations/stage (63 irgen/119 sema seeds).
   Logs: /data/fuzz-driver-{gcc,clang}-{tests,replay}.log.

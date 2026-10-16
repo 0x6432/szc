@@ -8,12 +8,16 @@ on:
 
 jobs:
   build-and-test:
+    needs: standalone-fuzz
+    if: always()
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
         cc: [gcc, clang]
     steps:
+      - name: Require all standalone fuzz partitions to pass
+        run: test "${{ needs.standalone-fuzz.result }}" = success
       - uses: actions/checkout@v4
       - name: Build (warnings are errors)
         run: make CC=${{ matrix.cc }} EXTRA_CFLAGS=-Werror
@@ -27,15 +31,26 @@ jobs:
           echo "PATH=$PWD/build/qbe-src:$PATH" >> "$GITHUB_ENV"
       - name: End-to-end and driver tests under ASan + UBSan
         run: make CC=${{ matrix.cc }} EXTRA_CFLAGS=-Werror e2e-test
+
+  standalone-fuzz:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      max-parallel: 4
+      matrix:
+        cc: [gcc, clang]
+        stage: [lexer, parser, irgen, sema]
+    steps:
+      - uses: actions/checkout@v4
       - name: Standalone fuzz replay
         timeout-minutes: 15
-        run: make CC=${{ matrix.cc }} fuzz-standalone
-      - name: Upload standalone fuzz inputs
+        run: make CC=${{ matrix.cc }} EXTRA_CFLAGS=-Werror FUZZERS=${{ matrix.stage }} fuzz-standalone
+      - name: Upload standalone fuzz input
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: standalone-fuzz-inputs-${{ matrix.cc }}
-          path: build/fuzz-last-*.bin
+          name: standalone-fuzz-input-${{ matrix.cc }}-${{ matrix.stage }}
+          path: build/fuzz-last-${{ matrix.stage }}.bin
           if-no-files-found: ignore
 
   fuzz:
