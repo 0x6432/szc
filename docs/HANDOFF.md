@@ -72,14 +72,36 @@ Read this first when resuming work (the sandbox resets often).
   even when all declared payload elements are undefined; wholly undefined sources
   remain undefined, except zero-bit destinations have their unique value. Packed
   buffers have a cumulative 1048576-word budget; dense values retain their element
-  budget. Runtime aggregate bit casts remain pending on main.
-- Next isolated work: /data/runtime-bitcasts-next implements bounded runtime
-  aggregate packing through typed loads/stores and existing integer TIR. Its
-  corrected /data/runtime-bitcasts-final3 wrapper validation is separate and must
-  complete before integration; final2 matrices/fuzz use identical code/tools/seeds.
-  Official generic AIR packing omits sentinel elements; the bool-sentinel native
-  case is explicitly scoped in tests/run_szc rather than copying that upstream bug. General ptrCast still needs physical memory/provenance rules;
-  never reuse whole-root coercion or logical packed bitCast as reinterpretation.
+  budget. Runtime aggregate support below extends this constant milestone.
+- M5.5g bounded runtime aggregate bit casts are complete. Corrected frozen
+  /data/runtime-bitcasts-final3 GCC/Clang trees match 5521 source/test/config
+  files: 1301 units/1043 goldens, 103 ordinary/generated plus four scoped native,
+  16 driver, all C/ABI/storage/alignment, 60 volatile and 255 safety checks pass.
+  GCC full e2e references actual Zig; Clang separately references the new seven
+  programs. Six generated width fixtures contain 1824 assertions. Fresh actual
+  matrices total 2052: 256 runtime+337 constant aggregates+499 scalar+409 alignment
+  +326 qualifier+225 numeric pointers. Optimized GCC: 103 native/255 safety.
+  Four 60s fuzzers: 1595562/39456/35829/32167; both compilers replay 20000 mutations/stage,
+  with 65 irgen/121 sema seeds. Every final wrapper exits zero. Logs: final3-*
+  (wrappers), final2-* (matrices/fuzz);
+  source /data/runtime-bitcasts-next. Final2 native reference failures identified
+  an upstream generic scalarizer sentinel bug: both official backends pack
+  [2:true]bool .{false,true} as 2, while comptime gives 6. Keep the correct
+  bool-sentinel regression in tests/run_szc; ordinary u8 numeric sentinels remain
+  reference-tested with the default backend. Explicit LLVM also omits numeric
+  sentinels; do not treat the default comparison as an LLVM pass. Final3 wrappers
+  retest the scoped fixture. Final2 matrix/fuzz
+  code/tools/seeds match final3 byte-for-byte; earlier pre-zero-fix snapshots
+  are not final evidence.
+- Runtime aggregate casts pack logical elements through typed loads/stores and
+  existing scalar TIR, with a 64-total-bit limit; array ownership/snapshots remain
+  ordinary aggregates. Source/destination ABI padding is not part of those bits.
+  Known wide constants retain M5.5f support. Runtime sentinel fixtures have valid
+  encoded sentinels; no guarantee is inferred for invalid representations.
+- Next: general ptrCast. Physical known-memory loads need ABI stride, padding and
+  relocation provenance; whole-root coercion or logical packed bitCast is not a
+  memory reinterpretation implementation. Reference notes: /data/ptr-cast-next-notes.md,
+  /data/thin-pointer-memory-reference.log, and Sema.zig ptrCastFull at 21738+.
 - Standalone fuzz replay now sorts corpus filenames bytewise, making its seeded
   mutations independent of filesystem directory order. Optional -save-input saves
   each current input before compiler entry; CI captures stage inputs on failure

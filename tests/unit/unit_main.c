@@ -1040,6 +1040,55 @@ test_constant_aggregate_bit_casts(void)
 }
 
 static void
+test_runtime_aggregate_bit_casts(void)
+{
+	const struct {
+		const char *function;
+		const char *call;
+		const char *error;
+	} cases[] = {
+		{"fn f(n:[2]u5) u10 { return @bitCast(n); }", "f(.{1,2})", NULL},
+		{"fn f(n:u10) [2]i5 { return @bitCast(n); }", "f(63)", NULL},
+		{"fn f(n:[3]bool) u3 { return @bitCast(n); }", "f(.{true,false,true})", NULL},
+		{"fn f(n:u3) [3]bool { return @bitCast(n); }", "f(5)", NULL},
+		{"fn f(n:i64) [2]i32 { return @bitCast(n); }", "f(-1)", NULL},
+		{"fn f(n:[2]i32) i64 { return @bitCast(n); }", "f(.{-1,-1})", NULL},
+		{"fn f(n:[2]u5) [5]u2 { return @bitCast(n); }", "f(.{1,2})", NULL},
+		{"fn f(n:u20) [2][2]u5 { return @bitCast(n); }", "f(134209)", NULL},
+		{"fn f(n:[2][2]u5) u20 { return @bitCast(n); }", "f(.{.{1,2},.{3,4}})", NULL},
+		{"fn f(n:u24) [2:17]u8 { return @bitCast(n); }", "f(0x110201)", NULL},
+		{"fn f(n:[2:17]u8) u24 { return @bitCast(n); }", "f(.{1,2})", NULL},
+		{"fn f(n:[2]u0) [0]u8 { return @bitCast(n); }", "f(.{0,0})", NULL},
+		{"fn f(n:[2]u64) u128 { return @bitCast(n); }", "f(.{1,2})", "runtime aggregate @bitCast wider than 64 bits"},
+		{"fn f(n:u128) [2]u64 { return @bitCast(n); }", "f(258)", "runtime aggregate @bitCast wider than 64 bits"},
+	};
+	for (uint32_t i = 0; i < sizeof(cases) / sizeof(cases[0]); i++) {
+		Arena arena;
+		arena_init(&arena);
+		SourceTable sources;
+		source_table_init(&sources, &arena);
+		Diag diag;
+		diag_init(&diag, &arena, &sources);
+		Interner interner;
+		intern_init(&interner, &arena);
+		char source[1024];
+		int length = snprintf(source, sizeof(source), "%s pub fn main() void { _=%s; }", cases[i].function, cases[i].call);
+		CHECK(length > 0 && (size_t)length < sizeof(source));
+		FileId file = source_add_memory(&sources, "runtime_bit_casts.zig", source, (uint32_t)length);
+		AstContainerDecl *root = parse_file(&arena, &diag, &sources, file);
+		CHECK(!diag_has_errors(&diag));
+		IrFile *ir = irgen_file(&arena, &diag, &interner, source_get(&sources, file), file, root);
+		CHECK(!diag_has_errors(&diag));
+		Sema *sema = sema_create(&arena, &diag, &interner, &sources);
+		bool success = sema_analyze_executable(sema, file, ir);
+		CHECK(success == (cases[i].error == NULL));
+		if (cases[i].error != NULL)
+			CHECK(diag.count != 0 && strstr(diag.items[0].message, cases[i].error) != NULL);
+		arena_free(&arena);
+	}
+}
+
+static void
 test_packed_bits(void)
 {
 	Arena arena;
@@ -1145,6 +1194,7 @@ main(void)
 	test_scalar_bit_casts();
 	test_packed_bits();
 	test_constant_aggregate_bit_casts();
+	test_runtime_aggregate_bit_casts();
 	test_binary_diagnostics();
 
 	printf("unit: %u checks, %u failed\n", checks, failures);

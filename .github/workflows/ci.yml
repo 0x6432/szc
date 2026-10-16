@@ -95,6 +95,7 @@ jobs:
           - diff_alignment_casts
           - diff_scalar_bitcasts
           - diff_constant_aggregate_bitcasts
+          - diff_runtime_aggregate_bitcasts
           - diff_slice_fields
           - diff_slice_deref
           - diff_slicing

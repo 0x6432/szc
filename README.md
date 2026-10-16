@@ -42,7 +42,8 @@ permissions. It does not reinterpret child types or strengthen backing allocatio
 Scalar `@bitCast` preserves equal-width integer/bool representations (including
 zero-bit void/u0), with arbitrary-width constants and native-width runtime values;
 constant nested integer/bool/void arrays also support logical packing (including
-scalar sentinels). Runtime aggregate and floating-point bit casts remain pending. `@sizeOf`/`@alignOf`/`@bitSizeOf` query supported layouts and representations;
+scalar sentinels). Runtime aggregate bit casts also work up to 64 total logical bits through typed
+element loads/stores; wider runtime aggregates and floating-point bit casts remain pending. `@sizeOf`/`@alignOf`/`@bitSizeOf` query supported layouts and representations;
 integer/boolean-sentinel many-pointers preserve promises through arithmetic;
 integer/bool-sentinel and unsentinelled slices have pointer/length descriptors, writable/addressable `.ptr`/`.len`
 fields (including individual volatile word access), indexing,

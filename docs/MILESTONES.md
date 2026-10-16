@@ -120,6 +120,7 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
   - [x] **M5.5d Alignment casts**: contextual alignment changes, combined qualifier permissions and guards.
   - [x] **M5.5e Scalar bit casts**: equal-width integer/bool/void representations; native-width runtime and arbitrary-width constants.
   - [x] **M5.5f Constant aggregate bit casts**: logical nested arrays, sentinels and undefined/zero-bit representations.
+  - [x] **M5.5g Native-width runtime aggregate bit casts**: typed element packing/unpacking up to 64 total logical bits.
 
 ## Phase 6: Aggregates and errors
 
@@ -171,6 +172,56 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
 ## Completed milestone log
 
 (newest first; each entry: what, limitations, interactions)
+
+### M5.5g Native-width runtime aggregate bit casts
+
+- **What**: runtime array/scalar and array/array bit casts for nested integer/bool/
+  void arrays up to 64 total logical bits, including scalar-sentinel storage.
+  Signedness changes, odd-width fields, reshaping, nested arrays and zero-bit
+  results preserve their logical representation, not ABI padding bytes.
+- **Lowering**: sema recursively loads source elements through typed pointers,
+  normalizes each unsigned field, widens/shifts/joins into a native word, then
+  extracts and normalizes destination fields into owned array slots. Existing
+  TIR integer/element/load/store/copy operations suffice; no backend aggregate
+  scalar temporary or memory-alias shortcut is introduced. Source snapshots and
+  ordinary private aggregate call/return ownership are preserved.
+- **Validation**: 5521 source/test/config files match both corrected final3
+  GCC/Clang Werror sanitizer trees. Both pass 1301 units/1043 goldens, 103 ordinary/
+  generated plus four scoped native cases, 16 driver checks, all C/ABI/storage/
+  alignment suites, 60 volatile sequences and 255 safety cases. GCC full e2e uses
+  actual Zig; Clang separately references the seven new native/generated cases.
+  The six width fixtures contain 1824 assertions across lengths 1/2/3/4/5/8
+  and every native total-width boundary, signed/unsigned fields, zero, high bits
+  and all ones. Splitting preserves coverage within the existing 10s run timeout.
+  Optimized GCC: 103 native/255 safety. Fresh actual matrices: 256 runtime + 337
+  constant aggregate + 499 scalar + 409 alignment + 326 qualifier + 225 numeric
+  pointers (2052 total). Four 60s fuzzers: 1595562/39456/35829/32167; both compilers replay
+  20000 mutations/stage (65 irgen/121 sema seeds). All final wrappers exit zero.
+- **Regressions/limits**: 58 new unit checks, three positive stage goldens, updated
+  wide-runtime diagnostics, one native fixture, six generated fixtures, two fuzz
+  seeds and the 33rd CI comparison suite. Tests cover bool/sentinels/nesting,
+  signed canonicalization, reshaping, calls/returns, zero bits and snapshot order.
+  Sentinel runtime tests use valid encoded sentinels; invalid representations have
+  no promised value. Runtime aggregate widths above 64 remain an explicit NYI,
+  while arbitrary-width constants retain M5.5f support. Floats/vectors/enums and
+  pointer memory reinterpretation remain separate; M5.5 is still partial.
+- **Upstream runtime defect**: the official 0.17.0 generic AIR scalarizer uses
+  arrayLen instead of arrayLenIncludingSentinel for packing and unpacking loops
+  (src/Air/Legalize.zig scalarizeBitcastBlockPayload, 1713 and 1864). Both official
+  x86_64 backends pack [2:true]bool .{false,true} as 2 instead of 6, unlike the
+  constant writer. The destination tail can remain uninitialized. The correct
+  logical bool-sentinel case remains in tests/run_szc, not silently deleted or
+  copied as a compiler bug. Ordinary u8 numeric-sentinel cases still compare
+  against the actual default x86_64 backend; an explicit -fllvm probe also loses
+  that numeric sentinel (szc/default Zig exit 0, LLVM exit 1). Earlier final2 native
+  failures are superseded by final3
+  full validation with this explicitly scoped regression; unchanged source/tools/
+  fuzz are verified byte-for-byte before counting final2 matrices/fuzz.
+  Evidence: /data/runtime-bitcasts-final3-* (wrappers), final2-* (matrices/fuzz);
+  source /data/runtime-bitcasts-next. Integration force-rebuilt GCC Werror
+  sanitizers (1301 units/1043 goldens), plus both new native regressions. Preserved
+  copy timestamps initially left stale binaries; do not count that stale-binary
+  attempt as a compiler regression or final validation.
 
 ### M5.5f Constant aggregate bit casts
 

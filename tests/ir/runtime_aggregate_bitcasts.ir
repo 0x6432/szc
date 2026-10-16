@@ -1,0 +1,748 @@
+%580 = struct_decl (flags=0) {
+  decl fn "to_int" value {
+    %12 = func "to_int" {
+      %6 = param "a" type {
+        %0 = int 2
+        %1 = as @type_usize, %0
+        %2 = int_type u5
+        %3 = array_type %1, %2
+        %4 = as @type_type, %3
+        %5 = break_inline result, %4
+      }
+      ret type {
+        %7 = int_type u10
+        %8 = break_inline result, %7
+      }
+      body insts {
+        %9 = ret_type
+        %10 = bit_cast %9, %6
+        %11 = ret %10
+      }
+    }
+    %13 = break_inline result, %12
+  }
+  decl fn "to_array" value {
+    %26 = func "to_array" {
+      %16 = param "a" type {
+        %14 = int_type u10
+        %15 = break_inline result, %14
+      }
+      ret type {
+        %17 = int 2
+        %18 = as @type_usize, %17
+        %19 = int_type i5
+        %20 = array_type %18, %19
+        %21 = as @type_type, %20
+        %22 = break_inline result, %21
+      }
+      body insts {
+        %23 = ret_type
+        %24 = bit_cast %23, %16
+        %25 = ret %24
+      }
+    }
+    %27 = break_inline result, %26
+  }
+  decl fn "to_bool" value {
+    %39 = func "to_bool" {
+      %30 = param "a" type {
+        %28 = int_type u3
+        %29 = break_inline result, %28
+      }
+      ret type {
+        %31 = int 3
+        %32 = as @type_usize, %31
+        %33 = array_type %32, @type_bool
+        %34 = as @type_type, %33
+        %35 = break_inline result, %34
+      }
+      body insts {
+        %36 = ret_type
+        %37 = bit_cast %36, %30
+        %38 = ret %37
+      }
+    }
+    %40 = break_inline result, %39
+  }
+  decl fn "to_nested" value {
+    %57 = func "to_nested" {
+      %43 = param "a" type {
+        %41 = int_type u20
+        %42 = break_inline result, %41
+      }
+      ret type {
+        %44 = int 2
+        %45 = as @type_usize, %44
+        %46 = int 2
+        %47 = as @type_usize, %46
+        %48 = int_type u5
+        %49 = array_type %47, %48
+        %50 = as @type_type, %49
+        %51 = array_type %45, %50
+        %52 = as @type_type, %51
+        %53 = break_inline result, %52
+      }
+      body insts {
+        %54 = ret_type
+        %55 = bit_cast %54, %43
+        %56 = ret %55
+      }
+    }
+    %58 = break_inline result, %57
+  }
+  decl fn "from_nested" value {
+    %75 = func "from_nested" {
+      %69 = param "a" type {
+        %59 = int 2
+        %60 = as @type_usize, %59
+        %61 = int 2
+        %62 = as @type_usize, %61
+        %63 = int_type u5
+        %64 = array_type %62, %63
+        %65 = as @type_type, %64
+        %66 = array_type %60, %65
+        %67 = as @type_type, %66
+        %68 = break_inline result, %67
+      }
+      ret type {
+        %70 = int_type u20
+        %71 = break_inline result, %70
+      }
+      body insts {
+        %72 = ret_type
+        %73 = bit_cast %72, %69
+        %74 = ret %73
+      }
+    }
+    %76 = break_inline result, %75
+  }
+  decl fn "sent" value {
+    %90 = func "sent" {
+      %79 = param "a" type {
+        %77 = int_type u24
+        %78 = break_inline result, %77
+      }
+      ret type {
+        %80 = int 2
+        %81 = as @type_usize, %80
+        %82 = int 17
+        %83 = as @type_u8, %82
+        %84 = array_type_sentinel %81, @type_u8, %83
+        %85 = as @type_type, %84
+        %86 = break_inline result, %85
+      }
+      body insts {
+        %87 = ret_type
+        %88 = bit_cast %87, %79
+        %89 = ret %88
+      }
+    }
+    %91 = break_inline result, %90
+  }
+  decl fn "signed_pack" value {
+    %104 = func "signed_pack" {
+      %98 = param "a" type {
+        %92 = int 2
+        %93 = as @type_usize, %92
+        %94 = int_type i5
+        %95 = array_type %93, %94
+        %96 = as @type_type, %95
+        %97 = break_inline result, %96
+      }
+      ret type {
+        %99 = int_type i10
+        %100 = break_inline result, %99
+      }
+      body insts {
+        %101 = ret_type
+        %102 = bit_cast %101, %98
+        %103 = ret %102
+      }
+    }
+    %105 = break_inline result, %104
+  }
+  decl fn "booleans" value {
+    %117 = func "booleans" {
+      %111 = param "a" type {
+        %106 = int 3
+        %107 = as @type_usize, %106
+        %108 = array_type %107, @type_bool
+        %109 = as @type_type, %108
+        %110 = break_inline result, %109
+      }
+      ret type {
+        %112 = int_type u3
+        %113 = break_inline result, %112
+      }
+      body insts {
+        %114 = ret_type
+        %115 = bit_cast %114, %111
+        %116 = ret %115
+      }
+    }
+    %118 = break_inline result, %117
+  }
+  decl fn "reshape" value {
+    %135 = func "reshape" {
+      %125 = param "a" type {
+        %119 = int 2
+        %120 = as @type_usize, %119
+        %121 = int_type u5
+        %122 = array_type %120, %121
+        %123 = as @type_type, %122
+        %124 = break_inline result, %123
+      }
+      ret type {
+        %126 = int 5
+        %127 = as @type_usize, %126
+        %128 = int_type u2
+        %129 = array_type %127, %128
+        %130 = as @type_type, %129
+        %131 = break_inline result, %130
+      }
+      body insts {
+        %132 = ret_type
+        %133 = bit_cast %132, %125
+        %134 = ret %133
+      }
+    }
+    %136 = break_inline result, %135
+  }
+  decl fn "sentinel_pack" value {
+    %150 = func "sentinel_pack" {
+      %144 = param "a" type {
+        %137 = int 2
+        %138 = as @type_usize, %137
+        %139 = int 17
+        %140 = as @type_u8, %139
+        %141 = array_type_sentinel %138, @type_u8, %140
+        %142 = as @type_type, %141
+        %143 = break_inline result, %142
+      }
+      ret type {
+        %145 = int_type u24
+        %146 = break_inline result, %145
+      }
+      body insts {
+        %147 = ret_type
+        %148 = bit_cast %147, %144
+        %149 = ret %148
+      }
+    }
+    %151 = break_inline result, %150
+  }
+  decl fn "bool_sentinel_pack" value {
+    %163 = func "bool_sentinel_pack" {
+      %157 = param "a" type {
+        %152 = int 2
+        %153 = as @type_usize, %152
+        %154 = array_type_sentinel %153, @type_bool, @true
+        %155 = as @type_type, %154
+        %156 = break_inline result, %155
+      }
+      ret type {
+        %158 = int_type u3
+        %159 = break_inline result, %158
+      }
+      body insts {
+        %160 = ret_type
+        %161 = bit_cast %160, %157
+        %162 = ret %161
+      }
+    }
+    %164 = break_inline result, %163
+  }
+  decl fn "bool_sentinel_unpack" value {
+    %176 = func "bool_sentinel_unpack" {
+      %167 = param "a" type {
+        %165 = int_type u3
+        %166 = break_inline result, %165
+      }
+      ret type {
+        %168 = int 2
+        %169 = as @type_usize, %168
+        %170 = array_type_sentinel %169, @type_bool, @true
+        %171 = as @type_type, %170
+        %172 = break_inline result, %171
+      }
+      body insts {
+        %173 = ret_type
+        %174 = bit_cast %173, %167
+        %175 = ret %174
+      }
+    }
+    %177 = break_inline result, %176
+  }
+  decl fn "zero" value {
+    %193 = func "zero" {
+      %184 = param "a" type {
+        %178 = int 2
+        %179 = as @type_usize, %178
+        %180 = int_type u0
+        %181 = array_type %179, %180
+        %182 = as @type_type, %181
+        %183 = break_inline result, %182
+      }
+      ret type {
+        %185 = int 0
+        %186 = as @type_usize, %185
+        %187 = array_type %186, @type_u8
+        %188 = as @type_type, %187
+        %189 = break_inline result, %188
+      }
+      body insts {
+        %190 = ret_type
+        %191 = bit_cast %190, %184
+        %192 = ret %191
+      }
+    }
+    %194 = break_inline result, %193
+  }
+  decl fn "main" pub value {
+    %578 = func "main" {
+      ret type {
+        %195 = break_inline result, @type_u8
+      }
+      body insts {
+        %196 = decl_val "to_int"
+        %197 = call %196 arg0 {
+          %198 = arg_type %197, 0
+          %199 = array_elem_type %198
+          %200 = int 1
+          %201 = as %199, %200
+          %202 = int 2
+          %203 = as %199, %202
+          %204 = array_init %198, %201, %203
+          %205 = as %198, %204
+          %206 = break_inline result, %205
+        }
+        %207 = int 65
+        %208 = cmp_neq %197, %207
+        %214 = if %208 then {
+          %209 = ret_type
+          %210 = int 1
+          %211 = as_return %209, %210
+          %212 = ret %211
+        } else {
+          %213 = break_inline result, @void_value
+        }
+        %215 = decl_val "to_array"
+        %216 = call %215 arg0 {
+          %217 = arg_type %216, 0
+          %218 = int 63
+          %219 = as %217, %218
+          %220 = break_inline result, %219
+        }
+        %221 = int 0
+        %222 = as @type_usize, %221
+        %223 = array_index %216, %222
+        %224 = int 1
+        %225 = negate %224
+        %226 = cmp_neq %223, %225
+        %233 = bool_or %226 rhs {
+          %227 = int 1
+          %228 = as @type_usize, %227
+          %229 = array_index %216, %228
+          %230 = int 1
+          %231 = cmp_neq %229, %230
+          %232 = break_inline result, %231
+        }
+        %239 = if %233 then {
+          %234 = ret_type
+          %235 = int 2
+          %236 = as_return %234, %235
+          %237 = ret %236
+        } else {
+          %238 = break_inline result, @void_value
+        }
+        %240 = decl_val "to_bool"
+        %241 = call %240 arg0 {
+          %242 = arg_type %241, 0
+          %243 = int 5
+          %244 = as %242, %243
+          %245 = break_inline result, %244
+        }
+        %246 = int 0
+        %247 = as @type_usize, %246
+        %248 = array_index %241, %247
+        %249 = as @type_bool, %248
+        %250 = bool_not %249
+        %256 = bool_or %250 rhs {
+          %251 = int 1
+          %252 = as @type_usize, %251
+          %253 = array_index %241, %252
+          %254 = as @type_bool, %253
+          %255 = break_inline result, %254
+        }
+        %263 = bool_or %256 rhs {
+          %257 = int 2
+          %258 = as @type_usize, %257
+          %259 = array_index %241, %258
+          %260 = as @type_bool, %259
+          %261 = bool_not %260
+          %262 = break_inline result, %261
+        }
+        %269 = if %263 then {
+          %264 = ret_type
+          %265 = int 3
+          %266 = as_return %264, %265
+          %267 = ret %266
+        } else {
+          %268 = break_inline result, @void_value
+        }
+        %270 = decl_val "to_nested"
+        %271 = call %270 arg0 {
+          %272 = arg_type %271, 0
+          %273 = int 134209
+          %274 = as %272, %273
+          %275 = break_inline result, %274
+        }
+        %276 = int 0
+        %277 = as @type_usize, %276
+        %278 = array_index_base %271, %277
+        %279 = int 0
+        %280 = as @type_usize, %279
+        %281 = array_index %278, %280
+        %282 = int 1
+        %283 = cmp_neq %281, %282
+        %293 = bool_or %283 rhs {
+          %284 = int 0
+          %285 = as @type_usize, %284
+          %286 = array_index_base %271, %285
+          %287 = int 1
+          %288 = as @type_usize, %287
+          %289 = array_index %286, %288
+          %290 = int 2
+          %291 = cmp_neq %289, %290
+          %292 = break_inline result, %291
+        }
+        %303 = bool_or %293 rhs {
+          %294 = int 1
+          %295 = as @type_usize, %294
+          %296 = array_index_base %271, %295
+          %297 = int 0
+          %298 = as @type_usize, %297
+          %299 = array_index %296, %298
+          %300 = int 3
+          %301 = cmp_neq %299, %300
+          %302 = break_inline result, %301
+        }
+        %313 = bool_or %303 rhs {
+          %304 = int 1
+          %305 = as @type_usize, %304
+          %306 = array_index_base %271, %305
+          %307 = int 1
+          %308 = as @type_usize, %307
+          %309 = array_index %306, %308
+          %310 = int 4
+          %311 = cmp_neq %309, %310
+          %312 = break_inline result, %311
+        }
+        %319 = if %313 then {
+          %314 = ret_type
+          %315 = int 4
+          %316 = as_return %314, %315
+          %317 = ret %316
+        } else {
+          %318 = break_inline result, @void_value
+        }
+        %320 = decl_val "from_nested"
+        %321 = call %320 arg0 {
+          %322 = arg_type %321, 0
+          %323 = as %322, %271
+          %324 = break_inline result, %323
+        }
+        %325 = int 134209
+        %326 = cmp_neq %321, %325
+        %332 = if %326 then {
+          %327 = ret_type
+          %328 = int 5
+          %329 = as_return %327, %328
+          %330 = ret %329
+        } else {
+          %331 = break_inline result, @void_value
+        }
+        %333 = decl_val "sent"
+        %334 = call %333 arg0 {
+          %335 = arg_type %334, 0
+          %336 = int 1114625
+          %337 = as %335, %336
+          %338 = break_inline result, %337
+        }
+        %339 = int 0
+        %340 = as @type_usize, %339
+        %341 = array_index %334, %340
+        %342 = int 1
+        %343 = cmp_neq %341, %342
+        %350 = bool_or %343 rhs {
+          %344 = int 1
+          %345 = as @type_usize, %344
+          %346 = array_index %334, %345
+          %347 = int 2
+          %348 = cmp_neq %346, %347
+          %349 = break_inline result, %348
+        }
+        %357 = bool_or %350 rhs {
+          %351 = int 2
+          %352 = as @type_usize, %351
+          %353 = array_index %334, %352
+          %354 = int 17
+          %355 = cmp_neq %353, %354
+          %356 = break_inline result, %355
+        }
+        %363 = if %357 then {
+          %358 = ret_type
+          %359 = int 6
+          %360 = as_return %358, %359
+          %361 = ret %360
+        } else {
+          %362 = break_inline result, @void_value
+        }
+        %364 = decl_val "signed_pack"
+        %365 = call %364 arg0 {
+          %366 = arg_type %365, 0
+          %367 = array_elem_type %366
+          %368 = int 1
+          %369 = negate %368
+          %370 = as %367, %369
+          %371 = int 1
+          %372 = negate %371
+          %373 = as %367, %372
+          %374 = array_init %366, %370, %373
+          %375 = as %366, %374
+          %376 = break_inline result, %375
+        }
+        %377 = int 1
+        %378 = negate %377
+        %379 = cmp_neq %365, %378
+        %393 = bool_or %379 rhs {
+          %380 = decl_val "booleans"
+          %381 = call %380 arg0 {
+            %382 = arg_type %381, 0
+            %383 = array_elem_type %382
+            %384 = as %383, @true
+            %385 = as %383, @false
+            %386 = as %383, @true
+            %387 = array_init %382, %384, %385, %386
+            %388 = as %382, %387
+            %389 = break_inline result, %388
+          }
+          %390 = int 5
+          %391 = cmp_neq %381, %390
+          %392 = break_inline result, %391
+        }
+        %399 = if %393 then {
+          %394 = ret_type
+          %395 = int 7
+          %396 = as_return %394, %395
+          %397 = ret %396
+        } else {
+          %398 = break_inline result, @void_value
+        }
+        %400 = decl_val "reshape"
+        %401 = call %400 arg0 {
+          %402 = arg_type %401, 0
+          %403 = array_elem_type %402
+          %404 = int 1
+          %405 = as %403, %404
+          %406 = int 2
+          %407 = as %403, %406
+          %408 = array_init %402, %405, %407
+          %409 = as %402, %408
+          %410 = break_inline result, %409
+        }
+        %411 = int 0
+        %412 = as @type_usize, %411
+        %413 = array_index %401, %412
+        %414 = int 1
+        %415 = cmp_neq %413, %414
+        %422 = bool_or %415 rhs {
+          %416 = int 1
+          %417 = as @type_usize, %416
+          %418 = array_index %401, %417
+          %419 = int 0
+          %420 = cmp_neq %418, %419
+          %421 = break_inline result, %420
+        }
+        %429 = bool_or %422 rhs {
+          %423 = int 2
+          %424 = as @type_usize, %423
+          %425 = array_index %401, %424
+          %426 = int 0
+          %427 = cmp_neq %425, %426
+          %428 = break_inline result, %427
+        }
+        %436 = bool_or %429 rhs {
+          %430 = int 3
+          %431 = as @type_usize, %430
+          %432 = array_index %401, %431
+          %433 = int 1
+          %434 = cmp_neq %432, %433
+          %435 = break_inline result, %434
+        }
+        %443 = bool_or %436 rhs {
+          %437 = int 4
+          %438 = as @type_usize, %437
+          %439 = array_index %401, %438
+          %440 = int 0
+          %441 = cmp_neq %439, %440
+          %442 = break_inline result, %441
+        }
+        %449 = if %443 then {
+          %444 = ret_type
+          %445 = int 8
+          %446 = as_return %444, %445
+          %447 = ret %446
+        } else {
+          %448 = break_inline result, @void_value
+        }
+        %450 = decl_val "sentinel_pack"
+        %451 = call %450 arg0 {
+          %452 = arg_type %451, 0
+          %453 = array_elem_type %452
+          %454 = int 1
+          %455 = as %453, %454
+          %456 = int 2
+          %457 = as %453, %456
+          %458 = array_init %452, %455, %457
+          %459 = as %452, %458
+          %460 = break_inline result, %459
+        }
+        %461 = int 1114625
+        %462 = cmp_neq %451, %461
+        %468 = if %462 then {
+          %463 = ret_type
+          %464 = int 9
+          %465 = as_return %463, %464
+          %466 = ret %465
+        } else {
+          %467 = break_inline result, @void_value
+        }
+        %469 = decl_val "zero"
+        %470 = call %469 arg0 {
+          %471 = arg_type %470, 0
+          %472 = array_elem_type %471
+          %473 = int 0
+          %474 = as %472, %473
+          %475 = int 0
+          %476 = as %472, %475
+          %477 = array_init %471, %474, %476
+          %478 = as %471, %477
+          %479 = break_inline result, %478
+        }
+        %480 = field_val "len", %470
+        %481 = int 0
+        %482 = cmp_neq %480, %481
+        %488 = if %482 then {
+          %483 = ret_type
+          %484 = int 10
+          %485 = as_return %483, %484
+          %486 = ret %485
+        } else {
+          %487 = break_inline result, @void_value
+        }
+        %489 = decl_val "bool_sentinel_pack"
+        %490 = call %489 arg0 {
+          %491 = arg_type %490, 0
+          %492 = array_elem_type %491
+          %493 = as %492, @false
+          %494 = as %492, @true
+          %495 = array_init %491, %493, %494
+          %496 = as %491, %495
+          %497 = break_inline result, %496
+        }
+        %498 = int 6
+        %499 = cmp_neq %490, %498
+        %505 = if %499 then {
+          %500 = ret_type
+          %501 = int 12
+          %502 = as_return %500, %501
+          %503 = ret %502
+        } else {
+          %504 = break_inline result, @void_value
+        }
+        %506 = decl_val "bool_sentinel_unpack"
+        %507 = call %506 arg0 {
+          %508 = arg_type %507, 0
+          %509 = int 6
+          %510 = as %508, %509
+          %511 = break_inline result, %510
+        }
+        %512 = int 0
+        %513 = as @type_usize, %512
+        %514 = array_index %507, %513
+        %515 = as @type_bool, %514
+        %522 = bool_or %515 rhs {
+          %516 = int 1
+          %517 = as @type_usize, %516
+          %518 = array_index %507, %517
+          %519 = as @type_bool, %518
+          %520 = bool_not %519
+          %521 = break_inline result, %520
+        }
+        %529 = bool_or %522 rhs {
+          %523 = int 2
+          %524 = as @type_usize, %523
+          %525 = array_index %507, %524
+          %526 = as @type_bool, %525
+          %527 = bool_not %526
+          %528 = break_inline result, %527
+        }
+        %535 = if %529 then {
+          %530 = ret_type
+          %531 = int 13
+          %532 = as_return %530, %531
+          %533 = ret %532
+        } else {
+          %534 = break_inline result, @void_value
+        }
+        %536 = int 2
+        %537 = as @type_usize, %536
+        %538 = array_type %537, @type_u8
+        %539 = as @type_type, %538
+        %540 = array_elem_type %539
+        %541 = int 1
+        %542 = as %540, %541
+        %543 = int 2
+        %544 = as %540, %543
+        %545 = array_init %539, %542, %544
+        %546 = as %539, %545
+        %547 = alloc type=%539 init=%546
+        %548 = load %547
+        %549 = bit_cast @type_u16, %548
+        %550 = array_base_ptr %547
+        %551 = int 0
+        %552 = as @type_usize, %551
+        %553 = array_index_ptr %550, %552
+        %554 = int 9
+        %555 = elem_type %553
+        %556 = as %555, %554
+        %557 = store %553, %556
+        %558 = int 513
+        %559 = cmp_neq %549, %558
+        %567 = bool_or %559 rhs {
+          %560 = array_base_ptr %547
+          %561 = int 0
+          %562 = as @type_usize, %561
+          %563 = array_index %560, %562
+          %564 = int 9
+          %565 = cmp_neq %563, %564
+          %566 = break_inline result, %565
+        }
+        %573 = if %567 then {
+          %568 = ret_type
+          %569 = int 11
+          %570 = as_return %568, %569
+          %571 = ret %570
+        } else {
+          %572 = break_inline result, @void_value
+        }
+        %574 = ret_type
+        %575 = int 0
+        %576 = as_return %574, %575
+        %577 = ret %576
+      }
+    }
+    %579 = break_inline result, %578
+  }
+}

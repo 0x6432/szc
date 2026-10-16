@@ -1909,7 +1909,92 @@ unpack_bit_cast(Block *block, TypeId type, const PackedBits *bits, uint32_t offs
 	return value_array(&sema->values, type, items, count);
 }
 
-/* Scalar runtime casts preserve representation; aggregate casts are comptime. */
+/* Flatten runtime array values through typed element loads, not ABI bytes. */
+static TirRef
+pack_runtime_bit_cast(Block *block, TypeId type, TirRef operand, uint32_t src)
+{
+	Sema *sema = block->sema;
+	TypeId word_type = type_int(sema, false, 64);
+	TypeId shift_type = type_int(sema, false, 6);
+	TypeKind kind = sema->types[type].kind;
+	if (kind != TYPE_ARRAY) {
+		uint32_t width = kind == TYPE_BOOL ? 1u : sema->types[type].as.integer.bits;
+		TypeId raw_type = type_int(sema, false, width);
+		TirRef raw = emit_tir_un(block, kind == TYPE_BOOL ? TIR_INT_FROM_BOOL : TIR_BIT_CAST, raw_type, src, operand);
+		return emit_tir_un(block, TIR_INT_CAST, word_type, src, raw);
+	}
+	TypeArray array = sema->types[type].as.array;
+	uint32_t element_bits;
+	if (!bit_cast_width(block, array.child, false, src, &element_bits))
+		return TIR_REF_NONE;
+	TirRef result = materialize(block, comptime_operand(word_type, value_int_u64(&sema->values, word_type, 0)), src);
+	if (element_bits == 0)
+		return result;
+	TypeId pointer = type_pointer(sema, array.child, POINTER_ONE, true, false, 0);
+	uint32_t count = (uint32_t)array.length + (array.sentinel != VALUE_NONE ? 1u : 0u);
+	for (uint32_t i = 0; i < count; i++) {
+		TirRef index = materialize(block, comptime_operand(T_USIZE, value_int_u64(&sema->values, T_USIZE, i)), src);
+		TirRef address = emit_tir_bin(block, TIR_ARRAY_ELEM_PTR, pointer, src, operand, index);
+		TirRef element = sema->types[array.child].kind == TYPE_ARRAY ? address : emit_tir_un(block, TIR_LOAD, array.child, src, address);
+		TirRef packed = pack_runtime_bit_cast(block, array.child, element, src);
+		if (packed == TIR_REF_NONE)
+			return TIR_REF_NONE;
+		if (i != 0) {
+			TirRef shift = materialize(block, comptime_operand(shift_type, value_int_u64(&sema->values, shift_type, i * element_bits)), src);
+			packed = emit_tir_bin(block, TIR_SHL, word_type, src, packed, shift);
+		}
+		result = emit_tir_bin(block, TIR_BIT_OR, word_type, src, result, packed);
+	}
+	return result;
+}
+
+/* Scalar extraction normalizes destination values before storing ABI elements. */
+static Operand
+unpack_runtime_bit_cast(Block *block, TypeId type, TirRef bits, uint32_t offset, uint32_t src)
+{
+	Sema *sema = block->sema;
+	TypeId word_type = type_int(sema, false, 64);
+	TypeId shift_type = type_int(sema, false, 6);
+	if (sema->types[type].kind != TYPE_ARRAY) {
+		uint32_t width = sema->types[type].kind == TYPE_BOOL ? 1u : sema->types[type].as.integer.bits;
+		TirRef raw = bits;
+		if (offset != 0) {
+			TirRef shift = materialize(block, comptime_operand(shift_type, value_int_u64(&sema->values, shift_type, offset)), src);
+			raw = emit_tir_bin(block, TIR_SHR, word_type, src, raw, shift);
+		}
+		TypeId raw_type = type_int(sema, false, width);
+		raw = emit_tir_un(block, TIR_TRUNCATE, raw_type, src, raw);
+		return runtime_operand(type, emit_tir_un(block, TIR_BIT_CAST, type, src, raw));
+	}
+	TypeArray array = sema->types[type].as.array;
+	uint32_t element_bits;
+	if (!bit_cast_width(block, array.child, true, src, &element_bits))
+		return operand_none;
+	TypeId pointer = type_pointer(sema, type, POINTER_ONE, true, false, 0);
+	TirRef slot = array_slot(block, pointer, src);
+	if (slot == TIR_REF_NONE)
+		return operand_none;
+	TypeId child_pointer = type_pointer(sema, array.child, POINTER_ONE, true, false, 0);
+	uint32_t count = (uint32_t)array.length + (array.sentinel != VALUE_NONE ? 1u : 0u);
+	for (uint32_t i = 0; i < count; i++) {
+		Operand element = unpack_runtime_bit_cast(block, array.child, bits, offset + i * element_bits, src);
+		if (element.kind == OPERAND_NONE)
+			return operand_none;
+		TirRef index = materialize(block, comptime_operand(T_USIZE, value_int_u64(&sema->values, T_USIZE, i)), src);
+		TirRef address = emit_tir_bin(block, TIR_ARRAY_ELEM_PTR, child_pointer, src, slot, index);
+		if (sema->types[array.child].kind == TYPE_ARRAY) {
+			if (!store_array(block, runtime_operand(child_pointer, address), element, src))
+				return operand_none;
+		} else {
+			emit_tir_bin(block, TIR_STORE, T_VOID, src, address, materialize(block, element, src));
+		}
+	}
+	Operand result = runtime_operand(type, slot);
+	result.kind = OPERAND_AGGREGATE;
+	return result;
+}
+
+/* Runtime aggregate packing is bounded by the native scalar representation. */
 static Operand
 analyze_bit_cast(Block *block, const IrInst *inst)
 {
@@ -1955,8 +2040,17 @@ analyze_bit_cast(Block *block, const IrInst *inst)
 		return result == VALUE_NONE ? operand_none : comptime_operand(type, result);
 	}
 	if (sema->types[type].kind == TYPE_ARRAY || sema->types[operand.type].kind == TYPE_ARRAY) {
-		sema_error(block, inst->src, "not supported by szc yet: runtime aggregate @bitCast");
-		return operand_none;
+		if (to_bits > 64) {
+			sema_error(block, inst->src, "not supported by szc yet: runtime aggregate @bitCast wider than 64 bits");
+			return operand_none;
+		}
+		if (!require_runtime(block, inst->src))
+			return operand_none;
+		Operand source = sema->types[operand.type].kind == TYPE_ARRAY ? analyze_ref(block, operand, inst->src, 0, 0) : operand;
+		if (source.kind == OPERAND_NONE)
+			return operand_none;
+		TirRef bits = pack_runtime_bit_cast(block, operand.type, materialize(block, source, inst->src), inst->src);
+		return bits == TIR_REF_NONE ? operand_none : unpack_runtime_bit_cast(block, type, bits, 0, inst->src);
 	}
 	if (!require_runtime(block, inst->src))
 		return operand_none;

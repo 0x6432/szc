@@ -1,0 +1,991 @@
+function w $szc.main.1() {
+@start
+	%t10 =l alloc4 2
+	%t34 =l alloc4 3
+	%t64 =l alloc4 4
+	%t124 =l alloc4 3
+	%t176 =l alloc4 5
+	%t239 =l alloc4 1
+	%t252 =l alloc4 3
+	%t281 =l alloc4 2
+	%t284 =l alloc4 2
+	%t1 =w call $szc.to_int.2(l $szc.const.1)
+	%t1 =w and %t1, 1023
+	%t3 =w cnew %t1, 65
+	jnz %t3, @c8_then, @c8_else
+@c8_then
+	ret 1
+@c8_else
+	jmp @b4
+@b4
+	call $szc.to_array.3(w 63, l %t10)
+	%t12 =l copy %t10
+	%e14_offset =l mul 0, 1
+	%t14 =l add %t12, %e14_offset
+	%t15 =w loadsb %t14
+	%t15 =w shl %t15, 27
+	%t15 =w sar %t15, 27
+	%t17 =w cnew %t15, -1
+	jnz %t17, @c27_then, @c27_else
+@c27_then
+	%t18 =w copy 1
+	jmp @b18
+@c27_else
+	%e20_offset =l mul 1, 1
+	%t20 =l add %t12, %e20_offset
+	%t21 =w loadsb %t20
+	%t21 =w shl %t21, 27
+	%t21 =w sar %t21, 27
+	%t23 =w cnew %t21, 1
+	%t18 =w copy %t23
+	jmp @b18
+@b18
+	jnz %t18, @c32_then, @c32_else
+@c32_then
+	ret 2
+@c32_else
+	jmp @b28
+@b28
+	call $szc.to_bool.4(w 5, l %t34)
+	%t36 =l copy %t34
+	%e38_offset =l mul 0, 1
+	%t38 =l add %t36, %e38_offset
+	%t39 =w loadub %t38
+	%t39 =w and %t39, 1
+	%t40 =w xor %t39, 1
+	%t40 =w and %t40, 1
+	jnz %t40, @c48_then, @c48_else
+@c48_then
+	%t41 =w copy 1
+	jmp @b41
+@c48_else
+	%e43_offset =l mul 1, 1
+	%t43 =l add %t36, %e43_offset
+	%t44 =w loadub %t43
+	%t44 =w and %t44, 1
+	%t41 =w copy %t44
+	jmp @b41
+@b41
+	jnz %t41, @c57_then, @c57_else
+@c57_then
+	%t49 =w copy 1
+	jmp @b49
+@c57_else
+	%e51_offset =l mul 2, 1
+	%t51 =l add %t36, %e51_offset
+	%t52 =w loadub %t51
+	%t52 =w and %t52, 1
+	%t53 =w xor %t52, 1
+	%t53 =w and %t53, 1
+	%t49 =w copy %t53
+	jmp @b49
+@b49
+	jnz %t49, @c62_then, @c62_else
+@c62_then
+	ret 3
+@c62_else
+	jmp @b58
+@b58
+	call $szc.to_nested.5(w 134209, l %t64)
+	%t66 =l copy %t64
+	%e68_offset =l mul 0, 2
+	%t68 =l add %t66, %e68_offset
+	%e70_offset =l mul 0, 1
+	%t70 =l add %t68, %e70_offset
+	%t71 =w loadub %t70
+	%t71 =w and %t71, 31
+	%t73 =w cnew %t71, 1
+	jnz %t73, @c85_then, @c85_else
+@c85_then
+	%t74 =w copy 1
+	jmp @b74
+@c85_else
+	%e76_offset =l mul 0, 2
+	%t76 =l add %t66, %e76_offset
+	%e78_offset =l mul 1, 1
+	%t78 =l add %t76, %e78_offset
+	%t79 =w loadub %t78
+	%t79 =w and %t79, 31
+	%t81 =w cnew %t79, 2
+	%t74 =w copy %t81
+	jmp @b74
+@b74
+	jnz %t74, @c97_then, @c97_else
+@c97_then
+	%t86 =w copy 1
+	jmp @b86
+@c97_else
+	%e88_offset =l mul 1, 2
+	%t88 =l add %t66, %e88_offset
+	%e90_offset =l mul 0, 1
+	%t90 =l add %t88, %e90_offset
+	%t91 =w loadub %t90
+	%t91 =w and %t91, 31
+	%t93 =w cnew %t91, 3
+	%t86 =w copy %t93
+	jmp @b86
+@b86
+	jnz %t86, @c109_then, @c109_else
+@c109_then
+	%t98 =w copy 1
+	jmp @b98
+@c109_else
+	%e100_offset =l mul 1, 2
+	%t100 =l add %t66, %e100_offset
+	%e102_offset =l mul 1, 1
+	%t102 =l add %t100, %e102_offset
+	%t103 =w loadub %t102
+	%t103 =w and %t103, 31
+	%t105 =w cnew %t103, 4
+	%t98 =w copy %t105
+	jmp @b98
+@b98
+	jnz %t98, @c114_then, @c114_else
+@c114_then
+	ret 4
+@c114_else
+	jmp @b110
+@b110
+	%t115 =w call $szc.from_nested.6(l %t66)
+	%t115 =w and %t115, 1048575
+	%t117 =w cnew %t115, 134209
+	jnz %t117, @c122_then, @c122_else
+@c122_then
+	ret 5
+@c122_else
+	jmp @b118
+@b118
+	call $szc.sent.7(w 1114625, l %t124)
+	%t126 =l copy %t124
+	%e128_offset =l mul 0, 1
+	%t128 =l add %t126, %e128_offset
+	%t129 =w loadub %t128
+	%t131 =w cnew %t129, 1
+	jnz %t131, @c141_then, @c141_else
+@c141_then
+	%t132 =w copy 1
+	jmp @b132
+@c141_else
+	%e134_offset =l mul 1, 1
+	%t134 =l add %t126, %e134_offset
+	%t135 =w loadub %t134
+	%t137 =w cnew %t135, 2
+	%t132 =w copy %t137
+	jmp @b132
+@b132
+	jnz %t132, @c151_then, @c151_else
+@c151_then
+	%t142 =w copy 1
+	jmp @b142
+@c151_else
+	%e144_offset =l mul 2, 1
+	%t144 =l add %t126, %e144_offset
+	%t145 =w loadub %t144
+	%t147 =w cnew %t145, 17
+	%t142 =w copy %t147
+	jmp @b142
+@b142
+	jnz %t142, @c156_then, @c156_else
+@c156_then
+	ret 6
+@c156_else
+	jmp @b152
+@b152
+	%t158 =w call $szc.signed_pack.8(l $szc.const.2)
+	%t158 =w shl %t158, 22
+	%t158 =w sar %t158, 22
+	%t160 =w cnew %t158, -1
+	jnz %t160, @c169_then, @c169_else
+@c169_then
+	%t161 =w copy 1
+	jmp @b161
+@c169_else
+	%t163 =w call $szc.booleans.9(l $szc.const.3)
+	%t163 =w and %t163, 7
+	%t165 =w cnew %t163, 5
+	%t161 =w copy %t165
+	jmp @b161
+@b161
+	jnz %t161, @c174_then, @c174_else
+@c174_then
+	ret 7
+@c174_else
+	jmp @b170
+@b170
+	call $szc.reshape.10(l $szc.const.1, l %t176)
+	%t178 =l copy %t176
+	%e180_offset =l mul 0, 1
+	%t180 =l add %t178, %e180_offset
+	%t181 =w loadub %t180
+	%t181 =w and %t181, 3
+	%t183 =w cnew %t181, 1
+	jnz %t183, @c193_then, @c193_else
+@c193_then
+	%t184 =w copy 1
+	jmp @b184
+@c193_else
+	%e186_offset =l mul 1, 1
+	%t186 =l add %t178, %e186_offset
+	%t187 =w loadub %t186
+	%t187 =w and %t187, 3
+	%t189 =w cnew %t187, 0
+	%t184 =w copy %t189
+	jmp @b184
+@b184
+	jnz %t184, @c203_then, @c203_else
+@c203_then
+	%t194 =w copy 1
+	jmp @b194
+@c203_else
+	%e196_offset =l mul 2, 1
+	%t196 =l add %t178, %e196_offset
+	%t197 =w loadub %t196
+	%t197 =w and %t197, 3
+	%t199 =w cnew %t197, 0
+	%t194 =w copy %t199
+	jmp @b194
+@b194
+	jnz %t194, @c213_then, @c213_else
+@c213_then
+	%t204 =w copy 1
+	jmp @b204
+@c213_else
+	%e206_offset =l mul 3, 1
+	%t206 =l add %t178, %e206_offset
+	%t207 =w loadub %t206
+	%t207 =w and %t207, 3
+	%t209 =w cnew %t207, 1
+	%t204 =w copy %t209
+	jmp @b204
+@b204
+	jnz %t204, @c223_then, @c223_else
+@c223_then
+	%t214 =w copy 1
+	jmp @b214
+@c223_else
+	%e216_offset =l mul 4, 1
+	%t216 =l add %t178, %e216_offset
+	%t217 =w loadub %t216
+	%t217 =w and %t217, 3
+	%t219 =w cnew %t217, 0
+	%t214 =w copy %t219
+	jmp @b214
+@b214
+	jnz %t214, @c228_then, @c228_else
+@c228_then
+	ret 8
+@c228_else
+	jmp @b224
+@b224
+	%t230 =w call $szc.sentinel_pack.11(l $szc.const.4)
+	%t230 =w and %t230, 16777215
+	%t232 =w cnew %t230, 1114625
+	jnz %t232, @c237_then, @c237_else
+@c237_then
+	ret 9
+@c237_else
+	jmp @b233
+@b233
+	call $szc.zero.12(l $szc.const.5, l %t239)
+	%t241 =l copy %t239
+	%t243 =w call $szc.bool_sentinel_pack.13(l $szc.const.6)
+	%t243 =w and %t243, 7
+	%t245 =w cnew %t243, 6
+	jnz %t245, @c250_then, @c250_else
+@c250_then
+	ret 12
+@c250_else
+	jmp @b246
+@b246
+	call $szc.bool_sentinel_unpack.14(w 6, l %t252)
+	%t254 =l copy %t252
+	%e256_offset =l mul 0, 1
+	%t256 =l add %t254, %e256_offset
+	%t257 =w loadub %t256
+	%t257 =w and %t257, 1
+	jnz %t257, @c266_then, @c266_else
+@c266_then
+	%t258 =w copy 1
+	jmp @b258
+@c266_else
+	%e260_offset =l mul 1, 1
+	%t260 =l add %t254, %e260_offset
+	%t261 =w loadub %t260
+	%t261 =w and %t261, 1
+	%t262 =w xor %t261, 1
+	%t262 =w and %t262, 1
+	%t258 =w copy %t262
+	jmp @b258
+@b258
+	jnz %t258, @c275_then, @c275_else
+@c275_then
+	%t267 =w copy 1
+	jmp @b267
+@c275_else
+	%e269_offset =l mul 2, 1
+	%t269 =l add %t254, %e269_offset
+	%t270 =w loadub %t269
+	%t270 =w and %t270, 1
+	%t271 =w xor %t270, 1
+	%t271 =w and %t271, 1
+	%t267 =w copy %t271
+	jmp @b267
+@b267
+	jnz %t267, @c280_then, @c280_else
+@c280_then
+	ret 13
+@c280_else
+	jmp @b276
+@b276
+	call $memmove(l %t281, l $szc.const.7, l 2)
+	call $memmove(l %t284, l %t281, l 2)
+	%e288_offset =l mul 0, 1
+	%t288 =l add %t284, %e288_offset
+	%t289 =w loadub %t288
+	%t290 =w copy %t289
+	%t291 =l extuw %t290
+	%t292 =l or 0, %t291
+	%e294_offset =l mul 1, 1
+	%t294 =l add %t284, %e294_offset
+	%t295 =w loadub %t294
+	%t296 =w copy %t295
+	%t297 =l extuw %t296
+	%g299_shift =w cugew 8, 64
+	jnz %g299_shift, @g299_shift_panic, @g299_shift_ok
+@g299_shift_panic
+	call $szc.panic.3()
+	hlt
+@g299_shift_ok
+	%t299 =l shl %t297, 8
+	%t300 =l or %t292, %t299
+	%t301 =w copy %t300
+	%t301 =w and %t301, 65535
+	%t302 =w copy %t301
+	%e304_offset =l mul 0, 1
+	%t304 =l add %t281, %e304_offset
+	storeb 9, %t304
+	%t308 =w cnew %t302, 513
+	jnz %t308, @c318_then, @c318_else
+@c318_then
+	%t309 =w copy 1
+	jmp @b309
+@c318_else
+	%e311_offset =l mul 0, 1
+	%t311 =l add %t281, %e311_offset
+	%t312 =w loadub %t311
+	%t314 =w cnew %t312, 9
+	%t309 =w copy %t314
+	jmp @b309
+@b309
+	jnz %t309, @c323_then, @c323_else
+@c323_then
+	ret 11
+@c323_else
+	jmp @b319
+@b319
+	ret 0
+}
+
+function w $szc.to_int.2(l %t0) {
+@start
+	%t1 =l alloc4 2
+	call $memmove(l %t1, l %t0, l 2)
+	%e5_offset =l mul 0, 1
+	%t5 =l add %t1, %e5_offset
+	%t6 =w loadub %t5
+	%t6 =w and %t6, 31
+	%t7 =w copy %t6
+	%t8 =l extuw %t7
+	%t9 =l or 0, %t8
+	%e11_offset =l mul 1, 1
+	%t11 =l add %t1, %e11_offset
+	%t12 =w loadub %t11
+	%t12 =w and %t12, 31
+	%t13 =w copy %t12
+	%t14 =l extuw %t13
+	%g16_shift =w cugew 5, 64
+	jnz %g16_shift, @g16_shift_panic, @g16_shift_ok
+@g16_shift_panic
+	call $szc.panic.3()
+	hlt
+@g16_shift_ok
+	%t16 =l shl %t14, 5
+	%t17 =l or %t9, %t16
+	%t18 =w copy %t17
+	%t18 =w and %t18, 1023
+	%t19 =w copy %t18
+	ret %t19
+}
+
+function $szc.to_array.3(w %t0, l %t1) {
+@start
+	%t4 =l alloc4 2
+	%t2 =w copy %t0
+	%t3 =l extuw %t2
+	%t5 =w copy %t3
+	%t5 =w and %t5, 31
+	%t6 =w copy %t5
+	%t6 =w shl %t6, 27
+	%t6 =w sar %t6, 27
+	%e8_offset =l mul 0, 1
+	%t8 =l add %t4, %e8_offset
+	storeb %t6, %t8
+	%g11_shift =w cugew 5, 64
+	jnz %g11_shift, @g11_shift_panic, @g11_shift_ok
+@g11_shift_panic
+	call $szc.panic.3()
+	hlt
+@g11_shift_ok
+	%t11 =l shr %t3, 5
+	%t12 =w copy %t11
+	%t12 =w and %t12, 31
+	%t13 =w copy %t12
+	%t13 =w shl %t13, 27
+	%t13 =w sar %t13, 27
+	%e15_offset =l mul 1, 1
+	%t15 =l add %t4, %e15_offset
+	storeb %t13, %t15
+	call $memmove(l %t1, l %t4, l 2)
+	ret
+}
+
+function $szc.to_bool.4(w %t0, l %t1) {
+@start
+	%t4 =l alloc4 3
+	%t2 =w copy %t0
+	%t3 =l extuw %t2
+	%t5 =w copy %t3
+	%t5 =w and %t5, 1
+	%t6 =w copy %t5
+	%e8_offset =l mul 0, 1
+	%t8 =l add %t4, %e8_offset
+	storeb %t6, %t8
+	%g11_shift =w cugew 1, 64
+	jnz %g11_shift, @g11_shift_panic, @g11_shift_ok
+@g11_shift_panic
+	call $szc.panic.3()
+	hlt
+@g11_shift_ok
+	%t11 =l shr %t3, 1
+	%t12 =w copy %t11
+	%t12 =w and %t12, 1
+	%t13 =w copy %t12
+	%e15_offset =l mul 1, 1
+	%t15 =l add %t4, %e15_offset
+	storeb %t13, %t15
+	%g18_shift =w cugew 2, 64
+	jnz %g18_shift, @g18_shift_panic, @g18_shift_ok
+@g18_shift_panic
+	call $szc.panic.3()
+	hlt
+@g18_shift_ok
+	%t18 =l shr %t3, 2
+	%t19 =w copy %t18
+	%t19 =w and %t19, 1
+	%t20 =w copy %t19
+	%e22_offset =l mul 2, 1
+	%t22 =l add %t4, %e22_offset
+	storeb %t20, %t22
+	call $memmove(l %t1, l %t4, l 3)
+	ret
+}
+
+function $szc.to_nested.5(w %t0, l %t1) {
+@start
+	%t4 =l alloc4 4
+	%t5 =l alloc4 2
+	%t21 =l alloc4 2
+	%t2 =w copy %t0
+	%t3 =l extuw %t2
+	%t6 =w copy %t3
+	%t6 =w and %t6, 31
+	%t7 =w copy %t6
+	%e9_offset =l mul 0, 1
+	%t9 =l add %t5, %e9_offset
+	storeb %t7, %t9
+	%g12_shift =w cugew 5, 64
+	jnz %g12_shift, @g12_shift_panic, @g12_shift_ok
+@g12_shift_panic
+	call $szc.panic.3()
+	hlt
+@g12_shift_ok
+	%t12 =l shr %t3, 5
+	%t13 =w copy %t12
+	%t13 =w and %t13, 31
+	%t14 =w copy %t13
+	%e16_offset =l mul 1, 1
+	%t16 =l add %t5, %e16_offset
+	storeb %t14, %t16
+	%e19_offset =l mul 0, 2
+	%t19 =l add %t4, %e19_offset
+	call $memmove(l %t19, l %t5, l 2)
+	%g23_shift =w cugew 10, 64
+	jnz %g23_shift, @g23_shift_panic, @g23_shift_ok
+@g23_shift_panic
+	call $szc.panic.3()
+	hlt
+@g23_shift_ok
+	%t23 =l shr %t3, 10
+	%t24 =w copy %t23
+	%t24 =w and %t24, 31
+	%t25 =w copy %t24
+	%e27_offset =l mul 0, 1
+	%t27 =l add %t21, %e27_offset
+	storeb %t25, %t27
+	%g30_shift =w cugew 15, 64
+	jnz %g30_shift, @g30_shift_panic, @g30_shift_ok
+@g30_shift_panic
+	call $szc.panic.3()
+	hlt
+@g30_shift_ok
+	%t30 =l shr %t3, 15
+	%t31 =w copy %t30
+	%t31 =w and %t31, 31
+	%t32 =w copy %t31
+	%e34_offset =l mul 1, 1
+	%t34 =l add %t21, %e34_offset
+	storeb %t32, %t34
+	%e37_offset =l mul 1, 2
+	%t37 =l add %t4, %e37_offset
+	call $memmove(l %t37, l %t21, l 2)
+	call $memmove(l %t1, l %t4, l 4)
+	ret
+}
+
+function w $szc.from_nested.6(l %t0) {
+@start
+	%t1 =l alloc4 4
+	call $memmove(l %t1, l %t0, l 4)
+	%e5_offset =l mul 0, 2
+	%t5 =l add %t1, %e5_offset
+	%e8_offset =l mul 0, 1
+	%t8 =l add %t5, %e8_offset
+	%t9 =w loadub %t8
+	%t9 =w and %t9, 31
+	%t10 =w copy %t9
+	%t11 =l extuw %t10
+	%t12 =l or 0, %t11
+	%e14_offset =l mul 1, 1
+	%t14 =l add %t5, %e14_offset
+	%t15 =w loadub %t14
+	%t15 =w and %t15, 31
+	%t16 =w copy %t15
+	%t17 =l extuw %t16
+	%g19_shift =w cugew 5, 64
+	jnz %g19_shift, @g19_shift_panic, @g19_shift_ok
+@g19_shift_panic
+	call $szc.panic.3()
+	hlt
+@g19_shift_ok
+	%t19 =l shl %t17, 5
+	%t20 =l or %t12, %t19
+	%t21 =l or 0, %t20
+	%e23_offset =l mul 1, 2
+	%t23 =l add %t1, %e23_offset
+	%e26_offset =l mul 0, 1
+	%t26 =l add %t23, %e26_offset
+	%t27 =w loadub %t26
+	%t27 =w and %t27, 31
+	%t28 =w copy %t27
+	%t29 =l extuw %t28
+	%t30 =l or 0, %t29
+	%e32_offset =l mul 1, 1
+	%t32 =l add %t23, %e32_offset
+	%t33 =w loadub %t32
+	%t33 =w and %t33, 31
+	%t34 =w copy %t33
+	%t35 =l extuw %t34
+	%g37_shift =w cugew 5, 64
+	jnz %g37_shift, @g37_shift_panic, @g37_shift_ok
+@g37_shift_panic
+	call $szc.panic.3()
+	hlt
+@g37_shift_ok
+	%t37 =l shl %t35, 5
+	%t38 =l or %t30, %t37
+	%g40_shift =w cugew 10, 64
+	jnz %g40_shift, @g40_shift_panic, @g40_shift_ok
+@g40_shift_panic
+	call $szc.panic.3()
+	hlt
+@g40_shift_ok
+	%t40 =l shl %t38, 10
+	%t41 =l or %t21, %t40
+	%t42 =w copy %t41
+	%t42 =w and %t42, 1048575
+	%t43 =w copy %t42
+	ret %t43
+}
+
+function $szc.sent.7(w %t0, l %t1) {
+@start
+	%t4 =l alloc4 3
+	%t2 =w copy %t0
+	%t3 =l extuw %t2
+	%t5 =w copy %t3
+	%t5 =w and %t5, 255
+	%t6 =w copy %t5
+	%e8_offset =l mul 0, 1
+	%t8 =l add %t4, %e8_offset
+	storeb %t6, %t8
+	%g11_shift =w cugew 8, 64
+	jnz %g11_shift, @g11_shift_panic, @g11_shift_ok
+@g11_shift_panic
+	call $szc.panic.3()
+	hlt
+@g11_shift_ok
+	%t11 =l shr %t3, 8
+	%t12 =w copy %t11
+	%t12 =w and %t12, 255
+	%t13 =w copy %t12
+	%e15_offset =l mul 1, 1
+	%t15 =l add %t4, %e15_offset
+	storeb %t13, %t15
+	%g18_shift =w cugew 16, 64
+	jnz %g18_shift, @g18_shift_panic, @g18_shift_ok
+@g18_shift_panic
+	call $szc.panic.3()
+	hlt
+@g18_shift_ok
+	%t18 =l shr %t3, 16
+	%t19 =w copy %t18
+	%t19 =w and %t19, 255
+	%t20 =w copy %t19
+	%e22_offset =l mul 2, 1
+	%t22 =l add %t4, %e22_offset
+	storeb %t20, %t22
+	call $memmove(l %t1, l %t4, l 3)
+	ret
+}
+
+function w $szc.signed_pack.8(l %t0) {
+@start
+	%t1 =l alloc4 2
+	call $memmove(l %t1, l %t0, l 2)
+	%e5_offset =l mul 0, 1
+	%t5 =l add %t1, %e5_offset
+	%t6 =w loadsb %t5
+	%t6 =w shl %t6, 27
+	%t6 =w sar %t6, 27
+	%t7 =w copy %t6
+	%t7 =w and %t7, 31
+	%t8 =l extuw %t7
+	%t9 =l or 0, %t8
+	%e11_offset =l mul 1, 1
+	%t11 =l add %t1, %e11_offset
+	%t12 =w loadsb %t11
+	%t12 =w shl %t12, 27
+	%t12 =w sar %t12, 27
+	%t13 =w copy %t12
+	%t13 =w and %t13, 31
+	%t14 =l extuw %t13
+	%g16_shift =w cugew 5, 64
+	jnz %g16_shift, @g16_shift_panic, @g16_shift_ok
+@g16_shift_panic
+	call $szc.panic.3()
+	hlt
+@g16_shift_ok
+	%t16 =l shl %t14, 5
+	%t17 =l or %t9, %t16
+	%t18 =w copy %t17
+	%t18 =w and %t18, 1023
+	%t19 =w copy %t18
+	%t19 =w shl %t19, 22
+	%t19 =w sar %t19, 22
+	ret %t19
+}
+
+function w $szc.booleans.9(l %t0) {
+@start
+	%t1 =l alloc4 3
+	call $memmove(l %t1, l %t0, l 3)
+	%e5_offset =l mul 0, 1
+	%t5 =l add %t1, %e5_offset
+	%t6 =w loadub %t5
+	%t6 =w and %t6, 1
+	%t7 =w copy %t6
+	%t8 =l extuw %t7
+	%t9 =l or 0, %t8
+	%e11_offset =l mul 1, 1
+	%t11 =l add %t1, %e11_offset
+	%t12 =w loadub %t11
+	%t12 =w and %t12, 1
+	%t13 =w copy %t12
+	%t14 =l extuw %t13
+	%g16_shift =w cugew 1, 64
+	jnz %g16_shift, @g16_shift_panic, @g16_shift_ok
+@g16_shift_panic
+	call $szc.panic.3()
+	hlt
+@g16_shift_ok
+	%t16 =l shl %t14, 1
+	%t17 =l or %t9, %t16
+	%e19_offset =l mul 2, 1
+	%t19 =l add %t1, %e19_offset
+	%t20 =w loadub %t19
+	%t20 =w and %t20, 1
+	%t21 =w copy %t20
+	%t22 =l extuw %t21
+	%g24_shift =w cugew 2, 64
+	jnz %g24_shift, @g24_shift_panic, @g24_shift_ok
+@g24_shift_panic
+	call $szc.panic.3()
+	hlt
+@g24_shift_ok
+	%t24 =l shl %t22, 2
+	%t25 =l or %t17, %t24
+	%t26 =w copy %t25
+	%t26 =w and %t26, 7
+	%t27 =w copy %t26
+	ret %t27
+}
+
+function $szc.reshape.10(l %t0, l %t3) {
+@start
+	%t1 =l alloc4 2
+	%t19 =l alloc4 5
+	call $memmove(l %t1, l %t0, l 2)
+	%e6_offset =l mul 0, 1
+	%t6 =l add %t1, %e6_offset
+	%t7 =w loadub %t6
+	%t7 =w and %t7, 31
+	%t8 =w copy %t7
+	%t9 =l extuw %t8
+	%t10 =l or 0, %t9
+	%e12_offset =l mul 1, 1
+	%t12 =l add %t1, %e12_offset
+	%t13 =w loadub %t12
+	%t13 =w and %t13, 31
+	%t14 =w copy %t13
+	%t15 =l extuw %t14
+	%g17_shift =w cugew 5, 64
+	jnz %g17_shift, @g17_shift_panic, @g17_shift_ok
+@g17_shift_panic
+	call $szc.panic.3()
+	hlt
+@g17_shift_ok
+	%t17 =l shl %t15, 5
+	%t18 =l or %t10, %t17
+	%t20 =w copy %t18
+	%t20 =w and %t20, 3
+	%t21 =w copy %t20
+	%e23_offset =l mul 0, 1
+	%t23 =l add %t19, %e23_offset
+	storeb %t21, %t23
+	%g26_shift =w cugew 2, 64
+	jnz %g26_shift, @g26_shift_panic, @g26_shift_ok
+@g26_shift_panic
+	call $szc.panic.3()
+	hlt
+@g26_shift_ok
+	%t26 =l shr %t18, 2
+	%t27 =w copy %t26
+	%t27 =w and %t27, 3
+	%t28 =w copy %t27
+	%e30_offset =l mul 1, 1
+	%t30 =l add %t19, %e30_offset
+	storeb %t28, %t30
+	%g33_shift =w cugew 4, 64
+	jnz %g33_shift, @g33_shift_panic, @g33_shift_ok
+@g33_shift_panic
+	call $szc.panic.3()
+	hlt
+@g33_shift_ok
+	%t33 =l shr %t18, 4
+	%t34 =w copy %t33
+	%t34 =w and %t34, 3
+	%t35 =w copy %t34
+	%e37_offset =l mul 2, 1
+	%t37 =l add %t19, %e37_offset
+	storeb %t35, %t37
+	%g40_shift =w cugew 6, 64
+	jnz %g40_shift, @g40_shift_panic, @g40_shift_ok
+@g40_shift_panic
+	call $szc.panic.3()
+	hlt
+@g40_shift_ok
+	%t40 =l shr %t18, 6
+	%t41 =w copy %t40
+	%t41 =w and %t41, 3
+	%t42 =w copy %t41
+	%e44_offset =l mul 3, 1
+	%t44 =l add %t19, %e44_offset
+	storeb %t42, %t44
+	%g47_shift =w cugew 8, 64
+	jnz %g47_shift, @g47_shift_panic, @g47_shift_ok
+@g47_shift_panic
+	call $szc.panic.3()
+	hlt
+@g47_shift_ok
+	%t47 =l shr %t18, 8
+	%t48 =w copy %t47
+	%t48 =w and %t48, 3
+	%t49 =w copy %t48
+	%e51_offset =l mul 4, 1
+	%t51 =l add %t19, %e51_offset
+	storeb %t49, %t51
+	call $memmove(l %t3, l %t19, l 5)
+	ret
+}
+
+function w $szc.sentinel_pack.11(l %t0) {
+@start
+	%t1 =l alloc4 3
+	call $memmove(l %t1, l %t0, l 3)
+	%e5_offset =l mul 0, 1
+	%t5 =l add %t1, %e5_offset
+	%t6 =w loadub %t5
+	%t7 =w copy %t6
+	%t8 =l extuw %t7
+	%t9 =l or 0, %t8
+	%e11_offset =l mul 1, 1
+	%t11 =l add %t1, %e11_offset
+	%t12 =w loadub %t11
+	%t13 =w copy %t12
+	%t14 =l extuw %t13
+	%g16_shift =w cugew 8, 64
+	jnz %g16_shift, @g16_shift_panic, @g16_shift_ok
+@g16_shift_panic
+	call $szc.panic.3()
+	hlt
+@g16_shift_ok
+	%t16 =l shl %t14, 8
+	%t17 =l or %t9, %t16
+	%e19_offset =l mul 2, 1
+	%t19 =l add %t1, %e19_offset
+	%t20 =w loadub %t19
+	%t21 =w copy %t20
+	%t22 =l extuw %t21
+	%g24_shift =w cugew 16, 64
+	jnz %g24_shift, @g24_shift_panic, @g24_shift_ok
+@g24_shift_panic
+	call $szc.panic.3()
+	hlt
+@g24_shift_ok
+	%t24 =l shl %t22, 16
+	%t25 =l or %t17, %t24
+	%t26 =w copy %t25
+	%t26 =w and %t26, 16777215
+	%t27 =w copy %t26
+	ret %t27
+}
+
+function $szc.zero.12(l %t0, l %t3) {
+@start
+	%t1 =l alloc4 1
+	ret
+}
+
+function w $szc.bool_sentinel_pack.13(l %t0) {
+@start
+	%t1 =l alloc4 3
+	call $memmove(l %t1, l %t0, l 3)
+	%e5_offset =l mul 0, 1
+	%t5 =l add %t1, %e5_offset
+	%t6 =w loadub %t5
+	%t6 =w and %t6, 1
+	%t7 =w copy %t6
+	%t8 =l extuw %t7
+	%t9 =l or 0, %t8
+	%e11_offset =l mul 1, 1
+	%t11 =l add %t1, %e11_offset
+	%t12 =w loadub %t11
+	%t12 =w and %t12, 1
+	%t13 =w copy %t12
+	%t14 =l extuw %t13
+	%g16_shift =w cugew 1, 64
+	jnz %g16_shift, @g16_shift_panic, @g16_shift_ok
+@g16_shift_panic
+	call $szc.panic.3()
+	hlt
+@g16_shift_ok
+	%t16 =l shl %t14, 1
+	%t17 =l or %t9, %t16
+	%e19_offset =l mul 2, 1
+	%t19 =l add %t1, %e19_offset
+	%t20 =w loadub %t19
+	%t20 =w and %t20, 1
+	%t21 =w copy %t20
+	%t22 =l extuw %t21
+	%g24_shift =w cugew 2, 64
+	jnz %g24_shift, @g24_shift_panic, @g24_shift_ok
+@g24_shift_panic
+	call $szc.panic.3()
+	hlt
+@g24_shift_ok
+	%t24 =l shl %t22, 2
+	%t25 =l or %t17, %t24
+	%t26 =w copy %t25
+	%t26 =w and %t26, 7
+	%t27 =w copy %t26
+	ret %t27
+}
+
+function $szc.bool_sentinel_unpack.14(w %t0, l %t1) {
+@start
+	%t4 =l alloc4 3
+	%t2 =w copy %t0
+	%t3 =l extuw %t2
+	%t5 =w copy %t3
+	%t5 =w and %t5, 1
+	%t6 =w copy %t5
+	%e8_offset =l mul 0, 1
+	%t8 =l add %t4, %e8_offset
+	storeb %t6, %t8
+	%g11_shift =w cugew 1, 64
+	jnz %g11_shift, @g11_shift_panic, @g11_shift_ok
+@g11_shift_panic
+	call $szc.panic.3()
+	hlt
+@g11_shift_ok
+	%t11 =l shr %t3, 1
+	%t12 =w copy %t11
+	%t12 =w and %t12, 1
+	%t13 =w copy %t12
+	%e15_offset =l mul 1, 1
+	%t15 =l add %t4, %e15_offset
+	storeb %t13, %t15
+	%g18_shift =w cugew 2, 64
+	jnz %g18_shift, @g18_shift_panic, @g18_shift_ok
+@g18_shift_panic
+	call $szc.panic.3()
+	hlt
+@g18_shift_ok
+	%t18 =l shr %t3, 2
+	%t19 =w copy %t18
+	%t19 =w and %t19, 1
+	%t20 =w copy %t19
+	%e22_offset =l mul 2, 1
+	%t22 =l add %t4, %e22_offset
+	storeb %t20, %t22
+	call $memmove(l %t1, l %t4, l 3)
+	ret
+}
+
+section ".rodata"
+data $szc.const.1 = align 1 { b 1, b 2 }
+section ".rodata"
+data $szc.const.2 = align 1 { b -1, b -1 }
+section ".rodata"
+data $szc.const.3 = align 1 { b 1, b 0, b 1 }
+section ".rodata"
+data $szc.const.4 = align 1 { b 1, b 2, b 17 }
+section ".rodata"
+data $szc.const.5 = align 1 { b 0 }
+section ".rodata"
+data $szc.const.6 = align 1 { b 0, b 1, b 1 }
+section ".rodata"
+data $szc.const.7 = align 1 { b 1, b 2 }
+data $szc.panic.msg.3 = { b "shift amount is greater than the type size\n", b 0 }
+function $szc.panic.3() {
+@start
+	call $write(w 2, l $szc.panic.msg.3, l 43)
+	call $abort()
+	hlt
+}
+
+export function w $main() {
+@start
+	%status =w call $szc.main.1()
+	ret %status
+}

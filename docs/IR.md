@@ -813,3 +813,22 @@ any sentinel, is undefined. Whole undefined is preserved; partial undefined is
 zero in the packed writer. Zero-bit results have their unique defined value.
 Packed buffer capacity and dense array construction are separately budgeted.
 Runtime aggregate bit casts still have an explicit limitation at this milestone.
+
+
+## Runtime aggregate bit casts (M5.5g)
+
+For aggregate casts with at most 64 logical bits, sema uses a native unsigned word
+as an intermediate representation. Typed ARRAY_ELEM_PTR/LOAD operations read ABI
+storage, scalar BIT_CAST/INT_FROM_BOOL/INT_CAST normalize and widen fields, and
+SHL/BIT_OR pack them. SHR/TRUNCATE/BIT_CAST normalize destination scalars before
+STORE or nested ARRAY_COPY into owned slots. The aggregate value remains an owned
+pointer-backed operand, never a scalar QBE temporary. Zero-bit results are known
+unique values. Wider runtime aggregates retain a deliberate diagnostic.
+
+Source sentinel fields participate in packing; runtime destination storage holds
+the extracted encoded bits. Tests use valid sentinel representations. Unlike
+comptime reconstruction, this path does not overwrite the encoded runtime tail
+with the type's sentinel. Neither path is a physical pointer-memory cast. The reference generic AIR
+scalarizer currently omits sentinel elements from its loop bounds; a bool-sentinel
+native regression is explicitly scoped under tests/run_szc rather than copying
+that upstream defect. Numeric-sentinel native comparisons remain enabled.
