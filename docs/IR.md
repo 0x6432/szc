@@ -126,7 +126,7 @@ runtime query evaluation. Optional-result peer synthesis reports explicit NYI;
 this does not add optionals, tuples, generics, general comptime function calls
 or floating-point computation/lowering.
 
-`has_decl` / `has_field` / `field_type` carry
+`has_decl` / `has_field` / `field_type` / `offset_of` carry
 `IrHasMember { container, name_body, type_src, name_src }`.
 The name body has a contextual `[]const u8` result and is generated/analyzed in
 an isolated comptime context, with an operand-map parent for outer constants.
@@ -142,7 +142,7 @@ Runtime backing, undefined descriptors/pointers and integer-address backing
 cannot supply names, even for empty ranges. Name decoding charges the shared
 constant-array work budget and has an explicit 16 MiB per-name ceiling.
 No runtime TIR instruction or backend lowering is needed. General comptime
-function calls/mutable-memory evaluation, field-bearing structs, other user-declared
+function calls/mutable-memory evaluation, struct values, other user-declared
 container kinds and imports retain their existing unsupported diagnostics.
 
 `field_named_ptr` / `field_named_val` carry
@@ -194,7 +194,7 @@ supported layout before lookup, even for an absent name.
 ## Ordinary struct field types and layout
 
 Each nominal namespace retains stable `SemaField` records with the original IR
-field body, resolved type, ABI size and alignment. Deferred field bodies analyze
+field body, resolved type, ABI size/alignment and checked byte offset. Deferred field bodies analyze
 in that namespace using arena-owned snapshots of lexical operand maps; no stack
 map or block escapes. Existing cross-namespace local capture rejection remains:
 this ownership mechanism does not enable runtime captures or foreign TIR refs.
@@ -208,11 +208,26 @@ Sema consumers demand layout before deriving implicit pointer alignment, strides
 pointer differences or resized slice lengths. Equal-pointee/equal-annotation
 qualifier coercions need no layout demand and avoid false recursive cycles.
 
-Ordinary auto layout groups fields by descending ABI alignment, with checked
-size addition and tail rounding. Zero-byte fields still contribute alignment.
-This computes size/alignment only: equal-alignment field order is unstable in
-Zig's PDQ sort, so no offsets are inferred or published by this pass. Scalar
-integers (including wide layout-only types), bool, void, f32/f64, pointers,
+Ordinary auto layout uses a separate declaration-index permutation, sorted by
+exact pinned Zig PDQ descending effective ABI alignment in `struct_layout.c`.
+Equal-alignment ordering is intentionally unstable, including above thresholds
+24/50; stable sorting or an arbitrary alignment tiebreak changes field addresses.
+Declaration order remains the identity of fields and constant-value positions.
+Physical-order traversal checks aligned offsets, size addition and final tail
+rounding; zero-byte fields still participate in the permutation and alignment.
+The final struct size must fit UINT32_MAX, matching the official implementation;
+this bound is enforced before size/alignment/order publication. Existing uint64
+arithmetic overflow guards remain earlier recovery boundaries. The read-only
+`sema_struct_layout` / `sema_struct_field_layout` APIs expose only resolved
+layouts and preserve outputs on failure, including bounds errors. The order array
+maps physical positions to declaration indices and is arena-owned. `offset_of`
+resolves type, then name, then layout (also through zero-length arrays), then
+checks struct kind and finds the field. It returns the stored byte offset as
+comptime_int; missing fields do not bypass layout validation. No runtime TIR is
+introduced. The sorter is a C specialization of the actual Zig std sources,
+not a replacement std; MIT attribution is in `third_party/LICENSE-ZIG`.
+
+Scalar integers (including wide layout-only types), bool, void, f32/f64, pointers,
 slices, nested supported structs and arrays can be field types. Other field
 forms/layouts report explicit NYI: tuples, comptime fields, defaults, explicit
 field alignment, comptime-only/uninstantiable fields, error layouts and unsupported
@@ -223,7 +238,7 @@ validation, but fields are never lexical namespace bindings.
 
 Physical struct values remain separate work: no struct initialization, instance
 field projection, storage, runtime materialization, by-value function transport,
-struct bitcasts or struct bit-size/offset queries are added. Struct stores,
+struct bitcasts or struct bit-size queries are added. Struct stores,
 including undefined/volatile stores, and direct/indirect/variadic runtime
 transport have explicit gates. The array/slice aggregate predicate and private
 ABI are intentionally unchanged. Thin pointers and slice descriptors referring

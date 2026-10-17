@@ -9,6 +9,7 @@
  * of emitted.
  */
 #include "sema.h"
+#include "struct_layout.h"
 
 #include <inttypes.h>
 #include <stdalign.h>
@@ -63,6 +64,7 @@ typedef struct SemaField {
 	IrField ir;
 	TypeId type;
 	uint64_t size;
+	uint64_t offset;
 	uint32_t alignment;
 } SemaField;
 
@@ -77,6 +79,7 @@ struct SemaNamespace {
 	bool					exports_resolved;
 	const struct InstMap *captures;
 	SemaField *fields;
+	uint32_t *field_order;
 	uint32_t field_count;
 	StructState layout_state;
 	uint64_t size;
@@ -669,6 +672,32 @@ static bool
 is_slice(const Sema *sema, TypeId type)
 {
 	return sema->types[type].kind == TYPE_POINTER && sema->types[type].as.pointer.size == POINTER_SLICE;
+}
+
+bool
+sema_struct_layout(const Sema *sema, TypeId type, const uint32_t **order, uint32_t *count)
+{
+	if (sema->types[type].kind != TYPE_STRUCT)
+		return false;
+	const SemaNamespace *ns = sema->types[type].as.structure;
+	if (ns->layout_state != STRUCT_RESOLVED)
+		return false;
+	*order = ns->field_order;
+	*count = ns->field_count;
+	return true;
+}
+
+bool
+sema_struct_field_layout(const Sema *sema, TypeId type, uint32_t index, SemaStructFieldLayout *out)
+{
+	if (sema->types[type].kind != TYPE_STRUCT)
+		return false;
+	const SemaNamespace *ns = sema->types[type].as.structure;
+	if (ns->layout_state != STRUCT_RESOLVED || index >= ns->field_count)
+		return false;
+	const SemaField *field = &ns->fields[index];
+	*out = (SemaStructFieldLayout){field->ir.name, field->type, field->offset};
+	return true;
 }
 
 bool
@@ -2787,30 +2816,42 @@ ensure_type_layout(Block *block, TypeId type, uint32_t src)
 		if (field->alignment > alignment)
 			alignment = field->alignment;
 	}
-	/* Zig sorts fields by descending effective alignment. Equal-alignment
-	 * ordering is unstable, but cannot affect total size: each ABI field size
-	 * is a multiple of its alignment. Do not publish offsets from this pass. */
+	/* Declaration order owns field identities; only this separate permutation
+	 * follows pinned Zig's exact unstable alignment sort. Offsets stay private
+	 * until the entire checked layout succeeds. */
+	uint32_t *order = ARENA_ARRAY(sema->arena, uint32_t, ns->field_count);
+	uint32_t *alignments = ARENA_ARRAY(sema->arena, uint32_t, ns->field_count);
+	for (uint32_t i = 0; i < ns->field_count; i++) {
+		order[i] = i;
+		alignments[i] = ns->fields[i].alignment;
+	}
+	struct_layout_order(order, alignments, ns->field_count);
 	uint64_t size = 0;
-	for (uint32_t group = alignment; group != 0; group /= 2) {
-		for (uint32_t i = 0; i < ns->field_count; i++) {
-			SemaField *field = &ns->fields[i];
-			if (field->alignment != group)
-				continue;
-			uint64_t padding = (0u - size) & (group - 1u);
-			if (size > UINT64_MAX - padding || size + padding > UINT64_MAX - field->size) {
-				sema_error(&fields, field->ir.src, "not supported by szc yet: struct layout size exceeds 64-bit address space");
-				goto fail;
-			}
-			size += padding + field->size;
+	for (uint32_t i = 0; i < ns->field_count; i++) {
+		SemaField *field = &ns->fields[order[i]];
+		uint64_t padding = (0u - size) & (field->alignment - 1u);
+		if (size > UINT64_MAX - padding || size + padding > UINT64_MAX - field->size) {
+			sema_error(&fields, field->ir.src, "not supported by szc yet: struct layout size exceeds 64-bit address space");
+			goto fail;
 		}
+		field->offset = size + padding;
+		size = field->offset + field->size;
 	}
 	uint64_t padding = (0u - size) & (alignment - 1u);
 	if (size > UINT64_MAX - padding) {
 		sema_error(&fields, ns->ir->insts[ns->inst].src, "not supported by szc yet: struct layout size exceeds 64-bit address space");
 		goto fail;
 	}
-	ns->size = size + padding;
+	uint64_t total_size = size + padding;
+	if (total_size > UINT32_MAX) {
+		sema_error(&fields, ns->ir->insts[ns->inst].src,
+			"struct layout requires size %" PRIu64 ", this compiler implementation supports up to %" PRIu32,
+			total_size, UINT32_MAX);
+		goto fail;
+	}
+	ns->size = total_size;
 	ns->alignment = alignment;
+	ns->field_order = order;
 	ns->layout_state = STRUCT_RESOLVED;
 	sema->layout_depth--;
 	return true;
@@ -5174,6 +5215,23 @@ analyze_has_member(Block *block, const IrInst *inst)
 	StringId name;
 	if (!resolve_name_body(block, payload.name_body, payload.name_src, &name))
 		return operand_none;
+	if (inst->op == IR_OFFSET_OF) {
+		/* Unlike FieldType, the reference resolves layout before the kind check. */
+		if (!ensure_type_layout(block, type, payload.type_src))
+			return operand_none;
+		if (sema->types[type].kind != TYPE_STRUCT) {
+			sema_error(block, payload.type_src, "expected struct type, found '%s'", sema_type_name(sema, type));
+			return operand_none;
+		}
+		SemaNamespace *ns = sema->types[type].as.structure;
+		SemaField *field = struct_find_field(ns, name);
+		if (field == NULL) {
+			const char *suffix = arena_sprintf(sema->arena, "' in struct '%s'", namespace_name(sema, ns));
+			sema_name_error(block, payload.name_src, "no field named '", name, suffix);
+			return operand_none;
+		}
+		return comptime_operand(T_COMPTIME_INT, value_int_u64(&sema->values, T_COMPTIME_INT, field->offset));
+	}
 	if (inst->op == IR_FIELD_TYPE) {
 		if (sema->types[type].kind != TYPE_STRUCT) {
 			sema_error(block, payload.type_src, "expected struct or union; found '%s'", sema_type_name(sema, type));
@@ -6837,6 +6895,7 @@ analyze_inst(Block *block, IrInstIndex index, Operand *break_value)
 	case IR_HAS_DECL:
 	case IR_HAS_FIELD:
 	case IR_FIELD_TYPE:
+	case IR_OFFSET_OF:
 		result = analyze_has_member(block, inst);
 		break;
 	case IR_THIS:

@@ -1,0 +1,52 @@
+%28 = struct_decl (flags=0) {
+  decl const "S" value {
+    %5 = struct_decl (flags=0) {
+      field "a" type {
+        %0 = break_inline result, @type_u8
+      }
+      field "b" type {
+        %1 = break_inline result, @type_u64
+      }
+      field "c" type {
+        %2 = break_inline result, @type_u16
+      }
+      field "d" type {
+        %3 = break_inline result, @type_u32
+      }
+      field "e" type {
+        %4 = break_inline result, @type_u8
+      }
+    }
+    %6 = break_inline result, %5
+  }
+  decl fn "main" pub value {
+    %26 = func "main" {
+      ret type {
+        %7 = break_inline result, @type_u8
+      }
+      body insts {
+        %8 = ret_type
+        %9 = decl_val "S"
+        %10 = as @type_type, %9
+        %15 = offset_of %10 name {
+          %11 = ptr_type @type_u8, @true slice
+          %12 = str "a"
+          %13 = as %11, %12
+          %14 = break_inline result, %13
+        }
+        %16 = decl_val "S"
+        %17 = as @type_type, %16
+        %22 = offset_of %17 name {
+          %18 = ptr_type @type_u8, @true slice
+          %19 = str "c"
+          %20 = as %18, %19
+          %21 = break_inline result, %20
+        }
+        %23 = add %15, %22
+        %24 = int_cast %8, %23
+        %25 = ret %24
+      }
+    }
+    %27 = break_inline result, %26
+  }
+}

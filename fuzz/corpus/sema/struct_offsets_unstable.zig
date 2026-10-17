@@ -1,0 +1,1 @@
+const S=struct {f0:u8,f1:u64,f2:u8,f3:u64,f4:u8,f5:u64,f6:u8,f7:u64,f8:u8,f9:u64,f10:u8,f11:u64,f12:u8,f13:u64,f14:u8,f15:u64,f16:u8,f17:u64,f18:u8,f19:u64,f20:u8,f21:u64,f22:u8,f23:u64,f24:u8,}; pub fn main() u8 { return @intCast(@offsetOf(S,"f0")); }

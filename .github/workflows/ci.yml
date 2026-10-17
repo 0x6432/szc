@@ -123,6 +123,7 @@ jobs:
           - diff_empty_array_storage
           - diff_struct_namespaces
           - diff_struct_metadata
+          - diff_offset_of
           - diff_field
           - diff_has_field
           - diff_typeof

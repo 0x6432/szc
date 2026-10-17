@@ -179,6 +179,19 @@ const Interner   *sema_interner(const Sema *sema);
 bool sema_type_size(const Sema *sema, TypeId type, uint64_t *out);
 uint32_t sema_type_align(const Sema *sema, TypeId type);
 
+/* Read-only resolved ordinary-struct layouts. False preserves every output;
+ * nonstruct/unresolved/failed layouts and out-of-range field indices fail.
+ * Fields are indexed in declaration order. order maps physical positions to
+ * declaration indices and remains valid for the lifetime of the sema arena. */
+typedef struct SemaStructFieldLayout {
+	StringId name;
+	TypeId type;
+	uint64_t offset;
+} SemaStructFieldLayout;
+
+bool sema_struct_layout(const Sema *sema, TypeId type, const uint32_t **order, uint32_t *count);
+bool sema_struct_field_layout(const Sema *sema, TypeId type, uint32_t index, SemaStructFieldLayout *out);
+
 /* Human-readable type name (for diagnostics and dumps). */
 const char *sema_type_name(Sema *sema, TypeId type);
 

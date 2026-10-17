@@ -10,6 +10,8 @@
 #include "parser.h"
 #include "ir.h"
 #include "sema.h"
+#include "struct_layout.h"
+#include "struct_layout_expected.h"
 
 static uint32_t failures = 0;
 static uint32_t checks = 0;
@@ -1766,6 +1768,102 @@ test_struct_metadata(void)
 }
 
 static void
+test_struct_offsets(void)
+{
+	const struct {
+		const char *source;
+		const char *error;
+	} cases[] = {
+		/* layout/perm3/0 */
+		{"const Inner=struct { byte:u8, word:u32, }; const S=struct {f0:u8,f1:u64,f2:u16,}; pub fn main() void { const n:u8=if(@sizeOf(S)==16 and @alignOf(S)==8 and @offsetOf(S,\"f0\")==10 and @offsetOf(S,\"f1\")==0 and @offsetOf(S,\"f2\")==8)0 else 256; _=n; }", NULL},
+		/* layout/zero/0 */
+		{"const Inner=struct { byte:u8, word:u32, }; const S=struct {a:u8,z:void,empty:[0]u64,bits:u0,b:u64,}; pub fn main() void { const n:u8=if(@sizeOf(S)==16 and @alignOf(S)==8 and @offsetOf(S,\"a\")==8 and @offsetOf(S,\"z\")==9 and @offsetOf(S,\"empty\")==0 and @offsetOf(S,\"bits\")==9 and @offsetOf(S,\"b\")==0)0 else 256; _=n; }", NULL},
+		/* layout/many/25/forward */
+		{"const Inner=struct { byte:u8, word:u32, }; const S=struct {f0:u8,f1:u64,f2:u16,f3:u65,f4:void,f5:[0]u32,f6:u24,f7:bool,f8:u8,f9:u64,f10:u16,f11:u65,f12:void,f13:[0]u32,f14:u24,f15:bool,f16:u8,f17:u64,f18:u16,f19:u65,f20:void,f21:[0]u32,f22:u24,f23:bool,f24:u8,}; pub fn main() void { const n:u8=if(@sizeOf(S)==112 and @alignOf(S)==16 and @offsetOf(S,\"f0\")==90 and @offsetOf(S,\"f1\")==48 and @offsetOf(S,\"f2\")==88 and @offsetOf(S,\"f3\")==0 and @offsetOf(S,\"f4\")==95 and @offsetOf(S,\"f5\")==76 and @offsetOf(S,\"f6\")==76 and @offsetOf(S,\"f7\")==94 and @offsetOf(S,\"f8\")==93 and @offsetOf(S,\"f9\")==64 and @offsetOf(S,\"f10\")==86 and @offsetOf(S,\"f11\")==32 and @offsetOf(S,\"f12\")==94 and @offsetOf(S,\"f13\")==72 and @offsetOf(S,\"f14\")==80 and @offsetOf(S,\"f15\")==91 and @offsetOf(S,\"f16\")==92 and @offsetOf(S,\"f17\")==56 and @offsetOf(S,\"f18\")==84 and @offsetOf(S,\"f19\")==16 and @offsetOf(S,\"f20\")==95 and @offsetOf(S,\"f21\")==76 and @offsetOf(S,\"f22\")==72 and @offsetOf(S,\"f23\")==95 and @offsetOf(S,\"f24\")==96)0 else 256; _=n; }", NULL},
+		/* layout/many/51/forward */
+		{"const Inner=struct { byte:u8, word:u32, }; const S=struct {f0:u8,f1:u64,f2:u16,f3:u65,f4:void,f5:[0]u32,f6:u24,f7:bool,f8:u8,f9:u64,f10:u16,f11:u65,f12:void,f13:[0]u32,f14:u24,f15:bool,f16:u8,f17:u64,f18:u16,f19:u65,f20:void,f21:[0]u32,f22:u24,f23:bool,f24:u8,f25:u64,f26:u16,f27:u65,f28:void,f29:[0]u32,f30:u24,f31:bool,f32:u8,f33:u64,f34:u16,f35:u65,f36:void,f37:[0]u32,f38:u24,f39:bool,f40:u8,f41:u64,f42:u16,f43:u65,f44:void,f45:[0]u32,f46:u24,f47:bool,f48:u8,f49:u64,f50:u16,}; pub fn main() void { const n:u8=if(@sizeOf(S)==208 and @alignOf(S)==16 and @offsetOf(S,\"f0\")==198 and @offsetOf(S,\"f1\")==96 and @offsetOf(S,\"f2\")==182 and @offsetOf(S,\"f3\")==16 and @offsetOf(S,\"f4\")==199 and @offsetOf(S,\"f5\")==152 and @offsetOf(S,\"f6\")==164 and @offsetOf(S,\"f7\")==191 and @offsetOf(S,\"f8\")==202 and @offsetOf(S,\"f9\")==128 and @offsetOf(S,\"f10\")==176 and @offsetOf(S,\"f11\")==80 and @offsetOf(S,\"f12\")==200 and @offsetOf(S,\"f13\")==152 and @offsetOf(S,\"f14\")==156 and @offsetOf(S,\"f15\")==199 and @offsetOf(S,\"f16\")==194 and @offsetOf(S,\"f17\")==136 and @offsetOf(S,\"f18\")==186 and @offsetOf(S,\"f19\")==0 and @offsetOf(S,\"f20\")==190 and @offsetOf(S,\"f21\")==172 and @offsetOf(S,\"f22\")==172 and @offsetOf(S,\"f23\")==192 and @offsetOf(S,\"f24\")==193 and @offsetOf(S,\"f25\")==144 and @offsetOf(S,\"f26\")==178 and @offsetOf(S,\"f27\")==64 and @offsetOf(S,\"f28\")==202 and @offsetOf(S,\"f29\")==176 and @offsetOf(S,\"f30\")==168 and @offsetOf(S,\"f31\")==190 and @offsetOf(S,\"f32\")==197 and @offsetOf(S,\"f33\")==120 and @offsetOf(S,\"f34\")==188 and @offsetOf(S,\"f35\")==48 and @offsetOf(S,\"f36\")==190 and @offsetOf(S,\"f37\")==152 and @offsetOf(S,\"f38\")==160 and @offsetOf(S,\"f39\")==195 and @offsetOf(S,\"f40\")==196 and @offsetOf(S,\"f41\")==112 and @offsetOf(S,\"f42\")==184 and @offsetOf(S,\"f43\")==32 and @offsetOf(S,\"f44\")==199 and @offsetOf(S,\"f45\")==160 and @offsetOf(S,\"f46\")==152 and @offsetOf(S,\"f47\")==200 and @offsetOf(S,\"f48\")==201 and @offsetOf(S,\"f49\")==104 and @offsetOf(S,\"f50\")==180)0 else 256; _=n; }", NULL},
+		/* layout/nested */
+		{"const Inner=struct { byte:u8, word:u32, }; const S=struct {a:u8,inner:Inner,array:[3]Inner,matrix:[2][3]u16,z:void,}; pub fn main() void { const n:u8=if(@sizeOf(S)==48 and @alignOf(S)==4 and @offsetOf(S,\"a\")==44 and @offsetOf(S,\"inner\")==0 and @offsetOf(S,\"array\")==8 and @offsetOf(S,\"matrix\")==32 and @offsetOf(S,\"z\")==45)0 else 256; _=n; }", NULL},
+		/* layout/self-pointer */
+		{"const Inner=struct { byte:u8, word:u32, }; const S=struct {tag:u8,next:*const @This(),children:[]@This(),}; pub fn main() void { const n:u8=if(@sizeOf(S)==32 and @alignOf(S)==8 and @offsetOf(S,\"tag\")==24 and @offsetOf(S,\"next\")==0 and @offsetOf(S,\"children\")==8)0 else 256; _=n; }", NULL},
+		/* layout/all-zero */
+		{"const Inner=struct { byte:u8, word:u32, }; const S=struct {v:void,u:u0,a:[0]u64,}; pub fn main() void { const n:u8=if(@sizeOf(S)==0 and @alignOf(S)==8 and @offsetOf(S,\"v\")==0 and @offsetOf(S,\"u\")==0 and @offsetOf(S,\"a\")==0)0 else 256; _=n; }", NULL},
+		/* layout/u32-size-limit */
+		{"const Inner=struct { byte:u8, word:u32, }; const S=struct {a:[4294967294]u8,b:u8,}; pub fn main() void { const n:u8=if(@sizeOf(S)==4294967295 and @alignOf(S)==1 and @offsetOf(S,\"a\")==0 and @offsetOf(S,\"b\")==4294967294)0 else 256; _=n; }", NULL},
+		/* name/trailing-nul */
+		{"const S=struct { item:u8, wide:u64, pub const declaration:u8=256; pub fn bad() u8 { return 256; } }; pub fn main() void { const n:u8=if(@offsetOf(S,\"item\\x00\")==8)0 else 256; _=n; }", NULL},
+		/* result-comptime-int */
+		{"const S=struct { item:u8, wide:u64, pub const declaration:u8=256; pub fn bad() u8 { return 256; } }; pub fn main() void { const n:u8=if(@TypeOf(@offsetOf(S,\"item\"))==comptime_int)0 else 256; _=n; }", NULL},
+		/* type-context */
+		{"const S=struct { item:u8, wide:u64, pub const declaration:u8=256; pub fn bad() u8 { return 256; } }; const A=[@offsetOf(S,\"item\")]u8; pub fn main() void { const n:u8=if(@sizeOf(A)==8)0 else 256; _=n; }", NULL},
+		/* global-query */
+		{"const S=struct { item:u8, wide:u64, pub const declaration:u8=256; pub fn bad() u8 { return 256; } }; const offset=@offsetOf(S,\"item\"); pub fn main() void { const n:u8=if(offset==8)0 else 256; _=n; }", NULL},
+		/* nested-type */
+		{"const S=struct { inner:Inner, }; const Inner=struct { byte:u8, word:u32, }; pub fn main() void { const n:u8=if(@offsetOf(@FieldType(S,\"inner\"),\"word\")==0)0 else 256; _=n; }", NULL},
+		/* absent/"missing" */
+		{"const S=struct { item:u8, wide:u64, pub const declaration:u8=256; pub fn bad() u8 { return 256; } }; pub fn main() void { _=@offsetOf(S,\"missing\"); }", "no field named 'missing' in struct 'test.S'"},
+		/* nonstruct/u8 */
+		{"const S=struct { item:u8, wide:u64, pub const declaration:u8=256; pub fn bad() u8 { return 256; } }; pub fn main() void { _=@offsetOf(u8,\"item\"); }", "expected struct type, found 'u8'"},
+		/* nonstruct/anyopaque */
+		{"const S=struct { item:u8, wide:u64, pub const declaration:u8=256; pub fn bad() u8 { return 256; } }; pub fn main() void { _=@offsetOf(anyopaque,\"item\"); }", "expected struct type, found 'anyopaque'"},
+		/* nonstruct/noreturn */
+		{"const S=struct { item:u8, wide:u64, pub const declaration:u8=256; pub fn bad() u8 { return 256; } }; pub fn main() void { _=@offsetOf(noreturn,\"item\"); }", "expected struct type, found 'noreturn'"},
+		/* arguments/zero-args */
+		{"const S=struct { item:u8, wide:u64, pub const declaration:u8=256; pub fn bad() u8 { return 256; } }; pub fn main() void { _=@offsetOf(); }", "expected 2 arguments, found 0"},
+		/* arguments/non-type */
+		{"const S=struct { item:u8, wide:u64, pub const declaration:u8=256; pub fn bad() u8 { return 256; } }; pub fn main() void { _=@offsetOf(3,\"item\"); }", "expected type 'type', found 'comptime_int'"},
+		/* arguments/undefined-type */
+		{"const S=struct { item:u8, wide:u64, pub const declaration:u8=256; pub fn bad() u8 { return 256; } }; pub fn main() void { _=@offsetOf(@as(type,undefined),\"item\"); }", "use of undefined value here causes illegal behavior"},
+		/* arguments/nonstruct-bad-name-order */
+		{"const S=struct { item:u8, wide:u64, pub const declaration:u8=256; pub fn bad() u8 { return 256; } }; pub fn main() void { _=@offsetOf(u8,3); }", "expected type '[]const u8', found 'comptime_int'"},
+		/* runtime-name */
+		{"const S=struct { item:u8, wide:u64, pub const declaration:u8=256; pub fn bad() u8 { return 256; } }; fn f(name:[]const u8) usize { return @offsetOf(S,name); } pub fn main() void { _=f(\"item\"); }", "unable to resolve comptime value"},
+		/* layout-error/by-value-cycle */
+		{"const S=struct { x:S, }; pub fn main() void { _=@offsetOf(S,\"x\"); }", "type 'test.S' depends on itself for field declared here"},
+		/* layout-error/invalid-field-before-missing */
+		{"const S=struct { x:anyopaque, }; pub fn main() void { _=@offsetOf(S,\"missing\"); }", "cannot directly embed opaque type 'anyopaque' in struct"},
+		/* layout-error/cycle-bad-name-order */
+		{"const S=struct { x:S, }; pub fn main() void { _=@offsetOf(S,3); }", "expected type '[]const u8', found 'comptime_int'"},
+		/* size-limit/exact-overflow/size */
+		{"const S=struct {a:[4294967295]u8,b:u8,}; pub fn main() void { _=@sizeOf(S); }", "struct layout requires size 4294967296, this compiler implementation supports up to 4294967295"},
+		/* size-limit/tail-padding-overflow/size */
+		{"const S=struct {a:[4294967287]u8,b:u64,}; pub fn main() void { _=@sizeOf(S); }", "struct layout requires size 4294967296, this compiler implementation supports up to 4294967295"},
+		/* zero-array-order/valid/valid-name */
+		{"const S=struct { x:u64, }; pub fn main() void { _=@offsetOf([0]S,\"x\"); }", "expected struct type, found '[0]test.S'"},
+		/* zero-array-order/invalid-embedded/valid-name */
+		{"const S=struct { x:anyopaque, }; pub fn main() void { _=@offsetOf([0]S,\"x\"); }", "cannot directly embed opaque type 'anyopaque' in struct"},
+		/* zero-array-order/oversize/valid-name */
+		{"const S=struct { a:[4294967295]u8,b:u8, }; pub fn main() void { _=@offsetOf([0]S,\"x\"); }", "struct layout requires size 4294967296, this compiler implementation supports up to 4294967295"},
+		/* zero-array-order/oversize/bad-name */
+		{"const S=struct { a:[4294967295]u8,b:u8, }; pub fn main() void { _=@offsetOf([0]S,3); }", "expected type '[]const u8', found 'comptime_int'"},
+	};
+	for (uint32_t i = 0; i < sizeof(cases) / sizeof(cases[0]); i++) {
+		Arena arena;
+		arena_init(&arena);
+		SourceTable sources;
+		source_table_init(&sources, &arena);
+		Diag diag;
+		diag_init(&diag, &arena, &sources);
+		Interner interner;
+		intern_init(&interner, &arena);
+		const char *source = cases[i].source;
+		FileId file = source_add_memory(&sources, "test.zig", source, (uint32_t)strlen(source));
+		AstContainerDecl *root = parse_file(&arena, &diag, &sources, file);
+		CHECK(!diag_has_errors(&diag));
+		IrFile *ir = irgen_file(&arena, &diag, &interner, source_get(&sources, file), file, root);
+		bool success = false;
+		if (!diag_has_errors(&diag)) {
+			Sema *sema = sema_create(&arena, &diag, &interner, &sources);
+			success = sema_analyze_executable(sema, file, ir);
+		}
+		CHECK(success == (cases[i].error == NULL));
+		if (cases[i].error != NULL)
+			CHECK(diag.count != 0 && strstr(diag.items[0].message, cases[i].error) != NULL);
+		arena_free(&arena);
+	}
+}
+
+static void
 test_struct_layout_api(void)
 {
 	for (uint32_t resolved = 0; resolved < 2; resolved++) {
@@ -1794,6 +1892,175 @@ test_struct_layout_api(void)
 		CHECK(sema_type_size(sema, type, &size) == (resolved != 0));
 		CHECK(size == (resolved ? 0u : 123u));
 		CHECK(sema_type_align(sema, type) == (resolved ? 8u : 0u));
+		arena_free(&arena);
+	}
+}
+
+static void
+struct_layout_test_alignments(uint32_t *alignments, uint32_t count, StructLayoutPattern pattern)
+{
+	for (uint32_t i = 0; i < count; i++) {
+		uint32_t exponent = 0;
+		switch (pattern) {
+		case STRUCT_LAYOUT_EQUAL:
+			exponent = 3;
+			break;
+		case STRUCT_LAYOUT_ALTERNATE:
+			exponent = i % 2 * 3;
+			break;
+		case STRUCT_LAYOUT_ASCENDING:
+			exponent = i * 32 / count;
+			break;
+		case STRUCT_LAYOUT_DESCENDING:
+		case STRUCT_LAYOUT_NEAR_SORTED:
+			exponent = 31 - i * 32 / count;
+			break;
+		case STRUCT_LAYOUT_ORGAN: {
+			uint32_t mirror = count - 1 - i;
+			exponent = (i < mirror ? i : mirror) % 32;
+			break;
+		}
+		case STRUCT_LAYOUT_SAW:
+			exponent = i % 32;
+			break;
+		case STRUCT_LAYOUT_BLOCKS:
+			exponent = i / 7 % 32;
+			break;
+		case STRUCT_LAYOUT_SINGLETON:
+			exponent = i == count / 2 ? 31 : 0;
+			break;
+		}
+		alignments[i] = UINT32_C(1) << exponent;
+	}
+	if (pattern == STRUCT_LAYOUT_NEAR_SORTED && count > 1) {
+		uint32_t a = count / 3;
+		uint32_t b = 2 * count / 3;
+		uint32_t tmp = alignments[a];
+		alignments[a] = alignments[b];
+		alignments[b] = tmp;
+	}
+}
+
+static void
+test_struct_layout_order(void)
+{
+	Arena arena;
+	arena_init(&arena);
+	const uint32_t capacity = 65536;
+	uint32_t *alignments = ARENA_ARRAY(&arena, uint32_t, capacity);
+	uint32_t *order = ARENA_ARRAY(&arena, uint32_t, capacity);
+	uint8_t *seen = ARENA_ARRAY(&arena, uint8_t, capacity);
+	/* These calls deliberately cannot be checked via memory reads. */
+	struct_layout_order(NULL, NULL, 0);
+	struct_layout_order(NULL, NULL, 1);
+	for (size_t test_index = 0; test_index < sizeof(struct_layout_expected) / sizeof(struct_layout_expected[0]); test_index++) {
+		StructLayoutExpected expected = struct_layout_expected[test_index];
+		uint32_t count = expected.count;
+		struct_layout_test_alignments(alignments, count, expected.pattern);
+		for (uint32_t i = 0; i < count; i++) {
+			order[i] = i;
+			seen[i] = 0;
+		}
+		struct_layout_order(order, alignments, count);
+		bool permutation = true;
+		bool sorted = true;
+		uint64_t hash = UINT64_C(14695981039346656037);
+		for (uint32_t i = 0; i < count; i++) {
+			uint32_t word = order[i];
+			hash = (hash ^ word) * UINT64_C(1099511628211);
+			if (word >= count) {
+				permutation = false;
+				sorted = false;
+				continue;
+			}
+			if (seen[word] != 0)
+				permutation = false;
+			seen[word] = 1;
+			if (i != 0 && order[i - 1] < count && alignments[order[i - 1]] < alignments[word])
+				sorted = false;
+		}
+		bool matches_reference = hash == expected.hash;
+		if (!permutation || !sorted || !matches_reference)
+			fprintf(stderr, "struct layout regression: row %zu, pattern %u, count %u\n", test_index, (unsigned)expected.pattern, (unsigned)count);
+		CHECK(permutation);
+		CHECK(sorted);
+		CHECK(matches_reference);
+	}
+	arena_free(&arena);
+}
+
+static void
+test_struct_field_layout_api(void)
+{
+	const struct {
+		const char *source;
+		bool success;
+		bool resolved;
+		uint32_t fields;
+	} cases[] = {
+		{"const S=struct { a:u8, }; fn use(p:*S) void { _=p; } pub fn main() void { use(undefined); }", true, false, 0},
+		{"const S=struct { a:u8, b:u64, z:[0]u64, }; fn use(p:*S) void { _=p; } pub fn main() void { use(undefined); _=@sizeOf(S); }", true, true, 3},
+		{"const S=struct {}; fn use(p:*S) void { _=p; } pub fn main() void { use(undefined); _=@sizeOf(S); }", true, true, 0},
+		{"const S=struct { a:u8=0, }; fn use(p:*S) void { _=p; } pub fn main() void { use(undefined); _=@sizeOf(S); }", false, false, 0},
+		{"const S=struct { a:[4294967295]u8, b:u8, }; fn use(p:*S) void { _=p; } pub fn main() void { use(undefined); _=@sizeOf(S); }", false, false, 0},
+		{"const S=struct { a:[4294967291]u8, b:u32, }; fn use(p:*S) void { _=p; } pub fn main() void { use(undefined); _=@sizeOf(S); }", false, false, 0},
+	};
+	for (uint32_t i = 0; i < sizeof(cases) / sizeof(cases[0]); i++) {
+		Arena arena;
+		arena_init(&arena);
+		SourceTable sources;
+		source_table_init(&sources, &arena);
+		Diag diag;
+		diag_init(&diag, &arena, &sources);
+		Interner interner;
+		intern_init(&interner, &arena);
+		FileId file = source_add_memory(&sources, "struct_field_layout_api.zig", cases[i].source, (uint32_t)strlen(cases[i].source));
+		AstContainerDecl *root = parse_file(&arena, &diag, &sources, file);
+		CHECK(!diag_has_errors(&diag));
+		IrFile *ir = irgen_file(&arena, &diag, &interner, source_get(&sources, file), file, root);
+		CHECK(!diag_has_errors(&diag));
+		Sema *sema = sema_create(&arena, &diag, &interner, &sources);
+		CHECK(sema_analyze_executable(sema, file, ir) == cases[i].success);
+		CHECK(sema_func_count(sema) == 3);
+		TypeFn fn = sema_type(sema, sema_func(sema, 2)->type)->as.fn;
+		TypeId type = sema_type(sema, fn.params[0])->as.pointer.child;
+		const uint32_t marker = 42;
+		const uint32_t *order = &marker;
+		uint32_t count = 123;
+		CHECK(sema_struct_layout(sema, type, &order, &count) == cases[i].resolved);
+		CHECK(count == (cases[i].resolved ? cases[i].fields : 123u));
+		if (!cases[i].resolved)
+			CHECK(order == &marker);
+		SemaStructFieldLayout field = {STRING_NONE, UINT32_MAX, 123};
+		CHECK(!sema_struct_field_layout(sema, type, cases[i].fields, &field));
+		CHECK(field.name == STRING_NONE && field.type == UINT32_MAX && field.offset == 123);
+		if (!cases[i].resolved) {
+			for (uint32_t retry = 0; retry < 3; retry++) {
+				CHECK(!sema_struct_layout(sema, type, &order, &count));
+				CHECK(order == &marker && count == 123);
+				CHECK(!sema_struct_field_layout(sema, type, 0, &field));
+				CHECK(field.name == STRING_NONE && field.type == UINT32_MAX && field.offset == 123);
+			}
+		}
+		if (cases[i].fields == 3) {
+			CHECK(order[0] == 1 && order[1] == 2 && order[2] == 0);
+			CHECK(sema_struct_field_layout(sema, type, 0, &field));
+			CHECK(strcmp(intern_text(&interner, field.name), "a") == 0);
+			CHECK(field.type == type_id_of_well_known(IR_REF_TYPE_U8) && field.offset == 8);
+			CHECK(sema_struct_field_layout(sema, type, 1, &field));
+			CHECK(strcmp(intern_text(&interner, field.name), "b") == 0);
+			CHECK(field.type == type_id_of_well_known(IR_REF_TYPE_U64) && field.offset == 0);
+			CHECK(sema_struct_field_layout(sema, type, 2, &field));
+			CHECK(strcmp(intern_text(&interner, field.name), "z") == 0 && field.offset == 8);
+		}
+		order = &marker;
+		count = 123;
+		field = (SemaStructFieldLayout){STRING_NONE, UINT32_MAX, 123};
+		TypeId byte = type_id_of_well_known(IR_REF_TYPE_U8);
+		CHECK(!sema_struct_layout(sema, byte, &order, &count));
+		CHECK(order == &marker && count == 123);
+		CHECK(!sema_struct_field_layout(sema, byte, 0, &field));
+		CHECK(field.name == STRING_NONE && field.type == UINT32_MAX && field.offset == 123);
 		arena_free(&arena);
 	}
 }
@@ -2316,7 +2583,10 @@ main(void)
 	test_has_decl();
 	test_has_field();
 	test_struct_metadata();
+	test_struct_offsets();
 	test_struct_layout_api();
+	test_struct_field_layout_api();
+	test_struct_layout_order();
 	test_typeof();
 	test_in_comptime();
 	test_field();

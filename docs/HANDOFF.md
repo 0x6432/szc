@@ -24,6 +24,58 @@ Read this first when resuming work (the sandbox resets often).
 
 ## Latest follow-up checkpoint
 
+- M6.1c exact ordinary struct field layout is implemented on top of b319e2b.
+  A separate declaration-index permutation preserves pinned Zig's exact unstable
+  PDQ field order; checked byte offsets remain private until full layout success.
+  @offsetOf follows type -> name -> layout -> struct kind -> field selection,
+  returning comptime_int. Read-only field/order APIs preserve every output for
+  unresolved/failed/nonstruct/bounds errors. Zero-byte fields retain order and
+  alignment, so they can have nonzero offsets. The official final struct size
+  limit is UINT32_MAX; boundary probes caught and fixed the prior metadata pass's
+  overly broad 64-bit-only acceptance. Earlier arithmetic overflow recovery stays.
+  The sorter is a C specialization of the pinned std sorting algorithm, not a
+  replacement std; preserve third_party/LICENSE-ZIG. Runtime struct-value gates
+  remain closed: no initialization/instance projection/storage/internal or C ABI,
+  defaults/comptime/tuples/align/packed/extern or bit-offset/bit-size extensions.
+  Planning: /data/struct-offset-plan.md, /data/struct-next-plan.md.
+  Independent specialists supplied and reviewed the sorter and actual ELF offset
+  expectations. Standalone exact comparisons: author 3310 GCC+Clang PDQ and 3310
+  forced heap cases each, 52 actual offset layouts; separate reviewer 12121 normal,
+  3000 sanitizer, 480 heap, 600 forced fallback and 22500 mapped boundary checks.
+  These are not exhaustive full UINT32_MAX-sized allocations or branch coverage.
+  Permanent regression fingerprints cover 279 official permutations (837 invariant
+  checks), with independent sortedness/uniqueness checks. Expected hashes come
+  from official std.sort.pdq output, not the C port. Source/reference hashes are
+  recorded in tests/unit/struct_layout_expected.h. Unit header changes now trigger
+  rebuilding the unit binary. Six API scenarios include repeated queries after
+  late size/tail-padding failures; 31 semantic cases, IR/TIR/QBE and four diagnostic
+  goldens, three seeds each irgen/sema, one native fixture and hosted matrix added.
+  Focused: 3659 units/1225 goldens; 91 official comparisons/51 exact primary errors,
+  original metadata 100/29, 51 explicit runtime/unsupported gates and Debug native
+  pass. Native also passed official ReleaseFast independently. One draft overflow
+  API fixture initially had a valid size; corrected its length to actually require
+  tail padding over UINT32_MAX, without changing the implementation.
+  Final immutable /data/struct-offset-final/{gcc,clang,optimized} pass GCC/Clang
+  Werror ASan/UBSan: 3659 units/1225 goldens, 130+4 native, 16 driver, 57 compiler-runner
+  checks, full C/ABI/storage/alignment, 102 observed volatile sequences and 303 safety
+  cases. Optimized native/safety and forced main tests pass. Both compilers pass
+  20000 standalone mutations/stage with 256/256/114/170 seeds. Four fresh 60s
+  libFuzzer runs pass: 2567388/64556/63512/61903. Source/config/test/corpus/license
+  files (6037 paths) match all three frozen copies. Final-source reference suites
+  pass offsetOf 91/51, metadata 100/29, TypeOf 207/51, namespaces 76/40, hasField 220/68,
+  field 201/92, resized slices 183/41 and exact pointer round trips 84. All three
+  struct native fixtures pass official Debug; the new offset fixture also passes
+  final ReleaseFast. Full e2e remains szc-only, not a full official/std/bootstrap
+  differential. Evidence: /data/struct-offset-final-{gcc,clang,optimized,fuzz}.log,
+  /data/struct-offset-final-reference-*.log, /data/struct-offset-final-{native,
+  releasefast}-reference.log, /data/struct-offset-main-final.log;
+  /data/struct-layout-next/, /data/struct-layout-review/, /data/struct-offset-tests/.
+  Latest b319e2b hosted snapshot run 39057048659: 49 successful, 5 running, 14 queued,
+  no observed failure; not green. Prior failed/unresolved jobs are recorded below.
+  M6.1 remains partial. Next: field-aware immutable values/init/projection, then
+  audited storage/internal ABI integration before opening any runtime struct gates.
+  Q6 remains mandatory at M10.2.
+
 - M6.1b ordinary struct type/layout foundation is implemented. Named typed fields
   have lazy stable metadata and explicit unresolved/in-progress/resolved/failed
   layout states. @hasField and @FieldType resolve the full supported layout before

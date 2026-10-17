@@ -1258,6 +1258,7 @@ static const BuiltinInfo builtin_table[] = {
 	{"inComptime", BUILTIN_IN_COMPTIME, 0, IR_IN_COMPTIME},
 	{"TypeOf", BUILTIN_TYPEOF, UINT32_MAX, IR_TYPEOF_BUILTIN},
 	{"hasDecl", BUILTIN_HAS_MEMBER, 2, IR_HAS_DECL},
+	{"offsetOf", BUILTIN_HAS_MEMBER, 2, IR_OFFSET_OF},
 	{"FieldType", BUILTIN_HAS_MEMBER, 2, IR_FIELD_TYPE},
 	{"hasField", BUILTIN_HAS_MEMBER, 2, IR_HAS_FIELD},
 	{"field", BUILTIN_FIELD, 2, IR_FIELD_NAMED_VAL},
@@ -3038,6 +3039,7 @@ dump_inst(const IrDumper *dumper, IrInstIndex index, uint32_t depth)
 		break;
 	}
 	case IR_HAS_DECL:
+	case IR_OFFSET_OF:
 	case IR_FIELD_TYPE:
 	case IR_HAS_FIELD: {
 		IrHasMember payload;

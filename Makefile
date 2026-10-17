@@ -16,7 +16,7 @@ SAN_FLAGS  = -fsanitize=address,undefined -fno-omit-frame-pointer -fno-sanitize-
 FUZZ_CC    ?= clang
 FUZZ_SECONDS ?= 60
 
-LIB_SOURCES = src/arena.c src/source.c src/diag.c src/intern.c src/lexer.c src/ast.c src/parser.c src/irgen.c src/comptime.c src/sema.c src/codegen.c src/driver.c
+LIB_SOURCES = src/arena.c src/source.c src/diag.c src/intern.c src/lexer.c src/ast.c src/parser.c src/irgen.c src/comptime.c src/struct_layout.c src/sema.c src/codegen.c src/driver.c
 HEADERS     = $(wildcard src/*.h)
 FUZZERS     = lexer parser irgen sema
 GENERATED_RUN_TESTS = build/memcpy-widths.zig build/integer-widths.zig build/conditional-widths.zig build/loop-widths.zig build/block-widths.zig build/for-widths.zig build/defer-widths.zig build/noreturn-widths.zig build/pointer-widths.zig build/global-widths.zig build/function-pointer-widths.zig build/array-widths.zig build/bitcast-widths.zig build/aggregate-bitcast-1-widths.zig build/aggregate-bitcast-2-widths.zig build/aggregate-bitcast-3-widths.zig build/aggregate-bitcast-4-widths.zig build/aggregate-bitcast-5-widths.zig build/aggregate-bitcast-8-widths.zig
@@ -38,7 +38,7 @@ build/asan/szc: $(LIB_SOURCES) src/main.c $(HEADERS)
 
 asan: build/asan/szc
 
-build/asan/unit_tests: $(LIB_SOURCES) tests/unit/*.c $(HEADERS)
+build/asan/unit_tests: $(LIB_SOURCES) tests/unit/*.c $(wildcard tests/unit/*.h) $(HEADERS)
 	@mkdir -p build/asan
 	$(CC) $(ALL_CFLAGS) $(SAN_FLAGS) -Isrc -o $@ $(LIB_SOURCES) tests/unit/*.c
 

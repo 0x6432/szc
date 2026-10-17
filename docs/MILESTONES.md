@@ -138,6 +138,7 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
 - [~] **M6.1 Structs**: fields, init, field access, methods, default values.
   - [x] **M6.1a Fieldless namespaces**: qualified declarations, lexical `@This()`, lazy nested exports.
   - [x] **M6.1b Ordinary struct type/layout foundation**: lazy declared field types, checked ABI size/alignment, @hasField/@FieldType and pointer-only layout integration.
+  - [x] **M6.1c Exact ordinary struct field layout**: pinned unstable field permutation, checked byte offsets, read-only layout APIs and @offsetOf.
   - Runtime struct values, field offsets/projection, initializers, defaults and instance methods remain unimplemented.
 - [ ] **M6.2 Enums**: tag values, `@intFromEnum`, `@enumFromInt`, enum literals.
 - [ ] **M6.3 switch** on ints/enums with ranges.
@@ -199,6 +200,44 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
 ## Completed milestone log
 
 (newest first; each entry: what, limitations, interactions)
+
+### M6.1c Exact ordinary struct field layout
+
+- **What**: separate physical permutation/declaration field identity; exact pinned
+  Zig PDQ alignment order, including unstable ties above thresholds 24/50. Checked
+  aligned field offsets, total-size/tail arithmetic and final UINT32_MAX size bound
+  publish only on full success. @offsetOf returns comptime_int with actual-Zig
+  type/name/layout/kind/lookup diagnostic ordering. Read-only layout/field APIs
+  preserve all outputs on failed/unresolved/nonstruct/out-of-range requests.
+- **Quality/reference**: independent implementation and second read-only review;
+  3310 exact sanitized permutations per compiler, 3310 forced fallback cases each,
+  52 actual offset layouts; separate reviewer 12121 exact/3000 sanitized/480 heap/
+  600 forced fallback/22500 boundary checks. No full UINT32_MAX allocation claim.
+  Permanent 279 official permutation fingerprints add 837 sortedness/permutation/hash
+  checks. 31 semantic cases, six failure-safe API scenarios including repeated late
+  failure queries, three stage/four error goldens, three seeds each irgen/sema,
+  one native and hosted matrix. 91 actual comparisons/51 exact primary diagnostics,
+  original metadata 100/29 and 51 scope rejection gates pass focused validation.
+  Final frozen GCC/Clang Werror ASan/UBSan pass 3659 units/1225 goldens, 130+4
+  native, 16 driver, 57 compiler-runner, full C/ABI/storage/alignment, 102 volatile
+  sequences and 303 safety cases. Optimized native/safety and forced main tests
+  pass. Both compilers pass 20000 standalone mutations/stage (256/256/114/170
+  seeds); fresh 60s libFuzzer totals 2567388/64556/63512/61903. 6037 source/config/
+  test/corpus/license paths match all three /data/struct-offset-final/ snapshots.
+  Final reference regressions pass TypeOf 207/51, namespaces 76/40, hasField 220/68,
+  field 201/92, resized slices 183/41 and exact pointer round trips 84. All three
+  struct native fixtures pass official Debug; offset fixture passes ReleaseFast.
+  Full e2e is szc-only, not full official-Zig/std/bootstrap differential.
+- **Boundary fix**: actual Zig casts final ordinary struct size to u32. This closes
+  the prior metadata-only pass's overly broad acceptance above 4294967295, retaining
+  existing earlier uint64 overflow recovery. Exact and tail-rounding overflow both
+  diagnose 4294967296 before field lookup, even through [0]S layout requests.
+- **Limits/next**: ordinary named nondefault/noncomptime/nonaligned fields only;
+  no runtime structs, field initialization/projection/storage/ABI, @bitOffsetOf,
+  packed/extern/tuple or broader field/layout features. M6.1/M7.6 remain partial.
+  Field-aware values, then deliberate storage/transport integration, are next;
+  do not broaden the existing aggregate predicate alone. MIT attribution for the
+  specialized algorithm is preserved in third_party/LICENSE-ZIG. Q6 stays M10.2.
 
 ### M6.1b Ordinary struct type/layout foundation
 
