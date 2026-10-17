@@ -1,0 +1,28 @@
+function w $szc.main.1() {
+@start
+	%t2 =l call $szc.advance.2(l 4096, l 3)
+	%t4 =w ceql %t2, 4144
+	jnz %t4, @c10_then, @c10_else
+@c10_then
+	%t5 =w copy 0
+	jmp @b5
+@c10_else
+	%t5 =w copy 1
+	jmp @b5
+@b5
+	ret %t5
+}
+
+function l $szc.advance.2(l %t0, l %t1) {
+@start
+	%e2_offset =l mul %t1, 16
+	%t2 =l add %t0, %e2_offset
+	%t3 =l copy %t2
+	ret %t3
+}
+
+export function w $main() {
+@start
+	%status =w call $szc.main.1()
+	ret %status
+}

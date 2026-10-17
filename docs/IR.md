@@ -126,7 +126,7 @@ runtime query evaluation. Optional-result peer synthesis reports explicit NYI;
 this does not add optionals, tuples, generics, general comptime function calls
 or floating-point computation/lowering.
 
-`has_decl` / `has_field` carry
+`has_decl` / `has_field` / `field_type` carry
 `IrHasMember { container, name_body, type_src, name_src }`.
 The name body has a contextual `[]const u8` result and is generated/analyzed in
 an isolated comptime context, with an operand-map parent for outer constants.
@@ -177,8 +177,9 @@ queue such addresses. The temporary address used internally by
 to wait for runtime use; generic instantiation retains its existing rules.
 
 `has_field` returns a comptime bool for supported instance-field metadata:
-arrays have `len`, slices have `len` and `ptr`, and existing fieldless structs
-(including the root) have no instance fields, regardless of their declarations.
+arrays have `len`, slices have `len` and `ptr`, and ordinary structs expose
+exact declared field names, never namespace declarations. The root and other
+fieldless structs have no instance fields.
 This is distinct from accessing a declaration on a type with `field_named_*`.
 No pointer auto-dereference applies to membership queries; thin/many pointers,
 including pointers to arrays/slices, and other unsupported target kinds receive
@@ -186,8 +187,48 @@ the official `type '...' does not support '@hasField'` primary diagnostic.
 The type resolves before the name, and the name resolves before target-kind
 validation. Both membership builtins share contextual constant-name decoding,
 its work/provenance limits and NUL rules; no runtime TIR or backend operation
-is introduced. Field-bearing structs, tuples, enum/union field metadata and
-other type-reflection builtins remain unsupported.
+is introduced. `field_type` requires a supported struct and returns the selected
+field's type, or diagnoses a missing field. Both struct queries resolve the full
+supported layout before lookup, even for an absent name.
+
+## Ordinary struct field types and layout
+
+Each nominal namespace retains stable `SemaField` records with the original IR
+field body, resolved type, ABI size and alignment. Deferred field bodies analyze
+in that namespace using arena-owned snapshots of lexical operand maps; no stack
+map or block escapes. Existing cross-namespace local capture rejection remains:
+this ownership mechanism does not enable runtime captures or foreign TIR refs.
+
+Layout has explicit unresolved/in-progress/resolved/failed states. Pointer and
+slice fields require only their own representation, allowing recursive pointees;
+by-value recursion (also through zero-length arrays) fails. Failure never
+publishes a zero-size/align-one layout. The public read-only size API fails for
+unresolved structs without changing its output; alignment is zero until resolved.
+Sema consumers demand layout before deriving implicit pointer alignment, strides,
+pointer differences or resized slice lengths. Equal-pointee/equal-annotation
+qualifier coercions need no layout demand and avoid false recursive cycles.
+
+Ordinary auto layout groups fields by descending ABI alignment, with checked
+size addition and tail rounding. Zero-byte fields still contribute alignment.
+This computes size/alignment only: equal-alignment field order is unstable in
+Zig's PDQ sort, so no offsets are inferred or published by this pass. Scalar
+integers (including wide layout-only types), bool, void, f32/f64, pointers,
+slices, nested supported structs and arrays can be field types. Other field
+forms/layouts report explicit NYI: tuples, comptime fields, defaults, explicit
+field alignment, comptime-only/uninstantiable fields, error layouts and unsupported
+float widths. Defaults are not silently ignored; demanding such a struct's
+layout is unsupported, while unused types, `has_decl` and pointer-size queries
+retain existing laziness. Declaration/field duplicates share normalized-name
+validation, but fields are never lexical namespace bindings.
+
+Physical struct values remain separate work: no struct initialization, instance
+field projection, storage, runtime materialization, by-value function transport,
+struct bitcasts or struct bit-size/offset queries are added. Struct stores,
+including undefined/volatile stores, and direct/indirect/variadic runtime
+transport have explicit gates. The array/slice aggregate predicate and private
+ABI are intentionally unchanged. Thin pointers and slice descriptors referring
+to supported structs may use existing pointer operations without loading a struct.
+
 
 ## Control flow
 

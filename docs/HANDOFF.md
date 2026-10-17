@@ -14,10 +14,98 @@ Read this first when resuming work (the sandbox resets often).
 6. Implement/test/fix/document/commit/push each coherent milestone, then continue
    directly to the next without pausing for user approval. Periodically inspect prior
    CI runs and fix actual failures; ask only for decisions/blockers (Q6 at M10.2).
-   Push after every milestone (and more often during long ones).
+   Push after every coherent integration batch (and more often during long ones).
+   Plan before editing. Multiple subagents are now user-authorized for bounded,
+   independent research, disjoint-file implementation, tests and review. Assign
+   explicit file ownership; keep one parent integration owner. Run focused checks
+   during implementation, then the full unchanged acceptance gate once per final
+   candidate. Never mutate frozen validation sources or mix flag configurations.
    The GitHub token is **never** committed. Restore authenticated Git access if needed.
 
 ## Latest follow-up checkpoint
+
+- M6.1b ordinary struct type/layout foundation is implemented. Named typed fields
+  have lazy stable metadata and explicit unresolved/in-progress/resolved/failed
+  layout states. @hasField and @FieldType resolve the full supported layout before
+  exact-name lookup; declarations remain distinct. @sizeOf/@alignOf support nested
+  ordinary structs/arrays, including wide integer layout-only types, f32/f64,
+  bool/void, pointers/slices and zero-byte fields with nontrivial alignment.
+  Nominal identity is published before field bodies; pointer/slice recursion works,
+  by-value recursion (including [0]Self) fails. Deferred maps are arena-owned;
+  existing cross-namespace local-capture NYI remains, not runtime capture support.
+  Grouped descending-alignment size calculation checks field/addition/tail overflow.
+  No field offsets/order are published: Zig's equal-alignment PDQ ordering becomes
+  unstable above its insertion threshold, but cannot affect total size. Resolve
+  layout before implicit pointer alignment, arithmetic/difference strides and
+  resized slice casts. Equal-child/equal-annotation qualifier coercions skip
+  unnecessary layout demand; independent review caught and fixed a false recursive
+  cycle here. Value snapshots avoid borrowed table entries across lazy resolution.
+  Public unresolved size queries fail without modifying output; alignment is zero,
+  not guessed one. Qualified nominal diagnostic names follow namespace parents.
+  Irgen now checks normalized field/declaration collisions without turning fields
+  into lexical bindings. Explicit guards keep structs out of scalar materialization,
+  stores (including undefined/volatile) and direct/indirect/variadic runtime calls.
+  The array/slice aggregate predicate and private ABI are deliberately unchanged.
+  Scope limits: no struct values/init/physical storage, instance projection, offsets,
+  bit-size queries, packed/extern/tuple/comptime/defaulted/aligned fields, comptime-
+  only/uninstantiable fields or unsupported float/error layouts. Such valid but
+  unimplemented features report NYI rather than fake invalid-Zig semantics. Defaults
+  are NOT ignored: demanding their layout is NYI; unused types, hasDecl and pointer
+  size queries retain existing laziness. Runtime >64-bit integer lowering remains NYI.
+  Reference: tools/diff_struct_metadata.py has 100 actual-Zig comparisons/29 exact
+  primary diagnostics; tools/check_struct_metadata_unsupported.py has 51 explicit
+  scope gates (szc-only, not differential). Two type/pointer-only native fixtures
+  pass final-source official Debug and ReleaseFast.
+  Three new safety cases pass actual Zig with unchanged deadlines; the first
+  divisibility reference expected-text check needed the existing dynamic-length
+  message suffix convention, not a compiler change. Forty-nine focused scenarios,
+  a two-case read-only layout API test, IR/TIR/QBE and eight diagnostic goldens,
+  four seeds each irgen/sema, native rejection wiring and hosted semantic matrix.
+  One old namespace unit expectation changes from field-bearing NYI to success;
+  no pre-existing golden changes. Focused totals: 2609 units, 1218 goldens.
+  Final immutable /data/struct-final-v2/{gcc,clang,optimized} pass Werror
+  ASan/UBSan: 2609 units/1218 goldens, 129+4 native, 16 driver, 56 compiler-runner
+  checks, full C/ABI/storage/alignment, 102 observed volatile sequences and 303
+  safety cases. Optimized native/safety and forced main tests pass. Both compilers
+  pass 20000 standalone mutations/stage with 256/256/111/167 seeds. Four fresh
+  60s libFuzzer runs pass: 2566454/66396/61617/45945. Implementation/config/test/
+  corpus files (6007 paths) match all three frozen copies. The first candidate
+  exposed new differential-script adapter convention errors; fixed the adapter,
+  not the common harness. Matching compiler/flag build outputs were reused only
+  after exact C/header/unit-source checks; the full acceptance gate was rerun.
+  Final-source reference regressions pass: TypeOf 207/51, inComptime 94/81,
+  namespaces 76/40, field 201/92, hasField 220/68, hasDecl 136/70, resized slice
+  casts 183/41, alignment casts 409, exact pointer round trips 84. The new matrix
+  passes 100/29. Both new native fixtures pass official Debug/ReleaseFast; all
+  three new safety cases pass the official reference. Full e2e remains szc-only,
+  not a complete official-Zig/std/bootstrap differential.
+  Independent agents researched official semantics, implemented only irgen member
+  collision validation, built reference fixtures and audited integration. The
+  parent reviewed/integrated all code; no overlapping shared-file edits or builds.
+  Evidence: /data/struct-final-v2-{gcc,clang,optimized,fuzz}.log,
+  /data/struct-main-final.log, /data/struct-final-v2-reference-*.log,
+  /data/struct-final-v2-{native,releasefast,safety}-reference.log;
+  /data/struct-{final-candidate-reference,expanded-v2-reference,
+  rejection-expanded,safety-reference-v2,final-candidate-unit,
+  final-candidate-golden}.log; /data/struct-research/, /data/struct-tests/,
+  /data/struct-audit/. These scratch paths are evidence, not build dependencies.
+  Latest hosted previous-commit snapshot: 8db69f4 has 67 successes/one Clang failure
+  (117240266372: mod_zero_i64 native15s and mod_zero_u64 compiler120s timeouts,
+  then runner shutdown); f576c2f has 65 successes/two failures. Its Clang job
+  117233768492 passes all 300 safety tests then fails cleanup after shutdown.
+  GCC job 117233768556's authenticated log endpoint returns 404 missing blob;
+  its test-step failure remains unresolved, NOT classified cleanup-only. Exact
+  source checks of 30 files per frozen snapshot and unchanged-deadline replays
+  of the two timeout cases five times each in GCC/Clang pass all 20; no semantic
+  or sanitizer regression reproduced. The long hosted timestamp gaps suggest
+  lifecycle/runner disruption but do not prove infrastructure-only failure.
+  No timeouts weakened or hosted failures blindly retried. Neither run is green.
+  Evidence: /data/struct-ci-*.json/.log, /data/struct-ci-replay/.
+  M6.1/M7.6 remain partial; this is a prerequisite, not full structs or std support.
+  Next coherent critical-path batch: exact field offsets plus field-aware values,
+  initialization/projection and deliberate storage/ABI integration. Audit existing
+  comptime value/provenance/backend paths before broadening aggregate handling.
+  Q6 remains mandatory at M10.2, not silently selected earlier.
 
 - M9.4j comptime context queries: `@inComptime()` uses a sema-only
   `in_comptime` instruction and resolves the current block's comptime state to

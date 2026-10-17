@@ -173,7 +173,9 @@ FuncId            sema_main_func(const Sema *sema);
 const ValueTable *sema_values(const Sema *sema);
 const Interner   *sema_interner(const Sema *sema);
 
-/* Size and alignment in bytes. Size returns false on overflow, preserving *out. */
+/* Size and alignment in bytes. Struct layouts must already be resolved by sema.
+ * Size returns false for unresolved structs or overflow, preserving *out;
+ * alignment returns zero for unresolved structs, never a guessed ABI alignment. */
 bool sema_type_size(const Sema *sema, TypeId type, uint64_t *out);
 uint32_t sema_type_align(const Sema *sema, TypeId type);
 

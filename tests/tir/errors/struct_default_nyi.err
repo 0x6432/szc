@@ -1,0 +1,3 @@
+tests/tir/errors/struct_default_nyi.zig:1:18: error: not supported by szc yet: tuple, comptime, aligned or defaulted struct fields
+const S=struct { x:u8=7, };
+                 ^

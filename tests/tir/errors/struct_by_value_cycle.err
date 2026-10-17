@@ -1,0 +1,3 @@
+tests/tir/errors/struct_by_value_cycle.zig:1:18: error: type 'struct_by_value_cycle.S' depends on itself for field declared here
+const S=struct { child:[0]S, };
+                 ^

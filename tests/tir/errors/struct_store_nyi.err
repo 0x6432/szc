@@ -1,0 +1,3 @@
+tests/tir/errors/struct_store_nyi.zig:2:26: error: not supported by szc yet: runtime struct stores
+fn store(p:*S) void { p.*=undefined; }
+                         ^

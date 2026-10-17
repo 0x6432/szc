@@ -1258,6 +1258,7 @@ static const BuiltinInfo builtin_table[] = {
 	{"inComptime", BUILTIN_IN_COMPTIME, 0, IR_IN_COMPTIME},
 	{"TypeOf", BUILTIN_TYPEOF, UINT32_MAX, IR_TYPEOF_BUILTIN},
 	{"hasDecl", BUILTIN_HAS_MEMBER, 2, IR_HAS_DECL},
+	{"FieldType", BUILTIN_HAS_MEMBER, 2, IR_FIELD_TYPE},
 	{"hasField", BUILTIN_HAS_MEMBER, 2, IR_HAS_FIELD},
 	{"field", BUILTIN_FIELD, 2, IR_FIELD_NAMED_VAL},
 	{"panic", BUILTIN_PANIC, 1, IR_OP_COUNT},
@@ -2516,6 +2517,13 @@ member_name(IrGen *gen, AstNode *member, uint32_t *src)
 {
 	*src = member->offset;
 	switch (member->kind) {
+	case AST_CONTAINER_FIELD: {
+		AstContainerField *field = AST_CAST(AstContainerField, member, AST_CONTAINER_FIELD);
+		if (!field->has_name)
+			return STRING_NONE;
+		*src = field->name.start;
+		return intern_span(gen, field->name);
+	}
 	case AST_VAR_DECL: {
 		AstVarDecl *decl = AST_CAST(AstVarDecl, member, AST_VAR_DECL);
 		*src = decl->name.start;
@@ -2561,6 +2569,9 @@ container_decl(GenBody *body, Scope *scope, AstContainerDecl *decl, StringId nam
 	IrDecl *decls = arena_zalloc(gen->arena, (decl_count + 1) * sizeof(IrDecl), alignof(IrDecl));
 	uint32_t decl_index = 0;
 
+	/* Fields share duplicate checking, but never become lexical bindings. */
+	StringId *member_names = ARENA_ARRAY(gen->arena, StringId, decl->members.count + 1);
+	uint32_t *member_srcs = ARENA_ARRAY(gen->arena, uint32_t, decl->members.count + 1);
 	/* Collect the declaration names first: members may refer to later ones. */
 	NamespaceScope namespace_scope;
 	namespace_scope.base.kind = SCOPE_NAMESPACE;
@@ -2570,21 +2581,25 @@ container_decl(GenBody *body, Scope *scope, AstContainerDecl *decl, StringId nam
 	namespace_scope.name_count = 0;
 	for (uint32_t i = 0; i < decl->members.count; i++) {
 		AstNode *member = decl->members.items[i];
+		uint32_t src;
+		StringId member_name_id = member_name(gen, member, &src);
+		member_names[i] = member_name_id;
+		member_srcs[i] = src;
+		if (member_name_id != STRING_NONE) {
+			for (uint32_t j = 0; j < i; j++) {
+				if (member_names[j] == member_name_id) {
+					error_at(gen, member_srcs[j], "duplicate struct member name '%s'", intern_text(gen->interner, member_name_id));
+					break;
+				}
+			}
+		}
 		if (member->kind == AST_CONTAINER_FIELD)
 			continue;
 		IrDecl *out = &decls[decl_index++];
-		uint32_t src;
-		StringId member_name_id = member_name(gen, member, &src);
 		out->name = member_name_id;
 		out->src = src;
 		if (member_name_id == STRING_NONE)
 			continue;
-		for (uint32_t j = 0; j < namespace_scope.name_count; j++) {
-			if (namespace_scope.names[j] == member_name_id) {
-				error_at(gen, namespace_scope.name_srcs[j], "duplicate struct member name '%s'", intern_text(gen->interner, member_name_id));
-				break;
-			}
-		}
 		namespace_scope.names[namespace_scope.name_count] = member_name_id;
 		namespace_scope.name_srcs[namespace_scope.name_count] = src;
 		namespace_scope.name_count = namespace_scope.name_count + 1;
@@ -2601,7 +2616,7 @@ container_decl(GenBody *body, Scope *scope, AstContainerDecl *decl, StringId nam
 			AstContainerField *field = AST_CAST(AstContainerField, member, AST_CONTAINER_FIELD);
 			IrField *out = &fields[field_index];
 			field_index = field_index + 1;
-			out->name = field->has_name ? intern_span(gen, field->name) : STRING_NONE;
+			out->name = member_names[i];
 			out->src = member->offset;
 			out->flags = IR_FIELD_HAS_TYPE | (field->is_comptime ? IR_FIELD_COMPTIME : 0);
 			GenBody type_body;
@@ -3023,6 +3038,7 @@ dump_inst(const IrDumper *dumper, IrInstIndex index, uint32_t depth)
 		break;
 	}
 	case IR_HAS_DECL:
+	case IR_FIELD_TYPE:
 	case IR_HAS_FIELD: {
 		IrHasMember payload;
 		IR_READ(ir, inst->data.payload, &payload);

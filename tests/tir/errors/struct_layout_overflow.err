@@ -1,0 +1,3 @@
+tests/tir/errors/struct_layout_overflow.zig:1:18: error: not supported by szc yet: struct layout size exceeds 64-bit address space
+const S=struct { x:[18446744073709551608]u8,y:u64, };
+                 ^

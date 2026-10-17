@@ -1405,7 +1405,7 @@ test_struct_namespaces(void)
 		{"pub fn main() void { _=@This().missing; }", "root source file"},
 		{"const N=struct { const value:u8=7; const C=struct {}; }; pub fn main() void { _=N.C.value; }", "has no member named"},
 		{"const T=u8; pub fn main() void { _=T.missing; }", "type 'u8' has no members"},
-		{"const N=struct { value:u8, }; pub fn main() void { _=N; }", "struct_decl"},
+		{"const N=struct { value:u8, }; pub fn main() void { _=N; }", NULL},
 		{"var n:u8=1; const N=struct { var n:u8=2; fn read() u8 { return n; } }; pub fn main() void { _=N.read(); }", "ambiguous reference"},
 		{"var n:u8=1; const N=struct { var n:u8=2; fn read() void { n=3; } }; pub fn main() void { N.read(); }", "ambiguous reference"},
 		{"var n:u8=1; const N=struct { var n:u8=2; fn read() void { _=&n; } }; pub fn main() void { N.read(); }", "ambiguous reference"},
@@ -1631,6 +1631,169 @@ test_has_field(void)
 		CHECK(success == (cases[i].error == NULL));
 		if (cases[i].error != NULL)
 			CHECK(diag.count != 0 && strstr(diag.items[0].message, cases[i].error) != NULL);
+		arena_free(&arena);
+	}
+}
+
+static void
+test_struct_metadata(void)
+{
+	const struct {
+		const char *source;
+		const char *error;
+	} cases[] = {
+		/* leaf/u0 */
+		{"const S=struct { item:u0, }; pub fn main() void { const n:u8=if(@hasField(S,\"item\") and !@hasField(S,\"Item\") and @FieldType(S,\"item\")==u0 and @sizeOf(S)==@sizeOf(u0) and @alignOf(S)==@alignOf(u0))0 else 256; _=n; }", NULL},
+		/* leaf/void */
+		{"const S=struct { item:void, }; pub fn main() void { const n:u8=if(@hasField(S,\"item\") and !@hasField(S,\"Item\") and @FieldType(S,\"item\")==void and @sizeOf(S)==@sizeOf(void) and @alignOf(S)==@alignOf(void))0 else 256; _=n; }", NULL},
+		/* leaf/bool */
+		{"const S=struct { item:bool, }; pub fn main() void { const n:u8=if(@hasField(S,\"item\") and !@hasField(S,\"Item\") and @FieldType(S,\"item\")==bool and @sizeOf(S)==@sizeOf(bool) and @alignOf(S)==@alignOf(bool))0 else 256; _=n; }", NULL},
+		/* leaf/u9 */
+		{"const S=struct { item:u9, }; pub fn main() void { const n:u8=if(@hasField(S,\"item\") and !@hasField(S,\"Item\") and @FieldType(S,\"item\")==u9 and @sizeOf(S)==@sizeOf(u9) and @alignOf(S)==@alignOf(u9))0 else 256; _=n; }", NULL},
+		/* leaf/i17 */
+		{"const S=struct { item:i17, }; pub fn main() void { const n:u8=if(@hasField(S,\"item\") and !@hasField(S,\"Item\") and @FieldType(S,\"item\")==i17 and @sizeOf(S)==@sizeOf(i17) and @alignOf(S)==@alignOf(i17))0 else 256; _=n; }", NULL},
+		/* leaf/u65 */
+		{"const S=struct { item:u65, }; pub fn main() void { const n:u8=if(@hasField(S,\"item\") and !@hasField(S,\"Item\") and @FieldType(S,\"item\")==u65 and @sizeOf(S)==@sizeOf(u65) and @alignOf(S)==@alignOf(u65))0 else 256; _=n; }", NULL},
+		/* leaf/u257 */
+		{"const S=struct { item:u257, }; pub fn main() void { const n:u8=if(@hasField(S,\"item\") and !@hasField(S,\"Item\") and @FieldType(S,\"item\")==u257 and @sizeOf(S)==@sizeOf(u257) and @alignOf(S)==@alignOf(u257))0 else 256; _=n; }", NULL},
+		/* leaf/f64 */
+		{"const S=struct { item:f64, }; pub fn main() void { const n:u8=if(@hasField(S,\"item\") and !@hasField(S,\"Item\") and @FieldType(S,\"item\")==f64 and @sizeOf(S)==@sizeOf(f64) and @alignOf(S)==@alignOf(f64))0 else 256; _=n; }", NULL},
+		/* leaf/[]const u16 */
+		{"const S=struct { item:[]const u16, }; pub fn main() void { const n:u8=if(@hasField(S,\"item\") and !@hasField(S,\"Item\") and @FieldType(S,\"item\")==[]const u16 and @sizeOf(S)==@sizeOf([]const u16) and @alignOf(S)==@alignOf([]const u16))0 else 256; _=n; }", NULL},
+		/* layout/mixed-forward */
+		{"const S=struct {a:u8, b:u64, c:u16,}; pub fn main() void { const n:u8=if(@sizeOf(S)==16 and @alignOf(S)==8)0 else 256; _=n; }", NULL},
+		/* layout/mixed-reverse */
+		{"const S=struct {c:u16, b:u64, a:u8,}; pub fn main() void { const n:u8=if(@sizeOf(S)==16 and @alignOf(S)==8)0 else 256; _=n; }", NULL},
+		/* layout/odd */
+		{"const S=struct {a:u9, b:i17, c:u33,}; pub fn main() void { const n:u8=if(@sizeOf(S)==16 and @alignOf(S)==8)0 else 256; _=n; }", NULL},
+		/* layout/empty-array */
+		{"const S=struct {a:[0]u64, b:u8,}; pub fn main() void { const n:u8=if(@sizeOf(S)==8 and @alignOf(S)==8)0 else 256; _=n; }", NULL},
+		/* nested */
+		{"const I=struct { x:u8, y:u32, }; const S=struct { a:[3]I, b:[2][3]u16, z:void, }; pub fn main() void { const n:u8=if(@FieldType(S,\"a\")==[3]I and @FieldType(I,\"y\")==u32 and @sizeOf(I)==8 and @alignOf(I)==4 and @sizeOf(S)==36 and @alignOf(S)==4)0 else 256; _=n; }", NULL},
+		/* self-pointers */
+		{"const S=struct { next:*S, many:[*]const S, }; pub fn main() void { const n:u8=if(@FieldType(S,\"next\")==*S and @FieldType(S,\"many\")==[*]const S and @sizeOf(S)==16 and @alignOf(S)==8)0 else 256; _=n; }", NULL},
+		{"const S=struct { p:@TypeOf(@as(*const @This(),@as(*@This(),undefined))), a:u8, }; pub fn main() u8 { return @sizeOf(S)-16; }", NULL},
+		{"const S=struct { p:@TypeOf(@as([]const @This(),@as([]@This(),undefined))), a:u8, }; pub fn main() u8 { return @sizeOf(S)-24; }", NULL},
+		/* mutual-pointers */
+		{"const A=struct { b:*B, }; const B=struct { a:*A, }; pub fn main() void { const n:u8=if(@FieldType(A,\"b\")==*B and @FieldType(B,\"a\")==*A and @sizeOf(A)==8 and @sizeOf(B)==8)0 else 256; _=n; }", NULL},
+		/* declarations-not-fields */
+		{"const S=struct { field:u8, pub const declaration:u8=256; const Other=struct { x:u16, }; pub fn bad() u8 { return 256; } }; pub fn main() void { const n:u8=if(@hasField(S,\"field\") and !@hasField(S,\"declaration\") and !@hasField(S,\"bad\") and !@hasField(S,\"Other\") and @FieldType(S,\"field\")==u8 and @FieldType(S.Other,\"x\")==u16 and @sizeOf(S)==1)0 else 256; _=n; }", NULL},
+		/* name/quote */
+		{"const S=struct { @\"a\\\"b\":u16, }; pub fn main() void { const n:u8=if(@hasField(S,\"a\\\"b\") and @FieldType(S,\"a\\\"b\")==u16)0 else 256; _=n; }", NULL},
+		/* nul-query/"item\x00" */
+		{"const S=struct { item:u8, }; pub fn main() void { const n:u8=if(@hasField(S,\"item\\x00\"))0 else 256; _=n; }", NULL},
+		/* nul-query/"item\x00tail" */
+		{"const S=struct { item:u8, }; pub fn main() void { const n:u8=if(!@hasField(S,\"item\\x00tail\"))0 else 256; _=n; }", NULL},
+		/* nested-anonymous */
+		{"const S=struct { inner:struct { value:u16, }, }; pub fn main() void { const n:u8=if(@FieldType(@FieldType(S,\"inner\"),\"value\")==u16 and @sizeOf(S)==2)0 else 256; _=n; }", NULL},
+		/* typed-query-result */
+		{"const S=struct { x:u16, }; const T=@FieldType(S,\"x\"); const answer:T=19; pub fn main() void { const n:u8=if(@TypeOf(answer)==u16 and answer==19 and @TypeOf(@hasField(S,\"x\"))==bool and @TypeOf(@FieldType(S,\"x\"))==type)0 else 256; _=n; }", NULL},
+		/* dynamic-pointer-native */
+		{"// exit: 0\n// Synthetic addresses only. No dereference, load/store, or struct value exists.\nconst S=struct { a:u8, b:u64, c:u16, };\nconst W=struct { wide:u65, byte:u8, };\nconst Z=struct { marker:void, zero:u0, };\nfn bytes(s:[]S) []u8 { return @ptrCast(s); }\nfn structs(s:[]u8) []S { return @alignCast(@ptrCast(s)); }\nfn wide_bytes(s:[]W) []u8 { return @ptrCast(s); }\nfn zero_bytes(s:[]Z) []u8 { return @ptrCast(s); }\nfn aligned(p:*align(1) S) *S { return @alignCast(p); }\nfn verify(address:usize,count:usize) u8 {\n    const p:[*]S=@ptrFromInt(address);\n    if(@intFromPtr(p+1)!=address+16 or @intFromPtr(p+3)!=address+48) return 1;\n    const wide:[*]W=@ptrFromInt(address);\n    if(@intFromPtr(wide+1)!=address+32) return 2;\n    const zero:[*]Z=@ptrFromInt(address);\n    if(@intFromPtr(zero+19)!=address) return 3;\n    const array:*[3]S=@ptrFromInt(address);\n    const s:[]S=array;\n    if(s.len!=3 or @intFromPtr(s.ptr)!=address) return 4;\n    const dynamic=p[0..count];\n    const b=bytes(dynamic);\n    if(b.len!=count*@sizeOf(S) or @intFromPtr(b.ptr)!=address) return 5;\n    const again=structs(b);\n    if(again.len!=count or @intFromPtr(again.ptr+2)!=address+32) return 6;\n    const wb=wide_bytes(wide[0..3]);\n    if(wb.len!=96 or @intFromPtr(wb.ptr)!=address) return 7;\n    const zb=zero_bytes(zero[0..5]);\n    if(zb.len!=0 or @intFromPtr(zb.ptr)!=address) return 8;\n    const unaligned:*align(1) S=@ptrFromInt(address);\n    if(@intFromPtr(aligned(unaligned))!=address) return 9;\n    const q:[*]S=@ptrCast(s);\n    if(@intFromPtr(q+1)!=address+16) return 10;\n    return 0;\n}\npub fn main() u8 { return verify(4096,3); }\n", NULL},
+		/* dynamic-struct-slice-resize */
+		{"const S=struct { a:u8, b:u64, }; fn f(p:[*]S,n:usize) []u8 { const s=p[0..n]; return @ptrCast(s); } pub fn main() void { const p:[*]S=@ptrFromInt(4096); const s=f(p,3); _=s; }", NULL},
+		/* dynamic-struct-align-cast */
+		{"const S=struct { a:u64, }; fn f(p:*align(1) S) *S { return @alignCast(p); } pub fn main() void { const p:*align(1) S=@ptrFromInt(4096); _=f(p); }", NULL},
+		/* invalid-field/x:anyopaque,/@hasField(S,"x") */
+		{"const S=struct {x:anyopaque,}; pub fn main() void { _=@hasField(S,\"x\"); }", "cannot directly embed opaque"},
+		/* invalid-field/x:i0,/@hasField(S,"x") */
+		{"const S=struct {x:i0,}; pub fn main() void { _=@hasField(S,\"x\"); }", "signed integer cannot have bit width 0"},
+		/* invalid-field/x:3,/@hasField(S,"x") */
+		{"const S=struct {x:3,}; pub fn main() void { _=@hasField(S,\"x\"); }", "expected type 'type'"},
+		/* invalid-field/x:MissingType,/@hasField(S,"x") */
+		{"const S=struct {x:MissingType,}; pub fn main() void { _=@hasField(S,\"x\"); }", "use of undeclared identifier"},
+		/* invalid-field/x:S,/@hasField(S,"x") */
+		{"const S=struct {x:S,}; pub fn main() void { _=@hasField(S,\"x\"); }", "depends on itself"},
+		/* invalid-field/x:u8, x:u16,/@hasField(S,"x") */
+		{"const S=struct {x:u8, x:u16,}; pub fn main() void { _=@hasField(S,\"x\"); }", "duplicate struct member name"},
+		/* invalid-query/@FieldType(S,"missing") */
+		{"const S=struct { x:u8, const declaration=1; }; pub fn main() void { _=@FieldType(S,\"missing\"); }", "no field named 'missing'"},
+		/* invalid-query/@FieldType(S,"declaration") */
+		{"const S=struct { x:u8, const declaration=1; }; pub fn main() void { _=@FieldType(S,\"declaration\"); }", "no field named 'declaration'"},
+		/* invalid-query/@FieldType(u8,"x") */
+		{"const S=struct { x:u8, const declaration=1; }; pub fn main() void { _=@FieldType(u8,\"x\"); }", "expected struct or union"},
+		/* invalid-query/@FieldType(S,undefined) */
+		{"const S=struct { x:u8, const declaration=1; }; pub fn main() void { _=@FieldType(S,undefined); }", "use of undefined"},
+		/* invalid-query/@FieldType(S,3) */
+		{"const S=struct { x:u8, const declaration=1; }; pub fn main() void { _=@FieldType(S,3); }", "expected type '[]const u8'"},
+		/* NYI/packed */
+		{"const S=packed struct { x:u8, }; pub fn main() void { _=@sizeOf(S); }", "not supported by szc yet"},
+		/* NYI/extern */
+		{"const S=extern struct { x:u8, }; pub fn main() void { _=@sizeOf(S); }", "not supported by szc yet"},
+		/* NYI/tuple */
+		{"const S=struct { u8, u16 }; pub fn main() void { _=@sizeOf(S); }", "not supported by szc yet"},
+		/* NYI/comptime-field */
+		{"const S=struct { comptime x:u8=1, }; pub fn main() void { _=@sizeOf(S); }", "not supported by szc yet"},
+		/* NYI/valid-default */
+		{"const S=struct { x:u8=7, }; pub fn main() void { _=@sizeOf(S); }", "not supported by szc yet"},
+		/* NYI/invalid-default */
+		{"const S=struct { x:u8=256, }; pub fn main() void { _=@sizeOf(S); }", "not supported by szc yet"},
+		/* NYI/explicit-align */
+		{"const S=struct { x:u8 align(16), }; pub fn main() void { _=@sizeOf(S); }", "not supported by szc yet"},
+		/* NYI/type/@sizeOf(S) */
+		{"const S=struct { x:type, }; pub fn main() void { _=@sizeOf(S); }", "not supported by szc yet"},
+		/* NYI/noreturn/@sizeOf(S) */
+		{"const S=struct { x:noreturn, }; pub fn main() void { _=@sizeOf(S); }", "not supported by szc yet"},
+		/* NYI/runtime-struct-value */
+		{"const S=struct { x:u8, }; pub fn main() u8 { const s:S=.{.x=7}; return s.x-7; }", "not supported by szc yet"},
+		/* NYI/runtime-struct-load */
+		{"const S=struct { x:u8, }; fn f(p:*S) void { const value=p.*; _=value; } pub fn main() void { const p:*S=@ptrFromInt(4096); f(p); }", "not supported by szc yet"},
+	};
+	for (uint32_t i = 0; i < sizeof(cases) / sizeof(cases[0]); i++) {
+		Arena arena;
+		arena_init(&arena);
+		SourceTable sources;
+		source_table_init(&sources, &arena);
+		Diag diag;
+		diag_init(&diag, &arena, &sources);
+		Interner interner;
+		intern_init(&interner, &arena);
+		const char *source = cases[i].source;
+		FileId file = source_add_memory(&sources, "struct_metadata.zig", source, (uint32_t)strlen(source));
+		AstContainerDecl *root = parse_file(&arena, &diag, &sources, file);
+		CHECK(!diag_has_errors(&diag));
+		IrFile *ir = irgen_file(&arena, &diag, &interner, source_get(&sources, file), file, root);
+		bool success = false;
+		if (!diag_has_errors(&diag)) {
+			Sema *sema = sema_create(&arena, &diag, &interner, &sources);
+			success = sema_analyze_executable(sema, file, ir);
+		}
+		CHECK(success == (cases[i].error == NULL));
+		if (cases[i].error != NULL)
+			CHECK(diag.count != 0 && strstr(diag.items[0].message, cases[i].error) != NULL);
+		arena_free(&arena);
+	}
+}
+
+static void
+test_struct_layout_api(void)
+{
+	for (uint32_t resolved = 0; resolved < 2; resolved++) {
+		Arena arena;
+		arena_init(&arena);
+		SourceTable sources;
+		source_table_init(&sources, &arena);
+		Diag diag;
+		diag_init(&diag, &arena, &sources);
+		Interner interner;
+		intern_init(&interner, &arena);
+		const char *source = resolved
+			? "const S=struct { z:[0]u64, }; fn use(p:*S) void { _=p; } pub fn main() void { _=@sizeOf(S); use(undefined); }"
+			: "const S=struct { x:u64, }; fn use(p:*S) void { _=p; } pub fn main() void { use(undefined); }";
+		FileId file = source_add_memory(&sources, "struct_layout_api.zig", source, (uint32_t)strlen(source));
+		AstContainerDecl *root = parse_file(&arena, &diag, &sources, file);
+		CHECK(!diag_has_errors(&diag));
+		IrFile *ir = irgen_file(&arena, &diag, &interner, source_get(&sources, file), file, root);
+		CHECK(!diag_has_errors(&diag));
+		Sema *sema = sema_create(&arena, &diag, &interner, &sources);
+		CHECK(sema_analyze_executable(sema, file, ir));
+		CHECK(sema_func_count(sema) == 3);
+		TypeFn fn = sema_type(sema, sema_func(sema, 2)->type)->as.fn;
+		TypeId type = sema_type(sema, fn.params[0])->as.pointer.child;
+		uint64_t size = 123;
+		CHECK(sema_type_size(sema, type, &size) == (resolved != 0));
+		CHECK(size == (resolved ? 0u : 123u));
+		CHECK(sema_type_align(sema, type) == (resolved ? 8u : 0u));
 		arena_free(&arena);
 	}
 }
@@ -2152,6 +2315,8 @@ main(void)
 	test_quoted_identifiers();
 	test_has_decl();
 	test_has_field();
+	test_struct_metadata();
+	test_struct_layout_api();
 	test_typeof();
 	test_in_comptime();
 	test_field();

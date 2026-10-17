@@ -24,6 +24,18 @@ def binary_case(name, integer_type, operator, lhs, rhs, message="integer overflo
 
 
 def cases():
+    prefix = 'const S=struct { a:u8,b:u64,c:u16, }; '
+    yield 'struct_pointer_alignment', prefix + (
+        'fn operation(n:usize) void { const p:*S=@ptrFromInt(n); _=p; } '
+        'pub fn main() void { operation(4097); }'), 'incorrect alignment'
+    yield 'struct_align_cast', prefix + (
+        'fn operation(p:*align(1) S) void { const q:*S=@alignCast(p); _=q; } '
+        'pub fn main() void { operation(@ptrFromInt(4097)); }'), 'incorrect alignment'
+    yield 'struct_slice_divisibility', prefix + (
+        'fn operation(s:[]u8) void { const q:[]align(1) S=@ptrCast(s); _=q; } '
+        'pub fn main() void { const p:[*]u8=@ptrFromInt(4096); operation(p[0..17]); }'), (
+        'slice length does not divide exactly into destination elements'), (
+        'does not divide exactly into destination elements')
     for leaf in ('type', 'u128'):
         yield 'memcpy_empty_array_length_'+leaf, (
             f'fn operation(d:[][0]{leaf},s:[]const [0]{leaf}) void {{ @memcpy(d,s); }} '

@@ -1,6 +1,6 @@
 # szc milestones
 
-Every milestone is small enough to finish, test and commit in one pass.
+Related dependency-driven submilestones may share a coherent integration batch.
 Each finished milestone records what it can't do yet ("Limitations") and how it
 depends on or feeds other stages ("Interactions").
 
@@ -137,7 +137,8 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
 
 - [~] **M6.1 Structs**: fields, init, field access, methods, default values.
   - [x] **M6.1a Fieldless namespaces**: qualified declarations, lexical `@This()`, lazy nested exports.
-  - Runtime fields, layout, values, initializers and instance methods remain unimplemented.
+  - [x] **M6.1b Ordinary struct type/layout foundation**: lazy declared field types, checked ABI size/alignment, @hasField/@FieldType and pointer-only layout integration.
+  - Runtime struct values, field offsets/projection, initializers, defaults and instance methods remain unimplemented.
 - [ ] **M6.2 Enums**: tag values, `@intFromEnum`, `@enumFromInt`, enum literals.
 - [ ] **M6.3 switch** on ints/enums with ranges.
 - [ ] **M6.4 Optionals**: `?T`, `orelse`, `.?`, if-payloads, optional pointers.
@@ -198,6 +199,55 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
 ## Completed milestone log
 
 (newest first; each entry: what, limitations, interactions)
+
+### M6.1b Ordinary struct type/layout foundation
+
+- **What**: lazy stable field metadata and checked ordinary auto-struct size/alignment;
+  nominal identity precedes field analysis. Explicit resolution/failure states reject
+  by-value cycles (including zero-length arrays) while allowing pointer/slice
+  recursion. @hasField and @FieldType demand full supported layout then select exact
+  normalized field names, not namespace declarations. @sizeOf/@alignOf support nested
+  structs/arrays, wide integer metadata, f32/f64, bool/void and pointer/slice fields.
+  Zero-byte fields retain alignment. Checked descending-alignment groups compute
+  size/tail rounding without claiming Zig's unstable equal-alignment field offsets.
+- **Integration**: implicit pointee alignment, arithmetic/difference strides and
+  slice resizing demand resolved layouts; unresolved read-only size fails without
+  touching output, alignment is zero. Same-child/equal-annotation qualifier coercions
+  avoid false recursive layout cycles. Deferred maps/field records are arena-owned;
+  effectful resolution uses value snapshots. Field/member duplicate checking shares
+  normalized identifiers without creating field namespace bindings. Nominal type
+  diagnostics are namespace-qualified. Runtime struct stores/materialization and
+  direct/indirect/variadic by-value calls have explicit rejection gates; existing
+  array/slice storage/ABI classification is not broadened.
+- **Reference/tests**: 100 official-Zig comparisons, 29 exact primary diagnostics;
+  51 separate szc-only scope rejections. Two type/pointer-only native fixtures,
+  three actual-Zig safety cases, 49 focused semantic scenarios plus two layout API
+  cases, IR/TIR/QBE and eight error goldens, four seeds each irgen/sema, hosted
+  semantic matrix and native rejection checks. Independent research/test/audit
+  agents found a real recursive qualifier regression before freeze; fixed with
+  four differential/two unit regressions. Final independent GCC/Clang Werror
+  ASan/UBSan snapshots pass 2609 units/1218 goldens, 129+4 native, 16 driver,
+  56 compiler-runner checks, full C/ABI/storage/alignment, 102 observed volatile
+  sequences and 303 safety cases. Optimized native/safety and forced main tests
+  pass. Both compilers pass 20000 standalone mutations/stage (256/256/111/167
+  seeds); fresh 60s libFuzzer totals: 2566454/66396/61617/45945. The first
+  candidate exposed new differential-script adapter convention errors, corrected
+  without weakening the shared harness. Final source/config/test/corpus files
+  match all three immutable /data/struct-final-v2/ snapshots. Final reference
+  regressions pass TypeOf 207/51, inComptime 94/81, namespaces 76/40, field
+  201/92, hasField 220/68, hasDecl 136/70, resized slices 183/41, alignment
+  casts 409 and exact pointer round trips 84. Both new native fixtures pass
+  actual-Zig Debug/ReleaseFast; the three new safety cases pass the reference.
+  Full e2e is szc-only, not full official-Zig/std/bootstrap differential.
+- **Limitations**: no offsets, field values/init/projection, struct storage or
+  by-value ABI, struct bitcasts/bit-size queries, packed/extern/tuple/comptime/
+  defaulted/explicitly aligned fields, comptime-only/uninstantiable/error field
+  layouts, unsupported float widths or local captures. These remain explicit NYI;
+  defaults are not silently ignored. Existing runtime integer-width limits remain.
+- **Interactions**: M6.1/M7.6 remain partial. This establishes shared layout/type
+  prerequisites for real structs, not struct-value or std/bootstrap completion.
+  Next batch must add deliberate field offsets/value/provenance/storage support,
+  not merely expand the array/slice aggregate predicate. Q6 stays at M10.2.
 
 ### M9.4j Comptime context query
 

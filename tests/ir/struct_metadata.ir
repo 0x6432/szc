@@ -1,0 +1,89 @@
+%59 = struct_decl (flags=0) {
+  decl const "Pair" value {
+    %2 = struct_decl (flags=0) {
+      field "byte" type {
+        %0 = break_inline result, @type_u8
+      }
+      field "word" type {
+        %1 = break_inline result, @type_u64
+      }
+    }
+    %3 = break_inline result, %2
+  }
+  decl const "Node" value {
+    %12 = struct_decl (flags=0) {
+      field "next" type {
+        %4 = this
+        %5 = as @type_type, %4
+        %6 = ptr_type %5, @true
+        %7 = as @type_type, %6
+        %8 = break_inline result, %7
+      }
+      field "pair" type {
+        %9 = decl_val "Pair"
+        %10 = as @type_type, %9
+        %11 = break_inline result, %10
+      }
+    }
+    %13 = break_inline result, %12
+  }
+  decl fn "main" pub value {
+    %57 = func "main" {
+      ret type {
+        %14 = break_inline result, @type_u8
+      }
+      body insts {
+        %15 = decl_val "Node"
+        %16 = as @type_type, %15
+        %21 = field_type %16 name {
+          %17 = ptr_type @type_u8, @true slice
+          %18 = str "pair"
+          %19 = as %17, %18
+          %20 = break_inline result, %19
+        }
+        %22 = ret_type
+        %23 = decl_val "Node"
+        %24 = as @type_type, %23
+        %29 = has_field %24 name {
+          %25 = ptr_type @type_u8, @true slice
+          %26 = str "next"
+          %27 = as %25, %26
+          %28 = break_inline result, %27
+        }
+        %30 = as @type_bool, %29
+        %34 = bool_and %30 rhs {
+          %31 = decl_val "Pair"
+          %32 = cmp_eq %21, %31
+          %33 = break_inline result, %32
+        }
+        %41 = bool_and %34 rhs {
+          %35 = decl_val "Node"
+          %36 = as @type_type, %35
+          %37 = size_of %36
+          %38 = int 24
+          %39 = cmp_eq %37, %38
+          %40 = break_inline result, %39
+        }
+        %48 = bool_and %41 rhs {
+          %42 = decl_val "Node"
+          %43 = as @type_type, %42
+          %44 = align_of %43
+          %45 = int 8
+          %46 = cmp_eq %44, %45
+          %47 = break_inline result, %46
+        }
+        %55 = if %48 then {
+          %49 = int 0
+          %50 = as %22, %49
+          %51 = break_inline result, %50
+        } else {
+          %52 = int 1
+          %53 = as %22, %52
+          %54 = break_inline result, %53
+        }
+        %56 = ret %55
+      }
+    }
+    %58 = break_inline result, %57
+  }
+}

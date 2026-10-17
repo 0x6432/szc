@@ -1,0 +1,3 @@
+tests/tir/errors/struct_signature_nyi.zig:3:29: error: not supported by szc yet: struct values in runtime function signatures
+pub fn main() void { consume(undefined); }
+                            ^
