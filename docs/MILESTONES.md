@@ -146,7 +146,7 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
   - [x] **M6.1h Internal struct-bearing by-value ABI**: direct/typed indirect private aggregate transport, argument-time snapshots, private callee copies and fresh result slots.
   - [x] **M6.1i Internal mutable struct globals**: checked stable symbols, source-known initialization, writable relocations, runtime snapshots and typed self/mutual address references.
   - [x] **M6.1j Ordinary field defaults**: definition-context constants, demanded validation and omitted-field completion.
-  - [ ] **M6.1k Ordinary instance method calls**: call-specific receiver binding, exact-once receiver evaluation and existing call transport.
+  - [x] **M6.1k Ordinary instance method calls**: call-specific receiver binding, exact-once receiver evaluation and existing call transport.
   - Remaining field forms stay deferred; struct singleton comptime classification remains separate.
 - [ ] **M6.2 Enums**: tag values, `@intFromEnum`, `@enumFromInt`, enum literals.
 - [ ] **M6.3 switch** on ints/enums with ranges.
@@ -208,6 +208,49 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
 ## Completed milestone log
 
 (newest first; each entry: what, limitations, interactions)
+
+### M6.1k Ordinary instance method-call syntax
+
+- **What**: direct dotted callees lower to FIELD_CALL, a five-word header plus
+  deferred explicit argument bodies. Bind only a transient receiver; no stored
+  bound-function/closure values. Namespace calls and real callback fields are
+  direct calls without receiver insertion. Same-file private methods, normalized
+  names, nominal S/*S/*const S receiver types and ordinary qualifiers compose
+  with prior storage/default/global/private-ABI support.
+- **Ordering/ownership**: evaluate receiver once, freeze a pointer variable or
+  callable field before explicit arguments, and snapshot a value receiver before
+  later side effects. Pointer receivers preserve aliases/qualifiers; temporaries
+  stay immutable. One optional receiver-pointer load, raw single-pointer guard,
+  per-instruction pending-method argument offset, explicit-count diagnostics and
+  bounded argument allocation. Existing call core owns all convention/storage/
+  liveness/generic/comptime/varargs/result-slot checks. No new backend/TIR/value
+  kind or C aggregate ABI. Grouped/builtin/stored instance lookups do not bind.
+- **Permanent checks**:90 semantic/emission and scope scenarios plus12 frontend
+  protocol cases;16 new compact stage/error goldens, six seeds each irgen/sema,
+  three natives/27 behavioral checks. Only three pre-existing positive IR dumps
+  change for direct dotted-call lowering; their TIR/QBE output remains unchanged.
+  No old method NYI existed to promote; the existing not-field/method exact
+  negative is retained. Separate explicit-callconv and11 other closed gates pass.
+- **Reference**:78 cases/33 exact-primary errors, three formatted natives Debug
+  and ReleaseFast, four compact positive stage sources, defaults82/29 including
+  all six mandatory ordered error lists, and private ABI62/15 pass. Two extra
+  bounded raw-dereference contracts also reject in both compilers. No fake address
+  is executed, and no whole-volatile/C aggregate/generic support is inferred.
+- **Grouped acceptance**: independent frozen GCC/Clang C11 Werror ASan/UBSan
+  pass7875 units/1351 goldens,158+4 natives, full driver/C/storage/alignment,
+  106 actual observed volatile sequences and303 safety cases. Each compiler
+  replays20000 standalone mutations/stage with seeds256/256/159/215. Separate
+  GCC-O2 native/safety and static2/mutable2 physical adapters pass. Four fresh
+  60-second libFuzzer campaigns: 2301833/78326/78349/74871, no failures.
+  All6443 files match main plus three frozen trees before final documentation
+  edits. Source reviews found no remaining receiver/capture/transport blocker.
+- **Evidence/limits**: /data/struct-methods-final/{gcc,clang,optimized}, manifest
+  and verification.json; /data/struct-methods-final-*.log, -diff-final.json,
+  -reference-native.json, -stage-reference.json, -regression-*.{json,log}.
+  Hosted ff6d66f run39173359597 was queued at last check, NOT green. No timeout,
+  assertion or hosted failure classification was weakened. Enum research is
+  scratch-only; packed/extern fields, OPV struct classification and other deferred
+  language domains remain pending.
 
 ### M6.1j Ordinary field defaults and checked field captures
 

@@ -1306,3 +1306,30 @@ original order. No-default analysis, pre-sema diagnostics, notes and multi-file
 suffixes preserve prior ordering. This scoped compatibility policy is not a general
 Zig diagnostic-unit ordering implementation. Six permanent differential cases
 compare all ordered errors, not merely the first primary.
+
+### Ordinary instance method-call binding
+
+`FIELD_CALL` is call syntax, not a bound-function value. Its five-word
+`IrFieldCallHeader { object, name, name_src, modifier, arg_count }` is followed by
+`arg_count` deferred argument bodies. `object` is the receiver's expression
+reference, evaluated once; the count and each `ARG_TYPE` index describe explicit
+arguments only. Only a direct dotted callee uses this opcode. Grouped callees,
+stored instance projections and builtin `@field` retain ordinary value lookup.
+
+Binding first freezes a pointer-valued receiver, optionally loading one pointer
+object. The raw expression reference must be a single pointer. Type-valued
+receivers perform ordinary namespace calls. An actual callable field is loaded
+before arguments and remains a direct callee. Otherwise a namespace function
+may bind its first parameter when it is nominally the concrete ordinary struct
+or a single pointer to that struct. Value receivers are loaded into owned
+snapshots before explicit arguments; pointer receivers preserve the borrowed
+reference, constness, volatility and alignment. Temporaries remain immutable.
+
+The common call core retains signature, convention, storage, generic/comptime,
+varargs, function-liveness and result-slot checks. A per-instruction pending
+method tag shifts explicit `ARG_TYPE` indices by one without changing interned
+function types or another nested call's context. Count diagnostics exclude the
+bound receiver. The existing private aggregate ABI transports value receivers;
+no closure representation, backend opcode or C aggregate ABI is introduced.
+Explicit calling-convention syntax and unsupported receiver/type domains retain
+their existing gates. Ordinary instance projections do not become method values.

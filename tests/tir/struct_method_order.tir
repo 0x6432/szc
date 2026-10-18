@@ -1,0 +1,53 @@
+global szc.g.1: struct_method_order.S = struct.20
+fn szc.main.1: fn () u8 {
+  %0: *struct_method_order.S = call szc.root.2()
+  %1: *const *struct_method_order.S = alloc
+  %2: void = store %1, %0
+  %3: *struct_method_order.S = load %1
+  %4: *const struct_method_order.S = alloc
+  %5: void = array_copy %4, %3
+  %6: u8 = call szc.mutate.4()
+  %7: u8 = call szc.value.3(%4, %6)
+  %8: *u8 = const struct_field(base.9, index.0, offset.0)
+  %9: u8 = const 1
+  %10: void = store %8, %9
+  %11: *struct_method_order.S = call szc.root.2()
+  %12: *const *struct_method_order.S = alloc
+  %13: void = store %12, %11
+  %14: *struct_method_order.S = load %12
+  %15: *const struct_method_order.S = ptr_cast %14
+  %16: u8 = call szc.mutate.4()
+  %17: u8 = call szc.read.5(%15, %16)
+  %18: u8 = add %7, %17
+  %19: noreturn = ret %18
+}
+fn szc.root.2: fn () *struct_method_order.S {
+  %0: *struct_method_order.S = const szc.g.1
+  %1: noreturn = ret %0
+}
+fn szc.value.3: fn (struct_method_order.S, u8) u8 {
+  %0: *align(1) const struct_method_order.S = arg 0
+  %1: *const struct_method_order.S = alloc
+  %2: void = array_copy %1, %0
+  %3: u8 = arg 1
+  %4: *const u8 = struct_field_ptr %1, 0
+  %5: u8 = load %4
+  %6: noreturn = ret %5
+}
+fn szc.mutate.4: fn () u8 {
+  %0: *u8 = const struct_field(base.9, index.0, offset.0)
+  %1: u8 = const 9
+  %2: void = store %0, %1
+  %3: u8 = const 0
+  %4: noreturn = ret %3
+}
+fn szc.read.5: fn (*const struct_method_order.S, u8) u8 {
+  %0: *const struct_method_order.S = arg 0
+  %1: u8 = arg 1
+  %2: *const *const struct_method_order.S = alloc
+  %3: void = store %2, %0
+  %4: *const struct_method_order.S = load %2
+  %5: *const u8 = struct_field_ptr %4, 0
+  %6: u8 = load %5
+  %7: noreturn = ret %6
+}

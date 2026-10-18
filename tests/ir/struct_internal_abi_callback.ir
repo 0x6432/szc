@@ -1,4 +1,4 @@
-%70 = struct_decl (flags=0) {
+%69 = struct_decl (flags=0) {
   decl const "S" value {
     %2 = struct_decl (flags=0) {
       field "a" type {
@@ -84,36 +84,35 @@
     %47 = break_inline result, %46
   }
   decl fn "main" pub value {
-    %68 = func "main" {
+    %67 = func "main" {
       ret type {
         %48 = break_inline result, @type_void
       }
       body insts {
-        %49 = decl_val "h"
-        %50 = field_val "cb", %49
-        %51 = call %50 arg0 {
-          %52 = arg_type %51, 0
-          %64 = struct_init %52 typed "a" value {
-            %53 = struct_field_type "a", %52
-            %54 = decl_val "seed"
-            %55 = call %54 arg0 {
-              %56 = arg_type %55, 0
-              %57 = int 1
-              %58 = as %56, %57
-              %59 = break_inline result, %58
+        %49 = decl_ref "h"
+        %50 = field_call %49, "cb" arg0 {
+          %51 = arg_type %50, 0
+          %63 = struct_init %51 typed "a" value {
+            %52 = struct_field_type "a", %51
+            %53 = decl_val "seed"
+            %54 = call %53 arg0 {
+              %55 = arg_type %54, 0
+              %56 = int 1
+              %57 = as %55, %56
+              %58 = break_inline result, %57
             }
-            %60 = break_inline result, %55
+            %59 = break_inline result, %54
           } "b" value {
-            %61 = struct_field_type "b", %52
-            %62 = int 2
-            %63 = break_inline result, %62
+            %60 = struct_field_type "b", %51
+            %61 = int 2
+            %62 = break_inline result, %61
           }
-          %65 = as %52, %64
-          %66 = break_inline result, %65
+          %64 = as %51, %63
+          %65 = break_inline result, %64
         }
-        %67 = ret_implicit
+        %66 = ret_implicit
       }
     }
-    %69 = break_inline result, %68
+    %68 = break_inline result, %67
   }
 }

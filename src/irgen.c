@@ -1232,12 +1232,15 @@ call(GenBody *body, Scope *scope, ResultInfo info, AstNode *node)
 {
 	IrGen *gen = body->gen;
 	AstCall *call_node = AST_CAST(AstCall, node, AST_CALL);
-	IrRef callee = expr(body, scope, result_none, call_node->callee);
+	bool field_call = call_node->callee->kind == AST_FIELD_ACCESS;
+	AstFieldAccess *field = field_call ? AST_CAST(AstFieldAccess, call_node->callee, AST_FIELD_ACCESS) : NULL;
+	IrRef callee = field_call ? read_reference(body, scope, field->lhs)
+		: expr(body, scope, result_none, call_node->callee);
 
 	/* Reserve the call so argument bodies can refer to it for their result types. */
 	IrData data;
 	memset(&data, 0, sizeof(data));
-	IrInstIndex call_index = new_inst(gen, IR_CALL, node->offset, data);
+	IrInstIndex call_index = new_inst(gen, field_call ? IR_FIELD_CALL : IR_CALL, node->offset, data);
 	IrRef call_ref = ir_ref_of_inst(call_index);
 
 	uint32_t arg_count = call_node->args.count;
@@ -1251,11 +1254,22 @@ call(GenBody *body, Scope *scope, ResultInfo info, AstNode *node)
 		arg_bodies[i] = body_finish(&arg_body);
 	}
 
-	IrCallHeader header;
-	header.callee = callee;
-	header.modifier = body->is_comptime ? IR_CALL_COMPTIME : IR_CALL_AUTO;
-	header.arg_count = arg_count;
-	uint32_t payload = APPEND_EXTRA(gen, header);
+	uint32_t payload;
+	if (field_call) {
+		IrFieldCallHeader header;
+		header.object = callee;
+		header.name = intern_span(gen, field->name);
+		header.name_src = field->name.start;
+		header.modifier = body->is_comptime ? IR_CALL_COMPTIME : IR_CALL_AUTO;
+		header.arg_count = arg_count;
+		payload = APPEND_EXTRA(gen, header);
+	} else {
+		IrCallHeader header;
+		header.callee = callee;
+		header.modifier = body->is_comptime ? IR_CALL_COMPTIME : IR_CALL_AUTO;
+		header.arg_count = arg_count;
+		payload = APPEND_EXTRA(gen, header);
+	}
 	uint32_t bodies = reserve_extra(gen, arg_count);
 	memcpy(&gen->ir->extra[bodies], arg_bodies, arg_count * sizeof(IrBody));
 	gen->ir->insts[call_index].data.payload = payload;
@@ -3378,6 +3392,23 @@ dump_inst(const IrDumper *dumper, IrInstIndex index, uint32_t depth)
 			dump_ref(dumper, payload.sentinel);
 		}
 		dump_labeled_body(dumper, "align", payload.alignment_body, depth);
+		break;
+	}
+	case IR_FIELD_CALL: {
+		IrFieldCallHeader header;
+		IR_READ(ir, inst->data.payload, &header);
+		fputc(' ', out);
+		dump_ref(dumper, header.object);
+		fputs(", ", out);
+		dump_string(dumper, header.name);
+		if (header.modifier == IR_CALL_COMPTIME)
+			fputs(" comptime", out);
+		uint32_t bodies = inst->data.payload + IR_WORDS(IrFieldCallHeader);
+		for (uint32_t i = 0; i < header.arg_count; i++) {
+			char label[32];
+			snprintf(label, sizeof(label), "arg%" PRIu32, i);
+			dump_labeled_body(dumper, label, ir->extra[bodies + i], depth);
+		}
 		break;
 	}
 	case IR_CALL: {

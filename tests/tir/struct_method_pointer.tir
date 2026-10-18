@@ -1,0 +1,30 @@
+global szc.g.1: struct_method_pointer.O = struct.25
+fn szc.main.1: fn () u8 {
+  %0: usize = call szc.index.2()
+  %1: *[2]struct_method_pointer.S = const struct_field(base.10, index.0, offset.0)
+  %2: *struct_method_pointer.S = array_elem_ptr %1, %0
+  %3: u8 = const 3
+  %4: u8 = call szc.bump.3(%2, %3)
+  %5: noreturn = ret %4
+}
+fn szc.index.2: fn () usize {
+  %0: usize = const 1
+  %1: noreturn = ret %0
+}
+fn szc.bump.3: fn (*struct_method_pointer.S, u8) u8 {
+  %0: *struct_method_pointer.S = arg 0
+  %1: u8 = arg 1
+  %2: *const *struct_method_pointer.S = alloc
+  %3: void = store %2, %0
+  %4: *struct_method_pointer.S = load %2
+  %5: *u8 = struct_field_ptr %4, 0
+  %6: u8 = load %5
+  %7: u8 = add %6, %1
+  %8: void = store %5, %7
+  %9: *const *struct_method_pointer.S = alloc
+  %10: void = store %9, %0
+  %11: *struct_method_pointer.S = load %9
+  %12: *u8 = struct_field_ptr %11, 0
+  %13: u8 = load %12
+  %14: noreturn = ret %13
+}

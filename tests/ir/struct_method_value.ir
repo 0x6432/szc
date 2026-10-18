@@ -1,0 +1,115 @@
+%74 = struct_decl (flags=0) {
+  decl const "S" value {
+    %32 = struct_decl (flags=0) {
+      field "x" type {
+        %0 = break_inline result, @type_u8
+      } default {
+        %1 = field_default_type
+        %2 = int 7
+        %3 = break_inline result, %2
+      }
+      field "y" type {
+        %4 = break_inline result, @type_u16
+      } default {
+        %5 = field_default_type
+        %6 = int 513
+        %7 = break_inline result, %6
+      }
+      decl fn "copy" value {
+        %30 = func "copy" {
+          %11 = param "self" type {
+            %8 = decl_val "S"
+            %9 = as @type_type, %8
+            %10 = break_inline result, %9
+          }
+          %13 = param "n" type {
+            %12 = break_inline result, @type_u8
+          }
+          ret type {
+            %14 = decl_val "S"
+            %15 = as @type_type, %14
+            %16 = break_inline result, %15
+          }
+          body insts {
+            %17 = ret_type
+            %27 = struct_init %17 "x" value {
+              %18 = struct_field_type "x", %17
+              %19 = field_val "x", %11
+              %20 = add %19, %13
+              %21 = as %18, %20
+              %22 = break_inline result, %21
+            } "y" value {
+              %23 = struct_field_type "y", %17
+              %24 = field_val "y", %11
+              %25 = as %23, %24
+              %26 = break_inline result, %25
+            }
+            %28 = as_return %17, %27
+            %29 = ret %28
+          }
+        }
+        %31 = break_inline result, %30
+      }
+    }
+    %33 = break_inline result, %32
+  }
+  decl fn "seed" value {
+    %40 = func "seed" noinline {
+      %35 = param "n" type {
+        %34 = break_inline result, @type_u8
+      }
+      ret type {
+        %36 = break_inline result, @type_u8
+      }
+      body insts {
+        %37 = ret_type
+        %38 = as_return %37, %35
+        %39 = ret %38
+      }
+    }
+    %41 = break_inline result, %40
+  }
+  decl fn "main" pub value {
+    %72 = func "main" {
+      ret type {
+        %42 = break_inline result, @type_u8
+      }
+      body insts {
+        %43 = decl_val "S"
+        %44 = as @type_type, %43
+        %54 = struct_init %44 "x" value {
+          %45 = struct_field_type "x", %44
+          %46 = decl_val "seed"
+          %47 = call %46 arg0 {
+            %48 = arg_type %47, 0
+            %49 = int 1
+            %50 = as %48, %49
+            %51 = break_inline result, %50
+          }
+          %52 = as %45, %47
+          %53 = break_inline result, %52
+        }
+        %55 = as %44, %54
+        %57 = ref %55
+        %56 = ret_type
+        %58 = field_call %57, "copy" arg0 {
+          %59 = arg_type %58, 0
+          %60 = int 2
+          %61 = as %59, %60
+          %62 = break_inline result, %61
+        }
+        %63 = ref %58
+        %64 = field_call %63, "copy" arg0 {
+          %65 = arg_type %64, 0
+          %66 = int 3
+          %67 = as %65, %66
+          %68 = break_inline result, %67
+        }
+        %69 = field_val "x", %64
+        %70 = as_return %56, %69
+        %71 = ret %70
+      }
+    }
+    %73 = break_inline result, %72
+  }
+}

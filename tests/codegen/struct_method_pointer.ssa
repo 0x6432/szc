@@ -1,0 +1,67 @@
+function w $szc.main.1() {
+@start
+	%t0 =l call $szc.index.2()
+	%g2_index =w cugel %t0, 2
+	jnz %g2_index, @g2_index_panic, @g2_index_ok
+@g2_index_panic
+	call $szc.panic.7()
+	hlt
+@g2_index_ok
+	%e2_offset =l mul %t0, 1
+	%t2 =l add $szc.g.1, %e2_offset
+	%t4 =w call $szc.bump.3(l %t2, w 3)
+	%t4 =w and %t4, 255
+	ret %t4
+}
+
+function l $szc.index.2() {
+@start
+	ret 1
+}
+
+function w $szc.bump.3(l %t0, w %t1) {
+@start
+	%t2 =l alloc8 8
+	%t9 =l alloc8 8
+	storel %t0, %t2
+	%t4 =l loadl %t2
+	%t5 =l copy %t4
+	%t6 =w loadub %t5
+	%t7 =w add %t6, %t1
+	%t7 =w and %t7, 255
+	%g7_overflow =w cultw %t7, %t6
+	jnz %g7_overflow, @g7_overflow_panic, @g7_overflow_ok
+@g7_overflow_panic
+	call $szc.panic.0()
+	hlt
+@g7_overflow_ok
+	storeb %t7, %t5
+	storel %t0, %t9
+	%t11 =l loadl %t9
+	%t12 =l copy %t11
+	%t13 =w loadub %t12
+	ret %t13
+}
+
+data $szc.g.1 = align 1 { b 1, b 2 }
+data $szc.panic.msg.0 = { b "integer overflow\n", b 0 }
+function $szc.panic.0() {
+@start
+	call $write(w 2, l $szc.panic.msg.0, l 17)
+	call $abort()
+	hlt
+}
+
+data $szc.panic.msg.7 = { b "index out of bounds\n", b 0 }
+function $szc.panic.7() {
+@start
+	call $write(w 2, l $szc.panic.msg.7, l 20)
+	call $abort()
+	hlt
+}
+
+export function w $main() {
+@start
+	%status =w call $szc.main.1()
+	ret %status
+}

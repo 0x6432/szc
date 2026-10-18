@@ -58,8 +58,8 @@ addresses and direct dereference following Zig 0.17.0 constant-load rules
 widths beyond 64 bits, but runtime
 wide-integer values/arithmetic are still unsupported. Ordinary structs support metadata and physical layout,
 constant and runtime values, typed field pointers, immutable and mutable internal globals,
-private by-value calls/returns, and checked ordinary field defaults. Instance method-call binding,
-packed/extern structs, C aggregate ABI, non-scalar sentinels, modules/imports,
+private by-value calls/returns, checked ordinary field defaults and call-specific instance methods.
+Packed/extern structs, C aggregate ABI, non-scalar sentinels, modules/imports,
 generic functions and the full comptime interpreter remain pending; szc does not yet
 bootstrap Zig.
 

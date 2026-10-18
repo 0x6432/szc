@@ -1,0 +1,69 @@
+function w $szc.main.1() {
+@start
+	%t2 =l alloc4 4
+	%t9 =l alloc4 4
+	%t12 =l alloc4 4
+	%t15 =l alloc4 4
+	%t18 =l alloc4 4
+	%t1 =w call $szc.seed.2(w 1)
+	%t1 =w and %t1, 255
+	%t3 =l add %t2, 2
+	storeb %t1, %t3
+	%t5 =l copy %t2
+	storeh 513, %t5
+	%t8 =l copy %t2
+	call $memmove(l %t9, l %t8, l 4)
+	call $szc.copy.3(l %t9, w 2, l %t12)
+	%t14 =l copy %t12
+	call $memmove(l %t15, l %t14, l 4)
+	call $szc.copy.3(l %t15, w 3, l %t18)
+	%t20 =l copy %t18
+	%t21 =l add %t20, 2
+	%t22 =w loadub %t21
+	ret %t22
+}
+
+function w $szc.seed.2(w %t0) {
+@start
+	ret %t0
+}
+
+function $szc.copy.3(l %t0, w %t3, l %t4) {
+@start
+	%t1 =l alloc4 4
+	%t10 =l alloc4 4
+	call $memmove(l %t1, l %t0, l 4)
+	%t5 =l add %t1, 2
+	%t6 =w loadub %t5
+	%t7 =w add %t6, %t3
+	%t7 =w and %t7, 255
+	%g7_overflow =w cultw %t7, %t6
+	jnz %g7_overflow, @g7_overflow_panic, @g7_overflow_ok
+@g7_overflow_panic
+	call $szc.panic.0()
+	hlt
+@g7_overflow_ok
+	%t8 =l copy %t1
+	%t9 =w loaduh %t8
+	%t11 =l add %t10, 2
+	storeb %t7, %t11
+	%t13 =l copy %t10
+	storeh %t9, %t13
+	%t15 =l copy %t10
+	call $memmove(l %t4, l %t15, l 4)
+	ret
+}
+
+data $szc.panic.msg.0 = { b "integer overflow\n", b 0 }
+function $szc.panic.0() {
+@start
+	call $write(w 2, l $szc.panic.msg.0, l 17)
+	call $abort()
+	hlt
+}
+
+export function w $main() {
+@start
+	%status =w call $szc.main.1()
+	ret %status
+}

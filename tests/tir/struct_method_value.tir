@@ -1,0 +1,50 @@
+fn szc.main.1: fn () u8 {
+  %0: u8 = const 1
+  %1: u8 = call szc.seed.2(%0)
+  %2: *struct_method_value.S = alloc
+  %3: *u8 = struct_field_ptr %2, 2
+  %4: void = store %3, %1
+  %5: *u16 = struct_field_ptr %2, 0
+  %6: u16 = const 513
+  %7: void = store %5, %6
+  %8: *const struct_method_value.S = ptr_cast %2
+  %9: *const struct_method_value.S = alloc
+  %10: void = array_copy %9, %8
+  %11: u8 = const 2
+  %12: *struct_method_value.S = alloc
+  %13: void = call szc.copy.3(%9, %11, %12)
+  %14: *const struct_method_value.S = ptr_cast %12
+  %15: *const struct_method_value.S = alloc
+  %16: void = array_copy %15, %14
+  %17: u8 = const 3
+  %18: *struct_method_value.S = alloc
+  %19: void = call szc.copy.3(%15, %17, %18)
+  %20: *const struct_method_value.S = ptr_cast %18
+  %21: *const u8 = struct_field_ptr %20, 2
+  %22: u8 = load %21
+  %23: noreturn = ret %22
+}
+fn szc.seed.2: fn (u8) u8 {
+  %0: u8 = arg 0
+  %1: noreturn = ret %0
+}
+fn szc.copy.3: fn (struct_method_value.S, u8) struct_method_value.S {
+  %0: *align(1) const struct_method_value.S = arg 0
+  %1: *const struct_method_value.S = alloc
+  %2: void = array_copy %1, %0
+  %3: u8 = arg 1
+  %4: *struct_method_value.S = arg 2
+  %5: *const u8 = struct_field_ptr %1, 2
+  %6: u8 = load %5
+  %7: u8 = add %6, %3
+  %8: *const u16 = struct_field_ptr %1, 0
+  %9: u16 = load %8
+  %10: *struct_method_value.S = alloc
+  %11: *u8 = struct_field_ptr %10, 2
+  %12: void = store %11, %7
+  %13: *u16 = struct_field_ptr %10, 0
+  %14: void = store %13, %9
+  %15: *const struct_method_value.S = ptr_cast %10
+  %16: void = array_copy %4, %15
+  %17: noreturn = ret
+}

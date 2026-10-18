@@ -1,0 +1,148 @@
+%96 = struct_decl (flags=0) {
+  decl const "S" value {
+    %29 = struct_decl (flags=0) {
+      field "x" type {
+        %0 = break_inline result, @type_u8
+      }
+      decl fn "value" value {
+        %12 = func "value" {
+          %4 = param "self" type {
+            %1 = decl_val "S"
+            %2 = as @type_type, %1
+            %3 = break_inline result, %2
+          }
+          %6 = param "n" type {
+            %5 = break_inline result, @type_u8
+          }
+          ret type {
+            %7 = break_inline result, @type_u8
+          }
+          body insts {
+            %8 = ret_type
+            %9 = field_val "x", %4
+            %10 = as_return %8, %9
+            %11 = ret %10
+          }
+        }
+        %13 = break_inline result, %12
+      }
+      decl fn "read" value {
+        %27 = func "read" {
+          %19 = param "self" type {
+            %14 = decl_val "S"
+            %15 = as @type_type, %14
+            %16 = ptr_type %15, @true
+            %17 = as @type_type, %16
+            %18 = break_inline result, %17
+          }
+          %21 = param "n" type {
+            %20 = break_inline result, @type_u8
+          }
+          ret type {
+            %22 = break_inline result, @type_u8
+          }
+          body insts {
+            %23 = ret_type
+            %24 = field_val "x", %19
+            %25 = as_return %23, %24
+            %26 = ret %25
+          }
+        }
+        %28 = break_inline result, %27
+      }
+    }
+    %30 = break_inline result, %29
+  }
+  decl var "g" type {
+    %31 = decl_val "S"
+    %32 = as @type_type, %31
+    %33 = break_inline result, %32
+  } value {
+    %34 = decl_type
+    %38 = struct_init %34 typed "x" value {
+      %35 = struct_field_type "x", %34
+      %36 = int 1
+      %37 = break_inline result, %36
+    }
+    %39 = as %34, %38
+    %40 = break_inline result, %39
+  }
+  decl fn "root" value {
+    %50 = func "root" noinline {
+      ret type {
+        %41 = decl_val "S"
+        %42 = as @type_type, %41
+        %43 = ptr_type %42, @false
+        %44 = as @type_type, %43
+        %45 = break_inline result, %44
+      }
+      body insts {
+        %46 = ret_type
+        %47 = decl_ref "g"
+        %48 = as_return %46, %47
+        %49 = ret %48
+      }
+    }
+    %51 = break_inline result, %50
+  }
+  decl fn "mutate" value {
+    %63 = func "mutate" noinline {
+      ret type {
+        %52 = break_inline result, @type_u8
+      }
+      body insts {
+        %53 = decl_ref "g"
+        %54 = field_ptr "x", %53
+        %55 = int 9
+        %56 = elem_type %54
+        %57 = as %56, %55
+        %58 = store %54, %57
+        %59 = ret_type
+        %60 = int 0
+        %61 = as_return %59, %60
+        %62 = ret %61
+      }
+    }
+    %64 = break_inline result, %63
+  }
+  decl fn "main" pub value {
+    %94 = func "main" {
+      ret type {
+        %65 = break_inline result, @type_u8
+      }
+      body insts {
+        %66 = decl_val "root"
+        %67 = call %66
+        %68 = ref %67
+        %69 = field_call %68, "value" arg0 {
+          %70 = arg_type %69, 0
+          %71 = decl_val "mutate"
+          %72 = call %71
+          %73 = as %70, %72
+          %74 = break_inline result, %73
+        }
+        %75 = decl_ref "g"
+        %76 = field_ptr "x", %75
+        %77 = int 1
+        %78 = elem_type %76
+        %79 = as %78, %77
+        %80 = store %76, %79
+        %81 = ret_type
+        %82 = decl_val "root"
+        %83 = call %82
+        %84 = ref %83
+        %85 = field_call %84, "read" arg0 {
+          %86 = arg_type %85, 0
+          %87 = decl_val "mutate"
+          %88 = call %87
+          %89 = as %86, %88
+          %90 = break_inline result, %89
+        }
+        %91 = add %69, %85
+        %92 = as_return %81, %91
+        %93 = ret %92
+      }
+    }
+    %95 = break_inline result, %94
+  }
+}

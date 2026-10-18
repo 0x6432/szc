@@ -2921,6 +2921,326 @@ test_struct_mutable_globals(void)
 
 /* Defaults are checked once per nominal type; omitted values compose with
  * runtime storage, globals and the private ABI without changing value ownership. */
+/* Frontend-only CHECK fragment: paste before main and invoke once.
+ * Binding versus callable-field/namespace dispatch remains sema's decision. */
+static void
+test_struct_field_call_ir(void)
+{
+	const struct {
+		const char *source;
+		uint32_t field_calls;
+		uint32_t direct_calls;
+		uint32_t arguments;
+		uint32_t read_fields;
+		bool comptime;
+	} cases[] = {
+		{"const s=undefined; fn f() void {s.method();}", 1, 0, 0, 0, false},
+		{"const s=undefined; fn f() void {s.method(1,2);}", 1, 0, 2, 0, false},
+		{"const s=undefined; fn f() void {s.@\"\\x6dethod\"(1);}", 1, 0, 1, 0, false},
+		{"const S=struct{}; fn f() void {S.method(1);}", 1, 0, 1, 0, false},
+		{"var s: u8=undefined; fn f() void {s.inner.method();}", 1, 0, 0, 1, false},
+		{"var a: [1]u8=undefined; fn f() void {a[0].method();}", 1, 0, 0, 0, false},
+		{"fn make() u8 {return 0;} fn f() void {make().method(1);}", 1, 1, 1, 0, false},
+		{"const s=undefined; fn f() void {(s.method)(1);}", 0, 1, 0, 0, false},
+		{"const s=undefined; fn f() void {@field(s,\"method\")(1);}", 0, 1, 0, 0, false},
+		{"fn g(x:u8) void {_=x;} fn f() void {g(1);}", 0, 1, 0, 0, false},
+		{"const s=undefined; comptime {s.method(1);}", 1, 0, 1, 0, true},
+		{"var p: *u8=undefined; fn f() void {p.*.method();}", 1, 0, 0, 0, false},
+	};
+	CHECK(IR_WORDS(IrFieldCallHeader) == 5);
+	for (uint32_t i = 0; i < sizeof(cases) / sizeof(cases[0]); i++) {
+		Arena arena;
+		arena_init(&arena);
+		SourceTable sources;
+		source_table_init(&sources, &arena);
+		Diag diag;
+		diag_init(&diag, &arena, &sources);
+		Interner interner;
+		intern_init(&interner, &arena);
+		const char *source = cases[i].source;
+		FileId file = source_add_memory(&sources, "struct_field_call_ir.zig", source, (uint32_t)strlen(source));
+		AstContainerDecl *root = parse_file(&arena, &diag, &sources, file);
+		CHECK(!diag_has_errors(&diag));
+		if (diag_has_errors(&diag)) {
+			arena_free(&arena);
+			continue;
+		}
+		IrFile *ir = irgen_file(&arena, &diag, &interner, source_get(&sources, file), file, root);
+		CHECK(!diag_has_errors(&diag));
+		if (diag_has_errors(&diag)) {
+			arena_free(&arena);
+			continue;
+		}
+		uint32_t field_calls = 0;
+		uint32_t direct_calls = 0;
+		uint32_t arguments = 0;
+		uint32_t read_fields = 0;
+		bool protocol = true;
+		bool names = true;
+		bool modifiers = true;
+		for (uint32_t j = 0; j < ir->inst_count; j++) {
+			const IrInst *inst = &ir->insts[j];
+			direct_calls += inst->op == IR_CALL;
+			read_fields += inst->op == IR_FIELD_READ_REF;
+			if (inst->op != IR_FIELD_CALL)
+				continue;
+			field_calls++;
+			IrFieldCallHeader header;
+			IR_READ(ir, inst->data.payload, &header);
+			names = names && strcmp(intern_text(&interner, header.name), "method") == 0
+				&& (source[header.name_src] == 'm' || source[header.name_src] == '@');
+			modifiers = modifiers && header.modifier == (cases[i].comptime ? IR_CALL_COMPTIME : IR_CALL_AUTO);
+			protocol = protocol && ir_ref_is_inst(header.object) && ir_ref_inst(header.object) < j;
+			uint32_t cursor = inst->data.payload + IR_WORDS(IrFieldCallHeader);
+			for (uint32_t k = 0; k < header.arg_count; k++) {
+				arguments++;
+				IrBody body = ir->extra[cursor + k];
+				uint32_t count = ir_body_count(ir, body);
+				if (count < 2) {
+					protocol = false;
+					continue;
+				}
+				const IrInstIndex *items = ir_body_insts(ir, body);
+				const IrInst *first = &ir->insts[items[0]];
+				const IrInst *last = &ir->insts[items[count - 1]];
+				protocol = protocol && first->op == IR_ARG_TYPE
+					&& first->data.bin.lhs == ir_ref_of_inst(j) && first->data.bin.rhs == (IrRef)k
+					&& last->op == IR_BREAK_INLINE && last->data.brk.block == IR_BODY_RESULT;
+			}
+		}
+		CHECK(field_calls == cases[i].field_calls);
+		CHECK(direct_calls == cases[i].direct_calls);
+		CHECK(arguments == cases[i].arguments);
+		CHECK(read_fields == cases[i].read_fields);
+		CHECK(protocol);
+		CHECK(names);
+		CHECK(modifiers);
+		arena_free(&arena);
+	}
+}
+
+/* Call-only receiver binding reuses ordinary transport and closed scope gates. */
+static void
+test_struct_methods(void)
+{
+	const struct {
+		const char *source;
+		const char *error;
+	} cases[] = {
+		/* value-const */
+		{"const S=struct{x:u8,fn value(that:S)u8{return that.x;}fn read(that:*const S)u8{return that.x;}fn bump(that:*S,n:u8)u8{that.x+=n;return that.x;}};pub fn main()void{const s:S=.{.x=7};_=s.value();}\n", NULL},
+		/* value-mutable */
+		{"const S=struct{x:u8,fn value(that:S)u8{return that.x;}fn read(that:*const S)u8{return that.x;}fn bump(that:*S,n:u8)u8{that.x+=n;return that.x;}};pub fn main()void{var s:S=.{.x=7};_=s.value();_= &s;}\n", NULL},
+		/* const-pointer-const */
+		{"const S=struct{x:u8,fn value(that:S)u8{return that.x;}fn read(that:*const S)u8{return that.x;}fn bump(that:*S,n:u8)u8{that.x+=n;return that.x;}};pub fn main()void{const s:S=.{.x=7};_=s.read();}\n", NULL},
+		/* const-pointer-mutable */
+		{"const S=struct{x:u8,fn value(that:S)u8{return that.x;}fn read(that:*const S)u8{return that.x;}fn bump(that:*S,n:u8)u8{that.x+=n;return that.x;}};pub fn main()void{var s:S=.{.x=7};_=s.read();_= &s;}\n", NULL},
+		/* mutable-pointer */
+		{"const S=struct{x:u8,fn value(that:S)u8{return that.x;}fn read(that:*const S)u8{return that.x;}fn bump(that:*S,n:u8)u8{that.x+=n;return that.x;}};pub fn main()void{var s:S=.{.x=7};_=s.bump(1);}\n", NULL},
+		/* pointer-value */
+		{"const S=struct{x:u8,fn value(that:S)u8{return that.x;}fn read(that:*const S)u8{return that.x;}fn bump(that:*S,n:u8)u8{that.x+=n;return that.x;}};pub fn main()void{var s:S=.{.x=7};const p:*S=&s;_=p.value();}\n", NULL},
+		/* pointer-const */
+		{"const S=struct{x:u8,fn value(that:S)u8{return that.x;}fn read(that:*const S)u8{return that.x;}fn bump(that:*S,n:u8)u8{that.x+=n;return that.x;}};pub fn main()void{const s:S=.{.x=7};const p:*const S=&s;_=p.read();}\n", NULL},
+		/* pointer-mutate */
+		{"const S=struct{x:u8,fn value(that:S)u8{return that.x;}fn read(that:*const S)u8{return that.x;}fn bump(that:*S,n:u8)u8{that.x+=n;return that.x;}};pub fn main()void{var s:S=.{.x=7};const p:*S=&s;_=p.bump(1);}\n", NULL},
+		/* temporary-value */
+		{"const S=struct{x:u8,fn value(that:S)u8{return that.x;}fn read(that:*const S)u8{return that.x;}fn bump(that:*S,n:u8)u8{that.x+=n;return that.x;}};pub fn main()void{_=(S{.x=7}).value();}\n", NULL},
+		/* temporary-const-pointer */
+		{"const S=struct{x:u8,fn value(that:S)u8{return that.x;}fn read(that:*const S)u8{return that.x;}fn bump(that:*S,n:u8)u8{that.x+=n;return that.x;}};pub fn main()void{_=(S{.x=7}).read();}\n", NULL},
+		/* runtime-value */
+		{"const S=struct{x:u8,fn value(that:S)u8{return that.x;}fn read(that:*const S)u8{return that.x;}fn bump(that:*S,n:u8)u8{that.x+=n;return that.x;}};fn f(x:u8)u8{const s:S=.{.x=x};return s.value();}pub fn main()void{_=f(7);}\n", NULL},
+		/* runtime-pointer */
+		{"const S=struct{x:u8,fn value(that:S)u8{return that.x;}fn read(that:*const S)u8{return that.x;}fn bump(that:*S,n:u8)u8{that.x+=n;return that.x;}};fn f(p:*S)u8{return p.bump(1);}pub fn main()void{var s:S=.{.x=7};_=f(&s);}\n", NULL},
+		/* runtime-returned-value */
+		{"const S=struct{x:u8,fn value(that:S)u8{return that.x;}fn read(that:*const S)u8{return that.x;}fn bump(that:*S,n:u8)u8{that.x+=n;return that.x;}};fn make(n:u8)S{return .{.x=n};}pub fn main()void{_=make(7).read();}\n", NULL},
+		/* explicit-deref */
+		{"const S=struct{x:u8,fn value(that:S)u8{return that.x;}fn read(that:*const S)u8{return that.x;}fn bump(that:*S,n:u8)u8{that.x+=n;return that.x;}};pub fn main()void{var s:S=.{.x=7};const p:*S=&s;_=(p.*).bump(1);}\n", NULL},
+		/* grouped-object */
+		{"const S=struct{x:u8,fn value(that:S)u8{return that.x;}fn read(that:*const S)u8{return that.x;}fn bump(that:*S,n:u8)u8{that.x+=n;return that.x;}};pub fn main()void{const s:S=.{.x=7};_=((s)).value();}\n", NULL},
+		/* explicit-type */
+		{"const S=struct{x:u8,fn value(that:S)u8{return that.x;}fn read(that:*const S)u8{return that.x;}fn bump(that:*S,n:u8)u8{that.x+=n;return that.x;}};pub fn main()void{const s:S=.{.x=7};_=S.value(s);_=S.read(&s);}\n", NULL},
+		/* type-alias */
+		{"const S=struct{x:u8,fn value(that:S)u8{return that.x;}fn read(that:*const S)u8{return that.x;}fn bump(that:*S,n:u8)u8{that.x+=n;return that.x;}};const T=S;pub fn main()void{const s:S=.{.x=7};_=T.value(s);}\n", NULL},
+		/* stored-type-function */
+		{"const S=struct{x:u8,fn value(that:S)u8{return that.x;}fn read(that:*const S)u8{return that.x;}fn bump(that:*S,n:u8)u8{that.x+=n;return that.x;}};pub fn main()void{const s:S=.{.x=7};const f=S.value;_=f(s);}\n", NULL},
+		/* stored-type-function-pointer */
+		{"const S=struct{x:u8,fn value(that:S)u8{return that.x;}fn read(that:*const S)u8{return that.x;}fn bump(that:*S,n:u8)u8{that.x+=n;return that.x;}};fn call(p:*const fn(S)u8,s:S)u8{return p(s);}pub fn main()void{const s:S=.{.x=7};_=call(&S.value,s);}\n", NULL},
+		/* builtin-type-function */
+		{"const S=struct{x:u8,fn value(that:S)u8{return that.x;}fn read(that:*const S)u8{return that.x;}fn bump(that:*S,n:u8)u8{that.x+=n;return that.x;}};pub fn main()void{const s:S=.{.x=7};_=@field(S,\"value\")(s);}\n", NULL},
+		/* grouped-type-function */
+		{"const S=struct{x:u8,fn value(that:S)u8{return that.x;}fn read(that:*const S)u8{return that.x;}fn bump(that:*S,n:u8)u8{that.x+=n;return that.x;}};pub fn main()void{const s:S=.{.x=7};_=(S.value)(s);}\n", NULL},
+		/* static-namespace-zero */
+		{"const S=struct{x:u8,fn zero()u8{return 7;}};pub fn main()void{_=S.zero();}\n", NULL},
+		/* namespace-function-alias */
+		{"const S=struct{x:u8,fn get(s:S)u8{return s.x;}const alias=get;};pub fn main()void{const s:S=.{.x=7};_=s.alias();}\n", NULL},
+		/* function-field */
+		{"fn plus(n:u8)u8{return n+1;}const H=struct{cb:*const fn(u8)u8,};pub fn main()void{const h:H=.{.cb=&plus};_=h.cb(7);}\n", NULL},
+		/* builtin-function-field */
+		{"fn plus(n:u8)u8{return n+1;}const H=struct{cb:*const fn(u8)u8,};pub fn main()void{const h:H=.{.cb=&plus};_=@field(h,\"cb\")(7);}\n", NULL},
+		/* grouped-function-field */
+		{"fn plus(n:u8)u8{return n+1;}const H=struct{cb:*const fn(u8)u8,};pub fn main()void{const h:H=.{.cb=&plus};_=(h.cb)(7);}\n", NULL},
+		/* function-field-explicit-self */
+		{"const S=struct{x:u8,fn value(that:S)u8{return that.x;}fn read(that:*const S)u8{return that.x;}fn bump(that:*S,n:u8)u8{that.x+=n;return that.x;}};const H=struct{cb:*const fn(S)u8,};pub fn main()void{const s:S=.{.x=7};const h:H=.{.cb=&S.value};_=h.cb(s);}\n", NULL},
+		/* callback-default */
+		{"fn plus(n:u8)u8{return n+1;}const H=struct{cb:*const fn(u8)u8=&plus,};pub fn main()void{const h:H=.{};_=h.cb(7);}\n", NULL},
+		/* nested-receiver */
+		{"const S=struct{x:u8,fn value(that:S)u8{return that.x;}fn read(that:*const S)u8{return that.x;}fn bump(that:*S,n:u8)u8{that.x+=n;return that.x;}};const O=struct{i:S,};pub fn main()void{var o:O=.{.i=.{.x=7}};_=o.i.bump(1);}\n", NULL},
+		/* array-receiver */
+		{"const S=struct{x:u8,fn value(that:S)u8{return that.x;}fn read(that:*const S)u8{return that.x;}fn bump(that:*S,n:u8)u8{that.x+=n;return that.x;}};fn index()usize{return 1;}pub fn main()void{var a:[2]S=.{.{.x=1},.{.x=7}};_=a[index()].bump(1);}\n", NULL},
+		/* global-receiver */
+		{"const S=struct{x:u8,fn value(that:S)u8{return that.x;}fn read(that:*const S)u8{return that.x;}fn bump(that:*S,n:u8)u8{that.x+=n;return that.x;}};var g:S=.{.x=7};pub fn main()void{_=g.bump(1);}\n", NULL},
+		/* slice-receiver */
+		{"const S=struct{x:u8,fn value(that:S)u8{return that.x;}fn read(that:*const S)u8{return that.x;}fn bump(that:*S,n:u8)u8{that.x+=n;return that.x;}};pub fn main()void{var a:[2]S=.{.{.x=1},.{.x=7}};const slice:[]S=&a;_=slice[1].bump(1);}\n", NULL},
+		/* normalized-name */
+		{"const S=struct{x:u8,fn read(s:S)u8{return s.x;}};pub fn main()void{const s:S=.{.x=7};_=s.@\"re\\x61d\"();}\n", NULL},
+		/* quoted-name */
+		{"const S=struct{x:u8,fn @\"read value\"(s:S)u8{return s.x;}};pub fn main()void{const s:S=.{.x=7};_=s.@\"read value\"();}\n", NULL},
+		/* this-type */
+		{"const S=struct{x:u8,const Self=@This();fn read(s:Self)u8{return s.x;}};pub fn main()void{const s:S=.{.x=7};_=s.read();}\n", NULL},
+		/* defaults-and-return */
+		{"const S=struct{x:u8=7,fn clone(s:S)S{return s;}};pub fn main()void{const s:S=.{};_=s.clone().clone();}\n", NULL},
+		/* contextual-aggregate-argument */
+		{"const S=struct{x:u8=7,fn choose(s:S,t:S)S{_=s;return t;}};pub fn main()void{const s:S=.{};_=s.choose(.{});}\n", NULL},
+		/* pointer-chain */
+		{"const S=struct{x:u8,fn same(s:*S)*S{return s;}fn read(s:*const S)u8{return s.x;}};pub fn main()void{var s:S=.{.x=7};_=s.same().read();}\n", NULL},
+		/* underaligned-pointer */
+		{"const S=struct{x:u64,fn read(s:*align(1)const S)u64{return s.x;}};pub fn main()void{const p:*align(1)const S=@ptrFromInt(4097);_=p.read();}\n", NULL},
+		/* volatile-scalar-method */
+		{"const S=struct{x:u8,fn bump(s:*volatile S)u8{s.x+=1;return s.x;}};pub fn main()void{var s:S=.{.x=7};const p:*volatile S=&s;_=p.bump();}\n", NULL},
+		/* implicit-C-export-pointer */
+		{"const S=struct{x:u8,export fn read(s:*const S)u8{return s.x;}};pub fn main()void{const s:S=.{.x=7};_=s.read();}\n", NULL},
+		/* implicit-C-extern-pointer */
+		{"const S=struct{x:u8,extern fn read(s:*const S)u8;};pub fn main()void{const s:S=.{.x=7};_=s.read();}\n", NULL},
+		/* public-private-reflection */
+		{"const S=struct{x:u8,pub fn exposed(s:S)u8{return s.x;}fn hidden(s:S)u8{return s.x;}};pub fn main()void{const s:S=.{.x=7};_=s.exposed();_=s.hidden();const n:u8=if(@hasDecl(S,\"exposed\") and !@hasDecl(S,\"hidden\") and !@hasField(S,\"exposed\"))0 else 256;_=n;}\n", NULL},
+		/* unused-bad-body */
+		{"const S=struct{x:u8,pub fn bad(s:S)u8{_=s;return 256;}};pub fn main()void{_=@sizeOf(S);_=@hasDecl(S,\"bad\");}\n", NULL},
+		/* unused-bad-signature */
+		{"const S=struct{x:u8,fn bad(s:S)@TypeOf(@as(u8,256)){_=s;return undefined;}};pub fn main()void{_=@sizeOf(S);}\n", NULL},
+		/* error/const-to-mut */
+		{"const S=struct{x:u8,fn value(that:S)u8{return that.x;}fn read(that:*const S)u8{return that.x;}fn bump(that:*S,n:u8)u8{that.x+=n;return that.x;}};pub fn main()void{const s:S=.{.x=7};_=s.bump(1);}\n", "expected type '*test.S', found '*const test.S'"},
+		/* error/temporary-to-mut */
+		{"const S=struct{x:u8,fn value(that:S)u8{return that.x;}fn read(that:*const S)u8{return that.x;}fn bump(that:*S,n:u8)u8{that.x+=n;return that.x;}};pub fn main()void{_=(S{.x=7}).bump(1);}\n", "expected type '*test.S', found '*const test.S'"},
+		/* error/pointer-const-to-mut */
+		{"const S=struct{x:u8,fn value(that:S)u8{return that.x;}fn read(that:*const S)u8{return that.x;}fn bump(that:*S,n:u8)u8{that.x+=n;return that.x;}};pub fn main()void{const s:S=.{.x=7};const p:*const S=&s;_=p.bump(1);}\n", "expected type '*test.S', found '*const test.S'"},
+		/* error/stored-instance */
+		{"const S=struct{x:u8,fn value(that:S)u8{return that.x;}fn read(that:*const S)u8{return that.x;}fn bump(that:*S,n:u8)u8{that.x+=n;return that.x;}};pub fn main()void{const s:S=.{.x=7};const f=s.value;_=f();}\n", "no field named 'value' in struct 'test.S'"},
+		/* error/grouped-instance-callee */
+		{"const S=struct{x:u8,fn value(that:S)u8{return that.x;}fn read(that:*const S)u8{return that.x;}fn bump(that:*S,n:u8)u8{that.x+=n;return that.x;}};pub fn main()void{const s:S=.{.x=7};_=(s.value)();}\n", "no field named 'value' in struct 'test.S'"},
+		/* error/builtin-instance-callee */
+		{"const S=struct{x:u8,fn value(that:S)u8{return that.x;}fn read(that:*const S)u8{return that.x;}fn bump(that:*S,n:u8)u8{that.x+=n;return that.x;}};pub fn main()void{const s:S=.{.x=7};_=@field(s,\"value\")();}\n", "no field named 'value' in struct 'test.S'"},
+		/* error/address-instance-function */
+		{"const S=struct{x:u8,fn value(that:S)u8{return that.x;}fn read(that:*const S)u8{return that.x;}fn bump(that:*S,n:u8)u8{that.x+=n;return that.x;}};pub fn main()void{const s:S=.{.x=7};const p=&s.value;_=p;}\n", "no field named 'value' in struct 'test.S'"},
+		/* error/missing-member */
+		{"const S=struct{x:u8,fn value(that:S)u8{return that.x;}fn read(that:*const S)u8{return that.x;}fn bump(that:*S,n:u8)u8{that.x+=n;return that.x;}};pub fn main()void{const s:S=.{.x=7};_=s.missing();}\n", "no field or member function named 'missing' in 'test.S'"},
+		/* error/wrong-first-scalar */
+		{"const S=struct{x:u8,fn m(n:u8)u8{return n;}};pub fn main()void{const s:S=.{.x=7};_=s.m();}\n", "no field or member function named 'm' in 'test.S'"},
+		/* error/wrong-first-nominal */
+		{"const T=struct{x:u8,};const S=struct{x:u8,fn m(t:T)u8{return t.x;}};pub fn main()void{const s:S=.{.x=7};_=s.m();}\n", "no field or member function named 'm' in 'test.S'"},
+		/* error/wrong-first-pointer */
+		{"const T=struct{x:u8,};const S=struct{x:u8,fn m(t:*const T)u8{return t.x;}};pub fn main()void{const s:S=.{.x=7};_=s.m();}\n", "no field or member function named 'm' in 'test.S'"},
+		/* error/no-first-parameter */
+		{"const S=struct{x:u8,fn m()u8{return 7;}};pub fn main()void{const s:S=.{.x=7};_=s.m();}\n", "no field or member function named 'm' in 'test.S'"},
+		/* error/too-few */
+		{"const S=struct{x:u8,fn value(that:S)u8{return that.x;}fn read(that:*const S)u8{return that.x;}fn bump(that:*S,n:u8)u8{that.x+=n;return that.x;}};pub fn main()void{var s:S=.{.x=7};_=s.bump();}\n", "member function expected 1 argument(s), found 0"},
+		/* error/too-many */
+		{"const S=struct{x:u8,fn value(that:S)u8{return that.x;}fn read(that:*const S)u8{return that.x;}fn bump(that:*S,n:u8)u8{that.x+=n;return that.x;}};pub fn main()void{const s:S=.{.x=7};_=s.value(1);}\n", "member function expected 0 argument(s), found 1"},
+		/* error/wrong-explicit-argument */
+		{"const S=struct{x:u8,fn value(that:S)u8{return that.x;}fn read(that:*const S)u8{return that.x;}fn bump(that:*S,n:u8)u8{that.x+=n;return that.x;}};pub fn main()void{var s:S=.{.x=7};_=s.bump(\"bad\");}\n", "expected type 'u8', found '*const [3:0]u8'"},
+		/* error/overflow-explicit-argument */
+		{"const S=struct{x:u8,fn value(that:S)u8{return that.x;}fn read(that:*const S)u8{return that.x;}fn bump(that:*S,n:u8)u8{that.x+=n;return that.x;}};pub fn main()void{var s:S=.{.x=7};_=s.bump(256);}\n", "type 'u8' cannot represent integer value '256'"},
+		/* error/namespace-count */
+		{"const S=struct{x:u8,fn value(that:S)u8{return that.x;}fn read(that:*const S)u8{return that.x;}fn bump(that:*S,n:u8)u8{that.x+=n;return that.x;}};pub fn main()void{_=S.value();}\n", "expected 1 argument(s), found 0"},
+		/* error/namespace-no-autoaddress */
+		{"const S=struct{x:u8,fn value(that:S)u8{return that.x;}fn read(that:*const S)u8{return that.x;}fn bump(that:*S,n:u8)u8{that.x+=n;return that.x;}};pub fn main()void{const s:S=.{.x=7};_=S.read(s);}\n", "expected type '*const test.S', found 'test.S'"},
+		/* error/namespace-wrong-nominal */
+		{"const S=struct{x:u8,fn value(that:S)u8{return that.x;}fn read(that:*const S)u8{return that.x;}fn bump(that:*S,n:u8)u8{that.x+=n;return that.x;}};const T=struct{x:u8,};pub fn main()void{const t:T=.{.x=7};_=S.value(t);}\n", "expected type 'test.S', found 'test.T'"},
+		/* error/double-pointer */
+		{"const S=struct{x:u8,fn value(that:S)u8{return that.x;}fn read(that:*const S)u8{return that.x;}fn bump(that:*S,n:u8)u8{that.x+=n;return that.x;}};pub fn main()void{var s:S=.{.x=7};var p:*S=&s;const pp:**S=&p;_=pp.value();}\n", "no field or member function named 'value' in '*test.S'"},
+		/* error/scalar-field-called */
+		{"const S=struct{x:u8,};pub fn main()void{const s:S=.{.x=7};_=s.x();}\n", "type 'u8' not a function"},
+		/* error/callback-count */
+		{"fn plus(n:u8)u8{return n+1;}const H=struct{cb:*const fn(u8)u8,};pub fn main()void{const h:H=.{.cb=&plus};_=h.cb();}\n", "expected 1 argument(s), found 0"},
+		/* error/namespace-function-pointer-not-method */
+		{"const S=struct{x:u8,fn get(s:S)u8{return s.x;}const alias:*const fn(S)u8=&get;};pub fn main()void{const s:S=.{.x=7};_=s.alias();}\n", "no field or member function named 'alias' in 'test.S'"},
+		/* error/field-declaration-collision */
+		{"const S=struct{x:u8,fn x(s:S)u8{return s.x;}};pub fn main()void{const s:S=.{.x=7};_=s.x();}\n", "duplicate struct member name 'x'"},
+		/* error/alignment-discard */
+		{"const S=struct{x:u64,fn read(s:*const S)u64{return s.x;}};pub fn main()void{const p:*align(1)const S=@ptrFromInt(4097);_=p.read();}\n", "expected type '*const test.S', found '*align(1) const test.S'"},
+		/* error/volatile-discard */
+		{"const S=struct{x:u8,fn read(s:*const S)u8{return s.x;}};pub fn main()void{var s:S=.{.x=7};const p:*volatile S=&s;_=p.read();}\n", "expected type '*const test.S', found '*volatile test.S'"},
+		/* error/allowzero-discard */
+		{"const S=struct{x:u8,fn read(s:*const S)u8{return s.x;}};pub fn main()void{const p:*allowzero const S=@ptrFromInt(4096);_=p.read();}\n", "expected type '*const test.S', found '*allowzero const test.S'"},
+		/* error/called-bad-body */
+		{"const S=struct{x:u8,fn bad(s:S)u8{_=s;return 256;}};pub fn main()void{const s:S=.{.x=7};_=s.bad();}\n", "type 'u8' cannot represent integer value '256'"},
+		/* error/addressed-bad-body */
+		{"const S=struct{x:u8,fn bad(s:S)u8{_=s;return 256;}};fn use(p:*const fn(S)u8)void{_=p;}pub fn main()void{use(&S.bad);}\n", "type 'u8' cannot represent integer value '256'"},
+		/* error/called-semantic-bad-signature */
+		{"const S=struct{x:u8,fn bad(s:S)@TypeOf(@as(u8,256)){_=s;return undefined;}};pub fn main()void{const s:S=.{.x=7};_=s.bad();}\n", "type 'u8' cannot represent integer value '256'"},
+		/* error/called-bad-signature */
+		{"const S=struct{x:u8,fn bad(s:S)Missing{_=s;return undefined;}};pub fn main()void{const s:S=.{.x=7};_=s.bad();}\n", "use of undeclared identifier 'Missing'"},
+		/* scope/explicit-callconv-pointer */
+		{"const S=struct{x:u8,fn read(s:*const S)callconv(.c)u8{return s.x;}};pub fn main()void{const s:S=.{.x=7};_=s.read();}\n", "not supported by szc yet:"},
+		/* scope/implicit-C-export-aggregate */
+		{"const S=struct{x:u8,export fn read(s:S)u8{return s.x;}};pub fn main()void{const s:S=.{.x=7};_=s.read();}", "not supported by szc yet:"},
+		/* scope/generic-self */
+		{"const S=struct{x:u8,fn read(s:anytype)u8{return s.x;}};pub fn main()void{const s:S=.{.x=7};_=s.read();}", "not supported by szc yet:"},
+		/* scope/comptime-argument */
+		{"const S=struct{x:u8,fn read(s:S,comptime n:u8)u8{return s.x+n;}};pub fn main()void{const s:S=.{.x=7};_=s.read(1);}", "not supported by szc yet:"},
+		/* scope/comptime-method-call */
+		{"const S=struct{x:u8,fn read(s:S)u8{return s.x;}};const n=(S{.x=7}).read();pub fn main()u8{return n-7;}", "not supported by szc yet:"},
+		/* scope/optional-self */
+		{"const S=struct{x:u8,fn read(s:?S)u8{return s.?.x;}};pub fn main()void{const s:S=.{.x=7};_=s.read();}", "not supported by szc yet:"},
+		/* scope/error-union-self */
+		{"const S=struct{x:u8,fn read(s:anyerror!S)u8{const v=s catch return 0;return v.x;}};pub fn main()void{const s:S=.{.x=7};_=s.read();}", "not supported by szc yet:"},
+		/* scope/whole-volatile-value */
+		{"const S=struct{x:u8,fn read(s:S)u8{return s.x;}};var g:S=.{.x=7};pub fn main()void{const p:*volatile S=&g;_=p.read();}", "not supported by szc yet:"},
+		/* scope/C-value-self */
+		{"const S=struct{x:u8,fn read(s:S)callconv(.c)u8{return s.x;}};pub fn main()void{const s:S=.{.x=7};_=s.read();}", "not supported by szc yet:"},
+		/* scope/C-aggregate-return */
+		{"const S=struct{x:u8,fn clone(s:*const S)callconv(.c)S{return s.*;}};pub fn main()void{const s:S=.{.x=7};_=s.clone();}", "not supported by szc yet:"},
+		/* scope/packed-self */
+		{"const S=packed struct{x:u8,fn read(s:S)u8{return s.x;}};pub fn main()void{const s:S=.{.x=7};_=s.read();}", "not supported by szc yet:"},
+		/* scope/OPV-global-read */
+		{"const S=struct{x:u0=0,fn read(s:S)u0{return s.x;}};var a:S=.{};var b:S=a;pub fn main()void{_=b.read();}", "not supported by szc yet:"},
+		/* error/raw-many-deref */
+		{"const S=struct{x:u8,fn value(that:S)u8{return that.x;}fn read(that:*const S)u8{return that.x;}fn bump(that:*S,n:u8)u8{that.x+=n;return that.x;}};pub fn main()void{const p:[*]S=@ptrFromInt(4096);_=(p.*).value();}\n", "index syntax required for unknown-length pointer type '[*]test.S'"},
+		/* error/raw-slice-deref */
+		{"const S=struct{x:u8,fn value(that:S)u8{return that.x;}fn read(that:*const S)u8{return that.x;}fn bump(that:*S,n:u8)u8{that.x+=n;return that.x;}};pub fn main()void{var a:[1]S=.{.{.x=7}};const slice:[]S=&a;_=(slice.*).value();}\n", "index syntax required to access runtime-known slice"},
+	};
+	for (uint32_t i = 0; i < sizeof(cases) / sizeof(cases[0]); i++) {
+		Arena arena;
+		arena_init(&arena);
+		SourceTable sources;
+		source_table_init(&sources, &arena);
+		Diag diag;
+		diag_init(&diag, &arena, &sources);
+		Interner interner;
+		intern_init(&interner, &arena);
+		const char *source = cases[i].source;
+		FileId file = source_add_memory(&sources, "test.zig", source, (uint32_t)strlen(source));
+		AstContainerDecl *root = parse_file(&arena, &diag, &sources, file);
+		IrFile *ir = irgen_file(&arena, &diag, &interner, source_get(&sources, file), file, root);
+		Sema *sema = sema_create(&arena, &diag, &interner, &sources);
+		bool success = !diag_has_errors(&diag) && sema_analyze_executable(sema, file, ir);
+		CHECK(success == (cases[i].error == NULL));
+		if (cases[i].error != NULL) {
+			CHECK(diag.count != 0 && strstr(diag.items[0].message, cases[i].error) != NULL);
+		} else if (success) {
+			FILE *output = tmpfile();
+			FILE *assembly = tmpfile();
+			CHECK(output != NULL && assembly != NULL);
+			if (output != NULL && assembly != NULL)
+				CHECK(codegen_qbe(output, assembly, sema, &diag));
+			if (output != NULL)
+				fclose(output);
+			if (assembly != NULL)
+				fclose(assembly);
+		}
+		arena_free(&arena);
+	}
+}
+
 static void
 test_struct_defaults(void)
 {
@@ -4768,6 +5088,8 @@ main(void)
 	test_runtime_struct_values();
 	test_struct_mutable_globals();
 	test_struct_defaults();
+	test_struct_methods();
+	test_struct_field_call_ir();
 	test_struct_defaults_work();
 	test_struct_default_type_ir();
 	test_struct_default_capture_ir();

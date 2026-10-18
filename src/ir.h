@@ -266,6 +266,7 @@ typedef enum IrDataKind {
 	X(IF, "if", IR_DATA_PAYLOAD)	/* IrCondbr; branches yield via break_inline BODY_RESULT */ \
 	X(LOOP, "loop", IR_DATA_PAYLOAD)	/* body (ends with repeat) */ \
 	X(REPEAT, "repeat", IR_DATA_UN)	/* loop instruction ref */ \
+	X(FIELD_CALL, "field_call", IR_DATA_PAYLOAD) /* object ref, member name, modifier, arg bodies */ \
 	X(CALL, "call", IR_DATA_PAYLOAD)	/* callee ref, modifier, arg count, arg bodies */ \
 	X(RET, "ret", IR_DATA_UN)	/* return operand */ \
 	X(RET_IMPLICIT, "ret_implicit", IR_DATA_NONE)	/* end of a function body */ \
@@ -533,6 +534,15 @@ typedef struct IrCallHeader {
 	IrCallModifier modifier;
 	uint32_t       arg_count;
 } IrCallHeader;
+
+/* FIELD_CALL: header, then arg_count explicit argument bodies. */
+typedef struct IrFieldCallHeader {
+	IrRef          object;
+	StringId       name;
+	uint32_t       name_src;
+	IrCallModifier modifier;
+	uint32_t       arg_count;
+} IrFieldCallHeader;
 
 /* ---------- Files ---------- */
 

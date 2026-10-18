@@ -1,0 +1,3 @@
+tests/tir/errors/struct_method_const.zig:1:97: error: expected type '*struct_method_const.S', found '*const struct_method_const.S'
+const S=struct{x:u8,fn bump(self:*S)void{self.x+=1;}};pub fn main()void{const s:S=.{.x=7};s.bump();}
+                                                                                                ^

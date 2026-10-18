@@ -1,0 +1,3 @@
+tests/tir/errors/struct_method_wrong_self.zig:1:93: error: no field or member function named 'read' in 'struct_method_wrong_self.S'
+const S=struct{x:u8,fn read(n:u8)u8{return n;}};pub fn main()void{const s:S=.{.x=7};_=s.read();}
+                                                                                            ^

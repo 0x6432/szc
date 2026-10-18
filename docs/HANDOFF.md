@@ -24,6 +24,58 @@ Read this first when resuming work (the sandbox resets often).
 
 ## Latest follow-up checkpoint
 
+- M6.1k ordinary instance method-call syntax implemented fromff6d66f as a single
+  coherent frontend/binder/common-call batch. FIELD_CALL uses expression reference,
+  normalized name/source, modifier and explicit count plus deferred argument bodies.
+  Only direct AST_FIELD_ACCESS callees bind; grouped/builtin/stored instance method
+  references remain ordinary field lookup and reject. No closure/value kind added.
+- Namespace/type members and real callable fields stay direct. Resolve/freeze
+  callable target and pointer-valued receiver BEFORE explicit arguments; by-value
+  self is an owned snapshot before later argument mutation. Pointer self preserves
+  aliases, qualifiers and natural alignment caps. Exactly one optional pointer
+  object load, raw POINTER_ONE guard, exact nominal self matching. Temporaries are
+  immutable. Same-file private methods remain distinct from public-only @hasDecl.
+- Common call core preserves convention/storage/liveness/comptime/generic/varargs/
+  hidden-result ordering. Per-call OPERAND_PENDING_METHOD_CALL shifts ARG_TYPE
+  contexts, counts exclude self in method messages. Argument allocation arithmetic
+  is checked. No borrowed Type/Value pointer spans recursive resolution; no effectful
+  cached graph traversal, backend/TIR or aggregate ABI changes. Explicit callconv
+  syntax is existing NYI; implicit-C pointer export/extern methods are accepted,
+  while C aggregate signatures still reject.
+-90 permanent semantic/scope emission cases and12 frontend protocol cases added.
+ 16 net stage/error goldens,12 fuzz seeds, three natives/27 behavior checks. Only
+  three old positive IR dumps change; old TIR/SSA remain byte-identical. Existing
+  not-field/method error source and prior checker classifications unchanged.
+  Methods78/33 exact-primary cases pass;12 closed gates pass. Exact final formatted
+  native sources pass official Debug/ReleaseFast6/6; four compact stage sources
+  compile officially. Defaults82/29 with all six ordered diagnostic lists and
+  private ABI62/15 pass. Targeted main unit/golden checks pass.
+- One grouped final full gate: independent GCC/Clang C11 Werror ASan/UBSan,
+ 7875 units/1351 goldens,158+4 native checks, full process/driver/C/storage/alignment,
+ 106 actual volatile sequences,303 safety cases. Each compiler20000 standalone
+  mutations/stage; seeds256/256/159/215. GCC-O2 native/safety/static2/mutable2
+  physical checks pass. Four fresh60-second libFuzzer runs 2301833/78326/78349/74871 pass. All6443
+  paths match main and three frozen trees before final README/HANDOFF/MILESTONES
+  edits. Frozen sources must not be modified for subsequent work.
+- Evidence: /data/struct-methods-final/{gcc,clang,optimized}, manifest.json,
+  verification.json; /data/struct-methods-final-*.log, -diff-final.json,
+  -reference-native.json, -stage-reference.json, -regression-*.{json,log}.
+  Research contract /data/struct-methods-contract/PLAN.md. Frontend scratch/tests
+  remain provenance only; main is integration owner.
+- Hosted ff6d66f run39173359597 last seen QUEUED, not green. Historical timeouts,
+  successful local replays and unclassified Clang failure remain recorded below;
+  no infra-only conclusion, weakened deadlines/assertions or blind reruns.
+- Next M6.2 enums: scratch source plans /data/enum-frontend-next-plan.md and
+  /data/enum-value-backend-next-plan.md, bounded official research /data/enum-contract.
+  Plan a nominal constant foundation plus deliberately bounded runtime admission,
+  then one grouped final acceptance gate. Keep scalar backend representation
+  separate from integer-language coercion/arithmetic. Check full-width sparse-tag
+  membership BEFORE enumFromInt narrowing; explicit singleton/empty and C/varargs
+  policies required. No enum support is claimed in this checkpoint. Q6 remains
+  mandatory at M10.2. Continue coherent commits/pushes without pausing for approval.
+
+## Previous follow-up checkpoint (M6.1j, ff6d66f)
+
 - M6.1j ordinary named typed field defaults is implemented from8240e1e as one
   coherent batch: frontend contextual lowering, definition-time constant caches,
   lazy/queued validation, omitted-field completion and local/global/private-ABI

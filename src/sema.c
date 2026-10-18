@@ -32,7 +32,8 @@ typedef enum OperandKind {
 	OPERAND_COMPTIME,	/* value is known */
 	OPERAND_RUNTIME,	/* inst is a typed-IR instruction */
 	OPERAND_AGGREGATE,	/* array/slice value owned by a private snapshot; inst is its pointer */
-	OPERAND_PENDING_CALL,	/* a call whose arguments are being analysed (type = callee's fn type) */
+	OPERAND_PENDING_CALL,	/* arguments being analysed; type = callee function type */
+	OPERAND_PENDING_METHOD_CALL,	/* same, with an already-bound argument zero */
 	OPERAND_NO_RESULT_TYPE,	/* arg_type of a variadic argument: no coercion */
 } OperandKind;
 
@@ -4885,10 +4886,10 @@ analyze_arg_type(Block *block, const IrInst *inst)
 {
 	Sema *sema = block->sema;
 	Operand call;
-	if (!ir_ref_is_inst(inst->data.bin.lhs) || !inst_map_get(block->map, ir_ref_inst(inst->data.bin.lhs), &call) || call.kind != OPERAND_PENDING_CALL)
+	if (!ir_ref_is_inst(inst->data.bin.lhs) || !inst_map_get(block->map, ir_ref_inst(inst->data.bin.lhs), &call) || (call.kind != OPERAND_PENDING_CALL && call.kind != OPERAND_PENDING_METHOD_CALL))
 		return operand_none;
 	TypeFn fn = sema->types[call.type].as.fn;
-	uint32_t index = inst->data.bin.rhs;
+	uint32_t index = inst->data.bin.rhs + (call.kind == OPERAND_PENDING_METHOD_CALL ? 1u : 0u);
 	if (index >= fn.param_count) {
 		Operand none = operand_none;
 		none.kind = OPERAND_NO_RESULT_TYPE;
@@ -4898,18 +4899,20 @@ analyze_arg_type(Block *block, const IrInst *inst)
 }
 
 static InstOutcome
-analyze_call(Block *block, IrInstIndex index, Operand *out)
+analyze_call_core(Block *block, IrInstIndex index, Operand callee,
+	IrCallModifier modifier, uint32_t explicit_count, const IrBody *arg_bodies,
+	Operand receiver, Operand *out)
 {
 	Sema *sema = block->sema;
-	const IrFile *ir = block->ir;
-	const IrInst *inst = &ir->insts[index];
-	uint32_t src = inst->src;
-	IrCallHeader header;
-	IR_READ(ir, inst->data.payload, &header);
-	const IrBody *arg_bodies = &ir->extra[inst->data.payload + IR_WORDS(IrCallHeader)];
+	uint32_t src = block->ir->insts[index].src;
+	uint32_t bound = receiver.kind != OPERAND_NONE ? 1u : 0u;
 	*out = operand_none;
+	if (explicit_count > UINT32_MAX / sizeof(Operand) - 2) {
+		sema_error(block, src, "not supported by szc yet: call argument storage exceeds limit");
+		return INST_CONTINUE;
+	}
+	uint32_t arg_count = explicit_count + bound;
 
-	Operand callee = resolve_ref(block, header.callee);
 	if (callee.kind == OPERAND_NONE)
 		return INST_CONTINUE;
 	TypeId type = callable_type(sema, callee.type);
@@ -4932,9 +4935,9 @@ analyze_call(Block *block, IrInstIndex index, Operand *out)
 	FuncId id = 0;
 	if (callee.kind == OPERAND_COMPTIME && operand_value(block, callee)->kind == VALUE_FUNCTION)
 		id = operand_value(block, callee)->as.function;
-	bool count_ok = fn.is_var_args ? header.arg_count >= fn.param_count : header.arg_count == fn.param_count;
+	bool count_ok = fn.is_var_args ? arg_count >= fn.param_count : arg_count == fn.param_count;
 	if (!count_ok) {
-		sema_error(block, src, "expected %s%u argument(s), found %u", fn.is_var_args ? "at least " : "", (unsigned)fn.param_count, (unsigned)header.arg_count);
+		sema_error(block, src, "%sexpected %s%u argument(s), found %u", bound ? "member function " : "", fn.is_var_args ? "at least " : "", (unsigned)(fn.param_count - bound), (unsigned)explicit_count);
 		return INST_CONTINUE;
 	}
 
@@ -4961,15 +4964,20 @@ analyze_call(Block *block, IrInstIndex index, Operand *out)
 	}
 
 	Operand pending = operand_none;
-	pending.kind = OPERAND_PENDING_CALL;
+	pending.kind = bound ? OPERAND_PENDING_METHOD_CALL : OPERAND_PENDING_CALL;
 	if (!check_defined(block, callee, src))
 		return INST_CONTINUE;
 	pending.type = type;
 	inst_map_put(block->map, sema->arena, index, pending);
-	Operand *args = arena_alloc(sema->arena, (header.arg_count + 1) * sizeof(Operand), alignof(Operand));
+	Operand *args = arena_alloc(sema->arena, (arg_count + 1) * sizeof(Operand), alignof(Operand));
 	bool failed = false;
-	for (uint32_t i = 0; i < header.arg_count; i++) {
-		BodyResult result = analyze_body(block, arg_bodies[i]);
+	if (bound) {
+		args[0] = coerce(block, receiver, fn.params[0], src);
+		if (args[0].kind == OPERAND_NONE)
+			return INST_CONTINUE;
+	}
+	for (uint32_t i = bound; i < arg_count; i++) {
+		BodyResult result = analyze_body(block, arg_bodies[i - bound]);
 		if (result.end == BODY_NORETURN)
 			return INST_NORETURN;
 		args[i] = result.result;
@@ -4986,7 +4994,7 @@ analyze_call(Block *block, IrInstIndex index, Operand *out)
 	}
 	if (failed)
 		return INST_CONTINUE;
-	if (block->is_comptime || header.modifier == IR_CALL_COMPTIME) {
+	if (block->is_comptime || modifier == IR_CALL_COMPTIME) {
 		sema_error(block, src, "not supported by szc yet: comptime function calls");
 		return INST_CONTINUE;
 	}
@@ -4995,8 +5003,8 @@ analyze_call(Block *block, IrInstIndex index, Operand *out)
 		if (sema->funcs[id]->state == FUNC_FAILED)
 			return INST_CONTINUE;
 	}
-	TirRef *refs = arena_alloc(sema->arena, (header.arg_count + 1) * sizeof(TirRef), alignof(TirRef));
-	for (uint32_t i = 0; i < header.arg_count; i++) {
+	TirRef *refs = arena_alloc(sema->arena, (arg_count + 1) * sizeof(TirRef), alignof(TirRef));
+	for (uint32_t i = 0; i < arg_count; i++) {
 		Operand argument = args[i];
 		if (sema_type_is_aggregate(sema, argument.type))
 			argument = analyze_ref(block, argument, src, 0, 0);
@@ -5011,12 +5019,12 @@ analyze_call(Block *block, IrInstIndex index, Operand *out)
 		result_pointer = aggregate_slot(block, pointer, src);
 		if (result_pointer == TIR_REF_NONE)
 			return INST_CONTINUE;
-		refs[header.arg_count] = result_pointer;
+		refs[arg_count] = result_pointer;
 	}
 	TirCall call;
 	call.callee = id;
 	call.indirect = id == 0 ? materialize(block, callee, src) : TIR_REF_NONE;
-	call.arg_count = header.arg_count + (array_return ? 1u : 0u);
+	call.arg_count = arg_count + (array_return ? 1u : 0u);
 	uint32_t payload = tir_extra(block->tir, sema->arena, &call, TIR_WORDS(TirCall));
 	tir_extra(block->tir, sema->arena, refs, call.arg_count);
 	TirRef ref = emit_tir(block, TIR_CALL, array_return ? T_VOID : fn.ret, src);
@@ -5035,6 +5043,18 @@ analyze_call(Block *block, IrInstIndex index, Operand *out)
 		*out = runtime_operand(fn.ret, ref);
 	}
 	return INST_CONTINUE;
+}
+
+static InstOutcome
+analyze_call(Block *block, IrInstIndex index, Operand *out)
+{
+	const IrInst *inst = &block->ir->insts[index];
+	IrCallHeader header;
+	IR_READ(block->ir, inst->data.payload, &header);
+	const IrBody *bodies = &block->ir->extra[inst->data.payload + IR_WORDS(IrCallHeader)];
+	Operand callee = resolve_ref(block, header.callee);
+	return analyze_call_core(block, index, callee, header.modifier,
+		header.arg_count, bodies, operand_none, out);
 }
 
 /* Aggregate values never enter scalar QBE temporaries. Every runtime value owns
@@ -6916,6 +6936,91 @@ struct_value_field(Block *block, Operand base, StringId name, uint32_t src,
 	return true;
 }
 
+/* A field-call receiver is an expression reference, not a bound-function value.
+ * Freeze its pointer, selected callback, or owned value before argument bodies. */
+static InstOutcome
+analyze_field_call(Block *block, IrInstIndex index, Operand *out)
+{
+	Sema *sema = block->sema;
+	const IrInst *inst = &block->ir->insts[index];
+	IrFieldCallHeader header;
+	IR_READ(block->ir, inst->data.payload, &header);
+	const IrBody *bodies = &block->ir->extra[inst->data.payload + IR_WORDS(IrFieldCallHeader)];
+	Operand base = resolve_ref(block, header.object);
+	Operand callee = operand_none;
+	Operand receiver = operand_none;
+	*out = operand_none;
+	if (base.kind == OPERAND_NONE || !pointer_type_operand(block, base, inst->src))
+		return INST_CONTINUE;
+	if (sema->types[base.type].as.pointer.size != POINTER_ONE) {
+		sema_error(block, inst->src, "expected single pointer, found '%s'", sema_type_name(sema, base.type));
+		return INST_CONTINUE;
+	}
+	TypeId concrete = sema->types[base.type].as.pointer.child;
+	Operand object = base;
+	if (sema->types[concrete].kind == TYPE_POINTER
+		&& sema->types[concrete].as.pointer.size == POINTER_ONE) {
+		object = load_pointer(block, base, inst->src);
+		if (object.kind == OPERAND_NONE)
+			return INST_CONTINUE;
+		concrete = sema->types[object.type].as.pointer.child;
+	}
+	if (!check_defined(block, object, inst->src))
+		return INST_CONTINUE;
+	if (namespace_member(block, object, header.name, false, header.name_src, &callee))
+		return analyze_call_core(block, index, callee, header.modifier,
+			header.arg_count, bodies, receiver, out);
+	if (!ensure_type_layout(block, concrete, inst->src))
+		return INST_CONTINUE;
+	if (sema->types[concrete].kind == TYPE_STRUCT) {
+		SemaNamespace *ns = sema->types[concrete].as.structure;
+		bool field_found = false;
+		for (uint32_t i = 0; i < ns->field_count; i++)
+			if (ns->fields[i].ir.name == header.name) {
+				field_found = true;
+				break;
+			}
+		if (field_found) {
+			if (!struct_value_field(block, object, header.name, header.name_src, true, &callee)) {
+				Operand address = analyze_field_pointer(block, object, header.name, header.name_src);
+				callee = address.kind == OPERAND_NONE ? operand_none
+					: load_pointer(block, address, header.name_src);
+			}
+			return analyze_call_core(block, index, callee, header.modifier,
+				header.arg_count, bodies, receiver, out);
+		}
+		SemaDecl *decl = namespace_find(ns, header.name);
+		if (decl != NULL) {
+			callee = read_declaration(block, ns, decl, false, header.name_src);
+			if (callee.kind == OPERAND_NONE)
+				return INST_CONTINUE;
+			if (sema->types[callee.type].kind == TYPE_FN) {
+				TypeFn fn = sema->types[callee.type].as.fn;
+				if (fn.is_generic)
+					return analyze_call_core(block, index, callee, header.modifier,
+						header.arg_count, bodies, object, out);
+				if (fn.param_count != 0) {
+					TypeId first = fn.params[0];
+					if (first == concrete)
+						receiver = load_pointer(block, object, inst->src);
+					else if (sema->types[first].kind == TYPE_POINTER
+						&& sema->types[first].as.pointer.size == POINTER_ONE
+						&& sema->types[first].as.pointer.child == concrete)
+						receiver = object;
+					if (receiver.kind != OPERAND_NONE)
+						return analyze_call_core(block, index, callee, header.modifier,
+							header.arg_count, bodies, receiver, out);
+					if (first == concrete)
+						return INST_CONTINUE;
+				}
+			}
+		}
+	}
+	const char *suffix = arena_sprintf(sema->arena, "' in '%s'", sema_type_name(sema, concrete));
+	sema_name_error(block, inst->src, "no field or member function named '", header.name, suffix);
+	return INST_CONTINUE;
+}
+
 /* Indexing constant backing never materializes an aggregate in the scalar backend. */
 static Operand
 constant_array_element(Block *block, Operand base, TypeArray array, uint64_t index, uint32_t src)
@@ -8390,6 +8495,10 @@ analyze_inst(Block *block, IrInstIndex index, Operand *break_value)
 			resolve_ref(block, inst->data.bin.rhs), src);
 		break;
 
+	case IR_FIELD_CALL:
+		if (analyze_field_call(block, index, &result) == INST_NORETURN)
+			return INST_NORETURN;
+		break;
 	case IR_CALL:
 		if (analyze_call(block, index, &result) == INST_NORETURN)
 			return INST_NORETURN;

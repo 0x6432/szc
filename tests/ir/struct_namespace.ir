@@ -1,4 +1,4 @@
-%81 = struct_decl (flags=0) {
+%79 = struct_decl (flags=0) {
   decl const "Root" value {
     %0 = this
     %1 = break_inline result, %0
@@ -76,7 +76,7 @@
     %46 = break_inline result, %45
   }
   decl fn "main" pub value {
-    %79 = func "main" {
+    %77 = func "main" {
       ret type {
         %47 = break_inline result, @type_u8
       }
@@ -89,34 +89,32 @@
         %53 = elem_type %50
         %54 = as %53, %52
         %55 = store %50, %54
-        %56 = decl_val "Namespace"
-        %57 = field_val "same", %56
-        %58 = call %57
-        %59 = as @type_bool, %58
-        %60 = bool_not %59
-        %66 = if %60 then {
-          %61 = ret_type
-          %62 = int 1
-          %63 = as_return %61, %62
-          %64 = ret %63
+        %56 = decl_ref "Namespace"
+        %57 = field_call %56, "same"
+        %58 = as @type_bool, %57
+        %59 = bool_not %58
+        %65 = if %59 then {
+          %60 = ret_type
+          %61 = int 1
+          %62 = as_return %60, %61
+          %63 = ret %62
         } else {
-          %65 = break_inline result, @void_value
+          %64 = break_inline result, @void_value
         }
-        %67 = ret_type
-        %68 = decl_val "Namespace"
-        %69 = field_val "add", %68
-        %70 = call %69 arg0 {
-          %71 = arg_type %70, 0
-          %72 = int 2
-          %73 = as %71, %72
-          %74 = break_inline result, %73
+        %66 = ret_type
+        %67 = decl_ref "Namespace"
+        %68 = field_call %67, "add" arg0 {
+          %69 = arg_type %68, 0
+          %70 = int 2
+          %71 = as %69, %70
+          %72 = break_inline result, %71
         }
-        %75 = int 9
-        %76 = sub %70, %75
-        %77 = as_return %67, %76
-        %78 = ret %77
+        %73 = int 9
+        %74 = sub %68, %73
+        %75 = as_return %66, %74
+        %76 = ret %75
       }
     }
-    %80 = break_inline result, %79
+    %78 = break_inline result, %77
   }
 }
