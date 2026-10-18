@@ -1,0 +1,3 @@
+tests/tir/errors/struct_field_pointer_before_start.zig:5:17: error: pointer computation here causes illegal behavior
+    const q = p - 1;
+                ^

@@ -1,0 +1,48 @@
+// exit: 0
+const S0 = struct { a: [2]u8 };
+const S1 = struct { inner: S0 };
+const S2 = struct { inner: S1 };
+const S3 = struct { inner: S2 };
+const S4 = struct { inner: S3 };
+const S5 = struct { inner: S4 };
+const S6 = struct { inner: S5 };
+const S7 = struct { inner: S6 };
+const S8 = struct { inner: S7 };
+const S9 = struct { inner: S8 };
+const S10 = struct { inner: S9 };
+const S11 = struct { inner: S10 };
+const S12 = struct { inner: S11 };
+const S13 = struct { inner: S12 };
+const S14 = struct { inner: S13 };
+const S15 = struct { inner: S14 };
+const S16 = struct { inner: S15 };
+const S17 = struct { inner: S16 };
+const S18 = struct { inner: S17 };
+const S19 = struct { inner: S18 };
+const S20 = struct { inner: S19 };
+const S21 = struct { inner: S20 };
+const S22 = struct { inner: S21 };
+const S23 = struct { inner: S22 };
+const S24 = struct { inner: S23 };
+const S25 = struct { inner: S24 };
+const S26 = struct { inner: S25 };
+const S27 = struct { inner: S26 };
+const S28 = struct { inner: S27 };
+const S29 = struct { inner: S28 };
+const S30 = struct { inner: S29 };
+const S31 = struct { inner: S30 };
+const S32 = struct { inner: S31 };
+const S33 = struct { inner: S32 };
+const S34 = struct { inner: S33 };
+const S35 = struct { inner: S34 };
+const S36 = struct { inner: S35 };
+const S37 = struct { inner: S36 };
+const S38 = struct { inner: S37 };
+const S39 = struct { inner: S38 };
+const S40 = struct { inner: S39 };
+const root: S40 = .{ .inner = .{ .inner = .{ .inner = .{ .inner = .{ .inner = .{ .inner = .{ .inner = .{ .inner = .{ .inner = .{ .inner = .{ .inner = .{ .inner = .{ .inner = .{ .inner = .{ .inner = .{ .inner = .{ .inner = .{ .inner = .{ .inner = .{ .inner = .{ .inner = .{ .inner = .{ .inner = .{ .inner = .{ .inner = .{ .inner = .{ .inner = .{ .inner = .{ .inner = .{ .inner = .{ .inner = .{ .inner = .{ .inner = .{ .inner = .{ .inner = .{ .inner = .{ .inner = .{ .inner = .{ .inner = .{ .inner = .{ .a = .{ 11, 22 } } } } } } } } } } } } } } } } } } } } } } } } } } } } } } } } } } } } } } } } } };
+const p = &root.inner.inner.inner.inner.inner.inner.inner.inner.inner.inner.inner.inner.inner.inner.inner.inner.inner.inner.inner.inner.inner.inner.inner.inner.inner.inner.inner.inner.inner.inner.inner.inner.inner.inner.inner.inner.inner.inner.inner.inner.a;
+pub fn main() void {
+    const n: u8 = if (p == p) 0 else 256;
+    _ = n;
+}

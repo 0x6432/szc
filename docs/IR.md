@@ -1103,8 +1103,8 @@ returns the loaded initialized array. Direct struct destinations remain NYI.
 Known struct field values receive logical immutable references; namespace/array/
 slice fields retain existing borrowed pointers. Recursive static/dynamic/indexed
 read chains evaluate each base/index once. True lvalues still use `FIELD_PTR` or
-`FIELD_NAMED_PTR`; the read-reference protocol must not open physical struct field
-addresses or silently snapshot volatile descriptor storage.
+`FIELD_NAMED_PTR`; the read-reference protocol must not bypass field-address validation or
+silently snapshot volatile descriptor storage.
 
 Known structs use a distinct nominal `VALUE_STRUCT`, with arena-owned IDs in
 **declaration order**, never physical-layout order or array-value aliasing. Runtime
@@ -1125,3 +1125,47 @@ Ordinary structs have no bit representation. `bit_size_of` rejects the original
 requested struct or array type before resolving its field layout, even for `[0]S`.
 It is not an alias for ABI byte size times eight. Scalar/array logical bit counts,
 sentinels and pointer behavior retain their existing rules.
+
+## Completed immutable struct backing and typed field addresses
+
+`VALUE_STRUCT_FIELD_PTR` records `StructFieldPointer { base, index, offset }`:
+index is declaration-indexed, offset is cumulative physical bytes from the root.
+Typed field provenance is retained through casts and array-element composition;
+it is not interchangeable with the same physical root plus a byte offset. Known
+comparison uses canonical enclosing field paths and field-relative displacement,
+so distinct overlapping zero-byte fields compare unequal at comptime. Runtime
+numeric addresses may coincide. Same-field subtraction folds; different field
+origins lower to runtime even when their physical root is shared. Subtraction
+before a field's start rejects at pointer formation, not only on dereference.
+The provenance walker charges all flattening/prefix work to a 4096-step limit.
+
+`FIELD_PTR`/`FIELD_NAMED_PTR` may now form addresses rooted in completed immutable
+compiler-owned objects. Qualifiers are preserved; ordinary field alignment is
+min(base alignment, field natural alignment), never offset-strengthened. Loads
+follow the typed declaration-index path, preserving typed undefined and array
+field bounds. Exact typed array-field decay retains the field origin. Whole
+volatile struct loads remain unsupported, but rooted scalar field and borrowed
+slice-descriptor field accesses emit real volatile operations.
+
+`sema_type_static_storage_allowed` is read-only and distinct from runtime array
+storage/aggregate ABI admission. It requires resolved ordinary struct fields,
+bounded recursive type work and supported occupied leaves, while preserving the
+legacy empty-array whitelist. Actual by-value struct coercions establish layout
+before same-type/undefined shortcuts; pointer-type construction remains lazy.
+Runtime-backing graph validation follows field paths and stored struct values
+without effectful resolution while holding queue/state buffers. It retains its
+cumulative 1048576 node/edge limit and explicit failure diagnostic.
+
+Codegen closes immutable dependencies iteratively, including REF contents rather
+than relying on object creation order. Static serialization visits declaration
+values in physical field order, checks types/extents, writes zero inter-field and
+tail padding, emits nested arrays/sentinels/slices and rooted relocations, and
+provides a one-byte anchor for zero-sized objects. Physical undefined-zero policy
+does not define logical comptime values. Aggregate objects/total storage retain
+the 16777216-byte limit; static traversal/serialization is bounded by 4194304
+node/edge steps and depth512. Relocation-bearing immutable objects use RELRO;
+alignment above64 uses outlined assembly with ELF OBJECT size metadata.
+
+Mutable/runtime struct values/storage/copies/by-value ABI, dynamic or absolute
+root field addresses, physical reinterpret loads, early struct-address cycles,
+and packed/extern/default/comptime/tuple/aligned-field extensions remain closed.

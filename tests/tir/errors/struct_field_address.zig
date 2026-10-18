@@ -1,5 +1,8 @@
 const S = struct { a: u8 };
+fn field(p: *const S) *const u8 {
+    return &p.a;
+}
 pub fn main() void {
-    const s = S{ .a = 7 };
-    _ = &s.a;
+    const p: *const S = @ptrFromInt(4096);
+    _ = field(p);
 }

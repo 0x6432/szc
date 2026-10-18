@@ -1996,6 +1996,112 @@ test_struct_initializer_ir(void)
 }
 
 static void
+test_struct_field_pointers(void)
+{
+	Arena arena;
+	arena_init(&arena);
+	ValueTable table;
+	value_table_init(&table, &arena);
+	ValueId item = value_int_u64(&table, 1, 42);
+	ValueId root = value_ref(&table, 2, item, 1, 16);
+	ValueId other_root = value_ref(&table, 2, item, 2, 16);
+	ValueId first = value_struct_field_pointer(&table, 3, root, 1, 8);
+	CHECK(value_get(&table, first)->kind == VALUE_STRUCT_FIELD_PTR);
+	CHECK(value_get(&table, first)->type == 3);
+	CHECK(value_get(&table, first)->as.struct_field.base == root);
+	CHECK(value_get(&table, first)->as.struct_field.index == 1);
+	CHECK(value_get(&table, first)->as.struct_field.offset == 8);
+	CHECK(first == value_struct_field_pointer(&table, 3, root, 1, 8));
+	CHECK(first != value_struct_field_pointer(&table, 4, root, 1, 8));
+	CHECK(first != value_struct_field_pointer(&table, 3, other_root, 1, 8));
+	CHECK(first != value_struct_field_pointer(&table, 3, root, 0, 8));
+	CHECK(first != value_struct_field_pointer(&table, 3, root, 1, 9));
+	CHECK(first != value_struct_field_pointer(&table, 3, root, 1, UINT64_C(0x100000008)));
+	CHECK(first != value_struct_field_pointer(&table, 3, root, UINT32_MAX, 8));
+	CHECK(first != value_element_pointer(&table, 3, root, 1, 8, false));
+	CHECK(first != value_slice_field_pointer(&table, 3, root, 8, true));
+	PointerAddress address = value_pointer_address(&table, first);
+	CHECK(address.root == root && address.offset == 8 && !address.logical);
+	ValueId overlap = value_struct_field_pointer(&table, 3, root, 2, 8);
+	CHECK(overlap != first);
+	address = value_pointer_address(&table, overlap);
+	CHECK(address.root == root && address.offset == 8 && !address.logical);
+	ValueId zero = value_struct_field_pointer(&table, 3, root, 0, 0);
+	CHECK(zero != root);
+	address = value_pointer_address(&table, zero);
+	CHECK(address.root == root && address.offset == 0 && !address.logical);
+
+	ValueId cast = value_pointer_cast(&table, 4, first);
+	CHECK(value_get(&table, cast)->kind == VALUE_PTR_CAST);
+	CHECK(value_get(&table, cast)->as.pointer == first);
+	ValueId recast = value_pointer_cast(&table, 5, cast);
+	CHECK(value_get(&table, recast)->as.pointer == first);
+	address = value_pointer_address(&table, recast);
+	CHECK(address.root == root && address.offset == 8 && !address.logical);
+	ValueId view = value_pointer_reinterpret(&table, 4, first);
+	CHECK(value_get(&table, view)->kind == VALUE_REINTERPRET_PTR);
+	CHECK(value_get(&table, view)->as.pointer == first);
+	CHECK(view != cast);
+	address = value_pointer_address(&table, view);
+	CHECK(address.root == root && address.offset == 8 && !address.logical);
+	ValueId nested = value_struct_field_pointer(&table, 5, recast, 3, 24);
+	address = value_pointer_address(&table, nested);
+	CHECK(address.root == root && address.offset == 24 && !address.logical);
+	CHECK(nested != value_struct_field_pointer(&table, 5, root, 3, 24));
+	ValueId element = value_element_pointer(&table, 6, nested, 2, 40, false);
+	address = value_pointer_address(&table, element);
+	CHECK(address.root == root && address.offset == 40 && !address.logical);
+	ValueId field_in_element = value_struct_field_pointer(&table, 7, element, 1, 48);
+	address = value_pointer_address(&table, field_in_element);
+	CHECK(address.root == root && address.offset == 48 && !address.logical);
+	ValueId descriptor = value_slice_field_pointer(&table, 8, field_in_element, 56, true);
+	address = value_pointer_address(&table, descriptor);
+	CHECK(address.root == root && address.offset == 56 && !address.logical);
+	ValueId field_in_descriptor = value_struct_field_pointer(&table, 9, descriptor, 0, 64);
+	address = value_pointer_address(&table, field_in_descriptor);
+	CHECK(address.root == root && address.offset == 64 && !address.logical);
+	ValueId field_in_view = value_struct_field_pointer(&table, 5, view, 3, 24);
+	address = value_pointer_address(&table, field_in_view);
+	CHECK(address.root == root && address.offset == 24 && !address.logical);
+
+	/* Construction is representation-only, including semantically gated roots. */
+	ValueId numeric = value_int_pointer(&table, 2, 4096);
+	ValueId numeric_field = value_struct_field_pointer(&table, 3, numeric, 1, 8);
+	CHECK(value_get(&table, numeric_field)->kind == VALUE_STRUCT_FIELD_PTR);
+	CHECK(value_get(&table, numeric_field)->as.struct_field.base == numeric);
+	CHECK(value_get(&table, numeric_field)->as.struct_field.offset == 8);
+	address = value_pointer_address(&table, numeric_field);
+	CHECK(address.root == numeric && address.offset == 4104 && !address.logical);
+	ValueId numeric_cast = value_pointer_cast(&table, 4, numeric_field);
+	CHECK(value_get(&table, numeric_cast)->kind == VALUE_PTR_CAST);
+	CHECK(value_get(&table, numeric_cast)->as.pointer == numeric_field);
+	ValueId global = value_global(&table, 2, 1);
+	ValueId global_field = value_struct_field_pointer(&table, 3, global, 1, 8);
+	address = value_pointer_address(&table, global_field);
+	CHECK(address.root == global && address.offset == 8 && !address.logical);
+
+	/* All offset words and all index bits survive table/slot reallocation. */
+	ValueId *ids = ARENA_ARRAY(&arena, ValueId, 1024);
+	for (uint32_t i = 0; i < 1024; i++)
+		ids[i] = value_struct_field_pointer(&table, 3, root, UINT32_MAX - i,
+			((uint64_t)i << 32) | i);
+	bool preserved = true;
+	for (uint32_t i = 0; i < 1024; i++)
+		if (ids[i] != value_struct_field_pointer(&table, 3, root, UINT32_MAX - i,
+			((uint64_t)i << 32) | i))
+			preserved = false;
+	CHECK(preserved);
+	CHECK(first == value_struct_field_pointer(&table, 3, root, 1, 8));
+	CHECK(table.objects[value_get(&table, root)->as.object].value == item);
+	ValueId chain = first;
+	for (uint32_t i = 0; i < 128; i++)
+		chain = value_struct_field_pointer(&table, 3, chain, i, 128 + i);
+	address = value_pointer_address(&table, chain);
+	CHECK(address.root == root && address.offset == 255 && !address.logical);
+	arena_free(&arena);
+}
+
+static void
 test_known_struct_values(void)
 {
 	const struct {
@@ -2103,33 +2209,33 @@ test_known_struct_values(void)
 		/* provenance/control_runtime */
 		{"const S = struct { a: u8 };\nconst obj = S{ .a = 7 };\nfn relay(p: *const S) void { _ = p; }\nfn use(p: *const S) void { relay(p); }\npub fn main() void { use(@ptrFromInt(4096)); }\n", NULL},
 		/* provenance/escape_array_element */
-		{"const S = struct { a: u8 };\nconst obj = S{ .a = 7 };\nconst items = [2]S{ obj, obj };\nfn use(p: *const S) void { _ = p; }\npub fn main() void { use(&items[1]); }\n", "not supported by szc yet"},
+		{"const S = struct { a: u8 };\nconst obj = S{ .a = 7 };\nconst items = [2]S{ obj, obj };\nfn use(p: *const S) void { _ = p; }\npub fn main() void { use(&items[1]); }\n", NULL},
 		/* provenance/escape_direct */
-		{"const S = struct { a: u8 };\nconst obj = S{ .a = 7 };\nfn use(p: *const S) void { _ = p; }\npub fn main() void { use(&obj); }\n", "not supported by szc yet"},
+		{"const S = struct { a: u8 };\nconst obj = S{ .a = 7 };\nfn use(p: *const S) void { _ = p; }\npub fn main() void { use(&obj); }\n", NULL},
 		/* provenance/escape_empty */
-		{"const S = struct {};\nconst obj = S{};\nfn use(p: *const S) void { _ = p; }\npub fn main() void { use(&obj); }\n", "not supported by szc yet"},
+		{"const S = struct {};\nconst obj = S{};\nfn use(p: *const S) void { _ = p; }\npub fn main() void { use(&obj); }\n", NULL},
 		/* provenance/escape_erased */
-		{"const S = struct { a: u8 };\nconst obj = S{ .a = 7 };\nfn use(p: *const anyopaque) void { _ = p; }\npub fn main() void { use(@ptrCast(&obj)); }\n", "not supported by szc yet"},
+		{"const S = struct { a: u8 };\nconst obj = S{ .a = 7 };\nfn use(p: *const anyopaque) void { _ = p; }\npub fn main() void { use(@ptrCast(&obj)); }\n", NULL},
 		/* provenance/escape_global_alias_cold */
-		{"const S = struct { a: u8 };\nconst obj = S{ .a = 7 };\nconst alias: *const S = &obj;\nfn use(p: *const *const S) void { _ = p; }\npub fn main() void { use(&alias); }\n", "not supported by szc yet"},
+		{"const S = struct { a: u8 };\nconst obj = S{ .a = 7 };\nconst alias: *const S = &obj;\nfn use(p: *const *const S) void { _ = p; }\npub fn main() void { use(&alias); }\n", NULL},
 		/* provenance/escape_global_alias_resolved */
-		{"const S = struct { a: u8 };\nconst obj = S{ .a = 7 };\nconst alias: *const S = &obj;\nfn use(p: *const *const S) void { _ = p; }\npub fn main() void { _ = alias; use(&alias); }\n", "not supported by szc yet"},
+		{"const S = struct { a: u8 };\nconst obj = S{ .a = 7 };\nconst alias: *const S = &obj;\nfn use(p: *const *const S) void { _ = p; }\npub fn main() void { _ = alias; use(&alias); }\n", NULL},
 		/* provenance/escape_global_erased_alias */
-		{"const S = struct { a: u8 };\nconst obj = S{ .a = 7 };\nconst alias: *const anyopaque = @ptrCast(&obj);\nfn use(p: *const *const anyopaque) void { _ = p; }\npub fn main() void { use(&alias); }\n", "not supported by szc yet"},
+		{"const S = struct { a: u8 };\nconst obj = S{ .a = 7 };\nconst alias: *const anyopaque = @ptrCast(&obj);\nfn use(p: *const *const anyopaque) void { _ = p; }\npub fn main() void { use(&alias); }\n", NULL},
 		/* provenance/escape_global_pointer */
-		{"const S = struct { a: u8 };\nconst obj = S{ .a = 7 };\nvar alias: *const S = &obj;\npub fn main() void { _ = alias; }\n", "not supported by szc yet"},
+		{"const S = struct { a: u8 };\nconst obj = S{ .a = 7 };\nvar alias: *const S = &obj;\npub fn main() void { _ = alias; }\n", NULL},
 		/* provenance/escape_hidden_erased_pointer_array */
-		{"const S = struct { a: u8 };\nconst obj = S{ .a = 7 };\nconst items = [1]*const anyopaque{ @ptrCast(&obj) };\nfn use(p: *const [1]*const anyopaque) void { _ = p; }\npub fn main() void { use(&items); }\n", "not supported by szc yet"},
+		{"const S = struct { a: u8 };\nconst obj = S{ .a = 7 };\nconst items = [1]*const anyopaque{ @ptrCast(&obj) };\nfn use(p: *const [1]*const anyopaque) void { _ = p; }\npub fn main() void { use(&items); }\n", NULL},
 		/* provenance/escape_hidden_pointer_array */
-		{"const S = struct { a: u8 };\nconst obj = S{ .a = 7 };\nconst items = [2]*const S{ &obj, &obj };\nfn use(p: *const [2]*const S) void { _ = p; }\npub fn main() void { use(&items); }\n", "not supported by szc yet"},
+		{"const S = struct { a: u8 };\nconst obj = S{ .a = 7 };\nconst items = [2]*const S{ &obj, &obj };\nfn use(p: *const [2]*const S) void { _ = p; }\npub fn main() void { use(&items); }\n", NULL},
 		/* provenance/escape_integer */
-		{"const S = struct { a: u8 };\nconst obj = S{ .a = 7 };\nfn use(p: usize) void { _ = p; }\npub fn main() void { use(@intFromPtr(&obj)); }\n", "not supported by szc yet"},
+		{"const S = struct { a: u8 };\nconst obj = S{ .a = 7 };\nfn use(p: usize) void { _ = p; }\npub fn main() void { use(@intFromPtr(&obj)); }\n", NULL},
 		/* provenance/escape_slice */
-		{"const S = struct { a: u8 };\nconst obj = S{ .a = 7 };\nconst items = [1]S{ obj };\nfn use(p: []const S) void { _ = p; }\npub fn main() void { use(&items); }\n", "not supported by szc yet"},
+		{"const S = struct { a: u8 };\nconst obj = S{ .a = 7 };\nconst items = [1]S{ obj };\nfn use(p: []const S) void { _ = p; }\npub fn main() void { use(&items); }\n", NULL},
 		/* provenance/escape_undefined */
-		{"const S = struct { a: u8 };\nconst obj: S = undefined;\nfn use(p: *const S) void { _ = p; }\npub fn main() void { use(&obj); }\n", "not supported by szc yet"},
+		{"const S = struct { a: u8 };\nconst obj: S = undefined;\nfn use(p: *const S) void { _ = p; }\npub fn main() void { use(&obj); }\n", NULL},
 		/* provenance/escape_zero_array */
-		{"const S = struct { a: u8 };\nconst obj = S{ .a = 7 };\nconst items: [0]S = .{};\nfn use(p: *const [0]S) void { _ = p; }\npub fn main() void { use(&items); }\n", "not supported by szc yet"},
+		{"const S = struct { a: u8 };\nconst obj = S{ .a = 7 };\nconst items: [0]S = .{};\nfn use(p: *const [0]S) void { _ = p; }\npub fn main() void { use(&items); }\n", NULL},
 		/* provenance/volatile_array */
 		{"const S = struct { a: u8 };\nconst obj = S{ .a = 7 };\nconst items = [1]S{ obj };\npub fn main() u8 { const p: *const volatile [1]S = &items; return p[0].a; }\n", "not supported by szc yet"},
 		/* provenance/volatile_deref */
@@ -2154,6 +2260,181 @@ test_known_struct_values(void)
 		intern_init(&interner, &arena);
 		const char *source = cases[i].source;
 		FileId file = source_add_memory(&sources, "struct_values.zig", source, (uint32_t)strlen(source));
+		AstContainerDecl *root = parse_file(&arena, &diag, &sources, file);
+		IrFile *ir = irgen_file(&arena, &diag, &interner, source_get(&sources, file), file, root);
+		bool success = false;
+		if (!diag_has_errors(&diag)) {
+			Sema *sema = sema_create(&arena, &diag, &interner, &sources);
+			success = sema_analyze_executable(sema, file, ir);
+		}
+		CHECK(success == (cases[i].error == NULL));
+		if (cases[i].error != NULL)
+			CHECK(diag.count != 0 && strstr(diag.items[0].message, cases[i].error) != NULL);
+		arena_free(&arena);
+	}
+}
+
+static void
+test_struct_static_values(void)
+{
+	const struct {
+		const char *source;
+		const char *error;
+	} cases[] = {
+		/* dot */
+		{"const S=struct { a:u8, wide:u64, }; const s:S=.{.a=7,.wide=19};  pub fn main() void { const p=&s.a; const n:u8=if(p.*==7 and @TypeOf(p)==*const u8)0 else 256; _=n; }", NULL},
+		/* builtin */
+		{"const S=struct { a:u8, wide:u64, }; const s:S=.{.a=7,.wide=19};  pub fn main() void { const p=&@field(s,\"a\"); const n:u8=if(p.*==7 and p==&s.a)0 else 256; _=n; }", NULL},
+		/* pointer-base */
+		{"const S=struct { a:u8, wide:u64, }; const s:S=.{.a=7,.wide=19};  pub fn main() void { const p=&s; const q=&p.a; const n:u8=if(q.*==7 and q==&s.a)0 else 256; _=n; }", NULL},
+		/* pointer-base-builtin */
+		{"const S=struct { a:u8, wide:u64, }; const s:S=.{.a=7,.wide=19};  pub fn main() void { const p=&s; const q=&@field(p,\"wide\"); const n:u8=if(q.*==19 and q==&s.wide)0 else 256; _=n; }", NULL},
+		/* qualified */
+		{"const S=struct { a:u8, wide:u64, }; const s:S=.{.a=7,.wide=19};  pub fn main() void { const p:*const volatile allowzero S=&s; const n:u8=if(@TypeOf(&p.a)==*const volatile allowzero u8 and @TypeOf(&p.wide)==*const volatile allowzero u64)0 else 256; _=n; }", NULL},
+		/* underaligned */
+		{"const S=struct { a:u8, wide:u64, }; const s:S=.{.a=7,.wide=19};  pub fn main() void { const p:*align(1) const S=&s; const n:u8=if(@TypeOf(&p.wide)==*align(1) const u64 and @TypeOf(&p.a)==*const u8)0 else 256; _=n; }", NULL},
+		/* underaligned-all-flags */
+		{"const S=struct { a:u8, wide:u64, }; const s:S=.{.a=7,.wide=19};  pub fn main() void { const p:*align(1) const volatile allowzero S=&s; const n:u8=if(@TypeOf(&p.wide)==*align(1) const volatile allowzero u64)0 else 256; _=n; }", NULL},
+		/* qualifier-cast */
+		{"const S=struct { a:u8, wide:u64, }; const s:S=.{.a=7,.wide=19};  pub fn main() void { const p:*const volatile u8=&s.a; _=p; const n:u8=if(@TypeOf(&s.a)==*const u8)0 else 256; _=n; }", NULL},
+		/* root-deref */
+		{"const S=struct { a:u8, wide:u64, }; const s:S=.{.a=7,.wide=19};  pub fn main() void { const p=&s; const q=&p.*.a; const n:u8=if(q.*==7 and q==&s.a)0 else 256; _=n; }", NULL},
+		/* name/space */
+		{"const S=struct {@\"two words\":u8,}; const s=S{.@\"two words\"=7}; pub fn main() void { const p=&@field(s,\"two words\"); const n:u8=if(p.*==7 and p==&s.@\"two words\")0 else 256; _=n; }", NULL},
+		/* name/keyword */
+		{"const S=struct {@\"fn\":u8,}; const s=S{.@\"fn\"=7}; pub fn main() void { const p=&@field(s,\"fn\"); const n:u8=if(p.*==7 and p==&s.@\"fn\")0 else 256; _=n; }", NULL},
+		/* name/hex */
+		{"const S=struct {@\"\\x61\":u8,}; const s=S{.@\"\\x61\"=7}; pub fn main() void { const p=&@field(s,\"a\"); const n:u8=if(p.*==7 and p==&s.@\"\\x61\")0 else 256; _=n; }", NULL},
+		/* name/nul */
+		{"const S=struct { a:u8, wide:u64, }; const s:S=.{.a=7,.wide=19};  pub fn main() void { const p=&@field(s,\"a\\x00\"); const n:u8=if(p.*==7 and p==&s.a)0 else 256; _=n; }", NULL},
+		/* name/concat */
+		{"const S=struct { a:u8, wide:u64, }; const s:S=.{.a=7,.wide=19};  pub fn main() void { const p=&@field(s,\"\"++\"a\"); const n:u8=if(p.*==7 and p==&s.a)0 else 256; _=n; }", NULL},
+		/* name/array */
+		{"const S=struct { a:u8, wide:u64, }; const s:S=.{.a=7,.wide=19};  pub fn main() void { const p=&@field(s,&[_]u8{97}); const n:u8=if(p.*==7 and p==&s.a)0 else 256; _=n; }", NULL},
+		/* nested */
+		{"const I=struct { x:u16, }; const S=struct { inner:I, tag:u8, }; const s:S=.{.inner=.{.x=513},.tag=7}; pub fn main() void { const p=&s.inner.x; const n:u8=if(p.*==513 and p==&@field(@field(s,\"inner\"),\"x\"))0 else 256; _=n; }", NULL},
+		/* field-array-field */
+		{"const I=struct { x:u16, }; const S=struct { a:[2]I, }; const s:S=.{.a=.{.{.x=11},.{.x=22}}}; pub fn main() void { const p=&s.a[1].x; const n:u8=if(p.*==22 and p==&@field(s.a[1],\"x\"))0 else 256; _=n; }", NULL},
+		/* array-field */
+		{"const S=struct { a:u8, }; const a=[_]S{.{.a=2},.{.a=9}}; pub fn main() void { const p=&a[1].a; const n:u8=if(p.*==9 and p!=&a[0].a)0 else 256; _=n; }", NULL},
+		/* matrix-path */
+		{"const S=struct { a:[2][2]u16, }; const s:S=.{.a=.{.{1,2},.{3,4}}}; pub fn main() void { const p=&s.a[1][0]; const n:u8=if(p.*==3)0 else 256; _=n; }", NULL},
+		/* sentinel-field */
+		{"const S=struct { a:[2:9]u8, }; const s:S=.{.a=.{3,5}}; pub fn main() void { const p=&s.a[2]; const n:u8=if(p.*==9 and @TypeOf(&s.a)==*const [2:9]u8)0 else 256; _=n; }", NULL},
+		/* zero-sentinel-field */
+		{"const S=struct { a:[0:9]u8, }; const s:S=.{.a=.{}}; pub fn main() void { const p=&s.a[0]; const n:u8=if(p.*==9)0 else 256; _=n; }", NULL},
+		/* slice-field */
+		{"const S=struct { text:[]const u8, }; const s:S=.{.text=\"abc\"}; pub fn main() void { const p=&s.text.len; const q=&s.text.ptr; const n:u8=if(p.*==3 and q.*[1]==98)0 else 256; _=n; }", NULL},
+		/* pointer-field */
+		{"const S=struct { p:*const u8, }; const byte:u8=31; const s:S=.{.p=&byte}; pub fn main() void { const p=&s.p; const n:u8=if(p.*.*==31)0 else 256; _=n; }", NULL},
+		/* pointer-array-field */
+		{"const S=struct { p:[2]*const u8, }; const a:u8=11; const b:u8=22; const s:S=.{.p=.{&a,&b}}; pub fn main() void { const p=&s.p[1]; const n:u8=if(p.*.*==22)0 else 256; _=n; }", NULL},
+		/* undefined-target-type */
+		{"const S=struct { a:u8, wide:u64, }; const s:S=undefined; pub fn main() void { const p=&s.a; const v=p.*; _=v; const n:u8=if(@TypeOf(p)==*const u8 and @TypeOf(p.*)==u8)0 else 256; _=n; }", NULL},
+		/* partial-undefined */
+		{"const S=struct { a:u8, wide:u64, }; const s:S=.{.a=undefined,.wide=19}; pub fn main() void { const p=&s.a; _=p; const n:u8=if((&s.wide).*==19)0 else 256; _=n; }", NULL},
+		/* empty-field */
+		{"const E=struct {}; const S=struct { e:E, a:u8, }; const s:S=.{.e=.{},.a=7}; pub fn main() void { const p=&s.e; const n:u8=if(@TypeOf(p)==*const E and @TypeOf(p.*)==E)0 else 256; _=n; }", NULL},
+		/* zero-overlap */
+		{"const S=struct {a:void,b:u0,c:[0]u8,x:u8,}; const s:S=.{.a={},.b=0,.c=.{},.x=7}; pub fn main() void { const a:*const anyopaque=@ptrCast(&s.a); const b:*const anyopaque=@ptrCast(&s.b); const c:*const anyopaque=@ptrCast(&s.c); const n:u8=if(@TypeOf(a)==*const anyopaque and @TypeOf(b)==*const anyopaque and @TypeOf(c)==*const anyopaque and (&s.b).*==0 and (&s.c).*.len==0)0 else 256; _=n; }", NULL},
+		/* global-distinct */
+		{"const S=struct { a:u8, wide:u64, }; const a:S=.{.a=7,.wide=19}; const b:S=.{.a=7,.wide=19}; pub fn main() void {  const n:u8=if(&a==&a and &a!=&b and &a.a!=&b.a)0 else 256; _=n; }", NULL},
+		/* local-dedup */
+		{"const S=struct { a:u8, wide:u64, };  pub fn main() void { const a:S=.{.a=7,.wide=19}; const b:S=.{.a=7,.wide=19}; const n:u8=if(&a==&b and &a.a==&b.a)0 else 256; _=n; }", NULL},
+		/* temporary-dedup */
+		{"const S=struct { a:u8, wide:u64, };  pub fn main() void { const a=&S{.a=7,.wide=19}; const b=&S{.a=7,.wide=19}; const n:u8=if(a==b and &a.a==&b.a)0 else 256; _=n; }", NULL},
+		/* global-local-distinct */
+		{"const S=struct { a:u8, wide:u64, }; const s:S=.{.a=7,.wide=19};  pub fn main() void { const local:S=.{.a=7,.wide=19}; const n:u8=if(&s!=&local and &s.a!=&local.a)0 else 256; _=n; }", NULL},
+		/* root-overalignment */
+		{"const S=struct { a:u8, wide:u64, }; const s:S align(128)=.{.a=7,.wide=19}; pub fn main() void {  const n:u8=if(@TypeOf(&s)==*align(128) const S and @TypeOf(&s.wide)==*const u64 and @TypeOf(&s.a)==*const u8)0 else 256; _=n; }", NULL},
+		/* completed-struct-dependency */
+		{"const I=struct {x:u32,}; const S=struct {p:*const I,}; const s:S=.{.p=&inner}; const inner:I=.{.x=73}; pub fn main() void { const p=&s.p.x; const n:u8=if(p.*==73 and p==&inner.x)0 else 256; _=n; }", NULL},
+		/* completed-forward */
+		{"const S=struct {p:*const u8,}; const s:S=.{.p=&byte}; const byte:u8=31; pub fn main() void {  const n:u8=if((&s.p).*.*==31)0 else 256; _=n; }", NULL},
+		/* error/discard-const */
+		{"const S=struct { a:u8, wide:u64, }; const s:S=.{.a=7,.wide=19};  pub fn main() void { const p:*u8=&s.a; _=p; }", "expected type '*u8', found '*const u8'"},
+		/* error/discard-volatile */
+		{"const S=struct { a:u8, wide:u64, }; const s:S=.{.a=7,.wide=19};  pub fn main() void { const p:*const volatile S=&s; const q:*const u8=&p.a; _=q; }", "expected type '*const u8', found '*const volatile u8'"},
+		/* error/discard-allowzero */
+		{"const S=struct { a:u8, wide:u64, }; const s:S=.{.a=7,.wide=19};  pub fn main() void { const p:*allowzero const S=&s; const q:*const u8=&p.a; _=q; }", "expected type '*const u8', found '*allowzero const u8'"},
+		/* error/promote-alignment */
+		{"const S=struct { a:u8, wide:u64, }; const s:S=.{.a=7,.wide=19};  pub fn main() void { const p:*align(16) const u64=&s.wide; _=p; }", "expected type '*align(16) const u64', found '*const u64'"},
+		/* error/under-promotion */
+		{"const S=struct { a:u8, wide:u64, }; const s:S=.{.a=7,.wide=19};  pub fn main() void { const p:*align(1) const S=&s; const q:*const u64=&p.wide; _=q; }", "expected type '*const u64', found '*align(1) const u64'"},
+		/* error/undefined-base */
+		{"const S=struct { a:u8, wide:u64, };  pub fn main() void { const p:*const S=undefined; _=&p.a; }", "use of undefined value here causes illegal behavior"},
+		/* error/undefined-base-type */
+		{"const S=struct { a:u8, wide:u64, };  pub fn main() void { const p:*const S=undefined; _=@TypeOf(&p.a); }", "use of undefined value here causes illegal behavior"},
+		/* error/undefined-read */
+		{"const S=struct { a:u8, wide:u64, }; const s:S=undefined; pub fn main() void { const p=&s.a; const n:u8=if(p.*==0)0 else 256; _=n; }", "use of undefined value here causes illegal behavior"},
+		/* error/partial-undefined-read */
+		{"const S=struct { a:u8, wide:u64, }; const s:S=.{.a=undefined,.wide=19}; pub fn main() void { const n:u8=if((&s.a).*==0)0 else 256; _=n; }", "use of undefined value here causes illegal behavior"},
+		/* error/missing */
+		{"const S=struct { a:u8, wide:u64, }; const s:S=.{.a=7,.wide=19};  pub fn main() void { _=&s.missing; }", "no field named 'missing' in struct 'test.S'"},
+		/* error/declaration */
+		{"const S=struct {a:u8,pub const decl:u8=7;}; const s:S=.{.a=7}; pub fn main() void { _=&s.decl; }", "no field named 'decl' in struct 'test.S'"},
+		/* error/double-nul */
+		{"const S=struct { a:u8, wide:u64, }; const s:S=.{.a=7,.wide=19};  pub fn main() void { _=&@field(s,\"a\\x00\\x00\"); }", "no field named 'a"},
+		/* error/nul-tail */
+		{"const S=struct { a:u8, wide:u64, }; const s:S=.{.a=7,.wide=19};  pub fn main() void { _=&@field(s,\"a\\x00tail\"); }", "no field named 'a"},
+		/* error/bad-name */
+		{"const S=struct { a:u8, wide:u64, }; const s:S=.{.a=7,.wide=19};  pub fn main() void { _=&@field(s,3); }", "expected type '[]const u8', found 'comptime_int'"},
+		/* error/undefined-name */
+		{"const S=struct { a:u8, wide:u64, }; const s:S=.{.a=7,.wide=19};  pub fn main() void { _=&@field(s,undefined); }", "use of undefined value here causes illegal behavior"},
+		/* error/oob-array */
+		{"const S=struct { a:[2]u8, }; const s:S=.{.a=.{1,2}}; pub fn main() void { _=&s.a[2]; }", "index 2 outside array of length 2"},
+		/* equality/same-field-casts */
+		{"const S=struct {wide:u64,byte:u8,}; const s:S=.{.wide=9,.byte=7};  pub fn main() void { const p:*align(1) const volatile allowzero u64=&s.wide; const n:u8=if(@as(*allowzero const volatile anyopaque,@ptrCast(p))==@as(*allowzero const volatile anyopaque,@ptrCast(&s.wide)))0 else 256; _=n; }", NULL},
+		/* equality/root-offset-provenance */
+		{"const S=struct {wide:u64,byte:u8,}; const s:S=.{.wide=9,.byte=7};  pub fn main() void { const bytes:[*]const u8=@ptrCast(&s); const field_bytes:[*]const u8=@ptrCast(&s.wide); const n:u8=if(@as(*const anyopaque,@ptrCast(&s))!=@as(*const anyopaque,@ptrCast(&s.wide)) and &bytes[@offsetOf(S,\"byte\")]!=&s.byte and &field_bytes[@offsetOf(S,\"byte\")]!=&s.byte)0 else 256; _=n; }", NULL},
+		/* equality/array-offset-casts */
+		{"const S=struct {a:[2]u16,}; const s:S=.{.a=.{11,22}}; pub fn main() void { const p:[*]const u16=@ptrCast(&s.a); const n:u8=if(&p[0]==&s.a[0] and &p[1]==&s.a[1] and @as(*const anyopaque,@ptrCast(&s.a))==@as(*const anyopaque,@ptrCast(&s.a[0])))0 else 256; _=n; }", NULL},
+		/* equality/mixed-array-field */
+		{"const I=struct{x:u8,}; const S=struct{a:[2]I,}; const s:S=.{.a=.{.{.x=1},.{.x=2}}}; pub fn main() void { const p:[*]const I=@ptrCast(&s.a); const n:u8=if(&p[1].x==&s.a[1].x and &@field(p[1],\"x\")==&s.a[1].x)0 else 256; _=n; }", NULL},
+		/* equality/zero-array-versus-field */
+		{"const S=struct {a:[2]u0,b:void,}; const s:S=.{.a=.{0,0},.b={}}; pub fn main() void {  const n:u8=if(&s.a[0]==&s.a[1] and @as(*const anyopaque,@ptrCast(&s.a[0]))!=@as(*const anyopaque,@ptrCast(&s.b)))0 else 256; _=n; }", NULL},
+		/* equality/overlapping-fields */
+		{"const S=struct {a:void,b:u0,c:[0]u8,x:u8,}; const s:S=.{.a={},.b=0,.c=.{},.x=7}; pub fn main() void { const a:*const anyopaque=@ptrCast(&s.a); const b:*const anyopaque=@ptrCast(&s.b); const c:*const anyopaque=@ptrCast(&s.c); const n:u8=if(a==a and a!=b and b!=c and @as(*const anyopaque,@ptrCast(&s))!=@as(*const anyopaque,@ptrCast(&s.x)))0 else 256; _=n; }", NULL},
+		/* provenance_depth_40.zig */
+		{"const S0 = struct { a: [2]u8 };\nconst S1 = struct { inner: S0 };\nconst S2 = struct { inner: S1 };\nconst S3 = struct { inner: S2 };\nconst S4 = struct { inner: S3 };\nconst S5 = struct { inner: S4 };\nconst S6 = struct { inner: S5 };\nconst S7 = struct { inner: S6 };\nconst S8 = struct { inner: S7 };\nconst S9 = struct { inner: S8 };\nconst S10 = struct { inner: S9 };\nconst S11 = struct { inner: S10 };\nconst S12 = struct { inner: S11 };\nconst S13 = struct { inner: S12 };\nconst S14 = struct { inner: S13 };\nconst S15 = struct { inner: S14 };\nconst S16 = struct { inner: S15 };\nconst S17 = struct { inner: S16 };\nconst S18 = struct { inner: S17 };\nconst S19 = struct { inner: S18 };\nconst S20 = struct { inner: S19 };\nconst S21 = struct { inner: S20 };\nconst S22 = struct { inner: S21 };\nconst S23 = struct { inner: S22 };\nconst S24 = struct { inner: S23 };\nconst S25 = struct { inner: S24 };\nconst S26 = struct { inner: S25 };\nconst S27 = struct { inner: S26 };\nconst S28 = struct { inner: S27 };\nconst S29 = struct { inner: S28 };\nconst S30 = struct { inner: S29 };\nconst S31 = struct { inner: S30 };\nconst S32 = struct { inner: S31 };\nconst S33 = struct { inner: S32 };\nconst S34 = struct { inner: S33 };\nconst S35 = struct { inner: S34 };\nconst S36 = struct { inner: S35 };\nconst S37 = struct { inner: S36 };\nconst S38 = struct { inner: S37 };\nconst S39 = struct { inner: S38 };\nconst S40 = struct { inner: S39 };\nconst root: S40 = .{ .inner = .{ .inner = .{ .inner = .{ .inner = .{ .inner = .{ .inner = .{ .inner = .{ .inner = .{ .inner = .{ .inner = .{ .inner = .{ .inner = .{ .inner = .{ .inner = .{ .inner = .{ .inner = .{ .inner = .{ .inner = .{ .inner = .{ .inner = .{ .inner = .{ .inner = .{ .inner = .{ .inner = .{ .inner = .{ .inner = .{ .inner = .{ .inner = .{ .inner = .{ .inner = .{ .inner = .{ .inner = .{ .inner = .{ .inner = .{ .inner = .{ .inner = .{ .inner = .{ .inner = .{ .inner = .{ .inner = .{ .a = .{ 11, 22 } } } } } } } } } } } } } } } } } } } } } } } } } } } } } } } } } } } } } } } } } };\nconst p = &root.inner.inner.inner.inner.inner.inner.inner.inner.inner.inner.inner.inner.inner.inner.inner.inner.inner.inner.inner.inner.inner.inner.inner.inner.inner.inner.inner.inner.inner.inner.inner.inner.inner.inner.inner.inner.inner.inner.inner.inner.a;\npub fn main() void { const n: u8 = if (p == p) 0 else 256; _ = n; }\n", NULL},
+		/* provenance_depth_64.zig */
+		{"const S0 = struct { a: [2]u8 };\nconst S1 = struct { inner: S0 };\nconst S2 = struct { inner: S1 };\nconst S3 = struct { inner: S2 };\nconst S4 = struct { inner: S3 };\nconst S5 = struct { inner: S4 };\nconst S6 = struct { inner: S5 };\nconst S7 = struct { inner: S6 };\nconst S8 = struct { inner: S7 };\nconst S9 = struct { inner: S8 };\nconst S10 = struct { inner: S9 };\nconst S11 = struct { inner: S10 };\nconst S12 = struct { inner: S11 };\nconst S13 = struct { inner: S12 };\nconst S14 = struct { inner: S13 };\nconst S15 = struct { inner: S14 };\nconst S16 = struct { inner: S15 };\nconst S17 = struct { inner: S16 };\nconst S18 = struct { inner: S17 };\nconst S19 = struct { inner: S18 };\nconst S20 = struct { inner: S19 };\nconst S21 = struct { inner: S20 };\nconst S22 = struct { inner: S21 };\nconst S23 = struct { inner: S22 };\nconst S24 = struct { inner: S23 };\nconst S25 = struct { inner: S24 };\nconst S26 = struct { inner: S25 };\nconst S27 = struct { inner: S26 };\nconst S28 = struct { inner: S27 };\nconst S29 = struct { inner: S28 };\nconst S30 = struct { inner: S29 };\nconst S31 = struct { inner: S30 };\nconst S32 = struct { inner: S31 };\nconst S33 = struct { inner: S32 };\nconst S34 = struct { inner: S33 };\nconst S35 = struct { inner: S34 };\nconst S36 = struct { inner: S35 };\nconst S37 = struct { inner: S36 };\nconst S38 = struct { inner: S37 };\nconst S39 = struct { inner: S38 };\nconst S40 = struct { inner: S39 };\nconst S41 = struct { inner: S40 };\nconst S42 = struct { inner: S41 };\nconst S43 = struct { inner: S42 };\nconst S44 = struct { inner: S43 };\nconst S45 = struct { inner: S44 };\nconst S46 = struct { inner: S45 };\nconst S47 = struct { inner: S46 };\nconst S48 = struct { inner: S47 };\nconst S49 = struct { inner: S48 };\nconst S50 = struct { inner: S49 };\nconst S51 = struct { inner: S50 };\nconst S52 = struct { inner: S51 };\nconst S53 = struct { inner: S52 };\nconst S54 = struct { inner: S53 };\nconst S55 = struct { inner: S54 };\nconst S56 = struct { inner: S55 };\nconst S57 = struct { inner: S56 };\nconst S58 = struct { inner: S57 };\nconst S59 = struct { inner: S58 };\nconst S60 = struct { inner: S59 };\nconst S61 = struct { inner: S60 };\nconst S62 = struct { inner: S61 };\nconst S63 = struct { inner: S62 };\nconst S64 = struct { inner: S63 };\nconst root: S64 = .{ .inner = .{ .inner = .{ .inner = .{ .inner = .{ .inner = .{ .inner = .{ .inner = .{ .inner = .{ .inner = .{ .inner = .{ .inner = .{ .inner = .{ .inner = .{ .inner = .{ .inner = .{ .inner = .{ .inner = .{ .inner = .{ .inner = .{ .inner = .{ .inner = .{ .inner = .{ .inner = .{ .inner = .{ .inner = .{ .inner = .{ .inner = .{ .inner = .{ .inner = .{ .inner = .{ .inner = .{ .inner = .{ .inner = .{ .inner = .{ .inner = .{ .inner = .{ .inner = .{ .inner = .{ .inner = .{ .inner = .{ .inner = .{ .inner = .{ .inner = .{ .inner = .{ .inner = .{ .inner = .{ .inner = .{ .inner = .{ .inner = .{ .inner = .{ .inner = .{ .inner = .{ .inner = .{ .inner = .{ .inner = .{ .inner = .{ .inner = .{ .inner = .{ .inner = .{ .inner = .{ .inner = .{ .inner = .{ .inner = .{ .inner = .{ .a = .{ 11, 22 } } } } } } } } } } } } } } } } } } } } } } } } } } } } } } } } } } } } } } } } } } } } } } } } } } } } } } } } } } } } } } } } } };\nconst p = &root.inner.inner.inner.inner.inner.inner.inner.inner.inner.inner.inner.inner.inner.inner.inner.inner.inner.inner.inner.inner.inner.inner.inner.inner.inner.inner.inner.inner.inner.inner.inner.inner.inner.inner.inner.inner.inner.inner.inner.inner.inner.inner.inner.inner.inner.inner.inner.inner.inner.inner.inner.inner.inner.inner.inner.inner.inner.inner.inner.inner.inner.inner.inner.inner.a;\npub fn main() void { const n: u8 = if (p == p) 0 else 256; _ = n; }\n", "not supported by szc yet: pointer provenance comparison work budget exceeded (4096)"},
+		/* sentinel_reverse_formation.zig */
+		{"const S = struct { a: [3:9]u8, before: u64 };\nconst s: S = .{ .a = .{ 11, 22, 33 }, .before = 123 };\npub fn main() void {\n    const p: [*]const u8 = @ptrCast(&s.a);\n    const q = p - 1;\n    _ = q;\n}\n", "pointer computation here causes illegal behavior"},
+		/* sentinel_reverse_to_start.zig */
+		{"const S = struct { a: [3:9]u8, before: u64 };\nconst s: S = .{ .a = .{ 11, 22, 33 }, .before = 123 };\npub fn main() void { const p: [*]const u8 = @ptrCast(&s.a); const q = p + 3; const n: u8 = if ((q - 3)[0] == 11 and q - p == 3) 0 else 256; _ = n; }\n", NULL},
+		/* empty_sentinel_onepast_read.zig */
+		{"const S = struct { a: [0:7]u8, before: u64 };\nconst s: S = .{ .a = .{}, .before = 123 };\npub fn main() void { const p: [*]const u8 = @ptrCast(&s.a); const n = p[1]; _ = n; }\n", "dereference of '*const u8' exceeds bounds of containing decl of type '[0:7]u8'"},
+		/* typed-root-layout/opaque-discard */
+		{"const S=struct{x:anyopaque,}; pub fn main() void {const s:S=undefined; const p=&s; _=p;}", "cannot directly embed opaque type 'anyopaque' in struct"},
+		/* typed-root-layout/opaque-typeof */
+		{"const S=struct{x:anyopaque,}; pub fn main() void {const s:S=undefined; _=@TypeOf(&s);}", "cannot directly embed opaque type 'anyopaque' in struct"},
+		/* typed-root-layout/default-discard */
+		{"const S=struct{x:u8=256,}; pub fn main() void {const s:S=undefined; const p=&s; _=p;}", "not supported by szc yet:"},
+		/* typed-root-layout/pointer-type-only */
+		{"const S=struct{x:anyopaque,}; pub fn main() void {const p:*const S=undefined; const n:u8=if(@sizeOf(*const S)==8 and @alignOf(*const S)==8 and @TypeOf(p)==*const S)0 else 256; _=n;}", NULL},
+		/* typed-root-layout/valid-undefined-address */
+		{"const S=struct{x:u8,}; noinline fn address(p:*const S) usize {return @intFromPtr(p);} pub fn main() void {const s:S=undefined; _=address(&s); _=@intFromPtr(&s);}", NULL},
+		/* typed-root-layout/default-typeof */
+		{"const S=struct{x:u8=256,}; pub fn main() void {const s:S=undefined; _=@TypeOf(&s);}", "not supported by szc yet:"},
+		/* arithmetic/same-field-difference */
+		{"const S=struct {a:[3:9]u8,before:u64,}; const s:S=.{.a=.{1,2,3},.before=17}; pub fn main() void { const p:[*]const u8=@ptrCast(&s.a); const q=p+2; const n:u8=if(q-p==2 and (q-2)[0]==1)0 else 256; _=n; }", NULL},
+		/* error/field-relative-underflow */
+		{"const S=struct {a:[3:9]u8,before:u64,}; const s:S=.{.a=.{1,2,3},.before=17}; pub fn main() void { const p:[*]const u8=@ptrCast(&s.a); const q=p-1; _=q; }", "pointer computation here causes illegal behavior"},
+		/* error/negative-field-difference */
+		{"const S=struct {a:[3]u8,}; const s:S=.{.a=.{1,2,3}}; pub fn main() void { const p:[*]const u8=@ptrCast(&s.a); const n=p-(p+1); _=n; }", "operation results in overflow"},
+	};
+	for (uint32_t i = 0; i < sizeof(cases) / sizeof(cases[0]); i++) {
+		Arena arena;
+		arena_init(&arena);
+		SourceTable sources;
+		source_table_init(&sources, &arena);
+		Diag diag;
+		diag_init(&diag, &arena, &sources);
+		Interner interner;
+		intern_init(&interner, &arena);
+		const char *source = cases[i].source;
+		FileId file = source_add_memory(&sources, "test.zig", source, (uint32_t)strlen(source));
 		AstContainerDecl *root = parse_file(&arena, &diag, &sources, file);
 		IrFile *ir = irgen_file(&arena, &diag, &interner, source_get(&sources, file), file, root);
 		bool success = false;
@@ -3223,6 +3504,8 @@ main(void)
 	test_has_field();
 	test_struct_metadata();
 	test_struct_value_interning();
+	test_struct_static_values();
+	test_struct_field_pointers();
 	test_known_struct_values();
 	test_struct_initializer_ir();
 	test_struct_offsets();

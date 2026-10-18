@@ -1,0 +1,12 @@
+const I = struct {
+    x: u16,
+};
+const S = struct {
+    a: [2]I,
+};
+const s: S = .{ .a = .{ .{ .x = 11 }, .{ .x = 22 } } };
+pub fn main() void {
+    const p = &s.a[1].x;
+    const n: u8 = if (p.* == 22 and p == &@field(s.a[1], "x")) 0 else 256;
+    _ = n;
+}

@@ -39,6 +39,7 @@ typedef enum ValueKind {
 	VALUE_PTR_CAST,	/* pointer qualification preserving the original byte backing */
 	VALUE_REINTERPRET_PTR,	/* physical runtime view retaining original root and offsets */
 	VALUE_ELEMENT_PTR,	/* subobject path into real backing, never a copied element */
+	VALUE_STRUCT_FIELD_PTR,	/* typed declaration-field path into original backing */
 	VALUE_SLICE_FIELD_PTR,	/* address of one descriptor word in original backing */
 	VALUE_SLICE,	/* pointer/usize length, not the pointee contents */
 	VALUE_ARRAY,	/* immutable aggregate of interned element IDs */
@@ -75,6 +76,12 @@ typedef struct ElementPointer {
 	bool logical;
 } ElementPointer;
 
+typedef struct StructFieldPointer {
+	ValueId base;
+	uint32_t index;	/* declaration index, not physical layout order */
+	uint64_t offset;	/* cumulative bytes from the original root */
+} StructFieldPointer;
+
 typedef struct SliceFieldPointer {
 	ValueId base;
 	uint64_t offset;	/* cumulative bytes from the original root */
@@ -103,6 +110,7 @@ typedef struct Value {
 		ConstObjectId object;
 		ElementPointer element;
 		SliceFieldPointer field;
+		StructFieldPointer struct_field;
 		ValueId pointer;
 		uint64_t address;
 	} as;
@@ -137,6 +145,7 @@ const Value *value_get(const ValueTable *table, ValueId id);
 ValueId value_global(ValueTable *table, TypeId type, GlobalId global);
 ValueId value_ref(ValueTable *table, TypeId type, ValueId pointee, uint32_t identity, uint32_t alignment);
 ValueId value_element_pointer(ValueTable *table, TypeId type, ValueId base, uint64_t index, uint64_t offset, bool logical);
+ValueId value_struct_field_pointer(ValueTable *table, TypeId type, ValueId base, uint32_t index, uint64_t cumulative_offset);
 ValueId value_slice_field_pointer(ValueTable *table, TypeId type, ValueId base, uint64_t offset, bool length);
 ValueId value_int_pointer(ValueTable *table, TypeId type, uint64_t address);
 ValueId value_pointer_cast(ValueTable *table, TypeId type, ValueId pointer);

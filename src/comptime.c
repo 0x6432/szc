@@ -554,6 +554,12 @@ value_hash(const Value *value)
 		hash = hash_mix(hash, (uint32_t)(value->as.element.offset >> 32));
 		hash = hash_mix(hash, value->as.element.logical ? 1u : 0u);
 		break;
+	case VALUE_STRUCT_FIELD_PTR:
+		hash = hash_mix(hash, value->as.struct_field.base);
+		hash = hash_mix(hash, value->as.struct_field.index);
+		hash = hash_mix(hash, (uint32_t)value->as.struct_field.offset);
+		hash = hash_mix(hash, (uint32_t)(value->as.struct_field.offset >> 32));
+		break;
 	case VALUE_SLICE_FIELD_PTR:
 		hash = hash_mix(hash, value->as.field.base);
 		hash = hash_mix(hash, (uint32_t)value->as.field.offset);
@@ -615,6 +621,10 @@ value_equal(const Value *a, const Value *b)
 			&& a->as.element.index == b->as.element.index
 			&& a->as.element.offset == b->as.element.offset
 			&& a->as.element.logical == b->as.element.logical;
+	case VALUE_STRUCT_FIELD_PTR:
+		return a->as.struct_field.base == b->as.struct_field.base
+			&& a->as.struct_field.index == b->as.struct_field.index
+			&& a->as.struct_field.offset == b->as.struct_field.offset;
 	case VALUE_SLICE_FIELD_PTR:
 		return a->as.field.base == b->as.field.base
 			&& a->as.field.offset == b->as.field.offset && a->as.field.length == b->as.field.length;
@@ -910,6 +920,15 @@ value_element_pointer(ValueTable *table, TypeId type, ValueId base, uint64_t ind
 	return value_intern(table, &value);
 }
 
+/* Sema validates the root and layout; retain even overlapping or absolute paths. */
+ValueId
+value_struct_field_pointer(ValueTable *table, TypeId type, ValueId base, uint32_t index, uint64_t cumulative_offset)
+{
+	Value value = make_value(VALUE_STRUCT_FIELD_PTR, type);
+	value.as.struct_field = (StructFieldPointer){base, index, cumulative_offset};
+	return value_intern(table, &value);
+}
+
 ValueId
 value_slice_field_pointer(ValueTable *table, TypeId type, ValueId base, uint64_t offset, bool length)
 {
@@ -951,7 +970,8 @@ value_pointer_address(const ValueTable *table, ValueId id)
 	bool selected = false;
 	const Value *value = value_get(table, id);
 	while (value->kind == VALUE_ELEMENT_PTR || value->kind == VALUE_PTR_CAST
-		|| value->kind == VALUE_REINTERPRET_PTR || value->kind == VALUE_SLICE_FIELD_PTR) {
+		|| value->kind == VALUE_REINTERPRET_PTR || value->kind == VALUE_SLICE_FIELD_PTR
+		|| value->kind == VALUE_STRUCT_FIELD_PTR) {
 		if (value->kind == VALUE_ELEMENT_PTR) {
 			if (!selected) {
 				address.offset = value->as.element.offset;
@@ -959,6 +979,12 @@ value_pointer_address(const ValueTable *table, ValueId id)
 				selected = true;
 			}
 			address.root = value->as.element.base;
+		} else if (value->kind == VALUE_STRUCT_FIELD_PTR) {
+			if (!selected) {
+				address.offset = value->as.struct_field.offset;
+				selected = true;
+			}
+			address.root = value->as.struct_field.base;
 		} else if (value->kind == VALUE_SLICE_FIELD_PTR) {
 			if (!selected) {
 				address.offset = value->as.field.offset;

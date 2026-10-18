@@ -1,0 +1,72 @@
+function w $szc.main.1() {
+@start
+	%t0 =l add $szc.const.1, 8
+	%t1 =l call $szc.volatile.load.u64(l %t0)
+	%t3 =w cnel %t1, 3
+	jnz %t3, @c8_then, @c8_else
+@c8_then
+	ret 3
+@c8_else
+	jmp @b4
+@b4
+	%t10 =l call $szc.volatile.load.u64(l $szc.const.1)
+	%e12_offset =l mul 2, 1
+	%t12 =l add %t10, %e12_offset
+	%t13 =w loadub %t12
+	%t15 =w cnew %t13, 99
+	jnz %t15, @c20_then, @c20_else
+@c20_then
+	ret 4
+@c20_else
+	jmp @b16
+@b16
+	%t22 =w call $szc.read.2(l $szc.const.1)
+	%t22 =w and %t22, 255
+	ret %t22
+}
+
+function w $szc.read.2(l %t0) {
+@start
+	%t1 =l alloc8 8
+	storel %t0, %t1
+	%t3 =l loadl %t1
+	%t4 =l add %t3, 8
+	%t5 =l loadl %t1
+	%t6 =l copy %t5
+	%t7 =l call $szc.volatile.load.u64(l %t4)
+	%t9 =w cnel %t7, 3
+	jnz %t9, @c14_then, @c14_else
+@c14_then
+	ret 1
+@c14_else
+	jmp @b10
+@b10
+	%t15 =l call $szc.volatile.load.u64(l %t6)
+	%e17_offset =l mul 1, 1
+	%t17 =l add %t15, %e17_offset
+	%t18 =w loadub %t17
+	%t20 =w cnew %t18, 98
+	jnz %t20, @c25_then, @c25_else
+@c25_then
+	ret 2
+@c25_else
+	jmp @b21
+@b21
+	ret 0
+}
+
+section ".data.rel.ro"
+data $szc.const.1 = align 8 { l $szc.bytes.10, l 3, l 17 }
+section ".rodata"
+data $szc.bytes.10 = { b 97, b 98, b 99, b 0 }
+function l $szc.volatile.load.u64(l %ptr) {
+@start
+	%value =l loadl %ptr
+	ret %value
+}
+
+export function w $main() {
+@start
+	%status =w call $szc.main.1()
+	ret %status
+}

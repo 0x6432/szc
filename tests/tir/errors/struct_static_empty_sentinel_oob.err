@@ -1,0 +1,3 @@
+tests/tir/errors/struct_static_empty_sentinel_oob.zig:3:72: error: dereference of '*const u8' exceeds bounds of containing decl of type '[0:7]u8'
+pub fn main() void { const p: [*]const u8 = @ptrCast(&s.a); const n = p[1]; _ = n; }
+                                                                       ^

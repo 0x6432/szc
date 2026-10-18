@@ -163,6 +163,10 @@ bool sema_analyze_executable(Sema *sema, FileId file, const IrFile *ir);
 bool sema_type_is_aggregate(const Sema *sema, TypeId type);
 /* Runtime array layouts, including proven empty dimensions with known alignment. */
 bool sema_type_array_storage_allowed(const Sema *sema, TypeId type);
+/* Static immutable backing only; preserves legacy empty arrays. No layout
+ * resolution or runtime aggregate/ABI admission. False includes bounded-work
+ * exhaustion and unresolved/unsupported by-value field graphs. */
+bool sema_type_static_storage_allowed(const Sema *sema, TypeId type);
 const Type       *sema_type(const Sema *sema, TypeId type);
 TypeId            sema_void_type(const Sema *sema);
 uint32_t          sema_global_count(const Sema *sema);

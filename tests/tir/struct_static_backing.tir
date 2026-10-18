@@ -1,0 +1,9 @@
+fn szc.main.1: fn () void {
+  %0: *const anyopaque = const ptr_view(value.12)
+  %1: void = call szc.use.2(%0)
+  %2: noreturn = ret
+}
+fn szc.use.2: fn (*const anyopaque) void {
+  %0: *const anyopaque = arg 0
+  %1: noreturn = ret
+}

@@ -1,0 +1,14 @@
+const S = struct {
+    a: void,
+    b: u0,
+    c: [0]u8,
+    x: u8,
+};
+const s: S = .{ .a = {}, .b = 0, .c = .{}, .x = 7 };
+pub fn main() void {
+    const a: *const anyopaque = @ptrCast(&s.a);
+    const b: *const anyopaque = @ptrCast(&s.b);
+    const c: *const anyopaque = @ptrCast(&s.c);
+    const n: u8 = if (a == a and a != b and b != c and @as(*const anyopaque, @ptrCast(&s)) != @as(*const anyopaque, @ptrCast(&s.x))) 0 else 256;
+    _ = n;
+}

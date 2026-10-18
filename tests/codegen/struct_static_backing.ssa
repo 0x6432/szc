@@ -1,0 +1,14 @@
+function $szc.main.1() {
+@start
+	%t0 =l add $szc.const.1, 8
+	call $consume(l %t0, l $szc.const.1)
+	ret
+}
+
+section ".rodata"
+data $szc.const.1 = align 8 { l 19, b 7, z 7 }
+export function w $main() {
+@start
+	call $szc.main.1()
+	ret 0
+}

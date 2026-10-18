@@ -24,6 +24,67 @@ Read this first when resuming work (the sandbox resets often).
 
 ## Latest follow-up checkpoint
 
+- M6.1f completed immutable ordinary struct backing is implemented on bbed857.
+  This is NOT mutable/runtime struct values/storage/ABI. Completed compiler-owned
+  roots and nested struct/array fields have typed declaration-indexed field paths;
+  logical equality preserves field provenance even when numeric addresses overlap.
+  Same-field subtraction folds; cross-field subtraction stays runtime. Rooted
+  field addresses preserve qualifiers and min(base,natural) ordinary alignment.
+  Typed loads retain undefined and field bounds; subtraction before a field's
+  start now rejects at formation, an actual bug caught by independent probes.
+- Static admission is distinct from runtime array/ABI admission and preserves the
+  legacy empty-array whitelist. Actual by-value root coercion establishes layout
+  before undefined/same-type shortcuts; pointer-type construction remains lazy.
+  Cached backing/dependency walks never resolve layouts while buffers are borrowed.
+  Serializer writes exact physical-order bytes/padding/tail, nested sentinels and
+  slices, zero-sized anchors and rooted pointer/function relocations, with explicit
+  work/depth/16MiB storage limits. Relocation-bearing constants remain RELRO;
+  alignment above64 is outlined assembly with OBJECT size metadata. Whole volatile
+  structs remain unsupported; rooted scalar/descriptor accesses use volatile loads.
+- Parallel ownership: scratch comptime path implementation, backend serializer and
+  physical/ELF checks, independent official contract/tests; parent owns sema and
+  integration. Read-only audits found no remaining blocker after the formation fix.
+  Added 71 semantic cases, 45 path-interner checks, 19 net stage/error/QBE goldens,
+  eight seeds each irgen/sema, five native fixtures and a permanent two-compile
+  external-C readback/PIE/RELRO/noTEXTREL test. Eighteen old backing/field NYIs are
+  deliberately retained as supported emission controls: values checker now22
+  rejections+23 controls; static checker19, metadata50 and bit-layout9 stay closed.
+- Reference: expanded static60 cases (42 successes/18 exact primary errors),
+  field201/92, values118/55, metadata100/29, empty-array112/24, symbolic pointer
+  casts252, exact pointer roundtrips84 and known-slice pointer casts48/16 pass.
+  All five new natives pass szc and official Debug/ReleaseFast. Full e2e remains
+  szc-only; these are targeted reference matrices/native fixtures, not std/bootstrap.
+- Final acceptance: independent frozen GCC/Clang strict C11 Werror ASan/UBSan
+  pass6491 units/1270 goldens,140+4 native,16driver/57compiler-runner, all C/ABI/
+  storage/alignment suites,102 observed volatile sequences and303 safety cases.
+  Both pass20000 standalone mutations per stage, seeds256/256/128/184. Fresh
+  four60-second libFuzzer runs1838135/51008/55025/80650 pass. Separate GCC-O2
+  native/safety/physical-storage and forced main rebuild/test pass. External C
+  readback/ELF checker passes both GCC/Clang linkers, explicit PIE/RELRO/noTEXTREL,
+  align8/128, nested fields/padding/sentinels/relocations/callbacks/undefined-zero
+  policy and empty anchors. All6188 frozen paths match each other and main before
+  the final two documentation checkpoints. Trees /data/struct-static-final/{gcc,
+  clang,optimized}; manifest.json and /data/struct-static-final-*.log retain evidence.
+- Hosted CI is NOT claimed green. bbed857 last snapshot70 successful+2running;
+  c2bfeb3 has69successful+2failed. Clang117620757905 records296pass/7 real safety
+  timeouts (5native15s/2compiler120s), exit2 and normal cleanup, not cancellation.
+  Exact historical source/binary replay of those seven cases x3 passes21/21 with
+  unchanged deadlines/assertions, no sanitizer findings; that does not prove an
+  infrastructure-only cause. GCC117620757859 log retrieval returns404, so its
+  cause remains unclassified. No deadline changes or blind hosted reruns.
+- Next: substantial runtime struct storage/lvalues/init/projection and owned
+  snapshots, with a distinct runtime predicate and explicit recursive ABI gates.
+  Contextual direct-destination initialization must store sequentially: aliasing
+  differs from an explicitly typed temporary. Keep internal struct by-value ABI
+  closed until the immediately dependent transport batch; C/SysV aggregate ABI
+  remains separate. Plans /data/struct-runtime-next-plan.md and official research
+  /data/struct-runtime-contract/ are scratch evidence, not build dependencies.
+  Defaults/comptime/tuple/aligned-field/packed/extern extensions, methods, mutable
+  comptime memory, imports/std/bootstrap remain deferred. M6.1 remains partial;
+  Q6 must still be asked only at M10.2.
+
+## Previous follow-up checkpoint (M6.1e)
+
 - M6.1e ordinary struct bit-layout parity is implemented on top of c2bfeb3.
   @bitOffsetOf shares offsetOf's exact type/name/layout/kind/field resolution and
   checked physical layout, returning uint64 byte-offset*8 as comptime_int. Ordinary

@@ -1,0 +1,1 @@
+const I=struct { x:u16, }; const S=struct { inner:I, tag:u8, }; const s:S=.{.inner=.{.x=513},.tag=7}; pub fn main() void { const p=&s.inner.x; const n:u8=if(p.*==513 and p==&@field(@field(s,"inner"),"x"))0 else 256; _=n; }

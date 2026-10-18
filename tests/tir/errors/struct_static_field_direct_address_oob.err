@@ -1,0 +1,3 @@
+tests/tir/errors/struct_static_field_direct_address_oob.zig:3:75: error: index 4 outside array of length 3 +1 (sentinel)
+pub fn main() void { const p: [*]const u8 = @ptrCast(&s.a); const q = &s.a[4]; const n: u8 = if (q == p + 4) 0 else 256; _ = n; }
+                                                                          ^

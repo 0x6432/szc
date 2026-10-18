@@ -141,7 +141,8 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
   - [x] **M6.1c Exact ordinary struct field layout**: pinned unstable field permutation, checked byte offsets, read-only layout APIs and @offsetOf.
   - [x] **M6.1d Immutable ordinary struct values**: named/contextual initialization, nominal declaration-ordered constants and logical instance field reads; runtime storage/ABI remains closed.
   - [x] **M6.1e Ordinary struct bit-layout parity**: @bitOffsetOf and exact ordinary-struct @bitSizeOf rejection before layout.
-  - Runtime struct values, field offsets/projection, initializers, defaults and instance methods remain unimplemented.
+  - [x] **M6.1f Immutable static struct backing**: completed-object field pointers, typed provenance, exact physical serialization and relocations.
+  - Mutable/runtime struct values/storage/ABI, defaults and instance methods remain unimplemented.
 - [ ] **M6.2 Enums**: tag values, `@intFromEnum`, `@enumFromInt`, enum literals.
 - [ ] **M6.3 switch** on ints/enums with ranges.
 - [ ] **M6.4 Optionals**: `?T`, `orelse`, `.?`, if-payloads, optional pointers.
@@ -202,6 +203,53 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
 ## Completed milestone log
 
 (newest first; each entry: what, limitations, interactions)
+
+### M6.1f Completed immutable struct backing and typed field pointers
+
+- **What**: completed compiler-owned ordinary structs and nested arrays serialize
+  by checked physical field order, with zero padding/tail/undefined policy, anchors,
+  sentinels/slices, pointer/function relocations and dependency closure independent
+  of object creation order. Relocations remain RELRO; >64 alignment is outlined
+  assembly with ELF OBJECT size. Read-only static admission preserves legacy empty
+  arrays without opening runtime aggregate storage or ABI transport.
+- **Pointers**: VALUE_STRUCT_FIELD_PTR retains declaration index, base and cumulative
+  offset. Logical comparison preserves typed field provenance, including overlapping
+  zero-byte fields; backend numeric addresses flatten separately. Same-field
+  differences fold; cross-field differences stay runtime. Qualifiers and ordinary
+  min(base,natural) alignment survive nested paths/casts. Exact array-field decay
+  retains bounds, typed undefined and nested identity. Field-relative subtraction
+  rejects before the field start at formation, not only on a later dereference.
+  Actual by-value root coercion demands layout; pure pointer types remain lazy.
+- **Boundaries**: immutable backing graph validation retains1048576 cumulative
+  node/edge work; provenance comparisons/arithmetic charge full walks to4096;
+  serializer4194304 steps/depth512 and aggregate16MiB limits fail explicitly.
+  No effectful layout resolution while cached traversal buffers are borrowed.
+  Whole volatile structs, mutable/runtime struct values/storage/copies/by-value ABI,
+  dynamic/absolute-root field addresses, reinterpret loads, early struct-address
+  cycles, defaults/comptime/tuple/aligned-field/packed/extern extensions stay NYI.
+- **Verification**: parallel scratch ownership plus independent integrated reviews;
+  60 actual-Zig cases (42 successes/18 exact primary errors),71 semantic cases,
+  45 interner checks,19 net stage/QBE/error goldens,eight seeds each irgen/sema,
+  five native fixtures. Permanent external-C readback checks physical bytes without
+  assuming C struct ABI, nested relocation addends, padding, sentinel/slice/callback
+  backing, explicit PIE/RELRO/noTEXTREL and align8/128. Both linkers pass. Eighteen
+  former backing/field NYIs remain as acceptance controls, not deleted coverage.
+- **Final gate**: frozen GCC/Clang C11 Werror ASan/UBSan6491 units/1270 goldens,
+  140+4 native,16driver/57runner, full C/ABI/storage/alignment,102 observed volatile
+  sequences/303 safety cases; each compiler20000 mutations per stage, seed counts
+  256/256/128/184. Four fresh60-second fuzz runs1838135/51008/55025/80650 pass.
+  Separate optimized native/safety/storage and forced main tests pass. All6188
+  source/config/test/corpus/license/doc paths match before final two checkpoint
+  edits. Prior field201/92,values118/55,metadata100/29,empty-array112/24,symbolic
+  casts252,roundtrips84,known-slice casts48/16 reference suites pass; all five new
+  natives pass official Debug/ReleaseFast. Full e2e itself is szc-only.
+- **CI**: not green. bbed857 last70successful+2running. c2bfeb3 has69successful+
+  2failed; Clang296pass/7 safety timeouts, normal failure/cleanup. Exact historical
+  seven-case x3 replay21/21 passes original deadlines/assertions, no sanitizer
+  finding, but root cause is not established. GCC failure log404 is unresolved.
+- **Next**: coherent runtime storage/lvalues/init/projection/snapshots first, with
+  true contextual result locations; internal struct ABI follows separately and
+  C/SysV aggregate ABI remains closed. M6.1 is still partial; Q6 at M10.2 only.
 
 ### M6.1e Ordinary struct bit-layout parity
 

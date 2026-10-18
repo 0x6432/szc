@@ -14,7 +14,7 @@ SZC_MODE='emit-qbe'
 NYI=re.compile(r'not supported|unsupported|not (?:yet )?implemented|NYI',re.I)
 
 
-def cases():
+def all_cases():
     prefix='const S=struct { a:u8,b:u64, }; '
     for label,source in (
         ('mutable-local','pub fn main() void { var s=S{.a=1,.b=2}; s.a=3; _=s; }'),
@@ -66,7 +66,27 @@ def cases():
     yield 'backing/volatile_named', 'const S = struct { a: u8 };\nconst obj = S{ .a = 7 };\npub fn main() u8 { const p: *const volatile S = &obj; return @field(p, "a"); }\n'
 
 
+
+# M6.1f admits completed immutable backing and rooted field addresses. Keep
+# every former rejection as an emission acceptance control instead of dropping it.
+STATIC_CONTROLS = {
+    'escaped-struct-address', 'field-address', 'builtin-field-address',
+    'escaped-struct-array-slice-backing',
+}
+
+
+def is_static_control(label):
+    return label in STATIC_CONTROLS or label.startswith('backing/escape_')
+
+
+def cases():
+    return ((label, source) for label, source in all_cases()
+            if not is_static_control(label))
+
+
 def controls():
+    yield from ((label, source) for label, source in all_cases()
+                if is_static_control(label))
     yield 'control_absolute', 'const S = struct { a: u8 };\nconst obj = S{ .a = 7 };\nfn use(p: *const S) void { _ = p; }\npub fn main() void { use(@ptrFromInt(4096)); }\n'
     yield 'control_discard_erased', 'const S = struct { a: u8 };\nconst obj = S{ .a = 7 };\npub fn main() void { const p: *const anyopaque = @ptrCast(&obj); _ = p; }\n'
     yield 'control_hidden_absolute', 'const S = struct { a: u8 };\nconst obj = S{ .a = 7 };\nconst items = [1]*const S{ @ptrFromInt(4096) };\nfn use(p: *const [1]*const S) void { _ = p; }\npub fn main() void { use(&items); }\n'

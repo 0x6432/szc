@@ -103,6 +103,7 @@ e2e-native-test: build/asan/szc $(GENERATED_RUN_TESTS)
 	python3 tools/check_struct_metadata_unsupported.py build/asan/szc
 	python3 tools/check_struct_values_unsupported.py build/asan/szc
 	python3 tools/check_struct_bit_layout_unsupported.py build/asan/szc
+	python3 tools/check_struct_static_unsupported.py build/asan/szc
 	python3 tests/run_safety_partition.py
 	./tests/run_e2e.sh build/asan/szc tests/run/*.zig $(GENERATED_RUN_TESTS)
 	env -u ZIG ./tests/run_e2e.sh build/asan/szc tests/run_szc/*.zig
@@ -110,6 +111,7 @@ e2e-native-test: build/asan/szc $(GENERATED_RUN_TESTS)
 
 e2e-storage-test: build/asan/szc
 	python3 tests/run_reference_storage.py build/asan/szc
+	python3 tests/run_struct_static_storage.py build/asan/szc
 	python3 tests/run_array_storage.py build/asan/szc
 	python3 tests/run_sentinel_array_storage.py build/asan/szc
 	python3 tests/run_array_mutable_storage.py build/asan/szc
