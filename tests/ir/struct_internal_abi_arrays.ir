@@ -1,0 +1,116 @@
+%78 = struct_decl (flags=0) {
+  decl const "S" value {
+    %2 = struct_decl (flags=0) {
+      field "a" type {
+        %0 = break_inline result, @type_u8
+      }
+      field "b" type {
+        %1 = break_inline result, @type_u16
+      }
+    }
+    %3 = break_inline result, %2
+  }
+  decl fn "seed" value {
+    %10 = func "seed" noinline {
+      %5 = param "x" type {
+        %4 = break_inline result, @type_u8
+      }
+      ret type {
+        %6 = break_inline result, @type_u8
+      }
+      body insts {
+        %7 = ret_type
+        %8 = as_return %7, %5
+        %9 = ret %8
+      }
+    }
+    %11 = break_inline result, %10
+  }
+  decl fn "f" value {
+    %38 = func "f" {
+      %23 = param "a" type {
+        %12 = int 2
+        %13 = as @type_usize, %12
+        %14 = int 1
+        %15 = as @type_usize, %14
+        %16 = decl_val "S"
+        %17 = as @type_type, %16
+        %18 = array_type %15, %17
+        %19 = as @type_type, %18
+        %20 = array_type %13, %19
+        %21 = as @type_type, %20
+        %22 = break_inline result, %21
+      }
+      ret type {
+        %24 = int 2
+        %25 = as @type_usize, %24
+        %26 = int 1
+        %27 = as @type_usize, %26
+        %28 = decl_val "S"
+        %29 = as @type_type, %28
+        %30 = array_type %27, %29
+        %31 = as @type_type, %30
+        %32 = array_type %25, %31
+        %33 = as @type_type, %32
+        %34 = break_inline result, %33
+      }
+      body insts {
+        %35 = ret_type
+        %36 = as_return %35, %23
+        %37 = ret %36
+      }
+    }
+    %39 = break_inline result, %38
+  }
+  decl fn "main" pub value {
+    %76 = func "main" {
+      ret type {
+        %40 = break_inline result, @type_void
+      }
+      body insts {
+        %41 = decl_val "f"
+        %42 = call %41 arg0 {
+          %43 = arg_type %42, 0
+          %44 = array_elem_type %43
+          %45 = array_elem_type %44
+          %57 = struct_init %45 typed "a" value {
+            %46 = struct_field_type "a", %45
+            %47 = decl_val "seed"
+            %48 = call %47 arg0 {
+              %49 = arg_type %48, 0
+              %50 = int 1
+              %51 = as %49, %50
+              %52 = break_inline result, %51
+            }
+            %53 = break_inline result, %48
+          } "b" value {
+            %54 = struct_field_type "b", %45
+            %55 = int 2
+            %56 = break_inline result, %55
+          }
+          %58 = as %45, %57
+          %59 = array_init %44, %58
+          %60 = as %44, %59
+          %61 = array_elem_type %44
+          %68 = struct_init %61 typed "a" value {
+            %62 = struct_field_type "a", %61
+            %63 = int 3
+            %64 = break_inline result, %63
+          } "b" value {
+            %65 = struct_field_type "b", %61
+            %66 = int 4
+            %67 = break_inline result, %66
+          }
+          %69 = as %61, %68
+          %70 = array_init %44, %69
+          %71 = as %44, %70
+          %72 = array_init %43, %60, %71
+          %73 = as %43, %72
+          %74 = break_inline result, %73
+        }
+        %75 = ret_implicit
+      }
+    }
+    %77 = break_inline result, %76
+  }
+}

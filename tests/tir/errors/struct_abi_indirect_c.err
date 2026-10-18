@@ -1,0 +1,3 @@
+tests/tir/errors/struct_abi_indirect_c.zig:3:34: error: not supported by szc yet: enum_literal
+	const p: *const fn (S) callconv(.c) void = @ptrFromInt(4096);
+	                                ^

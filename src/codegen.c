@@ -1324,7 +1324,7 @@ emit_function(Codegen *cg, const SemaFunc *func, FuncId id)
 	FILE *out = cg->out;
 	const TypeFn *fn = &sema_type(cg->sema, func->type)->as.fn;
 	uint32_t src = func->ir->insts[func->func_inst].src;
-	/* Internal array results use a trailing destination pointer and void return. */
+	/* Internal aggregate results use a trailing destination pointer and void return. */
 	QbeClass ret_class = sema_type_is_aggregate(cg->sema, fn->ret) ? QBE_NONE : type_class(cg, fn->ret, src);
 	if (func->alignment > 16) {
 		if (cg->assembly == NULL) {

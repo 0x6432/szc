@@ -1,0 +1,11 @@
+fn szc.main.1: fn () void {
+  %0: *const struct_signature_supported.S = const ref(object.1)
+  %1: void = call szc.consume.2(%0)
+  %2: noreturn = ret
+}
+fn szc.consume.2: fn (struct_signature_supported.S) void {
+  %0: *align(1) const struct_signature_supported.S = arg 0
+  %1: *const struct_signature_supported.S = alloc
+  %2: void = array_copy %1, %0
+  %3: noreturn = ret
+}

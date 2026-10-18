@@ -143,7 +143,8 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
   - [x] **M6.1e Ordinary struct bit-layout parity**: @bitOffsetOf and exact ordinary-struct @bitSizeOf rejection before layout.
   - [x] **M6.1f Immutable static struct backing**: completed-object field pointers, typed provenance, exact physical serialization and relocations.
   - [x] **M6.1g Runtime local struct storage**: owned snapshots, typed lvalues, sequential contextual result locations, nested aggregates and dynamic/absolute field pointers.
-  - Internal struct-bearing by-value ABI, mutable struct globals, defaults and instance methods remain unimplemented.
+  - [x] **M6.1h Internal struct-bearing by-value ABI**: direct/typed indirect private aggregate transport, argument-time snapshots, private callee copies and fresh result slots.
+  - Mutable struct globals, defaults and instance methods remain unimplemented.
 - [ ] **M6.2 Enums**: tag values, `@intFromEnum`, `@enumFromInt`, enum literals.
 - [ ] **M6.3 switch** on ints/enums with ranges.
 - [ ] **M6.4 Optionals**: `?T`, `orelse`, `.?`, if-payloads, optional pointers.
@@ -204,6 +205,33 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
 ## Completed milestone log
 
 (newest first; each entry: what, limitations, interactions)
+
+### M6.1h Internal struct-bearing parameters and returns
+
+- **What**: ordinary supported structs and recursively struct-bearing arrays use
+  the existing private pointer ABI for fixed internal signatures, direct and typed
+  indirect calls. Argument snapshots precede later side effects; callee entry
+  copies byte-aligned transport into private naturally aligned slots. Results use
+  fresh caller storage, preserving alias isolation and return-before-defer values.
+  Existing QBE calls/argument order/trailing-result transport need no opcode change.
+- **Admission**: live signature layout/storage validation, including function
+  references hidden in emitted callback backing, runs outside cached graph walks
+  in the definition context. Indirect signatures are independently checked. C ABI
+  rejects even without FuncId; known C diagnostics retain their original location.
+  Unsupported layouts, C/variadic aggregates, mutable globals and whole volatile
+  copies stay closed. Unused declarations and pointer-only child types stay lazy.
+- **Coverage**:74 new semantic/emission scenarios,20 net stage/error goldens, six
+  seeds each irgen/sema, four natives/34 checks and12 separate closed gates.
+  Eleven prior NYIs are source-preserving acceptance controls. Official comparisons
+  internal ABI62/15, runtime89/25, static60/18, TypeOf207/51, function pointers486;
+  all four new natives pass official Debug and ReleaseFast.
+- **Validation**: frozen GCC/Clang Werror ASan/UBSan6973 units/1306 goldens,
+  148+4 natives, full driver/C/storage/alignment,106 volatile and303 safety; each
+  compiler20000 mutations/stage, seeds256/256/141/197. Fresh four60-second fuzz
+  campaigns2864071/92900/85051/95908 pass. Independent GCC-O2 full native/safety/
+  physical-storage and forced main tests pass. Hosted4021366 remains72success/
+  2failure: GCC safety timeouts replay6/6 locally, not proved infrastructure-only;
+  Clang log404 unclassified. Details/evidence in HANDOFF. Struct parent stays PARTIAL.
 
 ### M6.1g Runtime local struct storage, initialization and snapshots
 

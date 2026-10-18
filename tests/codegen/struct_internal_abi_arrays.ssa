@@ -1,0 +1,47 @@
+function $szc.main.1() {
+@start
+	%t2 =l alloc4 4
+	%t9 =l alloc4 4
+	%t13 =l alloc4 8
+	%t21 =l alloc4 8
+	%t1 =w call $szc.seed.3(w 1)
+	%t1 =w and %t1, 255
+	%t3 =l add %t2, 2
+	storeb %t1, %t3
+	%t5 =l copy %t2
+	storeh 2, %t5
+	%t8 =l copy %t2
+	%e11_offset =l mul 0, 4
+	%t11 =l add %t9, %e11_offset
+	call $memmove(l %t11, l %t8, l 4)
+	%e15_offset =l mul 0, 4
+	%t15 =l add %t13, %e15_offset
+	call $memmove(l %t15, l %t9, l 4)
+	%e18_offset =l mul 1, 4
+	%t18 =l add %t13, %e18_offset
+	call $memmove(l %t18, l $szc.const.1, l 4)
+	call $szc.f.2(l %t13, l %t21)
+	%t23 =l copy %t21
+	ret
+}
+
+function $szc.f.2(l %t0, l %t3) {
+@start
+	%t1 =l alloc4 8
+	call $memmove(l %t1, l %t0, l 8)
+	call $memmove(l %t3, l %t1, l 8)
+	ret
+}
+
+function w $szc.seed.3(w %t0) {
+@start
+	ret %t0
+}
+
+section ".rodata"
+data $szc.const.1 = align 2 { h 4, b 3, z 1 }
+export function w $main() {
+@start
+	call $szc.main.1()
+	ret 0
+}

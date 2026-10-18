@@ -1,0 +1,3 @@
+tests/tir/errors/slice_abi_indirect_c.zig:2:33: error: not supported by szc yet: enum_literal
+	const p: *const fn () callconv(.c) []const u8 = @ptrFromInt(4096);
+	                               ^

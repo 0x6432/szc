@@ -56,10 +56,12 @@ def cases():
     yield 'struct-padding-overflow', 'const S=struct { x:[18446744073709551608]u8,y:u64, }; pub fn main() void { _=@sizeOf(S); }'
 
 
-# Preserve former NYIs as supported emission controls after local runtime storage.
+# Preserve former NYIs as supported controls after runtime storage and internal ABI.
 CONTROLS = {
     'runtime-struct-value', 'local-storage', 'store-undefined',
     'runtime-join', 'array-storage', 'runtime-struct-load',
+    # M6.1h internal direct/indirect value transport; keep exact old sources.
+    'direct-argument', 'return', 'indirect-argument',
 }
 
 def main():

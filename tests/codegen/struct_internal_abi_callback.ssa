@@ -1,0 +1,34 @@
+function $szc.main.1() {
+@start
+	%t2 =l alloc4 4
+	%t9 =l alloc4 4
+	%t1 =w call $szc.seed.3(w 1)
+	%t1 =w and %t1, 255
+	%t3 =l add %t2, 2
+	storeb %t1, %t3
+	%t5 =l copy %t2
+	storeh 2, %t5
+	%t8 =l copy %t2
+	call $szc.f.2(l %t8, l %t9)
+	%t11 =l copy %t9
+	ret
+}
+
+function $szc.f.2(l %t0, l %t3) {
+@start
+	%t1 =l alloc4 4
+	call $memmove(l %t1, l %t0, l 4)
+	call $memmove(l %t3, l %t1, l 4)
+	ret
+}
+
+function w $szc.seed.3(w %t0) {
+@start
+	ret %t0
+}
+
+export function w $main() {
+@start
+	call $szc.main.1()
+	ret 0
+}

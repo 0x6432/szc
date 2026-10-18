@@ -1218,3 +1218,31 @@ Recursive struct-bearing array signatures, direct/indirect/internal/C aggregate
 transport, mutable struct globals, and occupied struct-element memory builtins
 remain explicitly gated. Pointer and slice descriptors do not transport their
 pointee structs by value and retain their existing ABI.
+
+
+## Internal struct-bearing value transport (M6.1h)
+
+Ordinary supported structs and recursively struct-bearing arrays may be fixed
+parameters/results of internal Zig-convention functions. This reuses the private
+aggregate ABI: each argument is a backing pointer, incoming pointers promise only
+byte alignment, and callee entry takes a naturally aligned private snapshot.
+The caller allocates a fresh trailing result pointer for aggregate returns; the
+callee copies into it and returns void. Direct and typed indirect calls use the
+same transport. No struct is classified as a scalar QBE value.
+
+Argument expression evaluation owns aggregate snapshots before subsequent
+argument effects. Return expression evaluation owns its snapshot before deferred
+mutations. Result storage never aliases an assignment's actual destination;
+contextual literal initialization retains its separate sequential RLS semantics.
+
+Live function signatures resolve/check struct-bearing storage in the defining
+namespace/IR, including address/relocation-driven liveness. Indirect calls also
+validate their signature in the caller context. Pointer/slice descriptor types
+remain lazy with respect to pointee layout. Layout work never runs inside cached
+backing graph walks. Unreferenced declarations remain lazy.
+
+C/SysV aggregate transport remains explicitly closed, including typed indirect
+calls without a FuncId. Known C declarations retain declaration-site diagnostics;
+indirect signatures reject at the call. Variadic aggregate arguments, mutable
+struct globals, whole volatile aggregate copies, unsupported field layouts and
+occupied struct-element memory builtins remain gated independently.

@@ -1,0 +1,82 @@
+%46 = struct_decl (flags=0) {
+  decl const "S" value {
+    %2 = struct_decl (flags=0) {
+      field "a" type {
+        %0 = break_inline result, @type_u8
+      }
+      field "b" type {
+        %1 = break_inline result, @type_u16
+      }
+    }
+    %3 = break_inline result, %2
+  }
+  decl fn "seed" value {
+    %10 = func "seed" noinline {
+      %5 = param "x" type {
+        %4 = break_inline result, @type_u8
+      }
+      ret type {
+        %6 = break_inline result, @type_u8
+      }
+      body insts {
+        %7 = ret_type
+        %8 = as_return %7, %5
+        %9 = ret %8
+      }
+    }
+    %11 = break_inline result, %10
+  }
+  decl fn "f" value {
+    %22 = func "f" {
+      %15 = param "s" type {
+        %12 = decl_val "S"
+        %13 = as @type_type, %12
+        %14 = break_inline result, %13
+      }
+      ret type {
+        %16 = decl_val "S"
+        %17 = as @type_type, %16
+        %18 = break_inline result, %17
+      }
+      body insts {
+        %19 = ret_type
+        %20 = as_return %19, %15
+        %21 = ret %20
+      }
+    }
+    %23 = break_inline result, %22
+  }
+  decl fn "main" pub value {
+    %44 = func "main" {
+      ret type {
+        %24 = break_inline result, @type_void
+      }
+      body insts {
+        %25 = decl_val "f"
+        %26 = call %25 arg0 {
+          %27 = arg_type %26, 0
+          %39 = struct_init %27 typed "a" value {
+            %28 = struct_field_type "a", %27
+            %29 = decl_val "seed"
+            %30 = call %29 arg0 {
+              %31 = arg_type %30, 0
+              %32 = int 1
+              %33 = as %31, %32
+              %34 = break_inline result, %33
+            }
+            %35 = break_inline result, %30
+          } "b" value {
+            %36 = struct_field_type "b", %27
+            %37 = int 2
+            %38 = break_inline result, %37
+          }
+          %40 = as %27, %39
+          %41 = break_inline result, %40
+        }
+        %42 = field_val "a", %26
+        %43 = ret_implicit
+      }
+    }
+    %45 = break_inline result, %44
+  }
+}

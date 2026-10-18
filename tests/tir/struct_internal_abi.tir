@@ -1,0 +1,29 @@
+fn szc.main.1: fn () void {
+  %0: u8 = const 1
+  %1: u8 = call szc.seed.3(%0)
+  %2: *struct_internal_abi.S = alloc
+  %3: *u8 = struct_field_ptr %2, 2
+  %4: void = store %3, %1
+  %5: *u16 = struct_field_ptr %2, 0
+  %6: u16 = const 2
+  %7: void = store %5, %6
+  %8: *const struct_internal_abi.S = ptr_cast %2
+  %9: *struct_internal_abi.S = alloc
+  %10: void = call szc.f.2(%8, %9)
+  %11: *const struct_internal_abi.S = ptr_cast %9
+  %12: *const u8 = struct_field_ptr %11, 2
+  %13: u8 = load %12
+  %14: noreturn = ret
+}
+fn szc.f.2: fn (struct_internal_abi.S) struct_internal_abi.S {
+  %0: *align(1) const struct_internal_abi.S = arg 0
+  %1: *const struct_internal_abi.S = alloc
+  %2: void = array_copy %1, %0
+  %3: *struct_internal_abi.S = arg 1
+  %4: void = array_copy %3, %1
+  %5: noreturn = ret
+}
+fn szc.seed.3: fn (u8) u8 {
+  %0: u8 = arg 0
+  %1: noreturn = ret %0
+}

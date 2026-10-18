@@ -67,7 +67,7 @@ def all_cases():
 
 
 
-# M6.1f backing and M6.1g runtime locals retain their former NYI sources. Keep
+# M6.1f backing, M6.1g locals and M6.1h internal ABI retain former NYI sources. Keep
 # every former rejection as an emission acceptance control instead of dropping it.
 STATIC_CONTROLS = {
     'escaped-struct-address', 'field-address', 'builtin-field-address',
@@ -77,6 +77,8 @@ STATIC_CONTROLS = {
     'whole-struct-load', 'runtime-struct-choice', 'dynamic-struct-array-index',
     'backing/volatile_array', 'backing/volatile_dot', 'backing/volatile_many',
     'backing/volatile_named',
+    # M6.1h internal ordinary-struct value signatures.
+    'struct-parameter', 'struct-return',
 }
 
 

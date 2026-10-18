@@ -1,0 +1,64 @@
+function $szc.main.1() {
+@start
+	%t4 =l alloc4 4
+	%t1 =w call $szc.seed.3(w 1)
+	%t1 =w and %t1, 255
+	call $szc.f.2(w %t1, l $szc.const.1, w 4, l %t4)
+	%t6 =l copy %t4
+	ret
+}
+
+function $szc.f.2(w %t0, l %t1, w %t4, l %t5) {
+@start
+	%t2 =l alloc4 4
+	%t12 =l alloc4 4
+	call $memmove(l %t2, l %t1, l 4)
+	%t6 =l add %t2, 2
+	%t7 =w loadub %t6
+	%t8 =w add %t7, %t0
+	%t8 =w and %t8, 255
+	%g8_overflow =w cultw %t8, %t7
+	jnz %g8_overflow, @g8_overflow_panic, @g8_overflow_ok
+@g8_overflow_panic
+	call $szc.panic.0()
+	hlt
+@g8_overflow_ok
+	%t9 =l copy %t2
+	%t10 =w loaduh %t9
+	%t11 =w add %t10, %t4
+	%t11 =w and %t11, 65535
+	%g11_overflow =w cultw %t11, %t10
+	jnz %g11_overflow, @g11_overflow_panic, @g11_overflow_ok
+@g11_overflow_panic
+	call $szc.panic.0()
+	hlt
+@g11_overflow_ok
+	%t13 =l add %t12, 2
+	storeb %t8, %t13
+	%t15 =l copy %t12
+	storeh %t11, %t15
+	%t17 =l copy %t12
+	call $memmove(l %t5, l %t17, l 4)
+	ret
+}
+
+function w $szc.seed.3(w %t0) {
+@start
+	ret %t0
+}
+
+section ".rodata"
+data $szc.const.1 = align 2 { h 3, b 2, z 1 }
+data $szc.panic.msg.0 = { b "integer overflow\n", b 0 }
+function $szc.panic.0() {
+@start
+	call $write(w 2, l $szc.panic.msg.0, l 17)
+	call $abort()
+	hlt
+}
+
+export function w $main() {
+@start
+	call $szc.main.1()
+	ret 0
+}

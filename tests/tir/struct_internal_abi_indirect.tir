@@ -1,0 +1,36 @@
+fn szc.main.1: fn () void {
+  %0: u8 = const 1
+  %1: u8 = call szc.seed.3(%0)
+  %2: *const struct_internal_abi_indirect.S = const ref(object.1)
+  %3: u16 = const 4
+  %4: *struct_internal_abi_indirect.S = alloc
+  %5: void = call szc.f.2(%1, %2, %3, %4)
+  %6: *const struct_internal_abi_indirect.S = ptr_cast %4
+  %7: noreturn = ret
+}
+fn szc.f.2: fn (u8, struct_internal_abi_indirect.S, u16) struct_internal_abi_indirect.S {
+  %0: u8 = arg 0
+  %1: *align(1) const struct_internal_abi_indirect.S = arg 1
+  %2: *const struct_internal_abi_indirect.S = alloc
+  %3: void = array_copy %2, %1
+  %4: u16 = arg 2
+  %5: *struct_internal_abi_indirect.S = arg 3
+  %6: *const u8 = struct_field_ptr %2, 2
+  %7: u8 = load %6
+  %8: u8 = add %7, %0
+  %9: *const u16 = struct_field_ptr %2, 0
+  %10: u16 = load %9
+  %11: u16 = add %10, %4
+  %12: *struct_internal_abi_indirect.S = alloc
+  %13: *u8 = struct_field_ptr %12, 2
+  %14: void = store %13, %8
+  %15: *u16 = struct_field_ptr %12, 0
+  %16: void = store %15, %11
+  %17: *const struct_internal_abi_indirect.S = ptr_cast %12
+  %18: void = array_copy %5, %17
+  %19: noreturn = ret
+}
+fn szc.seed.3: fn (u8) u8 {
+  %0: u8 = arg 0
+  %1: noreturn = ret %0
+}

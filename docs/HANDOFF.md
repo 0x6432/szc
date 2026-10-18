@@ -24,6 +24,61 @@ Read this first when resuming work (the sandbox resets often).
 
 ## Latest follow-up checkpoint
 
+- M6.1h internal ordinary-struct/recursively struct-array by-value ABI is
+  implemented from4021366. Fixed Zig-convention parameters/results reuse private
+  pointer transport: evaluation-time argument snapshots, byte-aligned incoming
+  pointers copied into naturally aligned private callee storage, and fresh caller
+  result slots. Direct/typed indirect calls, recursion, callbacks and mixed/spilled
+  scalar+aggregate arguments share the existing QBE lowering; no scalar struct ABI.
+- Live signature layout/storage validation uses definition IR/namespace for queued
+  functions, including relocation-driven liveness, and caller context for indirect
+  signatures. QUEUED precedes effectful validation; unused declarations and pointer
+  pointees stay lazy. Validation never runs inside cached backing graph traversals.
+  Known C declarations keep their original diagnostic locations; indirect C calls
+  cannot bypass aggregate rejection through a missing FuncId. Independent audits
+  found no remaining blocker after the two old C diagnostic-location regressions
+  were fixed without changing their goldens.
+- Argument1 snapshots precede later argument mutation. Value-vs-pointer aliases,
+  fresh return-to-source assignment, return-before-defer, underaligned source
+  transport, recursive arrays, zero/sentinel fields and callbacks pass native tests.
+  Whole volatile copies, C/SysV/variadic aggregates, mutable struct globals, defaults/
+  comptime/tuple/aligned/packed/extern fields, generics and comptime calls stay gated.
+- Added74 semantic/emission scenarios,20 net stage/error goldens, six seeds each
+  irgen/sema and four natives (34 behavioral checks). Eleven former NYI sources
+  remain as acceptance controls: metadata41+9, values8+37, runtime5+4, static11+8
+  rejection/control counts; bit-layout9 and new internal-ABI12 closed gates pass.
+  Four older unit cases are deliberately accepted, not deleted.
+- Actual-Zig comparisons pass: internal ABI62/15 exact primary errors, runtime89/25,
+  static60/18, TypeOf207/51 and486 function-pointer acceptance comparisons. Four
+  new natives pass official Debug and ReleaseFast. Full e2e remains szc-only;
+  targeted reference checks are separate and are not std/bootstrap coverage.
+- Full unchanged gate passes in frozen independent GCC/Clang C11 Werror ASan/UBSan:
+  6973 units,1306 goldens,148+4 natives,16 driver/61 compiler-runner checks, all
+  C/storage/alignment suites,106 observed volatile sequences and303 safety cases.
+  Each compiler runs20000 standalone mutations per stage, seeds256/256/141/197.
+  Four fresh60-second libFuzzer runs2864071/92900/85051/95908 pass. Separate GCC-O2
+  full/generated148+4 natives,303 safety and external physical storage2 pass;
+  forced main rebuild/test passes. All6298 candidate paths match main and three
+  frozen trees before these final HANDOFF/MILESTONES edits. Evidence:
+  /data/struct-abi-final/{gcc,clang,optimized}, manifest.json,
+  /data/struct-abi-final-*.log, /data/struct-abi-main-forced.log,
+  /data/struct-abi-diff-*.log and /data/struct-abi-releasefast.json.
+- Hosted4021366 run39144992727 is NOT green:72success/2failure. GCC117727129316
+  records divExact_overflow_i64 native15s and exact_remainder_u8 compiler120s
+  timeouts, then runner shutdown/exit143; the next case has no recorded result.
+  Historical GCC bytes match34 source/config/harness files and6240 frozen paths;
+  exact original-deadline/assertion replays2cases x3 pass without rebuilding.
+  Evidence /data/struct-abi-ci-replay-117727129316; nonreproduction does NOT establish
+  an infrastructure-only cause. Clang117727129270 log retrieval404 leaves its
+  failure unclassified. No deadlines/assertions weakened and no blind reruns.
+- Next dependency: mutable ordinary-struct globals and recursively struct arrays,
+  known initializers, stable typed roots and runtime snapshots. Research plan
+  /data/struct-mutable-global-next-plan.md; no implementation included in M6.1h.
+  Keep whole volatile aggregate/C ABI/TLS/export/extern boundaries separate.
+  Q6 remains mandatory only at M10.2. M6.1 parent remains PARTIAL.
+
+## Previous follow-up checkpoint (M6.1g)
+
 - M6.1g runtime LOCAL ordinary structs is implemented on67da844. Struct-bearing
   by-value function ABI and mutable struct globals remain CLOSED. Runtime locals,
   nested struct/array/slice storage, initialization, lvalues, typed field pointers,

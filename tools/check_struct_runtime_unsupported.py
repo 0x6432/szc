@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Separate szc-only M6.1g scope gates; intentionally no official parity promise.
+"""Separate szc-only runtime gates and M6.1h ABI controls; no official parity promise.
 Prepared only; not executed by reference researcher. Parent owns gate integration.
 """
 import argparse,tempfile
@@ -18,6 +18,13 @@ CASES=(
  ('volatile-whole-store',BASE+'pub fn main()void{var s:S=.{.a=1};const p:*volatile S=&s;p.*=S{.a=2};}'),
  ('cabi-struct-parameter',BASE+'export fn consume(s:S)u8{return s.a;}pub fn main()void{}'),
 )
+
+# Retain exact prior ABI rejections as emission controls; no source is dropped.
+CONTROLS = {
+ 'byvalue-parameter', 'byvalue-return',
+ 'recursive-array-parameter', 'recursive-array-return',
+}
+
 def main():
  p=argparse.ArgumentParser(description=__doc__);p.add_argument('szc');args=p.parse_args();bad=[]
  with tempfile.TemporaryDirectory(prefix='szc-struct-runtime-nyi-') as directory:
@@ -25,7 +32,9 @@ def main():
   for i,(label,src) in enumerate(CASES,1):
    path.write_text(src)
    r=run_compiler([args.szc,'emit-qbe',str(path)],src,f'struct runtime NYI case {i} szc',timeout=120)
-   if r.returncode!=1 or 'not supported by szc yet:' not in r.stderr.decode(errors='replace'):bad.append(label+': '+str(primary_error(r.stderr)))
- print(f'struct runtime NYI: {len(CASES)} cases; {len(bad)} failures')
+   if label in CONTROLS:
+    if r.returncode!=0:bad.append('expected supported control '+label+': '+str(primary_error(r.stderr)))
+   elif r.returncode!=1 or 'not supported by szc yet:' not in r.stderr.decode(errors='replace'):bad.append(label+': '+str(primary_error(r.stderr)))
+ print(f'struct runtime: {len(CASES)-len(CONTROLS)} NYI cases; {len(CONTROLS)} supported controls; {len(bad)} failures')
  if bad:raise SystemExit('\n'.join(bad))
 if __name__=='__main__':main()

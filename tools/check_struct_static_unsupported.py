@@ -33,6 +33,8 @@ CASES=(
 CONTROLS = {
  'mutable-local', 'runtime-init', 'runtime-array-index', 'mutable-array',
  'dynamic-root-field-address', 'absolute-root-field-address',
+ # M6.1h fixed internal value parameters/results.
+ 'runtime-parameter', 'runtime-return',
 }
 
 def main():

@@ -5,6 +5,7 @@
 
 #include "arena.h"
 #include "comptime.h"
+#include "codegen.h"
 #include "diag.h"
 #include "lexer.h"
 #include "parser.h"
@@ -2437,13 +2438,13 @@ test_runtime_struct_values(void)
 		/* absolute/field-flags */
 		{"const T=struct{wide:u64,byte:u8,};const p:*align(16) volatile allowzero T=@ptrFromInt(4096);  pub fn main() void {const q:*align(1) volatile allowzero T=p;const n:u8=if(@TypeOf(&p.wide)==*volatile allowzero u64 and @TypeOf(&q.wide)==*align(1) volatile allowzero u64)0 else 256;_=n;}", NULL},
 		/* byvalue-parameter */
-		{"const S=struct{a:u8,}; fn f(s:S)u8{return s.a;}pub fn main()void{_=f(.{.a=1});}", "not supported by szc yet:"},
+		{"const S=struct{a:u8,}; fn f(s:S)u8{return s.a;}pub fn main()void{_=f(.{.a=1});}", NULL},
 		/* byvalue-return */
-		{"const S=struct{a:u8,}; fn f()S{return .{.a=1};}pub fn main()void{_=f();}", "not supported by szc yet:"},
+		{"const S=struct{a:u8,}; fn f()S{return .{.a=1};}pub fn main()void{_=f();}", NULL},
 		/* recursive-array-parameter */
-		{"const S=struct{a:u8,}; fn f(a:[2][1]S)u8{return a[0][0].a;}pub fn main()void{_=f(.{.{.{.a=1}},.{.{.a=2}}});}", "not supported by szc yet:"},
+		{"const S=struct{a:u8,}; fn f(a:[2][1]S)u8{return a[0][0].a;}pub fn main()void{_=f(.{.{.{.a=1}},.{.{.a=2}}});}", NULL},
 		/* recursive-array-return */
-		{"const S=struct{a:u8,}; fn f()[1]S{return .{.{.a=1}};}pub fn main()void{_=f();}", "not supported by szc yet:"},
+		{"const S=struct{a:u8,}; fn f()[1]S{return .{.{.a=1}};}pub fn main()void{_=f();}", NULL},
 		/* mutable-global */
 		{"const S=struct{a:u8,}; var s:S=.{.a=1};pub fn main()void{s.a=2;}", "not supported by szc yet:"},
 		/* mutable-global-array */
@@ -2504,6 +2505,199 @@ test_runtime_struct_values(void)
 
 /* Frontend-only protocol coverage. Paste before main() and call once.
  * Existing normalized-duplicate negative tests remain in their original suite. */
+/* Private transport stays pointer-only; each admitted case must also emit QBE,
+ * so unsupported scalar struct lowering cannot hide behind successful sema. */
+static void
+test_struct_internal_abi(void)
+{
+	const struct {
+		const char *source;
+		const char *error;
+	} cases[] = {
+		/* parameter */
+		{"const S=struct{a:u8,b:u16,}; noinline fn seed(x:u8)u8{return x;} fn f(s:S)u16{return s.b;}pub fn main()void{_=f(.{.a=seed(1),.b=2});}", NULL},
+		/* return-literal */
+		{"const S=struct{a:u8,b:u16,}; noinline fn seed(x:u8)u8{return x;} fn f(x:u8)S{return .{.a=x,.b=2};}pub fn main()void{_=f(seed(1));}", NULL},
+		/* identity */
+		{"const S=struct{a:u8,b:u16,}; noinline fn seed(x:u8)u8{return x;} fn f(s:S)S{return s;}pub fn main()void{const s=f(.{.a=seed(1),.b=2});_=s.a;}", NULL},
+		/* return-explicit */
+		{"const S=struct{a:u8,b:u16,}; noinline fn seed(x:u8)u8{return x;} fn f(x:u8)S{return S{.a=x,.b=2};}pub fn main()void{_=f(seed(1));}", NULL},
+		/* return-local */
+		{"const S=struct{a:u8,b:u16,}; noinline fn seed(x:u8)u8{return x;} fn f(x:u8)S{var s:S=.{.a=x,.b=2};s.b+=1;return s;}pub fn main()void{_=f(seed(1));}", NULL},
+		/* return-constant */
+		{"const S=struct{a:u8,b:u16,}; noinline fn seed(x:u8)u8{return x;} const c:S=.{.a=1,.b=2};fn f()S{return c;}pub fn main()void{_=f();}", NULL},
+		/* return-undefined */
+		{"const S=struct{a:u8,b:u16,}; noinline fn seed(x:u8)u8{return x;} fn f()S{return undefined;}pub fn main()void{_=f();}", NULL},
+		/* return-branch */
+		{"const S=struct{a:u8,b:u16,}; noinline fn seed(x:u8)u8{return x;} fn f(x:u8)S{return if(x==1)S{.a=1,.b=2} else S{.a=3,.b=4};}pub fn main()void{_=f(seed(1));}", NULL},
+		/* return-block */
+		{"const S=struct{a:u8,b:u16,}; noinline fn seed(x:u8)u8{return x;} fn f(x:u8)S{return blk:{if(x==1)break :blk S{.a=1,.b=2};break :blk S{.a=3,.b=4};};}pub fn main()void{_=f(seed(1));}", NULL},
+		/* private-copy */
+		{"const S=struct{a:u8,b:u16,}; noinline fn seed(x:u8)u8{return x;} fn f(s:S)S{var t=s;t.a+=1;return t;}pub fn main()void{var s:S=.{.a=seed(1),.b=2}; _=f(s);s.a=7;}", NULL},
+		/* parameter-const-address */
+		{"const S=struct{a:u8,b:u16,}; noinline fn seed(x:u8)u8{return x;} fn f(s:S)u8{const p:*const S=&s;return p.a;}pub fn main()void{_=f(.{.a=seed(1),.b=2});}", NULL},
+		/* value-alias */
+		{"const S=struct{a:u8,b:u16,}; noinline fn seed(x:u8)u8{return x;} fn f(s:S,p:*S)u16{p.b=9;return s.b;}pub fn main()void{var s:S=.{.a=seed(1),.b=2}; _=f(s,&s);}", NULL},
+		/* later-arg-effect */
+		{"const S=struct{a:u8,b:u16,}; noinline fn seed(x:u8)u8{return x;} fn mutate(p:*S)u8{p.a=9;return 3;}fn f(s:S,x:u8)u8{_=x;return s.a;}pub fn main()void{var s:S=.{.a=seed(1),.b=2}; _=f(s,mutate(&s));}", NULL},
+		/* return-alias */
+		{"const S=struct{a:u8,b:u16,}; noinline fn seed(x:u8)u8{return x;} fn f(s:S,p:*S)S{p.a=7;return s;}pub fn main()void{var s:S=.{.a=seed(1),.b=2}; s=f(s,&s);}", NULL},
+		/* defer-pointer-source */
+		{"const S=struct{a:u8,b:u16,}; noinline fn seed(x:u8)u8{return x;} fn f(p:*S)S{defer p.a=9;return p.*;}pub fn main()void{var s:S=.{.a=seed(1),.b=2}; _=f(&s);}", NULL},
+		/* defer-local-source */
+		{"const S=struct{a:u8,b:u16,}; noinline fn seed(x:u8)u8{return x;} fn f(x:u8)S{var s:S=.{.a=x,.b=2};defer s.a=9;return s;}pub fn main()void{_=f(seed(1));}", NULL},
+		/* defer-parameter-copy */
+		{"const S=struct{a:u8,b:u16,}; noinline fn seed(x:u8)u8{return x;} fn f(s:S)S{var t=s;defer t.a=9;return t;}pub fn main()void{_=f(.{.a=seed(1),.b=2});}", NULL},
+		/* mixed-args */
+		{"const S=struct{a:u8,b:u16,}; noinline fn seed(x:u8)u8{return x;} fn f(x:u8,s:S,y:u16,t:S,z:u8)S{return .{.a=x+s.a+z,.b=s.b+y+t.b};}pub fn main()void{_=f(seed(1),.{.a=2,.b=3},4,.{.a=5,.b=6},7);}", NULL},
+		/* recursion */
+		{"const S=struct{a:u8,b:u16,}; noinline fn seed(x:u8)u8{return x;} fn f(s:S,n:u8)S{if(n==0)return s;var t=s;t.a+=1;return f(t,n-1);}pub fn main()void{_=f(.{.a=seed(1),.b=2},3);}", NULL},
+		/* two-results */
+		{"const S=struct{a:u8,b:u16,}; noinline fn seed(x:u8)u8{return x;} fn f(x:u8)S{return .{.a=x,.b=2};}pub fn main()void{const a=f(seed(1));const b=f(seed(2));_=a.a+b.a;}", NULL},
+		/* under-aligned-source */
+		{"const S=struct{a:u8,b:u16,}; noinline fn seed(x:u8)u8{return x;} fn f(s:S)u16{return s.b;}fn read(p:*align(1)const S)u16{return f(p.*);}pub fn main()void{var s:S=.{.a=seed(1),.b=2}; _=read(&s);}", NULL},
+		/* overaligned-local */
+		{"const S=struct{a:u8,b:u16,}; noinline fn seed(x:u8)u8{return x;} fn f(s:S)S{var t:S align(64)=s;t.a+=1;return t;}pub fn main()void{_=f(.{.a=seed(1),.b=2});}", NULL},
+		/* return-nested */
+		{"const S=struct{a:u8,b:u16,}; noinline fn seed(x:u8)u8{return x;} const O=struct{inner:S,};fn f(o:O)S{return o.inner;}pub fn main()void{_=f(.{.inner=.{.a=seed(1),.b=2}});}", NULL},
+		/* array-parameter */
+		{"const S=struct{a:u8,b:u16,}; noinline fn seed(x:u8)u8{return x;} fn f(a:[2]S)u16{return a[1].b;}pub fn main()void{_=f(.{.{.a=seed(1),.b=2},.{.a=3,.b=4}});}", NULL},
+		/* array-return */
+		{"const S=struct{a:u8,b:u16,}; noinline fn seed(x:u8)u8{return x;} fn f(x:u8)[2]S{return .{.{.a=x,.b=2},.{.a=3,.b=4}};}pub fn main()void{_=f(seed(1));}", NULL},
+		/* array-identity */
+		{"const S=struct{a:u8,b:u16,}; noinline fn seed(x:u8)u8{return x;} fn f(a:[2]S)[2]S{return a;}pub fn main()void{_=f(.{.{.a=seed(1),.b=2},.{.a=3,.b=4}});}", NULL},
+		/* recursive-array */
+		{"const S=struct{a:u8,b:u16,}; noinline fn seed(x:u8)u8{return x;} fn f(a:[2][1]S)[2][1]S{return a;}pub fn main()void{_=f(.{.{.{.a=seed(1),.b=2}},.{.{.a=3,.b=4}}});}", NULL},
+		/* array-later-effect */
+		{"const S=struct{a:u8,b:u16,}; noinline fn seed(x:u8)u8{return x;} fn m(p:*[1]S)u8{p[0].a=9;return 1;}fn f(a:[1]S,x:u8)u8{_=x;return a[0].a;}pub fn main()void{var a:[1]S=.{.{.a=seed(1),.b=2}};_=f(a,m(&a));}", NULL},
+		/* nested-struct-array */
+		{"const S=struct{a:u8,b:u16,}; noinline fn seed(x:u8)u8{return x;} const O=struct{rows:[2]S,};fn f(o:O)O{return o;}pub fn main()void{_=f(.{.rows=.{.{.a=seed(1),.b=2},.{.a=3,.b=4}}});}", NULL},
+		/* zero-array */
+		{"const S=struct{a:u8,b:u16,}; noinline fn seed(x:u8)u8{return x;} fn f(a:[0]S)[0]S{return a;}pub fn main()void{_=f(.{});}", NULL},
+		/* zero-outer-array */
+		{"const S=struct{a:u8,b:u16,}; noinline fn seed(x:u8)u8{return x;} fn f(a:[0][2]S)[0][2]S{return a;}pub fn main()void{_=f(.{});}", NULL},
+		/* zero-inner-array */
+		{"const S=struct{a:u8,b:u16,}; noinline fn seed(x:u8)u8{return x;} fn f(a:[2][0]S)[2][0]S{return a;}pub fn main()void{_=f(.{.{},.{}});}", NULL},
+		/* empty-struct */
+		{"const S=struct{a:u8,b:u16,}; noinline fn seed(x:u8)u8{return x;} const E=struct{};fn f(e:E)E{return e;}pub fn main()void{_=f(.{});}", NULL},
+		/* zero-aligned-field */
+		{"const S=struct{a:u8,b:u16,}; noinline fn seed(x:u8)u8{return x;} const Z=struct{z:[0]u64,v:void,n:u0,};fn f(z:Z)Z{return z;}pub fn main()void{_=f(.{.z=.{},.v={},.n=0});}", NULL},
+		/* sentinel-field */
+		{"const S=struct{a:u8,b:u16,}; noinline fn seed(x:u8)u8{return x;} const T=struct{b:[2:9]u8,};fn f(t:T)T{return t;}pub fn main()void{_=f(.{.b=.{seed(1),2}});}", NULL},
+		/* zero-sentinel-field */
+		{"const S=struct{a:u8,b:u16,}; noinline fn seed(x:u8)u8{return x;} const T=struct{b:[0:9]u8,a:u8,};fn f(t:T)T{return t;}pub fn main()void{_=f(.{.b=.{},.a=seed(1)});}", NULL},
+		/* slice-pointer-field */
+		{"const S=struct{a:u8,b:u16,}; noinline fn seed(x:u8)u8{return x;} const T=struct{s:[]const u8,p:*const u8,};const byte:u8=7;fn f(t:T)T{return t;}pub fn main()void{_=f(.{.s=\"abc\",.p=&byte});}", NULL},
+		/* indirect-known */
+		{"const S=struct{a:u8,b:u16,}; noinline fn seed(x:u8)u8{return x;} fn f(s:S)S{return s;}pub fn main()void{const p:*const fn(S)S=&f;_=p(.{.a=seed(1),.b=2});}", NULL},
+		/* indirect-runtime */
+		{"const S=struct{a:u8,b:u16,}; noinline fn seed(x:u8)u8{return x;} fn f(s:S)S{return s;}fn g(s:S)S{return s;}fn choose(x:u8)*const fn(S)S{return if(x==1)&f else &g;}pub fn main()void{_=choose(seed(1))(.{.a=seed(1),.b=2});}", NULL},
+		/* indirect-array */
+		{"const S=struct{a:u8,b:u16,}; noinline fn seed(x:u8)u8{return x;} fn f(a:[1]S)[1]S{return a;}pub fn main()void{const p:*const fn([1]S)[1]S=&f;_=p(.{.{.a=seed(1),.b=2}});}", NULL},
+		/* callback-struct */
+		{"const S=struct{a:u8,b:u16,}; noinline fn seed(x:u8)u8{return x;} fn f(s:S)S{return s;}const H=struct{cb:*const fn(S)S,};const h:H=.{.cb=&f};pub fn main()void{_=h.cb(.{.a=seed(1),.b=2});}", NULL},
+		/* callback-array */
+		{"const S=struct{a:u8,b:u16,}; noinline fn seed(x:u8)u8{return x;} fn f(s:S)S{return s;}const a=[_]*const fn(S)S{&f};pub fn main()void{_=a[seed(0)](.{.a=seed(1),.b=2});}", NULL},
+		/* callback-slice */
+		{"const S=struct{a:u8,b:u16,}; noinline fn seed(x:u8)u8{return x;} fn f(s:S)S{return s;}const a=[_]*const fn(S)S{&f};const view:[]const *const fn(S)S=&a;pub fn main()void{_=view[seed(0)](.{.a=seed(1),.b=2});}", NULL},
+		/* aggregate-function-address */
+		{"const S=struct{a:u8,b:u16,}; noinline fn seed(x:u8)u8{return x;} fn f(s:S)S{return s;}const H=struct{cb:*const fn(S)S,};const h:H=.{.cb=&f};extern fn consume(p:*const H)void;pub fn main()void{consume(&h);}", NULL},
+		/* dead-bad-body */
+		{"const S=struct{a:u8,b:u16,}; noinline fn seed(x:u8)u8{return x;} fn bad(s:S)S{_=s;return .{.a=\"bad\",.b=2};}pub fn main()void{_=seed(1);}", NULL},
+		/* unused-parameter */
+		{"const S=struct{a:u8,b:u16,}; noinline fn seed(x:u8)u8{return x;} fn f(s:S)u8{_=s;return 7;}pub fn main()void{_=f(.{.a=seed(1),.b=2});}", NULL},
+		/* indirect-mixed */
+		{"const S=struct{a:u8,b:u16,}; noinline fn seed(x:u8)u8{return x;} fn f(x:u8,s:S,y:u16)S{return .{.a=s.a+x,.b=s.b+y};}pub fn main()void{const p:*const fn(u8,S,u16)S=&f;_=p(seed(1),.{.a=2,.b=3},4);}", NULL},
+		/* error/nominal-param */
+		{"const S=struct{a:u8,b:u16,}; noinline fn seed(x:u8)u8{return x;} const T=struct{a:u8,b:u16,};fn f(s:S)u8{return s.a;}pub fn main()void{const t:T=.{.a=seed(1),.b=2};_=f(t);}", "expected type 'test.S', found 'test.T'"},
+		/* error/nominal-return */
+		{"const S=struct{a:u8,b:u16,}; noinline fn seed(x:u8)u8{return x;} const T=struct{a:u8,b:u16,};fn f()S{const t:T=.{.a=1,.b=2};return t;}pub fn main()void{_=f();}", "expected type 'test.S', found 'test.T'"},
+		/* error/nominal-array */
+		{"const S=struct{a:u8,b:u16,}; noinline fn seed(x:u8)u8{return x;} const T=struct{a:u8,b:u16,};fn f(a:[1]S)u8{return a[0].a;}pub fn main()void{const t:[1]T=.{.{.a=seed(1),.b=2}};_=f(t);}", "expected type '[1]test.S', found '[1]test.T'"},
+		/* error/parameter-mutation */
+		{"const S=struct{a:u8,b:u16,}; noinline fn seed(x:u8)u8{return x;} fn f(s:S)u8{s.a=7;return s.a;}pub fn main()void{_=f(.{.a=seed(1),.b=2});}", "cannot assign to constant"},
+		/* error/parameter-mutable-address */
+		{"const S=struct{a:u8,b:u16,}; noinline fn seed(x:u8)u8{return x;} fn f(s:S)u8{const p:*S=&s;return p.a;}pub fn main()void{_=f(.{.a=seed(1),.b=2});}", "expected type '*test.S', found '*const test.S'"},
+		/* error/return-pointer-const */
+		{"const S=struct{a:u8,b:u16,}; noinline fn seed(x:u8)u8{return x;} fn f(s:S)*u8{return &s.a;}pub fn main()void{_=f(.{.a=seed(1),.b=2});}", "expected type '*u8', found '*const u8'"},
+		/* error/few-args */
+		{"const S=struct{a:u8,b:u16,}; noinline fn seed(x:u8)u8{return x;} fn f(s:S,x:u8)u8{return s.a+x;}pub fn main()void{_=f(.{.a=seed(1),.b=2});}", "expected 2 argument(s), found 1"},
+		/* error/many-args */
+		{"const S=struct{a:u8,b:u16,}; noinline fn seed(x:u8)u8{return x;} fn f(s:S)u8{return s.a;}pub fn main()void{_=f(.{.a=seed(1),.b=2},3);}", "expected 1 argument(s), found 2"},
+		/* error/indirect-few */
+		{"const S=struct{a:u8,b:u16,}; noinline fn seed(x:u8)u8{return x;} fn f(s:S,x:u8)u8{return s.a+x;}pub fn main()void{const p:*const fn(S,u8)u8=&f;_=p(.{.a=seed(1),.b=2});}", "expected 2 argument(s), found 1"},
+		/* error/indirect-many */
+		{"const S=struct{a:u8,b:u16,}; noinline fn seed(x:u8)u8{return x;} fn f(s:S)u8{return s.a;}pub fn main()void{const p:*const fn(S)u8=&f;_=p(.{.a=seed(1),.b=2},3);}", "expected 1 argument(s), found 2"},
+		/* error/bad-arg-field */
+		{"const S=struct{a:u8,b:u16,}; noinline fn seed(x:u8)u8{return x;} fn f(s:S)u8{return s.a;}pub fn main()void{_=f(.{.a=256,.b=seed(1)});}", "type 'u8' cannot represent integer value '256'"},
+		/* error/missing-arg-field */
+		{"const S=struct{a:u8,b:u16,}; noinline fn seed(x:u8)u8{return x;} fn f(s:S)u8{return s.a;}pub fn main()void{_=f(.{.a=seed(1)});}", "missing struct field: b"},
+		/* error/bad-return-field */
+		{"const S=struct{a:u8,b:u16,}; noinline fn seed(x:u8)u8{return x;} fn f(x:u8)S{return .{.a=x,.b=\"bad\"};}pub fn main()void{_=f(seed(1));}", "expected type 'u16', found '*const [3:0]u8'"},
+		/* error/function-pointer-type */
+		{"const S=struct{a:u8,b:u16,}; noinline fn seed(x:u8)u8{return x;} fn f(s:S)S{return s;}pub fn main()void{const p:*const fn(S)u8=&f;_=p;}", "expected type '*const fn (test.S) u8', found '*const fn (test.S) test.S'"},
+		/* error/live-callback-bad-body */
+		{"const S=struct{a:u8,b:u16,}; noinline fn seed(x:u8)u8{return x;} fn f(s:S)S{_=s;return .{.a=\"bad\",.b=2};}const H=struct{cb:*const fn(S)S,};const h:H=.{.cb=&f};extern fn consume(p:*const H)void;pub fn main()void{consume(&h);}", "expected type 'u8', found '*const [3:0]u8'"},
+		/* nyi/direct-C-parameter */
+		{"const S=struct{a:u8,}; fn f(s:S)callconv(.c)u8{return s.a;}pub fn main()void{_=f(.{.a=1});}", "not supported by szc yet:"},
+		/* nyi/direct-C-return */
+		{"const S=struct{a:u8,}; fn f()callconv(.c)S{return .{.a=1};}pub fn main()void{_=f();}", "not supported by szc yet:"},
+		/* nyi/indirect-C-parameter */
+		{"const S=struct{a:u8,}; pub fn main()void{const p:*const fn(S)callconv(.c)u8=@ptrFromInt(4096);_=p(.{.a=1});}", "not supported by szc yet:"},
+		/* nyi/indirect-C-return */
+		{"const S=struct{a:u8,}; pub fn main()void{const p:*const fn()callconv(.c)S=@ptrFromInt(4096);_=p();}", "not supported by szc yet:"},
+		/* nyi/direct-SysV */
+		{"const S=struct{a:u8,}; fn f(s:S)callconv(.x86_64_sysv)u8{return s.a;}pub fn main()void{_=f(.{.a=1});}", "not supported by szc yet:"},
+		/* nyi/indirect-SysV */
+		{"const S=struct{a:u8,}; pub fn main()void{const p:*const fn(S)callconv(.x86_64_sysv)u8=@ptrFromInt(4096);_=p(.{.a=1});}", "not supported by szc yet:"},
+		/* nyi/extern-recursive-array */
+		{"const S=struct{a:u8,}; extern fn f(a:[2][1]S)void;pub fn main()void{f(.{.{.{.a=1}},.{.{.a=2}}});}", "not supported by szc yet:"},
+		/* nyi/export-struct-return */
+		{"const S=struct{a:u8,}; export fn f()S{return .{.a=1};}pub fn main()void{}", "not supported by szc yet:"},
+		/* nyi/mutable-global */
+		{"const S=struct{a:u8,}; var s:S=.{.a=1};pub fn main()void{s.a=2;}", "not supported by szc yet:"},
+		/* nyi/volatile-whole-return-source */
+		{"const S=struct{a:u8,}; fn f(p:*const volatile S)S{return p.*;}pub fn main()void{var s:S=.{.a=1};_=f(&s);}", "not supported by szc yet:"},
+		/* nyi/default-field-signature */
+		{"const S=struct{a:u8=7,};fn f(s:S)S{return s;}pub fn main()void{_=f(.{.a=1});}", "not supported by szc yet:"},
+		/* nyi/generic-call */
+		{"const S=struct{a:u8,}; fn f(comptime T:type,s:T)T{return s;}pub fn main()void{_=f(S,.{.a=1});}", "not supported by szc yet:"},
+	};
+	for (uint32_t i = 0; i < sizeof(cases) / sizeof(cases[0]); i++) {
+		Arena arena;
+		arena_init(&arena);
+		SourceTable sources;
+		source_table_init(&sources, &arena);
+		Diag diag;
+		diag_init(&diag, &arena, &sources);
+		Interner interner;
+		intern_init(&interner, &arena);
+		const char *source = cases[i].source;
+		FileId file = source_add_memory(&sources, "test.zig", source, (uint32_t)strlen(source));
+		AstContainerDecl *root = parse_file(&arena, &diag, &sources, file);
+		IrFile *ir = irgen_file(&arena, &diag, &interner, source_get(&sources, file), file, root);
+		bool success = false;
+		Sema *sema = sema_create(&arena, &diag, &interner, &sources);
+		if (!diag_has_errors(&diag))
+			success = sema_analyze_executable(sema, file, ir);
+		CHECK(success == (cases[i].error == NULL));
+		if (cases[i].error != NULL) {
+			CHECK(diag.count != 0 && strstr(diag.items[0].message, cases[i].error) != NULL);
+		} else if (success) {
+			FILE *output = tmpfile();
+			FILE *assembly = tmpfile();
+			CHECK(output != NULL && assembly != NULL);
+			if (output != NULL && assembly != NULL)
+				CHECK(codegen_qbe(output, assembly, sema, &diag));
+			if (output != NULL)
+				fclose(output);
+			if (assembly != NULL)
+				fclose(assembly);
+		}
+		arena_free(&arena);
+	}
+}
+
 static void
 test_runtime_struct_initializer_ir(void)
 {
@@ -3869,6 +4063,7 @@ main(void)
 	test_struct_field_pointers();
 	test_known_struct_values();
 	test_runtime_struct_values();
+	test_struct_internal_abi();
 	test_runtime_struct_initializer_ir();
 	test_struct_initializer_ir();
 	test_struct_offsets();

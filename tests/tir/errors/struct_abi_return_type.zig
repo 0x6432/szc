@@ -1,0 +1,1 @@
+const S=struct{a:u8,b:u16,}; noinline fn seed(x:u8)u8{return x;} const T=struct{a:u8,b:u16,};fn f()S{const t:T=.{.a=1,.b=2};return t;}pub fn main()void{_=f();}

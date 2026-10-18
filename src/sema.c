@@ -1194,6 +1194,8 @@ type_has_struct_value(const Sema *sema, TypeId type)
 	return sema->types[type].kind == TYPE_STRUCT;
 }
 
+static bool func_validate_internal_signature(Sema *sema, FuncId id);
+
 /* Marks a function as referenced at runtime: its body will be analysed. */
 static void
 func_queue(Sema *sema, FuncId id)
@@ -1208,7 +1210,7 @@ func_queue(Sema *sema, FuncId id)
 	bool struct_value = type_has_struct_value(sema, fn.ret);
 	for (uint32_t i = 0; i < fn.param_count; i++)
 		struct_value |= type_has_struct_value(sema, fn.params[i]);
-	if (struct_value) {
+	if (struct_value && fn.convention == FUNCTION_C) {
 		diag_report(sema->diag, DIAG_ERROR, func->ir->file, func->ir->insts[func->func_inst].src,
 			"not supported by szc yet: struct values in runtime function signatures");
 		func->state = FUNC_FAILED;
@@ -1233,6 +1235,10 @@ func_queue(Sema *sema, FuncId id)
 	}
 	if (func->is_extern)
 		return;
+	if (struct_value && !func_validate_internal_signature(sema, id)) {
+		func->state = FUNC_FAILED;
+		return;
+	}
 	if (sema->queue_count == sema->queue_capacity) {
 		uint32_t new_capacity = sema->queue_capacity * 2;
 		sema->queue = arena_grow_array(sema->arena, sema->queue, sema->queue_count, new_capacity, sizeof(FuncId), alignof(FuncId));
@@ -1339,6 +1345,7 @@ block_init_comptime(Block *block, Sema *sema, SemaNamespace *ns, InstMap *map, S
 
 static bool operand_to_type(Block *block, Operand operand, uint32_t src, TypeId *out);
 static bool ensure_type_layout(Block *block, TypeId type, uint32_t src);
+static bool validate_internal_value_type(Block *block, TypeId type, uint32_t src);
 static bool require_runtime(Block *block, uint32_t src);
 static bool analyze_alignment(Block *block, IrBody body, uint32_t src, uint32_t *out);
 
@@ -4846,7 +4853,7 @@ analyze_call(Block *block, IrInstIndex index, Operand *out)
 	bool struct_value = type_has_struct_value(sema, fn.ret);
 	for (uint32_t i = 0; i < fn.param_count; i++)
 		struct_value |= type_has_struct_value(sema, fn.params[i]);
-	if (struct_value) {
+	if (struct_value && fn.convention == FUNCTION_C) {
 		sema_error(block, src, "not supported by szc yet: struct values in runtime function signatures");
 		return INST_CONTINUE;
 	}
@@ -4857,6 +4864,28 @@ analyze_call(Block *block, IrInstIndex index, Operand *out)
 	if (!count_ok) {
 		sema_error(block, src, "expected %s%u argument(s), found %u", fn.is_var_args ? "at least " : "", (unsigned)fn.param_count, (unsigned)header.arg_count);
 		return INST_CONTINUE;
+	}
+
+	/* Typed indirect C calls have no FuncId and never visit func_queue. Do not
+	 * silently apply our private aggregate pointer ABI to a public C signature. */
+	if (fn.convention == FUNCTION_C && id == 0) {
+		for (uint32_t i = 0; i < fn.param_count; i++) {
+			if (sema_type_is_aggregate(sema, fn.params[i])) {
+				sema_error(block, src, "parameter of type '%s' not allowed in function with calling convention 'x86_64_sysv'", sema_type_name(sema, fn.params[i]));
+				return INST_CONTINUE;
+			}
+		}
+		if (sema_type_is_aggregate(sema, fn.ret)) {
+			sema_error(block, src, "return type '%s' not allowed in function with calling convention 'x86_64_sysv'", sema_type_name(sema, fn.ret));
+			return INST_CONTINUE;
+		}
+	} else if (fn.convention != FUNCTION_C) {
+		bool valid = true;
+		for (uint32_t i = 0; i < fn.param_count; i++)
+			valid &= validate_internal_value_type(block, fn.params[i], src);
+		valid &= validate_internal_value_type(block, fn.ret, src);
+		if (!valid)
+			return INST_CONTINUE;
 	}
 
 	Operand pending = operand_none;
@@ -4874,10 +4903,6 @@ analyze_call(Block *block, IrInstIndex index, Operand *out)
 		args[i] = result.result;
 		if (result.end != BODY_BREAK_RESULT || args[i].kind == OPERAND_NONE)
 			failed = true;
-		if (!failed && type_has_struct_value(sema, args[i].type)) {
-			sema_error(block, src, "not supported by szc yet: runtime struct arguments");
-			failed = true;
-		}
 		if (!failed && i >= fn.param_count && sema_type_is_aggregate(sema, args[i].type)) {
 			sema_error(block, src, "not supported by szc yet: variadic array arguments");
 			failed = true;
@@ -4993,12 +5018,49 @@ sema_type_static_storage_allowed(const Sema *sema, TypeId type)
 }
 
 /* Storage shape is shared today, but callers choose admission deliberately.
- * This does not admit struct signatures, globals or explicit memory builtins. */
+ * Signature convention, globals and explicit memory builtins have separate gates. */
 bool
 sema_type_runtime_storage_allowed(const Sema *sema, TypeId type)
 {
 	uint32_t work = 0;
 	return storage_type_allowed(sema, type, 0, &work);
+}
+
+/* Only newly admitted struct-bearing values need this extra live-signature
+ * check. Pointer/slice pointees and legacy empty-array domains stay lazy. */
+static bool
+validate_internal_value_type(Block *block, TypeId type, uint32_t src)
+{
+	if (!type_has_struct_value(block->sema, type))
+		return true;
+	if (!ensure_type_layout(block, type, src))
+		return false;
+	if (!sema_type_runtime_storage_allowed(block->sema, type)) {
+		sema_error(block, src, "not supported by szc yet: runtime function storage of type '%s'", sema_type_name(block->sema, type));
+		return false;
+	}
+	return true;
+}
+
+/* Address/relocation-driven liveness has no caller Block. Resolve signature
+ * layouts in the definition's own IR/namespace, before allocating runtime slots.
+ * func_queue marks QUEUED first so recursive liveness cannot re-enter this check. */
+static bool
+func_validate_internal_signature(Sema *sema, FuncId id)
+{
+	SemaFunc *func = sema->funcs[id];
+	TypeFn fn = sema->types[func->type].as.fn;
+	InstMap map;
+	inst_map_init(&map, sema->arena);
+	Block block;
+	block_init_comptime(&block, sema, func->namespace_scope, &map, func->name);
+	block.ir = func->ir;
+	const IrInstIndex *params = &func->ir->extra[func->ir->insts[func->func_inst].data.payload + IR_WORDS(IrFuncHeader)];
+	bool valid = true;
+	for (uint32_t i = 0; i < fn.param_count; i++)
+		valid &= validate_internal_value_type(&block, fn.params[i], func->ir->insts[params[i]].src);
+	valid &= validate_internal_value_type(&block, fn.ret, func->ir->insts[func->func_inst].src);
+	return valid;
 }
 
 static TirRef
