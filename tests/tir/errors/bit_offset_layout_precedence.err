@@ -1,0 +1,3 @@
+tests/tir/errors/bit_offset_layout_precedence.zig:2:5: error: cannot directly embed opaque type 'anyopaque' in struct
+    a: anyopaque,
+    ^

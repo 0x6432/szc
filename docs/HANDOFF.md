@@ -24,6 +24,59 @@ Read this first when resuming work (the sandbox resets often).
 
 ## Latest follow-up checkpoint
 
+- M6.1e ordinary struct bit-layout parity is implemented on top of c2bfeb3.
+  @bitOffsetOf shares offsetOf's exact type/name/layout/kind/field resolution and
+  checked physical layout, returning uint64 byte-offset*8 as comptime_int. Ordinary
+  structs have NO bit representation: @bitSizeOf now gives Zig's exact diagnostic
+  for the original requested type before layout, including empty/[0]/nested arrays
+  and invalid/defaulted/cyclic/oversized fields. Existing scalar/array/sentinel and
+  pointer bit-size behavior is unchanged. No TIR/backend/runtime gate widened.
+  Plan /data/struct-bit-layout-plan.md; source-backed research and independent
+  fixtures /data/struct-bit-layout-{research,tests,frontend}/. Numeric expectations
+  came from 18 actual official binary captures, not the ported sort. A separate
+  read-only source audit found no blocker. Parent added 37 semantic cases/100 checks,
+  12 stage/error goldens, two seeds each irgen/sema, nine unsupported gates, a
+  metadata native fixture and seven-scenario initializer control-flow fixture.
+  The old NYI checker incorrectly classified ordinary bitSizeOf as unsupported;
+  exact official rejection now has unit/golden/differential coverage instead.
+  First frozen full gates caught that obsolete expectation, not a compiler failure;
+  fixed only the classification and froze fresh v2 trees, without mutating v1.
+  Final /data/struct-bit-layout-final-v2/{gcc,clang,optimized}: GCC/Clang C11 Werror
+  ASan/UBSan pass 6364 units/1251 goldens, 135 standard/generated plus 4 szc-only native,
+  16 driver/57 compiler-runner checks, full C/ABI/storage/alignment, 102 volatile
+  sequences, 303 safety cases and 20000 mutations/stage each. Seeds 256/256/120/176.
+  Separate optimized native/safety and forced main rebuild/tests pass. Four fresh
+  60-second libFuzzer runs pass: 3235176/90205/84888/81210. All 6115 source/config/
+  test/corpus/license paths match main and three frozen trees (docs separate).
+  Final reference suites: bit-layout74/39 exact primary errors, offsetOf 91/51,
+  immutable values 118/55. Both new native fixtures pass official Debug/ReleaseFast.
+  A separate maximum zero-size-field probe matches both compilers at 34359738360
+  bits. NYI suites: prior metadata50, immutable values40 plus5 provenance controls,
+  new bit-layout 9. Full e2e remains szc-only, not a full official/std/bootstrap run.
+  Logs /data/struct-bit-layout-final-v2-*.log, source-hashes.json; focused/reference
+  /data/struct-bit-layout-{focused,reference,native,nyi}.log.
+  Hosted c2bfeb3 run39108900241 last observed21success,6running,43queued, not green.
+  Additional historical run39092969305 (0c4ebca) has GCC 5 and Clang 16 real safety
+  timeouts before runner shutdown/cancellation; no sanitizer finding recorded.
+  Exact-source historical binaries verified 34 relevant paths before/after replay:
+  GCC15/15 and Clang48/48 targeted failure replays pass, plus 3 separate interrupted-
+  case controls, unchanged 120s compile/15s native limits and exact panic assertions.
+  Evidence /data/struct-bit-ci-replay-39092969305/. This supports interruption but
+  does not prove root cause or make CI green. Attempt2 GCC117618552101 downloaded
+  log is byte-identical to original October17 failure, archive empty; fresh rerun
+  execution evidence unresolved, not another proven reproduction. No blind reruns
+  or relaxed deadlines. See /data/struct-bit-ci-classification.md and raw logs.
+  Next bounded plan /data/struct-static-storage-plan.md: completed immutable static
+  backing plus rooted typed field pointers, not runtime mutable structs or ABI.
+  Scratch comptime helper /data/struct-static-comptime ready; codegen/reference
+  specialists preparing scratch-only changes. Do not copy next-batch scratch into
+  this frozen milestone. Reference corrected planning assumptions: ordinary field
+  alignment is min(base,natural), not offset-strengthened; overlapping zero-sized
+  fields may compare unequal at comptime despite physical offsets. Resolve exact
+  provenance equality before integration; do not silently change existing array
+  comparisons. Typed struct self/mutual address cycles remain out of next scope.
+  M6.1/M7.6 remain partial; Q6 remains mandatory at M10.2.
+
 - M6.1d immutable ordinary struct values is implemented on top of 0c4ebca.
   VALUE_STRUCT retains nominal identity and declaration-ordered fields with deep
   arena interning. Typed/contextual initialization, known nested structs/arrays,

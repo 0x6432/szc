@@ -1,0 +1,3 @@
+tests/tir/errors/bit_offset_size_limit.zig:1:11: error: struct layout requires size 4294967296, this compiler implementation supports up to 4294967295
+const S = struct {
+          ^

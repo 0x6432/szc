@@ -15,6 +15,8 @@ SZC_MODE='emit-qbe'
 NYI=re.compile(r'not supported|unsupported|not (?:yet )?implemented|NYI',re.I)
 
 
+# Ordinary struct @bitSizeOf is an exact invalid-Zig diagnostic, not NYI.
+# Its precedence/array cases live in diff_struct_bit_layout and unit/golden tests.
 def cases():
     for label, declaration in (
         ('packed', 'packed struct { x:u8, }'),
@@ -43,7 +45,6 @@ def cases():
         ('variadic-argument', 'extern fn f(...) void; pub fn main() void { f(@as(S,undefined)); }'),
         ('runtime-join', 'fn f(c:bool) void { const s=if(c)@as(S,undefined) else @as(S,undefined); _=s; } pub fn main() void { f(true); }'),
         ('array-storage', 'pub fn main() void { var a:[1]S=undefined; _=&a; }'),
-        ('bit-size', 'pub fn main() void { _=@bitSizeOf(S); }'),
     ):
         yield label, prefix + body
     yield 'runtime-struct-load', prefix+'fn f(p:*S) void { const value=p.*; _=value; } pub fn main() void { const p:*S=@ptrFromInt(4096); f(p); }'

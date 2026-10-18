@@ -1,0 +1,3 @@
+tests/tir/errors/bit_size_struct_zero_array.zig:5:9: error: no bit size available for type '[0]bit_size_struct_zero_array.S'
+    _ = @bitSizeOf([0]S);
+        ^

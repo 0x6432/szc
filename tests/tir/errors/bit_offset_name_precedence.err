@@ -1,0 +1,3 @@
+tests/tir/errors/bit_offset_name_precedence.zig:5:25: error: expected type '[]const u8', found 'comptime_int'
+    _ = @bitOffsetOf(S, 3);
+                        ^

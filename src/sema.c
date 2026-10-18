@@ -3071,8 +3071,11 @@ analyze_bit_size(Block *block, const IrInst *inst)
 		bits = 64;
 		break;
 	case TYPE_STRUCT:
-		sema_error(block, inst->src, "not supported by szc yet: bit size of structs");
-		return operand_none;
+		/* Ordinary structs have no bit representation, even inside [0]S.
+		 * Reject before demanding fields or layout, using the requested type. */
+		has_representation = false;
+		bits = 0;
+		break;
 	case TYPE_ANYERROR:
 		sema_error(block, inst->src, "not supported by szc yet: bit size of error sets");
 		return operand_none;
@@ -5353,7 +5356,7 @@ analyze_has_member(Block *block, const IrInst *inst)
 	StringId name;
 	if (!resolve_name_body(block, payload.name_body, payload.name_src, &name))
 		return operand_none;
-	if (inst->op == IR_OFFSET_OF) {
+	if (inst->op == IR_OFFSET_OF || inst->op == IR_BIT_OFFSET_OF) {
 		/* Unlike FieldType, the reference resolves layout before the kind check. */
 		if (!ensure_type_layout(block, type, payload.type_src))
 			return operand_none;
@@ -5368,7 +5371,11 @@ analyze_has_member(Block *block, const IrInst *inst)
 			sema_name_error(block, payload.name_src, "no field named '", name, suffix);
 			return operand_none;
 		}
-		return comptime_operand(T_COMPTIME_INT, value_int_u64(&sema->values, T_COMPTIME_INT, field->offset));
+		uint64_t offset = field->offset;
+		/* Resolved ordinary layout is bounded by UINT32_MAX bytes. */
+		if (inst->op == IR_BIT_OFFSET_OF)
+			offset *= 8;
+		return comptime_operand(T_COMPTIME_INT, value_int_u64(&sema->values, T_COMPTIME_INT, offset));
 	}
 	if (inst->op == IR_FIELD_TYPE) {
 		if (sema->types[type].kind != TYPE_STRUCT) {
@@ -7252,6 +7259,7 @@ analyze_inst(Block *block, IrInstIndex index, Operand *break_value)
 	case IR_HAS_FIELD:
 	case IR_FIELD_TYPE:
 	case IR_OFFSET_OF:
+	case IR_BIT_OFFSET_OF:
 		result = analyze_has_member(block, inst);
 		break;
 	case IR_THIS:

@@ -1,0 +1,3 @@
+tests/tir/errors/bit_size_struct_default.zig:5:9: error: no bit size available for type 'bit_size_struct_default.S'
+    _ = @bitSizeOf(S);
+        ^

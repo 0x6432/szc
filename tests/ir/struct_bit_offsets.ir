@@ -1,0 +1,108 @@
+%70 = struct_decl (flags=0) {
+  decl const "S" value {
+    %10 = struct_decl (flags=0) {
+      field "a" type {
+        %0 = break_inline result, @type_u8
+      }
+      field "z" type {
+        %1 = break_inline result, @type_void
+      }
+      field "empty" type {
+        %2 = int 0
+        %3 = as @type_usize, %2
+        %4 = array_type %3, @type_u64
+        %5 = as @type_type, %4
+        %6 = break_inline result, %5
+      }
+      field "bits" type {
+        %7 = int_type u0
+        %8 = break_inline result, %7
+      }
+      field "b" type {
+        %9 = break_inline result, @type_u64
+      }
+    }
+    %11 = break_inline result, %10
+  }
+  decl const "Huge" value {
+    %18 = struct_decl (flags=0) {
+      field "a" type {
+        %12 = int 4294967294
+        %13 = as @type_usize, %12
+        %14 = array_type %13, @type_u8
+        %15 = as @type_type, %14
+        %16 = break_inline result, %15
+      }
+      field "b" type {
+        %17 = break_inline result, @type_u8
+      }
+    }
+    %19 = break_inline result, %18
+  }
+  decl fn "main" pub value {
+    %68 = func "main" {
+      ret type {
+        %20 = break_inline result, @type_u8
+      }
+      body insts {
+        %21 = decl_val "S"
+        %22 = as @type_type, %21
+        %27 = bit_offset_of %22 name {
+          %23 = ptr_type @type_u8, @true slice
+          %24 = str "z"
+          %25 = as %23, %24
+          %26 = break_inline result, %25
+        }
+        %28 = decl_val "Huge"
+        %29 = as @type_type, %28
+        %34 = bit_offset_of %29 name {
+          %30 = ptr_type @type_u8, @true slice
+          %31 = str "b"
+          %32 = as %30, %31
+          %33 = break_inline result, %32
+        }
+        %36 = typeof_builtin %27 query {
+          %35 = break_inline result, @void_value
+        }
+        %37 = cmp_neq %36, @type_comptime_int
+        %41 = bool_or %37 rhs {
+          %38 = int 72
+          %39 = cmp_neq %27, %38
+          %40 = break_inline result, %39
+        }
+        %47 = if %41 then {
+          %42 = ret_type
+          %43 = int 1
+          %44 = as_return %42, %43
+          %45 = ret %44
+        } else {
+          %46 = break_inline result, @void_value
+        }
+        %48 = int 34359738352
+        %49 = cmp_neq %34, %48
+        %55 = if %49 then {
+          %50 = ret_type
+          %51 = int 2
+          %52 = as_return %50, %51
+          %53 = ret %52
+        } else {
+          %54 = break_inline result, @void_value
+        }
+        %56 = ret_type
+        %57 = decl_val "S"
+        %58 = as @type_type, %57
+        %63 = bit_offset_of %58 name {
+          %59 = ptr_type @type_u8, @true slice
+          %60 = str "a"
+          %61 = as %59, %60
+          %62 = break_inline result, %61
+        }
+        %64 = int 8
+        %65 = div %63, %64
+        %66 = int_cast %56, %65
+        %67 = ret %66
+      }
+    }
+    %69 = break_inline result, %68
+  }
+}

@@ -124,6 +124,7 @@ jobs:
           - diff_struct_namespaces
           - diff_struct_metadata
           - diff_struct_values
+          - diff_struct_bit_layout
           - diff_offset_of
           - diff_field
           - diff_has_field

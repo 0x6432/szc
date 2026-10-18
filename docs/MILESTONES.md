@@ -140,6 +140,7 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
   - [x] **M6.1b Ordinary struct type/layout foundation**: lazy declared field types, checked ABI size/alignment, @hasField/@FieldType and pointer-only layout integration.
   - [x] **M6.1c Exact ordinary struct field layout**: pinned unstable field permutation, checked byte offsets, read-only layout APIs and @offsetOf.
   - [x] **M6.1d Immutable ordinary struct values**: named/contextual initialization, nominal declaration-ordered constants and logical instance field reads; runtime storage/ABI remains closed.
+  - [x] **M6.1e Ordinary struct bit-layout parity**: @bitOffsetOf and exact ordinary-struct @bitSizeOf rejection before layout.
   - Runtime struct values, field offsets/projection, initializers, defaults and instance methods remain unimplemented.
 - [ ] **M6.2 Enums**: tag values, `@intFromEnum`, `@enumFromInt`, enum literals.
 - [ ] **M6.3 switch** on ints/enums with ranges.
@@ -201,6 +202,41 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
 ## Completed milestone log
 
 (newest first; each entry: what, limitations, interactions)
+
+### M6.1e Ordinary struct bit-layout parity
+
+- **What**: @bitOffsetOf reuses exact checked ordinary byte offsets and the existing
+  type -> comptime name -> layout -> struct-kind -> field ordering. Multiplication
+  happens in uint64 before construction of a comptime_int, including offsets above
+  UINT32_MAX bits and zero-byte fields at nonzero offsets. No TIR/backend change.
+- **Bit representation**: ordinary structs have none. @bitSizeOf now issues Zig's
+  exact no-representation diagnostic for the original requested type, including
+  empty structs and nested/zero-length arrays, before resolving invalid fields,
+  defaults, recursion or oversized layouts. It is not @sizeOf*8. Existing logical
+  integer/array/sentinel and pointer bit-size behavior remains unchanged.
+- **Verification**: independent pinned-source/binary research plus a separate
+  74-case oracle (35 successes, 39 exact primary diagnostics); numeric expectations
+  come from 18 official binary captures, not a local sort model. Includes 25/51/64
+  field ties, zero-byte fields at bit offset72 and boundary34359738352. Read-only
+  source audit found no blocker. Permanent tests add 37 semantic cases/100 checks,
+  12 IR/TIR/QBE/error goldens, two seeds each irgen/sema, nine explicit unsupported
+  gates, native bit-layout metadata and a seven-scenario struct-init control-flow
+  regression. Correct no-representation behavior replaces an obsolete metadata
+  checker NYI expectation; its invalid-Zig case remains covered by exact negatives.
+- **Final gate**: fresh immutable v2 GCC/Clang strict C11 Werror ASan/UBSan pass
+  6364 units/1251 goldens, 135+4 native, 16 driver/57 compiler-runner, full C/ABI/
+  storage/alignment, 102 volatile sequences and 303 safety cases. Separate optimized
+  native/safety and forced main tests pass. Each compiler passes 20000 mutations
+  per stage with 256/256/120/176 seeds; fresh 60-second libFuzzer executions:
+  3235176/90205/84888/81210. All 6115 source/config/test/corpus/license paths match.
+  Final actual-Zig matrix 74/39 and offsetOf 91/51, values 118/55 pass; new natives
+  pass official Debug/ReleaseFast. Separate max zero-field offset 34359738360
+  probe passes. Metadata NYI 50, values 40+5 controls and bit-layout 9 gates pass.
+  Initial fullgate exposed obsolete bitSize NYI classification; fresh v2 gates
+  include its exact-negative replacement. Hosted CI remains pending/investigated,
+  not green; 63 new historical failure replays plus 3 controls pass original limits.
+- **Scope**: no packed/extern/aligned/comptime-field offsets, new runtime struct
+  values/storage/ABI or physical field pointers. M6.1 remains partial; Q6 at M10.2.
 
 ### M6.1d Immutable ordinary struct values
 

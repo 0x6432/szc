@@ -2395,6 +2395,114 @@ test_struct_offsets(void)
 }
 
 static void
+test_struct_bit_layout(void)
+{
+	const struct {
+		const char *source;
+		const char *error;
+	} cases[] = {
+		/* layout/perm3/0 */
+		{"const Inner=struct { byte:u8, word:u32, }; const S=struct {f0:u8,f1:u64,f2:u16,}; pub fn main() void { const n:u8=if(@sizeOf(S)==16 and @alignOf(S)==8 and @bitOffsetOf(S,\"f0\")==80 and @bitOffsetOf(S,\"f1\")==0 and @bitOffsetOf(S,\"f2\")==64 and @bitOffsetOf(S,\"f0\")==@offsetOf(S,\"f0\")*8 and @bitOffsetOf(S,\"f1\")==@offsetOf(S,\"f1\")*8 and @bitOffsetOf(S,\"f2\")==@offsetOf(S,\"f2\")*8 and @TypeOf(@bitOffsetOf(S,\"f2\"))==comptime_int)0 else 256; _=n; }", NULL},
+		/* layout/zero/0 */
+		{"const Inner=struct { byte:u8, word:u32, }; const S=struct {a:u8,z:void,empty:[0]u64,bits:u0,b:u64,}; pub fn main() void { const n:u8=if(@sizeOf(S)==16 and @alignOf(S)==8 and @bitOffsetOf(S,\"a\")==64 and @bitOffsetOf(S,\"z\")==72 and @bitOffsetOf(S,\"empty\")==0 and @bitOffsetOf(S,\"bits\")==72 and @bitOffsetOf(S,\"b\")==0 and @bitOffsetOf(S,\"a\")==@offsetOf(S,\"a\")*8 and @bitOffsetOf(S,\"z\")==@offsetOf(S,\"z\")*8 and @bitOffsetOf(S,\"empty\")==@offsetOf(S,\"empty\")*8 and @bitOffsetOf(S,\"bits\")==@offsetOf(S,\"bits\")*8 and @bitOffsetOf(S,\"b\")==@offsetOf(S,\"b\")*8 and @TypeOf(@bitOffsetOf(S,\"b\"))==comptime_int)0 else 256; _=n; }", NULL},
+		/* layout/many/25/shuffle */
+		{"const Inner=struct { byte:u8, word:u32, }; const S=struct {f1:u64,f23:bool,f24:u8,f14:u24,f6:u24,f5:[0]u32,f2:u16,f21:[0]u32,f18:u16,f11:u65,f16:u8,f4:void,f7:bool,f20:void,f9:u64,f3:u65,f8:u8,f0:u8,f15:bool,f17:u64,f19:u65,f10:u16,f22:u24,f12:void,f13:[0]u32,}; pub fn main() void { const n:u8=if(@sizeOf(S)==112 and @alignOf(S)==16 and @bitOffsetOf(S,\"f1\")==448 and @bitOffsetOf(S,\"f23\")==768 and @bitOffsetOf(S,\"f24\")==760 and @bitOffsetOf(S,\"f14\")==608 and @bitOffsetOf(S,\"f6\")==640 and @bitOffsetOf(S,\"f5\")==672 and @bitOffsetOf(S,\"f2\")==672 and @bitOffsetOf(S,\"f21\")==672 and @bitOffsetOf(S,\"f18\")==688 and @bitOffsetOf(S,\"f11\")==0 and @bitOffsetOf(S,\"f16\")==752 and @bitOffsetOf(S,\"f4\")==752 and @bitOffsetOf(S,\"f7\")==720 and @bitOffsetOf(S,\"f20\")==752 and @bitOffsetOf(S,\"f9\")==512 and @bitOffsetOf(S,\"f3\")==256 and @bitOffsetOf(S,\"f8\")==728 and @bitOffsetOf(S,\"f0\")==736 and @bitOffsetOf(S,\"f15\")==744 and @bitOffsetOf(S,\"f17\")==384 and @bitOffsetOf(S,\"f19\")==128 and @bitOffsetOf(S,\"f10\")==704 and @bitOffsetOf(S,\"f22\")==576 and @bitOffsetOf(S,\"f12\")==768 and @bitOffsetOf(S,\"f13\")==576 and @bitOffsetOf(S,\"f1\")==@offsetOf(S,\"f1\")*8 and @bitOffsetOf(S,\"f23\")==@offsetOf(S,\"f23\")*8 and @bitOffsetOf(S,\"f24\")==@offsetOf(S,\"f24\")*8 and @bitOffsetOf(S,\"f14\")==@offsetOf(S,\"f14\")*8 and @bitOffsetOf(S,\"f6\")==@offsetOf(S,\"f6\")*8 and @bitOffsetOf(S,\"f5\")==@offsetOf(S,\"f5\")*8 and @bitOffsetOf(S,\"f2\")==@offsetOf(S,\"f2\")*8 and @bitOffsetOf(S,\"f21\")==@offsetOf(S,\"f21\")*8 and @bitOffsetOf(S,\"f18\")==@offsetOf(S,\"f18\")*8 and @bitOffsetOf(S,\"f11\")==@offsetOf(S,\"f11\")*8 and @bitOffsetOf(S,\"f16\")==@offsetOf(S,\"f16\")*8 and @bitOffsetOf(S,\"f4\")==@offsetOf(S,\"f4\")*8 and @bitOffsetOf(S,\"f7\")==@offsetOf(S,\"f7\")*8 and @bitOffsetOf(S,\"f20\")==@offsetOf(S,\"f20\")*8 and @bitOffsetOf(S,\"f9\")==@offsetOf(S,\"f9\")*8 and @bitOffsetOf(S,\"f3\")==@offsetOf(S,\"f3\")*8 and @bitOffsetOf(S,\"f8\")==@offsetOf(S,\"f8\")*8 and @bitOffsetOf(S,\"f0\")==@offsetOf(S,\"f0\")*8 and @bitOffsetOf(S,\"f15\")==@offsetOf(S,\"f15\")*8 and @bitOffsetOf(S,\"f17\")==@offsetOf(S,\"f17\")*8 and @bitOffsetOf(S,\"f19\")==@offsetOf(S,\"f19\")*8 and @bitOffsetOf(S,\"f10\")==@offsetOf(S,\"f10\")*8 and @bitOffsetOf(S,\"f22\")==@offsetOf(S,\"f22\")*8 and @bitOffsetOf(S,\"f12\")==@offsetOf(S,\"f12\")*8 and @bitOffsetOf(S,\"f13\")==@offsetOf(S,\"f13\")*8 and @TypeOf(@bitOffsetOf(S,\"f13\"))==comptime_int)0 else 256; _=n; }", NULL},
+		/* layout/u32-size-limit */
+		{"const Inner=struct { byte:u8, word:u32, }; const S=struct {a:[4294967294]u8,b:u8,}; pub fn main() void { const n:u8=if(@sizeOf(S)==4294967295 and @alignOf(S)==1 and @bitOffsetOf(S,\"a\")==0 and @bitOffsetOf(S,\"b\")==34359738352 and @bitOffsetOf(S,\"a\")==@offsetOf(S,\"a\")*8 and @bitOffsetOf(S,\"b\")==@offsetOf(S,\"b\")*8 and @TypeOf(@bitOffsetOf(S,\"b\"))==comptime_int)0 else 256; _=n; }", NULL},
+		/* layout/zero-offset-nonzero */
+		{"const S=struct { big:u64, byte:u8, zero:[0]u8, }; pub fn main() void { const n:u8=if(@sizeOf(S)==16 and @alignOf(S)==8 and @bitOffsetOf(S,\"big\")==0 and @bitOffsetOf(S,\"byte\")==64 and @bitOffsetOf(S,\"zero\")==72 and @bitOffsetOf(S,\"big\")==@offsetOf(S,\"big\")*8 and @bitOffsetOf(S,\"byte\")==@offsetOf(S,\"byte\")*8 and @bitOffsetOf(S,\"zero\")==@offsetOf(S,\"zero\")*8 and @TypeOf(@bitOffsetOf(S,\"zero\"))==comptime_int)0 else 256; _=n; }", NULL},
+		/* layout/zero-alignment */
+		{"const S=struct { byte:u8, zero:[0]u128, }; pub fn main() void { const n:u8=if(@sizeOf(S)==16 and @alignOf(S)==16 and @bitOffsetOf(S,\"byte\")==0 and @bitOffsetOf(S,\"zero\")==0 and @bitOffsetOf(S,\"byte\")==@offsetOf(S,\"byte\")*8 and @bitOffsetOf(S,\"zero\")==@offsetOf(S,\"zero\")*8 and @TypeOf(@bitOffsetOf(S,\"zero\"))==comptime_int)0 else 256; _=n; }", NULL},
+		/* name/one-nul */
+		{"const S=struct { item:u8, wide:u64, pub const declaration:u8=256; pub fn bad() u8 { return 256; } }; pub fn main() void { const n:u8=if(@bitOffsetOf(S,\"item\\x00\")==64)0 else 256; _=n; }", NULL},
+		/* escaped/space */
+		{"const S=struct {@\"two words\":u8, }; pub fn main() void { const n:u8=if(@bitOffsetOf(S,\"two words\")==0)0 else 256; _=n; }", NULL},
+		/* logical-bits/[2]u9 */
+		{"const S=struct { invalid:anyopaque, }; pub fn main() void { const n:u8=if(@bitSizeOf([2]u9)==18 and @TypeOf(@bitSizeOf([2]u9))==comptime_int)0 else 256; _=n; }", NULL},
+		/* logical-bits/[0:0]u9 */
+		{"const S=struct { invalid:anyopaque, }; pub fn main() void { const n:u8=if(@bitSizeOf([0:0]u9)==9 and @TypeOf(@bitSizeOf([0:0]u9))==comptime_int)0 else 256; _=n; }", NULL},
+		/* logical-bits: pointer to S */
+		{"const S=struct { invalid:anyopaque, }; pub fn main() void { const n:u8=if(@bitSizeOf(*S)==64 and @TypeOf(@bitSizeOf(*S))==comptime_int)0 else 256; _=n; }", NULL},
+		/* no-representation/empty */
+		{"const S=struct {}; pub fn main() void { _=@bitSizeOf(S); }", "no bit size available for type 'test.S'"},
+		/* no-representation/ordinary */
+		{"const S=struct { a:u8, b:u64, }; pub fn main() void { _=@bitSizeOf(S); }", "no bit size available for type 'test.S'"},
+		/* no-representation/zero-fields */
+		{"const S=struct { a:void, b:u0, }; pub fn main() void { _=@bitSizeOf(S); }", "no bit size available for type 'test.S'"},
+		/* no-representation/invalid-field */
+		{"const S=struct { a:anyopaque, }; pub fn main() void { _=@bitSizeOf(S); }", "no bit size available for type 'test.S'"},
+		/* no-representation/cycle */
+		{"const S=struct { a:S, }; pub fn main() void { _=@bitSizeOf(S); }", "no bit size available for type 'test.S'"},
+		/* no-representation/invalid-default */
+		{"const S=struct { a:u8=256, }; pub fn main() void { _=@bitSizeOf(S); }", "no bit size available for type 'test.S'"},
+		/* no-representation/comptime-field */
+		{"const S=struct { comptime a:u8=1, }; pub fn main() void { _=@bitSizeOf(S); }", "no bit size available for type 'test.S'"},
+		/* no-representation/oversize */
+		{"const S=struct { a:[4294967295]u8,b:u8, }; pub fn main() void { _=@bitSizeOf(S); }", "no bit size available for type 'test.S'"},
+		/* no-representation/array */
+		{"const S=struct { a:u8, }; pub fn main() void { _=@bitSizeOf([3]S); }", "no bit size available for type '[3]test.S'"},
+		/* no-representation/zero-array */
+		{"const S=struct { a:u8, }; pub fn main() void { _=@bitSizeOf([0]S); }", "no bit size available for type '[0]test.S'"},
+		/* no-representation/nested-zero-array */
+		{"const S=struct { a:u8, }; pub fn main() void { _=@bitSizeOf([0][2]S); }", "no bit size available for type '[0][2]test.S'"},
+		/* no-representation/zero-array-invalid */
+		{"const S=struct { a:anyopaque, }; pub fn main() void { _=@bitSizeOf([0]S); }", "no bit size available for type '[0]test.S'"},
+		/* no-representation/zero-array-cycle */
+		{"const S=struct { a:S, }; pub fn main() void { _=@bitSizeOf([0]S); }", "no bit size available for type '[0]test.S'"},
+		/* order/arity-zero */
+		{"pub fn main() void { _=@bitOffsetOf(); }", "expected 2 arguments, found 0"},
+		/* order/type-before-name */
+		{"pub fn main() void { _=@bitOffsetOf(3,3); }", "expected type 'type', found 'comptime_int'"},
+		/* order/nonstruct-name-before-kind */
+		{"pub fn main() void { _=@bitOffsetOf(u8,3); }", "expected type '[]const u8', found 'comptime_int'"},
+		/* order/cycle-name-before-layout */
+		{"const S=struct { a:S, }; pub fn main() void { _=@bitOffsetOf(S,3); }", "expected type '[]const u8', found 'comptime_int'"},
+		/* order/cycle-before-missing */
+		{"const S=struct { a:S, }; pub fn main() void { _=@bitOffsetOf(S,\"missing\"); }", "type 'test.S' depends on itself for field declared here"},
+		/* order/invalid-before-missing */
+		{"const S=struct { a:anyopaque, }; pub fn main() void { _=@bitOffsetOf(S,\"missing\"); }", "cannot directly embed opaque type 'anyopaque' in struct"},
+		/* order/zero-array-kind */
+		{"const S=struct { item:u8, wide:u64, pub const declaration:u8=256; pub fn bad() u8 { return 256; } }; pub fn main() void { _=@bitOffsetOf([0]S,\"item\"); }", "expected struct type, found '[0]test.S'"},
+		/* order/zero-array-layout */
+		{"const S=struct { a:anyopaque, }; pub fn main() void { _=@bitOffsetOf([0]S,\"missing\"); }", "cannot directly embed opaque type 'anyopaque' in struct"},
+		/* order/size-limit */
+		{"const S=struct { a:[4294967295]u8,b:u8, }; pub fn main() void { _=@bitOffsetOf(S,\"missing\"); }", "struct layout requires size 4294967296, this compiler implementation supports up to 4294967295"},
+		/* order/tail-align-limit */
+		{"const S=struct { a:[4294967287]u8,b:u64, }; pub fn main() void { _=@bitOffsetOf(S,\"b\"); }", "struct layout requires size 4294967296, this compiler implementation supports up to 4294967295"},
+		/* not-field/missing */
+		{"const S=struct { item:u8, wide:u64, pub const declaration:u8=256; pub fn bad() u8 { return 256; } }; pub fn main() void { _=@bitOffsetOf(S,\"missing\"); }", "no field named 'missing' in struct 'test.S'"},
+		/* not-field/declaration */
+		{"const S=struct { item:u8, wide:u64, pub const declaration:u8=256; pub fn bad() u8 { return 256; } }; pub fn main() void { _=@bitOffsetOf(S,\"declaration\"); }", "no field named 'declaration' in struct 'test.S'"},
+		/* runtime-name */
+		{"const S=struct { item:u8, wide:u64, pub const declaration:u8=256; pub fn bad() u8 { return 256; } }; fn f(name:[]const u8) usize { return @bitOffsetOf(S,name); } pub fn main() void { _=f(\"item\"); }", "unable to resolve comptime value"},
+	};
+	for (uint32_t i = 0; i < sizeof(cases) / sizeof(cases[0]); i++) {
+		Arena arena;
+		arena_init(&arena);
+		SourceTable sources;
+		source_table_init(&sources, &arena);
+		Diag diag;
+		diag_init(&diag, &arena, &sources);
+		Interner interner;
+		intern_init(&interner, &arena);
+		const char *source = cases[i].source;
+		FileId file = source_add_memory(&sources, "test.zig", source, (uint32_t)strlen(source));
+		AstContainerDecl *tree = parse_file(&arena, &diag, &sources, file);
+		CHECK(!diag_has_errors(&diag));
+		IrFile *ir = irgen_file(&arena, &diag, &interner, source_get(&sources, file), file, tree);
+		bool success = false;
+		if (!diag_has_errors(&diag)) {
+			Sema *sema = sema_create(&arena, &diag, &interner, &sources);
+			success = sema_analyze_executable(sema, file, ir);
+		}
+		CHECK(success == (cases[i].error == NULL));
+		if (cases[i].error != NULL)
+			CHECK(diag.count != 0 && strcmp(diag.items[0].message, cases[i].error) == 0);
+		arena_free(&arena);
+	}
+}
+
+static void
 test_struct_layout_api(void)
 {
 	for (uint32_t resolved = 0; resolved < 2; resolved++) {
@@ -3118,6 +3226,7 @@ main(void)
 	test_known_struct_values();
 	test_struct_initializer_ir();
 	test_struct_offsets();
+	test_struct_bit_layout();
 	test_struct_layout_api();
 	test_struct_field_layout_api();
 	test_struct_layout_order();

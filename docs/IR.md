@@ -1111,3 +1111,17 @@ Known structs use a distinct nominal `VALUE_STRUCT`, with arena-owned IDs in
 struct storage/ABI is not implemented. Runtime emission/global publication checks
 all immutable backing dependencies so pointer casts or nested relocations cannot
 hide unsupported struct storage. Pure logical references are not runtime escapes.
+
+## Ordinary struct bit-layout queries
+
+`bit_offset_of` uses the same `IrHasMember` payload and deferred comptime name
+body as `offset_of`. Sema resolves type, name, complete layout, struct kind and
+field in that order. For the supported ordinary structs the result is the checked
+byte offset multiplied by eight in uint64, returned as comptime_int; no new TIR
+operation or runtime transport is introduced. Zero-byte fields retain their actual
+physical offset. Packed/extern/comptime-field offset extensions remain unsupported.
+
+Ordinary structs have no bit representation. `bit_size_of` rejects the original
+requested struct or array type before resolving its field layout, even for `[0]S`.
+It is not an alias for ABI byte size times eight. Scalar/array logical bit counts,
+sentinels and pointer behavior retain their existing rules.
