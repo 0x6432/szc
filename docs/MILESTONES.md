@@ -148,7 +148,10 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
   - [x] **M6.1j Ordinary field defaults**: definition-context constants, demanded validation and omitted-field completion.
   - [x] **M6.1k Ordinary instance method calls**: call-specific receiver binding, exact-once receiver evaluation and existing call transport.
   - Remaining field forms stay deferred; struct singleton comptime classification remains separate.
-- [ ] **M6.2 Enums**: tag values, `@intFromEnum`, `@enumFromInt`, enum literals.
+- [~] **M6.2 Enums**: bounded ordinary exhaustive unsigned foundation and runtime support.
+  - [x] **M6.2a Nominal enum foundation**: lazy tags, literals, namespace/metadata, exact constant conversions.
+  - [x] **M6.2b Bounded runtime enums**: unsigned backing 1..64, sparse membership safety, scalar storage/private ABI.
+  - Remaining signed/wide, non-exhaustive, enum methods, C ABI and runtime singleton domains stay deferred.
 - [ ] **M6.3 switch** on ints/enums with ranges.
 - [ ] **M6.4 Optionals**: `?T`, `orelse`, `.?`, if-payloads, optional pointers.
 - [ ] **M6.5 Error sets + error unions**: `try`, `catch`, `errdefer`, error set merging, inferred error sets.
@@ -208,6 +211,64 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
 ## Completed milestone log
 
 (newest first; each entry: what, limitations, interactions)
+
+### M6.2a/b Ordinary exhaustive unsigned enums
+
+- **Coherent batch**: nominal constant/type foundation and deliberately bounded
+  runtime admission integrated from aa6513c, with disjoint frontend, interning,
+  backend and independent reference-test ownership. No tagged-union, calling-
+  convention, C aggregate, OPV or general comptime expansion.
+- **Frontend/values**: ENUM_DECL reuses container records without struct field
+  type/default machinery. Explicit tags use ENUM_TAG_TYPE contextual bodies;
+  DECL_LITERAL/ENUM_LITERAL preserve typed versus raw literal semantics. Distinct
+  VALUE_ENUM carries nominal type/backing integer ValueId, never declaration
+  ordinal; VALUE_ENUM_LITERAL carries normalized StringId. Normalized duplicate
+  names and malformed declarations are checked before expression generation.
+- **Resolution**: lazy, bounded, definition-context tag resolution evaluates all
+  explicit values before implicit numbering and duplicate-value checks. Atomic
+  metadata/tag publication; failure reuse; recursive metadata/field dependencies
+  reject against actual pinned-binary evidence. Empty exhaustive enums use
+  noreturn/uninstantiable metadata. Inferred width is bits(field_count-1), including
+  known u0 singleton values without runtime/storage admission. Read-only metadata
+  APIs preserve outputs on failure; actual enum pointee/index reads demand layout.
+- **Runtime**: unsigned backing widths1..64 use backend-only scalar classification,
+  normalized narrow call results, static/mutable storage, nested aggregates,
+  private direct/indirect calls and volatile scalar access. Integer language
+  predicates remain unchanged. Original-width/sign ENUM_FROM_INT membership checks
+  precede narrowing; sparse holes, negative inputs and high/low-bit aliases take
+  the distinct invalid-enum panic. Constant and literal comparisons propagate
+  typed undefined bool until consumed. C/direct/indirect/varargs, memory builtins,
+  enum sentinels, bitcasts, enum methods and other deferred domains remain closed.
+- **Bounds**: layout depth256 and cumulative tag-resolution/constant-membership
+  work1Mi; separate cumulative backend membership scan1,000,000, including filtered
+  tags. Permanent API tests cover lazy/resolved/failed publication. A two-function
+  filtered-tag generator passes999424 inspections and rejects1000448 cumulatively,
+  without executing generated invalid conversions or writing huge data fixtures.
+- **Permanent tests**: 106 semantic/scope/emission cases,17 frontend-positive and13
+  frontend-negative protocol cases,4136 interning checks, API/budget checks;18 new
+  stage/error goldens,14 fuzz seeds,3 natives/30 checks,5 new safety cases. All prior
+  sources/classifications retained. Five reviewed error baselines move from raw
+  enum-literal NYI to existing callconv/comptime-alignment diagnostics; one const
+  assignment wording correction drops the name without changing rejection/source.
+  Existing positive IR/TIR/SSA are unchanged.
+- **Reference evidence**: enums80/29 exact-primary comparisons,15 explicit scope
+  gates,2 demanded cycles,6 Debug safety modes/12 compiler executions pass. Same
+  native bytes pass official Debug/ReleaseFast6/6. Related defaults82/29 (six full
+  ordered-error lists), methods78/33 and private ABI62/15 regressions pass. Bounded
+  audit probes confirm lazy pointee loads and discarded versus forced undefined
+  enum/literal comparisons. No fake-address dereference or invalid ReleaseFast run.
+- **Grouped acceptance**: frozen GCC/Clang C11 Werror ASan/UBSan pass12577 units,
+  1369 goldens,161+4 natives, full process/driver/C/storage/alignment tests,106 actual
+  observed volatile sequences and308 safety cases. Each compiler replays20000
+  standalone mutations/stage (seeds256/256/166/222). GCC-O2 native/safety/static2/
+  mutable2 physical checks pass. Four fresh60-second libFuzzer campaigns complete
+  1046540/24038/27356/26166 runs (1124100 total), no findings.
+- **Provenance/limits**: all6501 files match main plus three frozen trees before
+  final README/HANDOFF/MILESTONES edits. Evidence /data/enum-final/{gcc,clang,
+  optimized}, manifest.json,verification.json,provenance.json; /data/enum-final-*.log,
+  /data/enum-regression-*.{json,log}; research /data/enum-contract and /data/enum-tests.
+  Hosted aa6513c run39174648960 was QUEUED at last check, not green. No timeout or
+  assertion weakened; no bootstrap/std claim. Next is M6.3 integer/enum switch.
 
 ### M6.1k Ordinary instance method-call syntax
 

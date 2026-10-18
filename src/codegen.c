@@ -39,6 +39,7 @@ typedef enum PanicKind {
 	PANIC_SLICE_CAST_LEN,
 	PANIC_COPY_LEN,
 	PANIC_MEMCPY_ALIAS,
+	PANIC_INVALID_ENUM,
 	PANIC_COUNT,
 } PanicKind;
 
@@ -65,6 +66,7 @@ typedef struct Codegen {
 	bool *dependencies_seen;
 	uint64_t array_storage_bytes;
 	uint32_t static_work;
+	uint32_t enum_work;
 	ValueId *dependency_queue;
 	bool explicit_panic_used;
 	bool volatile_loads[2][MEMORY_WIDTH_COUNT];
@@ -80,9 +82,29 @@ codegen_error(Codegen *cg, uint32_t src, const char *message)
 
 /* ---------- Types ---------- */
 
+/* Backend representation only; this does not make enums language integers. */
+static TypeId
+scalar_type(Codegen *cg, TypeId type_id, uint32_t src)
+{
+	if (sema_type(cg->sema, type_id)->kind != TYPE_ENUM)
+		return type_id;
+	TypeId backing = sema_enum_tag_type(cg->sema, type_id);
+	if (backing != 0) {
+		const Type *type = sema_type(cg->sema, backing);
+		if (type->kind == TYPE_INT && !type->as.integer.is_signed
+			&& type->as.integer.bits != 0 && type->as.integer.bits <= 64)
+			return backing;
+	}
+	codegen_error(cg, src, "not supported by szc yet: runtime representation of this enum type");
+	return 0;
+}
+
 static QbeClass
 type_class(Codegen *cg, TypeId type_id, uint32_t src)
 {
+	type_id = scalar_type(cg, type_id, src);
+	if (type_id == 0)
+		return QBE_NONE;
 	const Type *type = sema_type(cg->sema, type_id);
 	switch (type->kind) {
 	case TYPE_BOOL:
@@ -126,6 +148,9 @@ class_bits(QbeClass cls)
 static bool
 type_is_signed(Codegen *cg, TypeId type_id)
 {
+	type_id = scalar_type(cg, type_id, 0);
+	if (type_id == 0)
+		return false;
 	const Type *type = sema_type(cg->sema, type_id);
 	return type->kind == TYPE_INT && type->as.integer.is_signed;
 }
@@ -133,6 +158,9 @@ type_is_signed(Codegen *cg, TypeId type_id)
 static uint32_t
 type_bits(Codegen *cg, TypeId type_id)
 {
+	type_id = scalar_type(cg, type_id, 0);
+	if (type_id == 0)
+		return 64;
 	const Type *type = sema_type(cg->sema, type_id);
 	if (type->kind == TYPE_BOOL)
 		return 1;
@@ -190,6 +218,27 @@ print_pointer_address(Codegen *cg, FILE *out, ValueId id, bool outlined, bool wi
 		fprintf(out, " + %" PRIu64, address.offset);
 }
 
+/* Values remain nominal; only their validated integer child is serialized. */
+static const Value *
+enum_integer(Codegen *cg, const Value *value, uint32_t src)
+{
+	TypeId backing = sema_enum_tag_type(cg->sema, value->type);
+	const ValueTable *values = sema_values(cg->sema);
+	if (value->as.enum_tag == VALUE_NONE || value->as.enum_tag >= values->count
+		|| backing == 0 || scalar_type(cg, value->type, src) == 0) {
+		codegen_error(cg, src, "invalid enum constant backing");
+		return NULL;
+	}
+	const Value *integer = value_get(values, value->as.enum_tag);
+	const Type *type = sema_type(cg->sema, backing);
+	if (integer->kind != VALUE_INT || integer->type != backing
+		|| !bigint_fits(&integer->as.integer, false, type->as.integer.bits)) {
+		codegen_error(cg, src, "invalid enum constant backing");
+		return NULL;
+	}
+	return integer;
+}
+
 static void
 print_operand(Codegen *cg, TirRef ref)
 {
@@ -208,6 +257,14 @@ print_operand(Codegen *cg, TirRef ref)
 	case VALUE_BOOL:
 		fputs(value->as.boolean ? "1" : "0", cg->out);
 		return;
+	case VALUE_ENUM:
+		value = enum_integer(cg, value, inst->src);
+		if (value == NULL) {
+			fputs("0", cg->out);
+			return;
+		}
+		/* Fall through to print the integer in the outer enum class. */
+		/* fall through */
 	case VALUE_INT: {
 		uint64_t bits = bigint_to_u64_bits(&value->as.integer);
 		if (type_class(cg, inst->type, inst->src) == QBE_W)
@@ -313,6 +370,7 @@ static const char *const panic_messages[PANIC_COUNT] = {
 	"slice length does not divide exactly into destination elements",
 	"source and destination arguments have non-equal lengths",
 	"@memcpy arguments alias",
+	"invalid enum value",
 };
 
 /* Bounds as canonical 64-bit bit patterns; wider types have already errored. */
@@ -371,6 +429,62 @@ emit_cast_checks(Codegen *cg, TirRef ref)
 	uint32_t dest_positive_bits = to_bits - (to_signed && to_bits != 0 ? 1 : 0);
 	if (dest_positive_bits < source_positive_bits)
 		emit_bound_check(cg, ref, operand, "high", from_signed ? "csgt" : "cugt", int_max_bits(to_bits, to_signed), PANIC_INT_CAST);
+}
+
+/* Check the original integer before any narrowing or signedness conversion. */
+static bool
+emit_enum_checks(Codegen *cg, TirRef ref)
+{
+	const TirInst *inst = inst_at(cg, ref);
+	TirRef operand = inst->data.un.operand;
+	TypeId source = inst_at(cg, operand)->type;
+	const Type *source_type = sema_type(cg->sema, source);
+	const ValueId *tags;
+	uint32_t count;
+	TypeId backing = scalar_type(cg, inst->type, inst->src);
+	if (sema_type(cg->sema, inst->type)->kind != TYPE_ENUM || backing == 0
+		|| source_type->kind != TYPE_INT || source_type->as.integer.bits > 64
+		|| !sema_enum_tags(cg->sema, inst->type, &tags, &count) || count == 0) {
+		codegen_error(cg, inst->src, "invalid runtime enum conversion");
+		return false;
+	}
+	uint32_t bits = source_type->as.integer.bits;
+	bool is_signed = source_type->as.integer.is_signed;
+	char c = bits <= 32 ? 'w' : 'l';
+	const ValueTable *values = sema_values(cg->sema);
+	uint32_t tag_bits = sema_type(cg->sema, backing)->as.integer.bits;
+	fprintf(cg->out, "\t%%g%u_enum_match =w copy 0\n", ref);
+	for (uint32_t i = 0; i < count; i++) {
+		if (cg->enum_work >= 1000000) {
+			codegen_error(cg, inst->src, "not supported by szc yet: enum conversion work budget exceeded (1000000)");
+			return false;
+		}
+		cg->enum_work++;
+		ValueId id = tags[i];
+		if (id == VALUE_NONE || id >= values->count) {
+			codegen_error(cg, inst->src, "invalid enum tag metadata");
+			return false;
+		}
+		const Value *tag = value_get(values, id);
+		if (tag->kind != VALUE_INT || tag->type != backing
+			|| !bigint_fits(&tag->as.integer, false, tag_bits)) {
+			codegen_error(cg, inst->src, "invalid enum tag metadata");
+			return false;
+		}
+		if (!bigint_fits(&tag->as.integer, is_signed, bits))
+			continue;
+		uint64_t integer = bigint_to_u64_bits(&tag->as.integer);
+		fprintf(cg->out, "\t%%g%u_enum_tag%u =w ceq%c ", ref, i, c);
+		print_operand(cg, operand);
+		if (c == 'w')
+			fprintf(cg->out, ", %" PRId32 "\n", (int32_t)(uint32_t)integer);
+		else
+			fprintf(cg->out, ", %" PRId64 "\n", (int64_t)integer);
+		fprintf(cg->out, "\t%%g%u_enum_match =w or %%g%u_enum_match, %%g%u_enum_tag%u\n", ref, ref, ref, i);
+	}
+	fprintf(cg->out, "\t%%g%u_enum_invalid =w ceqw %%g%u_enum_match, 0\n", ref, ref);
+	emit_guard(cg, ref, "enum_invalid", PANIC_INVALID_ENUM);
+	return true;
 }
 
 /* Multiplication: compare magnitudes against limit / |rhs| before multiplying.
@@ -947,11 +1061,14 @@ emit_inst(Codegen *cg, TirRef ref)
 		fputs("\n", out);
 		return;
 	case TIR_BIT_CAST:
+	case TIR_ENUM_FROM_INT:
 	case TIR_INT_CAST:
 	case TIR_TRUNCATE:
 	case TIR_INT_FROM_BOOL: {
 		const TirInst *operand = inst_at(cg, inst->data.un.operand);
 		QbeClass from = type_class(cg, operand->type, inst->src);
+		if (inst->op == TIR_ENUM_FROM_INT && !emit_enum_checks(cg, ref))
+			return;
 		if (inst->op == TIR_INT_CAST)
 			emit_cast_checks(cg, ref);
 		if (cls == QBE_NONE)
@@ -1227,7 +1344,7 @@ emit_inst(Codegen *cg, TirRef ref)
 		}
 		fputs(")\n", out);
 		TypeKind kind = sema_type(cg->sema, inst->type)->kind;
-		if (cls != QBE_NONE && (kind == TYPE_INT || kind == TYPE_BOOL))
+		if (cls != QBE_NONE && (kind == TYPE_INT || kind == TYPE_BOOL || kind == TYPE_ENUM))
 			normalize(cg, ref, inst->type, cls);
 		return;
 	}
@@ -1432,6 +1549,10 @@ mark_value_dependencies(Codegen *cg, ValueId root)
 		const ValueId *children = one;
 		uint32_t child_count = 0;
 		switch (value->kind) {
+		case VALUE_ENUM:
+			one[0] = value->as.enum_tag;
+			child_count = 1;
+			break;
 		case VALUE_ELEMENT_PTR:
 			one[0] = value->as.element.base;
 			child_count = 1;
@@ -1668,6 +1789,13 @@ emit_data_value(Codegen *cg, FILE *out, ValueId stored, bool outlined, bool *fir
 	else
 		fprintf(out, "%c ", cls);
 	switch (value->kind) {
+	case VALUE_ENUM:
+		value = enum_integer(cg, value, src);
+		if (value == NULL) {
+			fputs("0", out);
+			break;
+		}
+		/* fall through */
 	case VALUE_INT:
 		fprintf(out, "%" PRId64, (int64_t)bigint_to_u64_bits(&value->as.integer));
 		break;
@@ -1760,9 +1888,12 @@ emit_data_object(Codegen *cg, ValueId stored, const char *symbol, bool immutable
 			fputs(relocations ? "section \".data.rel.ro\"\n" : "section \".rodata\"\n", out);
 		fprintf(out, "data $%s = align %u { ", symbol, (unsigned)align);
 	}
+	const Value *zero_value = value->kind == VALUE_ENUM ? enum_integer(cg, value, src) : value;
+	if (zero_value == NULL)
+		return;
 	bool zero = value->kind == VALUE_UNDEFINED || value->kind == VALUE_VOID
 		|| (value->kind == VALUE_BOOL && !value->as.boolean)
-		|| (value->kind == VALUE_INT && value->as.integer.limb_count == 0);
+		|| (zero_value->kind == VALUE_INT && zero_value->as.integer.limb_count == 0);
 	bool first = true;
 	if (!immutable && zero)
 		emit_data_zero(out, outlined, &first, emitted_size);

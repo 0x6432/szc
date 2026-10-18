@@ -1,0 +1,11 @@
+fn szc.main.1: fn () u8 {
+  %0: u16 = const 7
+  %1: enum_conversion.E = call szc.decode.2(%0)
+  %2: u8 = int_cast %1
+  %3: noreturn = ret %2
+}
+fn szc.decode.2: fn (u16) enum_conversion.E {
+  %0: u16 = arg 0
+  %1: enum_conversion.E = enum_from_int %0, %0
+  %2: noreturn = ret %1
+}

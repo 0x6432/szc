@@ -1,0 +1,35 @@
+function w $szc.main.1() {
+@start
+	%t2 =w call $szc.call.2(l $szc.flip.3, w 0)
+	%t2 =w and %t2, 1
+	%t3 =w copy %t2
+	%t4 =w copy %t3
+	ret %t4
+}
+
+function w $szc.call.2(l %t0, w %t1) {
+@start
+	%t2 =w call %t0(w %t1)
+	%t2 =w and %t2, 1
+	ret %t2
+}
+
+function w $szc.flip.3(w %t0) {
+@start
+	%t2 =w ceqw %t0, 0
+	jnz %t2, @c8_then, @c8_else
+@c8_then
+	%t3 =w copy 1
+	jmp @b3
+@c8_else
+	%t3 =w copy 0
+	jmp @b3
+@b3
+	ret %t3
+}
+
+export function w $main() {
+@start
+	%status =w call $szc.main.1()
+	ret %status
+}

@@ -60,7 +60,7 @@ Ordinary shift assignments use `log2_int_type value` for the RHS result type.
 
 ## Declarations
 
-`struct_decl` (also enum/union/opaque) payload in `extra`: kind and layout,
+`struct_decl` (also union/opaque placeholders) or `enum_decl` payload in `extra`: kind and layout,
 optional argument body (backing integer / tag type), then for each field its
 name, flags and type / alignment / default-value bodies, then for each
 declaration its name, flags (pub, export, extern, threadlocal, var, test,
@@ -1333,3 +1333,57 @@ bound receiver. The existing private aggregate ABI transports value receivers;
 no closure representation, backend opcode or C aggregate ABI is introduced.
 Explicit calling-convention syntax and unsupported receiver/type domains retain
 their existing gates. Ordinary instance projections do not become method values.
+
+## Ordinary exhaustive enums (M6.2)
+
+`enum_decl` reuses `IrContainerHeader`, `IrField[]` and `IrDecl[]`, but enum
+fields are normalized tag names, not struct field types. The independent
+`arg_body` resolves an explicit backing type. Each explicit tag-value body starts
+with `enum_tag_type` (no payload), a definition-context binding to the already
+chosen backing type; its expression receives a coerced-type hint and returns its
+raw result through `break_inline`. Absent tag-value bodies encode implicit tags.
+The frontend rejects malformed or duplicate normalized members before evaluating
+backing/tag expressions. `_` non-exhaustive syntax remains an explicit NYI.
+
+Sema interns a nominal `TYPE_ENUM` namespace immediately, while tag resolution
+remains lazy. Pointer-only type use does not demand tags. A demanded layout/tag
+operation evaluates all explicit values before declaration-order implicit numbering
+and duplicate-value checking. Backing metadata and declaration-order integer
+ValueIds publish atomically only after success; recursive size or tag queries
+fail rather than observing a partial table. Empty exhaustive enums are backed by
+`noreturn` and uninstantiable. Inferred backing width is the smallest unsigned
+width for `field_count - 1`; singleton `u0` values and metadata are comptime-only
+in this batch. Signed or >64-bit backing types remain explicit NYIs.
+
+`enum_literal` carries a normalized name with no operand and produces the
+comptime-only enum-literal type. `decl_literal` carries destination type/name;
+within the admitted enum domain it performs namespace-declaration-first/tag
+lookup and destination coercion. A literal-type destination preserves a raw
+literal. No struct declaration-literal domain or calling-convention tagged union
+is implied. `VALUE_ENUM` carries nominal type plus its backing integer ValueId;
+`VALUE_ENUM_LITERAL` carries its normalized StringId. They are distinct interned
+kinds, never field ordinals or interchangeable integers. Same-nominal enum
+comparisons and literal comparisons preserve typed undefined bool until consumed.
+
+`int_from_enum` returns exactly the backing integer type. Its runtime lowering is
+a representation-preserving `TIR_INT_CAST`. `enum_from_int` carries destination
+and the original integer operand. Constants require exact tag membership;
+runtime `TIR_ENUM_FROM_INT` compares the original width/sign against every
+representable tag before any narrowing, then normalizes the admitted backing.
+Sparse holes, negative inputs and width-truncation aliases take the distinct
+`PANIC_INVALID_ENUM` path with `invalid enum value`. Conversion source evaluation
+is once only. A separate cumulative backend budget charges each examined tag,
+including tags filtered out by source representability (1,000,000 maximum).
+Tag resolution and constant membership also have bounded cumulative work (1Mi)
+and layout dependency depth (256).
+
+Resolved unsigned backing widths 1..64 use scalar storage/private ABI, including
+enums nested in structs/arrays, static and mutable globals, snapshots, callbacks,
+volatile scalar access and narrow call-result normalization. Backend backing
+classification is separate from language integer predicates: arithmetic, implicit
+integer coercion, bitcasts, enum sentinels and memory builtins are not admitted.
+C/direct/indirect/variadic enum values and enum instance methods remain gated.
+Read-only `sema_enum_tag_type`/`sema_enum_tags` never resolve a type; failed queries
+leave outputs unchanged. Actual pointer loads/index operations demand enum layout
+before using these predicates. Existing aggregate ownership, relocation and
+runtime safety gates otherwise remain unchanged.

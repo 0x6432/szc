@@ -3020,6 +3020,636 @@ test_struct_field_call_ir(void)
 }
 
 /* Call-only receiver binding reuses ordinary transport and closed scope gates. */
+/* Requires comptime.h (including intern.h), Arena, and the unit CHECK macro. */
+static void
+test_enum_value_interning(void)
+{
+	Arena arena;
+	arena_init(&arena);
+	ValueTable table;
+	value_table_init(&table, &arena);
+	Interner names;
+	intern_init(&names, &arena);
+	StringId red = intern_cstr(&names, "red");
+	StringId blue = intern_cstr(&names, "blue");
+	ValueId zero = value_int_u64(&table, 1, 0);
+	ValueId seven = value_int_u64(&table, 1, 7);
+	ValueId wide = value_int_u64(&table, 1, UINT64_MAX);
+	BigInt negative = bigint_from_u64(&arena, 7);
+	negative.negative = true;
+	ValueId minus_seven = value_int(&table, 1, &negative);
+	ValueId e = value_enum(&table, 2, seven);
+	ValueId literal = value_enum_literal(&table, 3, red);
+	CHECK(value_get(&table, e)->kind == VALUE_ENUM);
+	CHECK(value_get(&table, e)->type == 2);
+	CHECK(value_get(&table, e)->as.enum_tag == seven);
+	CHECK(value_enum(&table, 2, value_int_u64(&table, 1, 7)) == e);
+	CHECK(value_enum(&table, 4, seven) != e);
+	CHECK(value_enum(&table, 2, zero) != e);
+	CHECK(value_enum(&table, 2, wide) != e);
+	CHECK(value_enum(&table, 2, minus_seven) != e);
+	CHECK(value_enum(&table, 2, seven) != seven);
+	CHECK(value_enum(&table, 2, zero) != value_int_u64(&table, 2, 0));
+	CHECK(value_enum(&table, 2, zero) != value_undefined(&table, 2));
+	CHECK(value_enum_literal(&table, 3, intern_cstr(&names, "red")) == literal);
+	CHECK(value_enum_literal(&table, 3, blue) != literal);
+	CHECK(value_enum_literal(&table, 4, red) != literal);
+	CHECK(value_get(&table, literal)->kind == VALUE_ENUM_LITERAL);
+	CHECK(value_get(&table, literal)->type == 3);
+	CHECK(value_get(&table, literal)->as.enum_literal == red);
+	/* Identical numeric payload/type still must not alias different kinds. */
+	CHECK(zero == (ValueId)red);
+	CHECK(value_enum(&table, 3, zero) != literal);
+	CHECK(value_type(&table, 3, (TypeId)red) != literal);
+	CHECK(value_function(&table, 3, (FuncId)red) != literal);
+
+	/* Raw value_intern copies scalar IDs: no constructor/source borrows. */
+	Value source = {0};
+	source.kind = VALUE_ENUM;
+	source.type = 2;
+	source.as.enum_tag = seven;
+	CHECK(value_intern(&table, &source) == e);
+	source.as.enum_tag = wide;
+	ValueId wide_enum = value_intern(&table, &source);
+	source.as.enum_tag = zero;
+	CHECK(value_get(&table, wide_enum)->as.enum_tag == wide);
+	source.kind = VALUE_ENUM_LITERAL;
+	source.type = 3;
+	source.as.enum_literal = red;
+	CHECK(value_intern(&table, &source) == literal);
+	source.as.enum_literal = blue;
+	CHECK(value_get(&table, literal)->as.enum_literal == red);
+	char mutable_name[] = "green";
+	StringId green = intern(&names, mutable_name, 5);
+	ValueId green_literal = value_enum_literal(&table, 3, green);
+	mutable_name[0] = 'x';
+	CHECK(strcmp(intern_text(&names, green), "green") == 0);
+	CHECK(value_enum_literal(&table, 3, intern_cstr(&names, "green")) == green_literal);
+
+	ValueId fields[] = {e, literal, value_undefined(&table, 2)};
+	ValueId aggregate = value_struct(&table, 5, fields, 3);
+	ValueId array = value_array(&table, 6, fields, 3);
+	ValueId pointer = value_ref(&table, 7, e, 0, 0);
+	uint32_t capacity = table.capacity;
+	uint32_t slots = table.slot_count;
+	uint32_t name_capacity = names.capacity;
+	ValueId *enums = ARENA_ARRAY(&arena, ValueId, 1024);
+	ValueId *literals = ARENA_ARRAY(&arena, ValueId, 1024);
+	for (uint32_t i = 0; i < 1024; i++) {
+		ValueId tag = value_int_u64(&table, 1, (uint64_t)i + 100);
+		StringId name = intern_cstr(&names, arena_sprintf(&arena, "tag_%u", i));
+		enums[i] = value_enum(&table, 2, tag);
+		literals[i] = value_enum_literal(&table, 3, name);
+	}
+	CHECK(table.capacity > capacity);
+	CHECK(table.slot_count > slots);
+	CHECK(names.capacity > name_capacity);
+	for (uint32_t i = 0; i < 1024; i++) {
+		ValueId tag = value_int_u64(&table, 1, (uint64_t)i + 100);
+		StringId name = intern_cstr(&names, arena_sprintf(&arena, "tag_%u", i));
+		CHECK(value_enum(&table, 2, tag) == enums[i]);
+		CHECK(value_enum_literal(&table, 3, name) == literals[i]);
+		CHECK(value_get(&table, enums[i])->as.enum_tag == tag);
+		CHECK(value_get(&table, literals[i])->as.enum_literal == name);
+	}
+	CHECK(value_enum(&table, 2, seven) == e);
+	CHECK(value_enum(&table, 2, wide) == wide_enum);
+	CHECK(value_enum_literal(&table, 3, red) == literal);
+	CHECK(value_struct(&table, 5, fields, 3) == aggregate);
+	CHECK(value_array(&table, 6, fields, 3) == array);
+	CHECK(value_ref(&table, 7, e, 0, 0) == pointer);
+	CHECK(value_get(&table, pointer)->kind == VALUE_REF);
+	CHECK(value_pointer_address(&table, pointer).root == pointer);
+	CHECK(value_get(&table, wide)->as.integer.limb_count == 2);
+	CHECK(value_get(&table, minus_seven)->as.integer.negative);
+	arena_free(&arena);
+}
+
+/* Frontend-only CHECK fragment. Invoke test_enum_frontend_ir() before main exits.
+ * Runtime widths/validity and enum member semantics remain sema decisions. */
+static void
+test_enum_frontend_ir(void)
+{
+	const struct {
+		const char *source;
+		uint32_t enums;
+		uint32_t fields;
+		uint32_t tags;
+		uint32_t backing_bodies;
+		uint32_t raw_literals;
+		uint32_t decl_literals;
+		uint32_t from_int;
+		uint32_t to_int;
+	} cases[] = {
+		{"const E=enum{};", 1, 0, 0, 0, 0, 0, 0, 0},
+		{"const E=enum{a};", 1, 1, 0, 0, 0, 0, 0, 0},
+		{"const E=enum{a,b,c};", 1, 3, 0, 0, 0, 0, 0, 0},
+		{"const E=enum(u8){a=2,b,c=7};", 1, 3, 2, 1, 0, 0, 0, 0},
+		{"const E=enum(i8){a=-2,b};", 1, 2, 1, 1, 0, 0, 0, 0},
+		{"const E=enum(u128){a=1};", 1, 1, 1, 1, 0, 0, 0, 0},
+		{"const E=enum(u8){@\"\\x61\"=1,@\"_\"=2};", 1, 2, 2, 1, 0, 0, 0, 0},
+		{"const E=enum(u8){a=n,pub const n=4;};", 1, 1, 1, 1, 0, 0, 0, 0},
+		{"const x=.a;", 0, 0, 0, 0, 1, 0, 0, 0},
+		{"const E=enum{a,b}; const x:E=.a;", 1, 2, 0, 0, 0, 1, 0, 0},
+		{"const E=enum{a,b}; fn f() E {return .b;}", 1, 2, 0, 0, 0, 1, 0, 0},
+		{"const E=enum{a,b}; fn f(p:*E) void {p.*=.a;}", 1, 2, 0, 0, 0, 1, 0, 0},
+		{"const E=enum{a,b}; const S=struct{x:E=.b};", 1, 2, 0, 0, 0, 1, 0, 0},
+		{"const E=enum{a,b}; const x=@as(E,.a);", 1, 2, 0, 0, 0, 1, 0, 0},
+		{"const E=enum{a,b}; const x:E=@enumFromInt(1);", 1, 2, 0, 0, 0, 0, 1, 0},
+		{"const E=enum{a,b}; const x=@intFromEnum(E.a);", 1, 2, 0, 0, 0, 0, 0, 1},
+		{"const E=enum(u8){a=@intCast(@as(u16,3))};", 1, 1, 1, 1, 0, 0, 0, 0},
+	};
+	for (uint32_t i = 0; i < sizeof(cases) / sizeof(cases[0]); i++) {
+		Arena arena;
+		arena_init(&arena);
+		SourceTable sources;
+		source_table_init(&sources, &arena);
+		Diag diag;
+		diag_init(&diag, &arena, &sources);
+		Interner interner;
+		intern_init(&interner, &arena);
+		const char *source = cases[i].source;
+		FileId file = source_add_memory(&sources, "enum_frontend_ir.zig", source, (uint32_t)strlen(source));
+		AstContainerDecl *root = parse_file(&arena, &diag, &sources, file);
+		CHECK(!diag_has_errors(&diag));
+		if (diag_has_errors(&diag)) {
+			arena_free(&arena);
+			continue;
+		}
+		IrFile *ir = irgen_file(&arena, &diag, &interner, source_get(&sources, file), file, root);
+		CHECK(!diag_has_errors(&diag));
+		if (diag_has_errors(&diag)) {
+			arena_free(&arena);
+			continue;
+		}
+		uint32_t enums = 0;
+		uint32_t fields = 0;
+		uint32_t tags = 0;
+		uint32_t hints = 0;
+		uint32_t backing_bodies = 0;
+		uint32_t raw_literals = 0;
+		uint32_t decl_literals = 0;
+		uint32_t from_int = 0;
+		uint32_t to_int = 0;
+		bool protocol = true;
+		for (uint32_t j = 0; j < ir->inst_count; j++) {
+			const IrInst *inst = &ir->insts[j];
+			hints += inst->op == IR_ENUM_TAG_TYPE;
+			raw_literals += inst->op == IR_ENUM_LITERAL;
+			decl_literals += inst->op == IR_DECL_LITERAL;
+			from_int += inst->op == IR_ENUM_FROM_INT;
+			to_int += inst->op == IR_INT_FROM_ENUM;
+			if (inst->op == IR_ENUM_LITERAL)
+				protocol = protocol && inst->data.name.operand == IR_REF_NONE;
+			if (inst->op == IR_DECL_LITERAL)
+				protocol = protocol && inst->data.name.operand != IR_REF_NONE;
+			if (inst->op != IR_ENUM_DECL)
+				continue;
+			enums++;
+			IrContainerHeader header;
+			IR_READ(ir, inst->data.payload, &header);
+			protocol = protocol && (header.flags & IR_CONTAINER_KIND_MASK) == AST_CONTAINER_ENUM;
+			backing_bodies += header.arg_body != 0;
+			uint32_t cursor = inst->data.payload + IR_WORDS(IrContainerHeader);
+			for (uint32_t k = 0; k < header.field_count; k++) {
+				IrField field;
+				IR_READ(ir, cursor, &field);
+				cursor += IR_WORDS(IrField);
+				fields++;
+				protocol = protocol && field.name != STRING_NONE && field.flags == 0
+					&& field.type_body == 0 && field.align_body == 0;
+				if (field.default_body == 0)
+					continue;
+				tags++;
+				uint32_t count = ir_body_count(ir, field.default_body);
+				if (count < 2) {
+					protocol = false;
+					continue;
+				}
+				const IrInstIndex *items = ir_body_insts(ir, field.default_body);
+				const IrInst *first = &ir->insts[items[0]];
+				const IrInst *last = &ir->insts[items[count - 1]];
+				protocol = protocol && first->op == IR_ENUM_TAG_TYPE
+					&& last->op == IR_BREAK_INLINE && last->data.brk.block == IR_BODY_RESULT;
+			}
+		}
+		CHECK(enums == cases[i].enums);
+		CHECK(fields == cases[i].fields);
+		CHECK(tags == cases[i].tags);
+		CHECK(hints == tags);
+		CHECK(backing_bodies == cases[i].backing_bodies);
+		CHECK(raw_literals == cases[i].raw_literals);
+		CHECK(decl_literals == cases[i].decl_literals);
+		CHECK(from_int == cases[i].from_int);
+		CHECK(to_int == cases[i].to_int);
+		CHECK(protocol);
+		arena_free(&arena);
+	}
+	const struct {
+		const char *source;
+		const char *message;
+	} errors[] = {
+		{"const E=enum{a,@\"\\x61\"};", "duplicate enum member name 'a'"},
+		{"const E=enum{a,pub const a=1;};", "duplicate enum member name 'a'"},
+		{"const E=enum(u8){a,b=a};", "use of undeclared identifier 'a'"},
+		{"const E=enum{a:u8};", "enum fields do not have types"},
+		{"const E=enum{comptime a};", "enum fields cannot be marked comptime"},
+		{"const E=enum{a align(1)};", "enum fields cannot be aligned"},
+		{"const E=enum{1};", "enum field missing name"},
+		{"const E=extern enum{a};", "enums do not support 'packed' or 'extern'; instead provide an explicit integer tag type"},
+		{"const E=packed enum{a};", "enums do not support 'packed' or 'extern'; instead provide an explicit integer tag type"},
+		{"const E=enum{a=1};", "explicitly valued enum missing integer tag type"},
+		{"const E=enum(u8){a,_};", "not supported by szc yet: non-exhaustive enums"},
+		{"const x=@enumFromInt(0);", "@enumFromInt must have a known result type"},
+		{"fn f() void {const T=u8; const E=enum(T){a}; _=E;}", "not supported by szc yet: capturing local 'T' across a namespace"},
+	};
+	for (uint32_t i = 0; i < sizeof(errors) / sizeof(errors[0]); i++) {
+		Arena arena;
+		arena_init(&arena);
+		SourceTable sources;
+		source_table_init(&sources, &arena);
+		Diag diag;
+		diag_init(&diag, &arena, &sources);
+		Interner interner;
+		intern_init(&interner, &arena);
+		const char *source = errors[i].source;
+		FileId file = source_add_memory(&sources, "enum_frontend_error.zig", source, (uint32_t)strlen(source));
+		AstContainerDecl *root = parse_file(&arena, &diag, &sources, file);
+		CHECK(!diag_has_errors(&diag));
+		if (!diag_has_errors(&diag)) {
+			irgen_file(&arena, &diag, &interner, source_get(&sources, file), file, root);
+			CHECK(diag_has_errors(&diag));
+			CHECK(diag.count != 0 && strcmp(diag.items[0].message, errors[i].message) == 0);
+		}
+		arena_free(&arena);
+	}
+}
+
+/* Nominal enums reuse scalar transport, with independent closed-domain gates. */
+/* Read-only API calls never complete a lazy or failed tag table. */
+static void
+test_enum_layout_api(void)
+{
+	for (uint32_t state = 0; state < 3; state++) {
+		Arena arena;
+		arena_init(&arena);
+		SourceTable sources;
+		source_table_init(&sources, &arena);
+		Diag diag;
+		diag_init(&diag, &arena, &sources);
+		Interner interner;
+		intern_init(&interner, &arena);
+		const char *source = state == 0
+			? "const E=enum(u9){lo=1,hi=511};fn use(p:*const E)void{_=p;}pub fn main()void{use(undefined);}"
+			: state == 1
+			? "const E=enum(u9){lo=1,hi=511};fn use(p:*const E)void{_=p;}pub fn main()void{use(undefined);_=@sizeOf(E);}"
+			: "const E=enum(u9){lo=1,hi=512};fn use(p:*const E)void{_=p;}pub fn main()void{use(undefined);_=@sizeOf(E);}";
+		FileId file = source_add_memory(&sources, "enum_api.zig", source, (uint32_t)strlen(source));
+		AstContainerDecl *root = parse_file(&arena, &diag, &sources, file);
+		IrFile *ir = irgen_file(&arena, &diag, &interner, source_get(&sources, file), file, root);
+		CHECK(!diag_has_errors(&diag));
+		Sema *sema = sema_create(&arena, &diag, &interner, &sources);
+		CHECK(sema_analyze_executable(sema, file, ir) == (state != 2));
+		TypeId type = 0;
+		for (FuncId id = 1; id < sema_func_count(sema); id++) {
+			const SemaFunc *func = sema_func(sema, id);
+			if (func->name == intern_cstr(&interner, "use")) {
+				TypeFn fn = sema_type(sema, func->type)->as.fn;
+				type = sema_type(sema, fn.params[0])->as.pointer.child;
+			}
+		}
+		CHECK(type != 0);
+		if (type != 0) {
+			const ValueId *tags = NULL;
+			uint32_t count = 123;
+			uint64_t size = 456;
+			TypeId tag = sema_enum_tag_type(sema, type);
+			CHECK((tag != 0) == (state == 1));
+			CHECK(sema_enum_tags(sema, type, &tags, &count) == (state == 1));
+			CHECK(sema_type_size(sema, type, &size) == (state == 1));
+			CHECK(size == (state == 1 ? 2u : 456u));
+			CHECK(sema_type_align(sema, type) == (state == 1 ? 2u : 0u));
+			if (state == 1) {
+				CHECK(sema_type(sema, tag)->kind == TYPE_INT);
+				CHECK(sema_type(sema, tag)->as.integer.bits == 9);
+				CHECK(tags != NULL && count == 2);
+				if (tags != NULL && count == 2) {
+					CHECK(value_get(sema_values(sema), tags[0])->kind == VALUE_INT);
+					CHECK(value_get(sema_values(sema), tags[0])->type == tag);
+					CHECK(bigint_to_u64_bits(&value_get(sema_values(sema), tags[0])->as.integer) == 1);
+					CHECK(bigint_to_u64_bits(&value_get(sema_values(sema), tags[1])->as.integer) == 511);
+				}
+			} else {
+				CHECK(tags == NULL && count == 123);
+			}
+			const ValueId *sentinel = tags;
+			count = 321;
+			CHECK(!sema_enum_tags(sema, type_id_of_well_known(IR_REF_TYPE_U8), &tags, &count));
+			CHECK(tags == sentinel && count == 321);
+			CHECK(sema_enum_tag_type(sema, type_id_of_well_known(IR_REF_TYPE_U8)) == 0);
+		}
+		arena_free(&arena);
+	}
+}
+
+/* All 1024 tags exceed the u8 source range: filtered tags must still count.
+ * Each function is individually below the cap; only the cumulative total fails.
+ * No generated program is executed (every conversion would panic at runtime). */
+static void
+test_enum_codegen_budget(void)
+{
+	for (uint32_t extra = 0; extra < 2; extra++) {
+		Arena arena;
+		arena_init(&arena);
+		SourceTable sources;
+		source_table_init(&sources, &arena);
+		Diag diag;
+		diag_init(&diag, &arena, &sources);
+		Interner interner;
+		intern_init(&interner, &arena);
+		char *source = arena_alloc(&arena, 131072, 1);
+		size_t length = (size_t)snprintf(source, 131072, "const E=enum(u16){");
+		for (uint32_t i = 0; i < 1024; i++)
+			length += (size_t)snprintf(source + length, 131072 - length, "f%u=%u,", i, i + 256);
+		length += (size_t)snprintf(source + length, 131072 - length, "};");
+		for (uint32_t f = 0; f < 2; f++) {
+			length += (size_t)snprintf(source + length, 131072 - length, "fn f%u(n:u8)void{", f);
+			for (uint32_t i = 0; i < 488 + (f == 1 ? extra : 0); i++)
+				length += (size_t)snprintf(source + length, 131072 - length, "_=@as(E,@enumFromInt(n));");
+			length += (size_t)snprintf(source + length, 131072 - length, "}");
+		}
+		length += (size_t)snprintf(source + length, 131072 - length, "pub fn main()void{f0(1);f1(2);}");
+		CHECK(length < 131072);
+		FileId file = source_add_memory(&sources, "enum_budget.zig", source, (uint32_t)length);
+		AstContainerDecl *root = parse_file(&arena, &diag, &sources, file);
+		IrFile *ir = irgen_file(&arena, &diag, &interner, source_get(&sources, file), file, root);
+		CHECK(!diag_has_errors(&diag));
+		Sema *sema = sema_create(&arena, &diag, &interner, &sources);
+		CHECK(sema_analyze_executable(sema, file, ir));
+		FILE *output = tmpfile();
+		FILE *assembly = tmpfile();
+		CHECK(output != NULL && assembly != NULL);
+		if (output != NULL && assembly != NULL) {
+			CHECK(codegen_qbe(output, assembly, sema, &diag) == (extra == 0));
+			CHECK(diag_has_errors(&diag) == (extra != 0));
+			if (extra != 0)
+				CHECK(diag.count == 1 && strstr(diag.items[0].message, "enum conversion work budget exceeded") != NULL);
+		}
+		if (output != NULL)
+			fclose(output);
+		if (assembly != NULL)
+			fclose(assembly);
+		arena_free(&arena);
+	}
+}
+
+static void
+test_enum_values(void)
+{
+	const struct { const char *source; const char *error; } cases[] = {
+		/* inferred-2 */
+		{"const E=enum{f0,f1,};pub fn main()void{const check:u8=if(@TypeOf(@intFromEnum(E.f1))==u1 and @intFromEnum(E.f1)==1)0 else 256;_=check;}\n", NULL},
+		/* inferred-3 */
+		{"const E=enum{f0,f1,f2,};pub fn main()void{const check:u8=if(@TypeOf(@intFromEnum(E.f2))==u2 and @intFromEnum(E.f2)==2)0 else 256;_=check;}\n", NULL},
+		/* inferred-5 */
+		{"const E=enum{f0,f1,f2,f3,f4,};pub fn main()void{const check:u8=if(@TypeOf(@intFromEnum(E.f4))==u3 and @intFromEnum(E.f4)==4)0 else 256;_=check;}\n", NULL},
+		/* inferred-9 */
+		{"const E=enum{f0,f1,f2,f3,f4,f5,f6,f7,f8,};pub fn main()void{const check:u8=if(@TypeOf(@intFromEnum(E.f8))==u4 and @intFromEnum(E.f8)==8)0 else 256;_=check;}\n", NULL},
+		/* unsigned-u1 */
+		{"const E=enum(u1){lo=0,hi=1,};pub fn main()void{const check:u8=if(@TypeOf(@intFromEnum(E.hi))==u1 and @intFromEnum(E.hi)==1 and @sizeOf(E)==1 and @alignOf(E)==1 and @bitSizeOf(E)==1)0 else 256;_=check;}\n", NULL},
+		/* unsigned-u8 */
+		{"const E=enum(u8){lo=0,hi=255,};pub fn main()void{const check:u8=if(@TypeOf(@intFromEnum(E.hi))==u8 and @intFromEnum(E.hi)==255 and @sizeOf(E)==1 and @alignOf(E)==1 and @bitSizeOf(E)==8)0 else 256;_=check;}\n", NULL},
+		/* unsigned-u9 */
+		{"const E=enum(u9){lo=0,hi=511,};pub fn main()void{const check:u8=if(@TypeOf(@intFromEnum(E.hi))==u9 and @intFromEnum(E.hi)==511 and @sizeOf(E)==2 and @alignOf(E)==2 and @bitSizeOf(E)==9)0 else 256;_=check;}\n", NULL},
+		/* unsigned-u16 */
+		{"const E=enum(u16){lo=0,hi=65535,};pub fn main()void{const check:u8=if(@TypeOf(@intFromEnum(E.hi))==u16 and @intFromEnum(E.hi)==65535 and @sizeOf(E)==2 and @alignOf(E)==2 and @bitSizeOf(E)==16)0 else 256;_=check;}\n", NULL},
+		/* unsigned-u33 */
+		{"const E=enum(u33){lo=0,hi=8589934591,};pub fn main()void{const check:u8=if(@TypeOf(@intFromEnum(E.hi))==u33 and @intFromEnum(E.hi)==8589934591 and @sizeOf(E)==8 and @alignOf(E)==8 and @bitSizeOf(E)==33)0 else 256;_=check;}\n", NULL},
+		/* unsigned-u64 */
+		{"const E=enum(u64){lo=0,hi=18446744073709551615,};pub fn main()void{const check:u8=if(@TypeOf(@intFromEnum(E.hi))==u64 and @intFromEnum(E.hi)==18446744073709551615 and @sizeOf(E)==8 and @alignOf(E)==8 and @bitSizeOf(E)==64)0 else 256;_=check;}\n", NULL},
+		/* tag-order */
+		{"const E=enum(u8){a=7,b,c=2,d,};pub fn main()void{const check:u8=if(@intFromEnum(E.a)==7 and @intFromEnum(E.b)==8 and @intFromEnum(E.c)==2 and @intFromEnum(E.d)==3)0 else 256;_=check;}\n", NULL},
+		/* implicit-first */
+		{"const E=enum(u8){a,b=7,c,};pub fn main()void{const check:u8=if(@intFromEnum(E.a)==0 and @intFromEnum(E.c)==8)0 else 256;_=check;}\n", NULL},
+		/* tag-expression */
+		{"const base:u8=4;const E=enum(u8){a=base+1,b=@as(u8,9),c,};pub fn main()void{const check:u8=if(@intFromEnum(E.a)==5 and @intFromEnum(E.c)==10)0 else 256;_=check;}\n", NULL},
+		/* namespace-tag-expression */
+		{"const E=enum(u8){a=base,b,pub const base:u8=7;};pub fn main()void{const check:u8=if(@intFromEnum(E.a)==7 and @intFromEnum(E.b)==8)0 else 256;_=check;}\n", NULL},
+		/* type-alias */
+		{"const E=enum(u8){a=1,b=7,c=250,};const Alias=E;pub fn main()void{const e:Alias=.b;const check:u8=if(e==E.b and Alias==E)0 else 256;_=check;}\n", NULL},
+		/* namespace-alias */
+		{"const E=enum(u8){a=1,b=7,c=250,};const H=struct{pub const Alias=E;};pub fn main()void{const e:H.Alias=.c;const check:u8=if(e==E.c)0 else 256;_=check;}\n", NULL},
+		/* quoted-field */
+		{"const E=enum(u8){@\"a b\"=1,@\"re\\x61d\"=7,};pub fn main()void{const check:u8=if(@intFromEnum(@field(E,\"a b\"))==1 and E.read==E.@\"re\\x61d\")0 else 256;_=check;}\n", NULL},
+		/* namespace-reflection */
+		{"const E=enum{a,b,pub const answer:u8=9;pub const alias:E=.b;};pub fn main()void{const check:u8=if(@hasField(E,\"a\") and !@hasDecl(E,\"a\") and @hasDecl(E,\"answer\") and !@hasField(E,\"answer\") and E.alias==E.b)0 else 256;_=check;}\n", NULL},
+		/* namespace-function */
+		{"const E=enum(u8){a=7,b,fn get(e:E)u8{return @intFromEnum(e);}};pub fn main()void{_=E.get(.a);}\n", NULL},
+		/* literal-as */
+		{"const E=enum(u8){a=1,b=7,c=250,};pub fn main()void{const e:E=@as(E,.b);const check:u8=if(e==E.b)0 else 256;_=check;}\n", NULL},
+		/* literal-assignment */
+		{"const E=enum(u8){a=1,b=7,c=250,};pub fn main()void{var e:E=.a;e=.c;_= &e;}\n", NULL},
+		/* known-conversion */
+		{"const E=enum(u8){a=1,b=7,c=250,};pub fn main()void{const e:E=@enumFromInt(7);const check:u8=if(e==E.b and @intFromEnum(e)==7)0 else 256;_=check;}\n", NULL},
+		/* known-conversion-typed */
+		{"const E=enum(u8){a=1,b=7,c=250,};pub fn main()void{const n:u16=250;const e:E=@enumFromInt(n);const check:u8=if(e==E.c)0 else 256;_=check;}\n", NULL},
+		/* known-conversion-max64 */
+		{"const E=enum(u64){lo=1,hi=18446744073709551615,};pub fn main()void{const e:E=@enumFromInt(18446744073709551615);const check:u8=if(e==E.hi)0 else 256;_=check;}\n", NULL},
+		/* known-singleton */
+		{"const E=enum{only,};pub fn main()void{const e:E=.only;const check:u8=if(e==E.only and @TypeOf(@intFromEnum(e))==u0 and @intFromEnum(e)==0 and @sizeOf(E)==0 and @alignOf(E)==1 and @bitSizeOf(E)==0)0 else 256;_=check;}\n", NULL},
+		/* known-explicit-u0 */
+		{"const E=enum(u0){only=0,};pub fn main()void{const e:E=@enumFromInt(0);const check:u8=if(e==E.only and @sizeOf(E)==0)0 else 256;_=check;}\n", NULL},
+		/* empty-pointer-lazy */
+		{"const E=enum{};pub fn main()void{const check:u8=if(@sizeOf(*const E)==@sizeOf(usize))0 else 256;_=check;}\n", NULL},
+		/* unused-invalid-tag */
+		{"const E=enum(u8){a=256,b,};pub fn main()void{}\n", NULL},
+		/* invalid-pointer-lazy */
+		{"const E=enum(u8){a=256,b,};pub fn main()void{const check:u8=if(@sizeOf(*const E)==@sizeOf(usize))0 else 256;_=check;}\n", NULL},
+		/* runtime-decode */
+		{"const E=enum(u8){a=1,b=7,c=250,};fn f(n:u16)E{return @enumFromInt(n);}pub fn main()void{_=f(7);}\n", NULL},
+		/* runtime-encode */
+		{"const E=enum(u8){a=1,b=7,c=250,};fn f(e:E)u8{return @intFromEnum(e);}pub fn main()void{_=f(.b);}\n", NULL},
+		/* internal-direct */
+		{"const E=enum(u8){a=1,b=7,c=250,};fn f(e:E)E{return e;}pub fn main()void{_=f(.c);}\n", NULL},
+		/* internal-indirect */
+		{"const E=enum(u8){a=1,b=7,c=250,};fn f(e:E)E{return e;}fn call(p:*const fn(E)E,e:E)E{return p(e);}pub fn main()void{_=call(&f,.c);}\n", NULL},
+		/* struct-default */
+		{"const E=enum(u8){a=1,b=7,c=250,};const H=struct{e:E=.b,};pub fn main()void{const h:H=.{};const check:u8=if(h.e==E.b)0 else 256;_=check;}\n", NULL},
+		/* nested-default */
+		{"const E=enum(u8){a=1,b=7,c=250,};const I=struct{e:E=.c,};const O=struct{i:I=.{},};pub fn main()void{const o:O=.{};const check:u8=if(o.i.e==E.c)0 else 256;_=check;}\n", NULL},
+		/* runtime-struct-field */
+		{"const E=enum(u8){a=1,b=7,c=250,};const H=struct{e:E=.a,};fn f(n:u8)H{return .{.e=@enumFromInt(n)};}pub fn main()void{var h=f(7);h.e=.c;_= &h;}\n", NULL},
+		/* aggregate-ABI */
+		{"const E=enum(u8){a=1,b=7,c=250,};const H=struct{e:E,n:u8,};fn f(h:H)H{return h;}pub fn main()void{_=f(.{.e=.b,.n=3});}\n", NULL},
+		/* array-storage */
+		{"const E=enum(u8){a=1,b=7,c=250,};fn index()usize{return 1;}pub fn main()void{var a:[2]E=.{.a,.b};a[index()]=.c;_= &a;}\n", NULL},
+		/* slice-storage */
+		{"const E=enum(u8){a=1,b=7,c=250,};fn f(s:[]E)void{s[1]=.c;}pub fn main()void{var a:[2]E=.{.a,.b};f(&a);}\n", NULL},
+		/* global-scalar */
+		{"const E=enum(u8){a=1,b=7,c=250,};var g:E=.a;pub fn main()void{g=.b;_=g;}\n", NULL},
+		/* global-struct-array */
+		{"const E=enum(u8){a=1,b=7,c=250,};const H=struct{e:E=.b,};var g:[2]H=.{.{},.{.e=.c}};pub fn main()void{g[0].e=.a;_=g[1];}\n", NULL},
+		/* global-pointer */
+		{"const E=enum(u8){a=1,b=7,c=250,};var g:E=.a;const p:*E=&g;pub fn main()void{p.*=.c;}\n", NULL},
+		/* static-pointer */
+		{"const E=enum(u8){a=1,b=7,c=250,};const e:E=.b;fn f(p:*const E)E{return p.*;}pub fn main()void{_=f(&e);}\n", NULL},
+		/* pointer-qualifiers */
+		{"const E=enum(u8){a=1,b=7,c=250,};fn f(p:*volatile E)u8{return @intFromEnum(p.*);}pub fn main()void{var e:E=.a;_=f(&e);}\n", NULL},
+		/* enum-pointer-identity */
+		{"const E=enum(u8){a=1,b=7,c=250,};pub fn main()void{var e:E=.a;const p:*E=&e;const q:*const E=p;_=p==q;}\n", NULL},
+		/* branch-result */
+		{"const E=enum(u8){a=1,b=7,c=250,};fn f(b:bool)E{return if(b).a else .b;}pub fn main()void{_=f(true);}\n", NULL},
+		/* block-result */
+		{"const E=enum(u8){a=1,b=7,c=250,};fn f(b:bool)E{return blk:{if(b)break :blk .c;break :blk .a;};}pub fn main()void{_=f(false);}\n", NULL},
+		/* u9-runtime */
+		{"const E=enum(u9){a=1,b=257,c=511,};fn f(n:u16)u9{const e:E=@enumFromInt(n);return @intFromEnum(e);}pub fn main()void{_=f(257);}\n", NULL},
+		/* u33-runtime */
+		{"const E=enum(u33){a=1,b=4294967297,c=8589934591,};fn f(n:u64)u33{const e:E=@enumFromInt(n);return @intFromEnum(e);}pub fn main()void{_=f(4294967297);}\n", NULL},
+		/* u64-runtime */
+		{"const E=enum(u64){a=1,b=9223372036854775808,c=18446744073709551615,};fn f(n:u64)u64{const e:E=@enumFromInt(n);return @intFromEnum(e);}pub fn main()void{_=f(18446744073709551615);}\n", NULL},
+		/* callback-liveness */
+		{"const E=enum(u8){a=1,b=7,c=250,};fn f(e:E)E{return e;}const H=struct{cb:*const fn(E)E=&f,};pub fn main()void{const h:H=.{};_=h.cb(.b);}\n", NULL},
+		/* error/nominal */
+		{"const E=enum{a,b,};const F=enum{a,b,};pub fn main()void{const e:E=F.a;_=e;}\n", "expected type 'test.E', found 'test.F'"},
+		/* error/integer-to-enum */
+		{"const E=enum(u8){a=1,b=7,c=250,};pub fn main()void{const e:E=7;_=e;}\n", "expected type 'test.E', found 'comptime_int'"},
+		/* error/enum-to-integer */
+		{"const E=enum(u8){a=1,b=7,c=250,};pub fn main()void{const n:u8=E.b;_=n;}\n", "expected type 'u8', found 'test.E'"},
+		/* error/missing-literal */
+		{"const E=enum(u8){a=1,b=7,c=250,};pub fn main()void{const e:E=.missing;_=e;}\n", "enum 'test.E' has no member named 'missing'"},
+		/* error/missing-type-field */
+		{"const E=enum(u8){a=1,b=7,c=250,};pub fn main()void{_=E.missing;}\n", "enum 'test.E' has no member named 'missing'"},
+		/* error/missing-builtin-field */
+		{"const E=enum(u8){a=1,b=7,c=250,};pub fn main()void{_=@field(E,\"missing\");}\n", "enum 'test.E' has no member named 'missing'"},
+		/* error/known-hole */
+		{"const E=enum(u8){a=1,b=7,c=250,};pub fn main()void{const e:E=@enumFromInt(2);_=e;}\n", "enum 'test.E' has no tag with value '2'"},
+		/* error/known-width */
+		{"const E=enum(u8){a=1,b=7,c=250,};pub fn main()void{const e:E=@enumFromInt(257);_=e;}\n", "enum 'test.E' has no tag with value '257'"},
+		/* error/known-negative */
+		{"const E=enum(u8){a=1,b=7,c=250,};pub fn main()void{const e:E=@enumFromInt(-1);_=e;}\n", "enum 'test.E' has no tag with value '-1'"},
+		/* error/known-undefined */
+		{"const E=enum(u8){a=1,b=7,c=250,};pub fn main()void{const e:E=@enumFromInt(@as(u8,undefined));_=e;}\n", "use of undefined value here causes illegal behavior"},
+		/* error/from-noninteger */
+		{"const E=enum(u8){a=1,b=7,c=250,};pub fn main()void{const e:E=@enumFromInt(true);_=e;}\n", "expected integer type, found 'bool'"},
+		/* error/from-no-context */
+		{"const E=enum(u8){a=1,b=7,c=250,};pub fn main()void{_=@enumFromInt(7);}\n", "@enumFromInt must have a known result type"},
+		/* error/from-wrong-context */
+		{"pub fn main()void{const n:u8=@enumFromInt(1);_=n;}\n", "expected enum, found 'u8'"},
+		/* error/intFrom-literal */
+		{"pub fn main()void{_=@intFromEnum(.a);}\n", "expected enum or tagged union, found '@EnumLiteral()'"},
+		/* error/intFrom-integer */
+		{"pub fn main()void{_=@intFromEnum(@as(u8,1));}\n", "expected enum or tagged union, found 'u8'"},
+		/* error/duplicate-tags */
+		{"const E=enum(u8){a=7,b=7,};pub fn main()void{_=@sizeOf(E);}\n", "enum tag value '7' for field 'b' already taken"},
+		/* error/duplicate-names */
+		{"const E=enum{a,a,};pub fn main()void{_=@sizeOf(E);}\n", "duplicate enum member name 'a'"},
+		/* error/valued-inferred */
+		{"const E=enum{a=7,b,};pub fn main()void{_=@sizeOf(E);}\n", "explicitly valued enum missing integer tag type"},
+		/* error/implicit-overflow */
+		{"const E=enum(u1){a,b,c,};pub fn main()void{_=@sizeOf(E);}\n", "enum tag value '2' too large for type 'u1'"},
+		/* error/explicit-overflow */
+		{"const E=enum(u8){a=256,b,};pub fn main()void{_=@sizeOf(E);}\n", "type 'u8' cannot represent integer value '256'"},
+		/* error/negative-tag */
+		{"const E=enum(u8){a=-1,b,};pub fn main()void{_=@sizeOf(E);}\n", "type 'u8' cannot represent integer value '-1'"},
+		/* error/noninteger-backing */
+		{"const E=enum(bool){a,b,};pub fn main()void{_=@sizeOf(E);}\n", "expected integer tag type, found 'bool'"},
+		/* error/empty-size */
+		{"const E=enum{};pub fn main()void{_=@sizeOf(E);}\n", "no size available for uninstantiable type 'test.E'"},
+		/* error/empty-align */
+		{"const E=enum{};pub fn main()void{_=@alignOf(E);}\n", "no align available for uninstantiable type 'test.E'"},
+		/* error/empty-explicit-integer */
+		{"const E=enum(u8){};pub fn main()void{_=@sizeOf(E);}\n", "empty exhaustive enums must be backed by 'noreturn'"},
+		/* error/const-mutation */
+		{"const E=enum(u8){a=1,b=7,c=250,};pub fn main()void{const e:E=.a;e=.b;}\n", "cannot assign to constant"},
+		/* error/wrong-argument-nominal */
+		{"const E=enum(u8){a=1,b=7,c=250,};const F=enum(u8){a=1,b=7,c=250,};fn f(e:E)void{_=e;}pub fn main()void{f(F.a);}\n", "expected type 'test.E', found 'test.F'"},
+		/* error/wrong-argument-count */
+		{"const E=enum(u8){a=1,b=7,c=250,};fn f(e:E)void{_=e;}pub fn main()void{f();}\n", "expected 1 argument(s), found 0"},
+		/* error/struct-default-wrong */
+		{"const E=enum(u8){a=1,b=7,c=250,};const F=enum{a,b,};const H=struct{e:E=F.a,};pub fn main()void{const h:H=.{};_=h;}\n", "expected type 'test.E', found 'test.F'"},
+		/* scope/signed-tag */
+		{"const E=enum(i8){a=-1,b,c,};pub fn main()void{_=@sizeOf(E);}", "not supported by szc yet:"},
+		/* scope/wide-tag */
+		{"const E=enum(u65){a=1,b=18446744073709551617,};pub fn main()void{_=@sizeOf(E);}", "not supported by szc yet:"},
+		/* scope/nonexhaustive */
+		{"const E=enum(u8){a=1,_,};pub fn main()void{const e:E=@enumFromInt(7);_=e;}", "not supported by szc yet:"},
+		/* scope/singleton-runtime */
+		{"const E=enum{only,};fn f(n:u8)E{return @enumFromInt(n);}pub fn main()void{_=f(0);}", "not supported by szc yet:"},
+		/* scope/singleton-storage */
+		{"const E=enum{only,};var e:E=.only;pub fn main()void{const p:*E=&e;_=p;}", "not supported by szc yet:"},
+		/* scope/C-export */
+		{"const E=enum(u8){a,b,};export fn f(e:E)u8{return @intFromEnum(e);}pub fn main()void{}", "not supported by szc yet:"},
+		/* scope/C-extern */
+		{"const E=enum(u8){a,b,};extern fn f(e:E)u8;pub fn main()void{_=f(.a);}", "not supported by szc yet:"},
+		/* scope/memory-memcpy */
+		{"const E=enum(u8){a,b,};pub fn main()void{var a:[2]E=.{.a,.b};const b:[2]E=.{.b,.a};@memcpy(&a,&b);}", "not supported by szc yet:"},
+		/* scope/memory-memset */
+		{"const E=enum(u8){a,b,};pub fn main()void{var a:[2]E=.{.a,.b};@memset(&a,.b);}", "not supported by szc yet:"},
+		/* scope/sentinel */
+		{"const E=enum(u8){a,b,};pub fn main()void{const a:[2:.a]E=.{.b,.b};_= &a;}", "not supported by szc yet:"},
+		/* scope/bitcast */
+		{"const E=enum(u8){a=1,b=7,};pub fn main()void{const n:u8=@bitCast(E.a);_=n;}", "not supported by szc yet:"},
+		/* scope/method */
+		{"const E=enum(u8){a,b,fn get(e:E)u8{return @intFromEnum(e);}};pub fn main()void{const e:E=.a;_=e.get();}", "not supported by szc yet:"},
+		/* scope/generic */
+		{"const E=enum(u8){a,b,};fn f(e:anytype)u8{return @intFromEnum(e);}pub fn main()void{_=f(E.a);}", "not supported by szc yet:"},
+		/* scope/comptime-call */
+		{"const E=enum(u8){a,b,};fn f(e:E)u8{return @intFromEnum(e);}const n=f(.b);pub fn main()void{_=n;}", "not supported by szc yet:"},
+		/* scope/explicit-callconv */
+		{"const E=enum(u8){a,b,};fn f(e:E)callconv(.c)u8{return @intFromEnum(e);}pub fn main()void{_=f(.a);}", "not supported by szc yet:"},
+		/* cycle/self-size */
+		{"const E=enum(u8){a=@sizeOf(@This()),b};pub fn main()void{_=E.a;}\n", "depends on itself"},
+		/* cycle/prior-tag */
+		{"const E=enum(u8){a=1,b=@intFromEnum(E.a)+1};pub fn main()void{_=E.b;}\n", "depends on itself"},
+		/* lazy-pointee-load */
+		{"const E=enum(u8){a,b};export fn read(p:*const E)u8{return @intFromEnum(p.*);}pub fn main()void{}", NULL},
+		/* lazy-array-load */
+		{"const E=enum(u8){a,b};export fn read(p:*const [2]E)u8{return @intFromEnum(p[1]);}pub fn main()void{}", NULL},
+		/* literal-destination */
+		{"const L=@TypeOf(.a);const x:L=.b;pub fn main()void{const n:u8=if(x==.b)0 else 256;_=n;}", NULL},
+		/* Typed indirect C signatures must not use the private enum ABI. */
+		{"const E=enum(u8){a,b};extern fn external(E)E;fn call(p:*const @TypeOf(external),e:E)E{return p(e);}pub fn main()void{_= &call;}", "not supported by szc yet: enum values in C function signatures"},
+		/* nominal undefined comparisons propagate until consumed */
+		{"const E=enum{a,b};const x:E=undefined;pub fn main()void{_=x==E.a;}", NULL},
+		{"const E=enum{a,b};const x:E=undefined;pub fn main()void{const n:u8=if(x==E.a)0 else 256;_=n;}", "use of undefined value here causes illegal behavior"},
+		/* literal-undefined */
+		{"const L=@TypeOf(.a);const x:L=undefined;pub fn main()void{_=x==.a;}", NULL},
+		{"const L=@TypeOf(.a);const x:L=undefined;pub fn main()void{const n:u8=if(x==.a)0 else 256;_=n;}", "use of undefined value here causes illegal behavior"},
+		{"const L=@TypeOf(.a);const x:L=undefined;pub fn main()void{const n:u8=if(x==x)0 else 256;_=n;}", "use of undefined value here causes illegal behavior"},
+	};
+	for (uint32_t i = 0; i < sizeof(cases) / sizeof(cases[0]); i++) {
+		Arena arena;
+		arena_init(&arena);
+		SourceTable sources;
+		source_table_init(&sources, &arena);
+		Diag diag;
+		diag_init(&diag, &arena, &sources);
+		Interner interner;
+		intern_init(&interner, &arena);
+		const char *source = cases[i].source;
+		FileId file = source_add_memory(&sources, "test.zig", source, (uint32_t)strlen(source));
+		AstContainerDecl *root = parse_file(&arena, &diag, &sources, file);
+		IrFile *ir = irgen_file(&arena, &diag, &interner, source_get(&sources, file), file, root);
+		Sema *sema = sema_create(&arena, &diag, &interner, &sources);
+		bool success = !diag_has_errors(&diag) && sema_analyze_executable(sema, file, ir);
+		CHECK(success == (cases[i].error == NULL));
+		if (cases[i].error != NULL) {
+			CHECK(diag.count != 0 && strstr(diag.items[0].message, cases[i].error) != NULL);
+		} else if (success) {
+			FILE *output = tmpfile();
+			FILE *assembly = tmpfile();
+			CHECK(output != NULL && assembly != NULL);
+			if (output != NULL && assembly != NULL)
+				CHECK(codegen_qbe(output, assembly, sema, &diag));
+			if (output != NULL)
+				fclose(output);
+			if (assembly != NULL)
+				fclose(assembly);
+		}
+		arena_free(&arena);
+	}
+}
+
 static void
 test_struct_methods(void)
 {
@@ -5089,6 +5719,11 @@ main(void)
 	test_struct_mutable_globals();
 	test_struct_defaults();
 	test_struct_methods();
+	test_enum_value_interning();
+	test_enum_frontend_ir();
+	test_enum_values();
+	test_enum_layout_api();
+	test_enum_codegen_budget();
 	test_struct_field_call_ir();
 	test_struct_defaults_work();
 	test_struct_default_type_ir();

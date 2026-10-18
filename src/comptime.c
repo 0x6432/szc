@@ -529,6 +529,12 @@ value_hash(const Value *value)
 		for (uint32_t i = 0; i < value->as.integer.limb_count; i++)
 			hash = hash_mix(hash, value->as.integer.limbs[i]);
 		break;
+	case VALUE_ENUM:
+		hash = hash_mix(hash, value->as.enum_tag);
+		break;
+	case VALUE_ENUM_LITERAL:
+		hash = hash_mix(hash, value->as.enum_literal);
+		break;
 	case VALUE_TYPE:
 		hash = hash_mix(hash, value->as.type_value);
 		break;
@@ -605,6 +611,10 @@ value_equal(const Value *a, const Value *b)
 		return a->as.boolean == b->as.boolean;
 	case VALUE_INT:
 		return bigint_compare(&a->as.integer, &b->as.integer) == 0;
+	case VALUE_ENUM:
+		return a->as.enum_tag == b->as.enum_tag;
+	case VALUE_ENUM_LITERAL:
+		return a->as.enum_literal == b->as.enum_literal;
 	case VALUE_TYPE:
 		return a->as.type_value == b->as.type_value;
 	case VALUE_GLOBAL:
@@ -813,6 +823,22 @@ value_struct(ValueTable *table, TypeId type, const ValueId *fields, uint32_t cou
 	Value value = make_value(VALUE_STRUCT, type);
 	value.as.structure.fields = fields;
 	value.as.structure.count = count;
+	return value_intern(table, &value);
+}
+
+ValueId
+value_enum(ValueTable *table, TypeId type, ValueId tag)
+{
+	Value value = make_value(VALUE_ENUM, type);
+	value.as.enum_tag = tag;
+	return value_intern(table, &value);
+}
+
+ValueId
+value_enum_literal(ValueTable *table, TypeId type, StringId name)
+{
+	Value value = make_value(VALUE_ENUM_LITERAL, type);
+	value.as.enum_literal = name;
 	return value_intern(table, &value);
 }
 

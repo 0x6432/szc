@@ -1,0 +1,108 @@
+%66 = struct_decl (flags=0) {
+  decl const "E" value {
+    %1 = enum_decl (flags=1) {
+       tag_type {
+        %0 = break_inline result, @type_u1
+      }
+      field "a"
+      field "b"
+    }
+    %2 = break_inline result, %1
+  }
+  decl fn "flip" value {
+    %19 = func "flip" {
+      %6 = param "e" type {
+        %3 = decl_val "E"
+        %4 = as @type_type, %3
+        %5 = break_inline result, %4
+      }
+      ret type {
+        %7 = decl_val "E"
+        %8 = as @type_type, %7
+        %9 = break_inline result, %8
+      }
+      body insts {
+        %10 = ret_type
+        %11 = enum_literal "a"
+        %12 = cmp_eq %6, %11
+        %17 = if %12 then {
+          %13 = decl_literal "b", %10
+          %14 = break_inline result, %13
+        } else {
+          %15 = decl_literal "a", %10
+          %16 = break_inline result, %15
+        }
+        %18 = ret %17
+      }
+    }
+    %20 = break_inline result, %19
+  }
+  decl fn "call" value {
+    %48 = func "call" {
+      %33 = param "p" type {
+        %28 = fn_type "" {
+          %24 = param "" type {
+            %21 = decl_val "E"
+            %22 = as @type_type, %21
+            %23 = break_inline result, %22
+          }
+          ret type {
+            %25 = decl_val "E"
+            %26 = as @type_type, %25
+            %27 = break_inline result, %26
+          }
+        }
+        %29 = as @type_type, %28
+        %30 = ptr_type %29, @true
+        %31 = as @type_type, %30
+        %32 = break_inline result, %31
+      }
+      %37 = param "e" type {
+        %34 = decl_val "E"
+        %35 = as @type_type, %34
+        %36 = break_inline result, %35
+      }
+      ret type {
+        %38 = decl_val "E"
+        %39 = as @type_type, %38
+        %40 = break_inline result, %39
+      }
+      body insts {
+        %41 = ret_type
+        %42 = call %33 arg0 {
+          %43 = arg_type %42, 0
+          %44 = as %43, %37
+          %45 = break_inline result, %44
+        }
+        %46 = as_return %41, %42
+        %47 = ret %46
+      }
+    }
+    %49 = break_inline result, %48
+  }
+  decl fn "main" pub value {
+    %64 = func "main" {
+      ret type {
+        %50 = break_inline result, @type_u8
+      }
+      body insts {
+        %51 = ret_type
+        %52 = decl_val "call"
+        %53 = call %52 arg0 {
+          %54 = arg_type %53, 0
+          %55 = decl_ref "flip"
+          %56 = as %54, %55
+          %57 = break_inline result, %56
+        } arg1 {
+          %58 = arg_type %53, 1
+          %59 = decl_literal "a", %58
+          %60 = break_inline result, %59
+        }
+        %61 = int_from_enum %53
+        %62 = as_return %51, %61
+        %63 = ret %62
+      }
+    }
+    %65 = break_inline result, %64
+  }
+}

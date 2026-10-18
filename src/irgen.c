@@ -599,7 +599,9 @@ is_coerced_to(const GenBody *body, IrRef value, IrRef type)
 		return true;
 	if (type == IR_REF_TYPE_BOOL && inst->op >= IR_CMP_EQ && inst->op <= IR_CMP_GTE)
 		return true;
-	if ((inst->op == IR_BIT_CAST || inst->op == IR_INT_CAST || inst->op == IR_TRUNCATE || inst->op == IR_PTR_FROM_INT) && inst->data.bin.lhs == type)
+	if ((inst->op == IR_BIT_CAST || inst->op == IR_INT_CAST || inst->op == IR_TRUNCATE || inst->op == IR_PTR_FROM_INT || inst->op == IR_ENUM_FROM_INT) && inst->data.bin.lhs == type)
+		return true;
+	if (inst->op == IR_DECL_LITERAL && inst->data.name.operand == type)
 		return true;
 	return false;
 }
@@ -995,7 +997,7 @@ lvalue(GenBody *body, Scope *scope, AstNode *node)
 		StringId name = intern_span(gen, identifier_node->name);
 		Lookup found = lookup_name(scope, name);
 		if (field_capture_allowed(body, found)) {
-			error_at(gen, node->offset, "cannot assign to constant '%s'", intern_text(gen->interner, name));
+			error_at(gen, node->offset, "%s", "cannot assign to constant");
 			return IR_REF_VOID_VALUE;
 		}
 		if (check_capture(gen, found, node->offset))
@@ -1003,7 +1005,7 @@ lvalue(GenBody *body, Scope *scope, AstNode *node)
 		if (found.kind == LOOKUP_LOCAL) {
 			if (found.local->local_kind == LOCAL_VAR)
 				return found.local->ref;
-			error_at(gen, node->offset, "cannot assign to constant '%s'", intern_text(gen->interner, name));
+			error_at(gen, node->offset, "%s", "cannot assign to constant");
 			return IR_REF_VOID_VALUE;
 		}
 		if (found.kind == LOOKUP_DECL)
@@ -1283,6 +1285,7 @@ typedef enum Builtin {
 	BUILTIN_AS,
 	BUILTIN_BIT_CAST,
 	BUILTIN_INT_CAST,
+	BUILTIN_ENUM_FROM_INT,
 	BUILTIN_TRUNCATE,
 	BUILTIN_INT_FROM_BOOL,
 	BUILTIN_INT_FROM_PTR,
@@ -1324,6 +1327,8 @@ static const BuiltinInfo builtin_table[] = {
 	{"as", BUILTIN_AS, 2, IR_OP_COUNT},
 	{"bitCast", BUILTIN_BIT_CAST, 1, IR_OP_COUNT},
 	{"intCast", BUILTIN_INT_CAST, 1, IR_OP_COUNT},
+	{"enumFromInt", BUILTIN_ENUM_FROM_INT, 1, IR_OP_COUNT},
+	{"intFromEnum", BUILTIN_INT_BITS, 1, IR_INT_FROM_ENUM},
 	{"truncate", BUILTIN_TRUNCATE, 1, IR_OP_COUNT},
 	{"intFromBool", BUILTIN_INT_FROM_BOOL, 1, IR_OP_COUNT},
 	{"alignCast", BUILTIN_ALIGN_CAST, 1, IR_ALIGN_CAST},
@@ -1616,6 +1621,7 @@ builtin_call(GenBody *body, Scope *scope, ResultInfo info, AstNode *node)
 	case BUILTIN_BIT_CAST:
 	case BUILTIN_PTR_FROM_INT:
 	case BUILTIN_INT_CAST:
+	case BUILTIN_ENUM_FROM_INT:
 	case BUILTIN_TRUNCATE: {
 		IrRef type = cast_result_type(body, info, node, builtin->name);
 		IrRef operand = expr(body, scope, result_none, args[0]);
@@ -1623,6 +1629,7 @@ builtin_call(GenBody *body, Scope *scope, ResultInfo info, AstNode *node)
 			return IR_REF_VOID_VALUE;
 		IrOp op = builtin->builtin == BUILTIN_BIT_CAST ? IR_BIT_CAST
 			: builtin->builtin == BUILTIN_PTR_FROM_INT ? IR_PTR_FROM_INT
+			: builtin->builtin == BUILTIN_ENUM_FROM_INT ? IR_ENUM_FROM_INT
 			: builtin->builtin == BUILTIN_INT_CAST ? IR_INT_CAST : IR_TRUNCATE;
 		return emit_bin(body, op, node->offset, type, operand);
 	}
@@ -2287,6 +2294,13 @@ expr(GenBody *body, Scope *scope, ResultInfo info, AstNode *node)
 		return rvalue(body, info, string_literal(body, node), node->offset);
 	case AST_MULTILINE_STRING_LITERAL:
 		return rvalue(body, info, multiline_literal(body, node), node->offset);
+	case AST_ENUM_LITERAL: {
+		StringId name = intern_span(body->gen, AST_CAST(AstNamedValue, node, AST_ENUM_LITERAL)->name);
+		if (info.kind == RESULT_NONE)
+			return emit_name(body, IR_ENUM_LITERAL, node->offset, name, IR_REF_NONE);
+		IrRef type = cast_result_type(body, info, node, "enum literal");
+		return emit_name(body, IR_DECL_LITERAL, node->offset, name, type);
+	}
 	case AST_NUMBER_LITERAL:
 		return rvalue(body, info, number_literal(body, node), node->offset);
 	case AST_IDENTIFIER:
@@ -2731,7 +2745,12 @@ container_decl(GenBody *body, Scope *scope, AstContainerDecl *decl, StringId nam
 {
 	IrGen *gen = body->gen;
 	(void)name;
-	if (decl->container_kind != AST_CONTAINER_STRUCT || decl->layout != AST_LAYOUT_AUTO || decl->arg != NULL) {
+	bool is_enum = decl->container_kind == AST_CONTAINER_ENUM;
+	if (is_enum && decl->layout != AST_LAYOUT_AUTO) {
+		error_at(gen, decl->base.offset, "%s", "enums do not support 'packed' or 'extern'; instead provide an explicit integer tag type");
+		return IR_REF_VOID_VALUE;
+	}
+	if (!is_enum && (decl->container_kind != AST_CONTAINER_STRUCT || decl->layout != AST_LAYOUT_AUTO || decl->arg != NULL)) {
 		unsupported(body, &decl->base, "this kind of container");
 		return IR_REF_VOID_VALUE;
 	}
@@ -2761,12 +2780,20 @@ container_decl(GenBody *body, Scope *scope, AstContainerDecl *decl, StringId nam
 		AstNode *member = decl->members.items[i];
 		uint32_t src;
 		StringId member_name_id = member_name(gen, member, &src);
+		if (is_enum && member->kind == AST_CONTAINER_FIELD) {
+			AstContainerField *field = AST_CAST(AstContainerField, member, AST_CONTAINER_FIELD);
+			if (!field->has_name && field->type != NULL && field->type->kind == AST_IDENTIFIER) {
+				Span field_name = AST_CAST(AstIdentifier, field->type, AST_IDENTIFIER)->name;
+				src = field_name.start;
+				member_name_id = intern_span(gen, field_name);
+			}
+		}
 		member_names[i] = member_name_id;
 		member_srcs[i] = src;
 		if (member_name_id != STRING_NONE) {
 			for (uint32_t j = 0; j < i; j++) {
 				if (member_names[j] == member_name_id) {
-					error_at(gen, member_srcs[j], "duplicate struct member name '%s'", intern_text(gen->interner, member_name_id));
+					error_at(gen, member_srcs[j], is_enum ? "duplicate enum member name '%s'" : "duplicate struct member name '%s'", intern_text(gen->interner, member_name_id));
 					break;
 				}
 			}
@@ -2783,6 +2810,66 @@ container_decl(GenBody *body, Scope *scope, AstContainerDecl *decl, StringId nam
 		namespace_scope.name_count = namespace_scope.name_count + 1;
 	}
 
+	/* Enum syntax is validated before generating any type or tag expression. */
+	if (is_enum) {
+		for (uint32_t i = 0; i < decl->members.count; i++) {
+			AstNode *member = decl->members.items[i];
+			if (member->kind != AST_CONTAINER_FIELD)
+				continue;
+			AstContainerField *field = AST_CAST(AstContainerField, member, AST_CONTAINER_FIELD);
+			const char *message = NULL;
+			uint32_t src = member->offset;
+			if (member_names[i] == STRING_NONE)
+				message = "enum field missing name";
+			else if (field->is_comptime)
+				message = "enum fields cannot be marked comptime";
+			else if (field->has_name) {
+				message = "enum fields do not have types";
+				src = field->type->offset;
+			} else if (field->align != NULL) {
+				message = "enum fields cannot be aligned";
+				src = field->align->offset;
+			} else if (field->type->kind == AST_IDENTIFIER) {
+				Span field_name = AST_CAST(AstIdentifier, field->type, AST_IDENTIFIER)->name;
+				if (field_name.end - field_name.start == 1 && gen->source[field_name.start] == '_') {
+					if (field->default_value != NULL) {
+						message = "'_' is used to mark an enum as non-exhaustive and cannot be assigned a value";
+						src = field->default_value->offset;
+					} else {
+						for (uint32_t j = i + 1; j < decl->members.count; j++)
+							if (decl->members.items[j]->kind == AST_CONTAINER_FIELD) {
+								message = "'_' field of non-exhaustive enum must be last";
+								break;
+							}
+					}
+					if (message == NULL && decl->arg == NULL) {
+						message = "non-exhaustive enum missing integer tag type";
+						src = decl->base.offset;
+					} else if (message == NULL) {
+						unsupported(body, member, "non-exhaustive enums");
+						return IR_REF_VOID_VALUE;
+					}
+				}
+			}
+			if (message == NULL && field->default_value != NULL && decl->arg == NULL) {
+				message = "explicitly valued enum missing integer tag type";
+				src = decl->base.offset;
+			}
+			if (message != NULL) {
+				error_at(gen, src, "%s", message);
+				return IR_REF_VOID_VALUE;
+			}
+		}
+	}
+	IrBody arg_body = 0;
+	if (is_enum && decl->arg != NULL) {
+		GenBody type_body;
+		body_init(&type_body, gen, &namespace_scope.base, true);
+		IrRef type = type_expr(&type_body, &type_body.base, decl->arg);
+		emit_break(&type_body, IR_BREAK_INLINE, decl->arg->offset, IR_BODY_RESULT, type);
+		arg_body = body_finish(&type_body);
+	}
+
 	IrField *fields = arena_zalloc(gen->arena, (field_count + 1) * sizeof(IrField), alignof(IrField));
 	uint32_t field_index = 0;
 	decl_index = 0;
@@ -2796,6 +2883,18 @@ container_decl(GenBody *body, Scope *scope, AstContainerDecl *decl, StringId nam
 			field_index = field_index + 1;
 			out->name = member_names[i];
 			out->src = member->offset;
+			if (is_enum) {
+				out->src = member_srcs[i];
+				if (field->default_value != NULL) {
+					GenBody tag_body;
+					body_init(&tag_body, gen, member_scope, true);
+					IrRef type_hint = emit_none(&tag_body, IR_ENUM_TAG_TYPE, field->default_value->offset);
+					IrRef value = expr(&tag_body, &tag_body.base, result_coerced_type(type_hint), field->default_value);
+					emit_break(&tag_body, IR_BREAK_INLINE, field->default_value->offset, IR_BODY_RESULT, value);
+					out->default_body = body_finish(&tag_body);
+				}
+				continue;
+			}
 			out->flags = IR_FIELD_HAS_TYPE | (field->is_comptime ? IR_FIELD_COMPTIME : 0);
 			GenBody type_body;
 			body_init(&type_body, gen, member_scope, true);
@@ -2870,7 +2969,7 @@ container_decl(GenBody *body, Scope *scope, AstContainerDecl *decl, StringId nam
 
 	IrContainerHeader header;
 	header.flags = (uint32_t)decl->container_kind | ((uint32_t)decl->layout << IR_CONTAINER_LAYOUT_SHIFT);
-	header.arg_body = 0;
+	header.arg_body = arg_body;
 	header.field_count = field_count;
 	header.decl_count = decl_count;
 	uint32_t payload = APPEND_EXTRA(gen, header);
@@ -2878,7 +2977,7 @@ container_decl(GenBody *body, Scope *scope, AstContainerDecl *decl, StringId nam
 		APPEND_EXTRA(gen, fields[i]);
 	for (uint32_t i = 0; i < decl_count; i++)
 		APPEND_EXTRA(gen, decls[i]);
-	return emit_payload(body, IR_STRUCT_DECL, decl->base.offset, payload);
+	return emit_payload(body, is_enum ? IR_ENUM_DECL : IR_STRUCT_DECL, decl->base.offset, payload);
 }
 
 /* ---------- Entry point ---------- */
@@ -3041,6 +3140,11 @@ dump_struct_decl(const IrDumper *dumper, uint32_t payload, uint32_t depth)
 	IR_READ(ir, payload, &header);
 	uint32_t index = payload + IR_WORDS(IrContainerHeader);
 	fprintf(dumper->out, "(flags=%" PRIu32 ") {\n", header.flags);
+	if (header.arg_body != 0) {
+		dump_indent(dumper, depth + 1);
+		dump_labeled_body(dumper, "tag_type", header.arg_body, depth + 1);
+		fputc('\n', dumper->out);
+	}
 	for (uint32_t i = 0; i < header.field_count; i++) {
 		IrField field;
 		IR_READ(ir, index, &field);
@@ -3169,6 +3273,7 @@ dump_inst(const IrDumper *dumper, IrInstIndex index, uint32_t depth)
 	dump_indent(dumper, depth);
 	fprintf(out, "%%%" PRIu32 " = %s", index, ir_op_name(inst->op));
 	switch (inst->op) {
+	case IR_ENUM_DECL:
 	case IR_STRUCT_DECL:
 		fputc(' ', out);
 		dump_struct_decl(dumper, inst->data.payload, depth);

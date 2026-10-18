@@ -109,6 +109,7 @@ e2e-native-test: build/asan/szc $(GENERATED_RUN_TESTS)
 	python3 tools/check_struct_mutable_global_unsupported.py build/asan/szc
 	python3 tools/check_struct_defaults_unsupported.py build/asan/szc
 	python3 tools/check_struct_methods_unsupported.py build/asan/szc
+	python3 tools/check_enum_unsupported.py build/asan/szc
 	python3 tests/run_safety_partition.py
 	./tests/run_e2e.sh build/asan/szc tests/run/*.zig $(GENERATED_RUN_TESTS)
 	env -u ZIG ./tests/run_e2e.sh build/asan/szc tests/run_szc/*.zig

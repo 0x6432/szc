@@ -53,6 +53,7 @@ typedef uint32_t TirBody;	/* extra index of a body, 0 = none */
 	X(NEGATE_WRAP, "negate_wrap") \
 	X(PTR_CAST, "ptr_cast")	/* un: representation-preserving thin pointer cast */ \
 	X(BIT_CAST, "bit_cast")	/* un: equal-width scalar bit representation */ \
+	X(ENUM_FROM_INT, "enum_from_int") /* un: original integer -> checked nominal enum */ \
 	X(INT_CAST, "int_cast")	/* un: widen/narrow integer to `type` */ \
 	X(TRUNCATE, "truncate")	/* un: discard high integer bits */ \
 	X(COPY_LEN_CHECK, "copy_len_check") /* bin: equal logical lengths */ \

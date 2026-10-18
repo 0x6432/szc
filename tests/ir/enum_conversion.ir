@@ -1,0 +1,64 @@
+%35 = struct_decl (flags=0) {
+  decl const "E" value {
+    %10 = enum_decl (flags=1) {
+       tag_type {
+        %0 = break_inline result, @type_u8
+      }
+      field "small" default {
+        %1 = enum_tag_type
+        %2 = int 1
+        %3 = break_inline result, %2
+      }
+      field "mid" default {
+        %4 = enum_tag_type
+        %5 = int 7
+        %6 = break_inline result, %5
+      }
+      field "large" default {
+        %7 = enum_tag_type
+        %8 = int 250
+        %9 = break_inline result, %8
+      }
+    }
+    %11 = break_inline result, %10
+  }
+  decl fn "decode" value {
+    %20 = func "decode" noinline {
+      %13 = param "n" type {
+        %12 = break_inline result, @type_u16
+      }
+      ret type {
+        %14 = decl_val "E"
+        %15 = as @type_type, %14
+        %16 = break_inline result, %15
+      }
+      body insts {
+        %17 = ret_type
+        %18 = enum_from_int %17, %13
+        %19 = ret %18
+      }
+    }
+    %21 = break_inline result, %20
+  }
+  decl fn "main" pub value {
+    %33 = func "main" {
+      ret type {
+        %22 = break_inline result, @type_u8
+      }
+      body insts {
+        %23 = ret_type
+        %24 = decl_val "decode"
+        %25 = call %24 arg0 {
+          %26 = arg_type %25, 0
+          %27 = int 7
+          %28 = as %26, %27
+          %29 = break_inline result, %28
+        }
+        %30 = int_from_enum %25
+        %31 = as_return %23, %30
+        %32 = ret %31
+      }
+    }
+    %34 = break_inline result, %33
+  }
+}

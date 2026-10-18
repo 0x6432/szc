@@ -24,6 +24,18 @@ def binary_case(name, integer_type, operator, lhs, rhs, message="integer overflo
 
 
 def cases():
+    # Exhaustive membership is checked in the original source integer domain.
+    for label, source_type, destination, tags, value in (
+        ('hole', 'u16', 'u8', 'one=1,seven=7,last=250', '2'),
+        ('width', 'u16', 'u8', 'one=1,seven=7,last=250', '257'),
+        ('negative', 'i16', 'u8', 'one=1,seven=7,last=250', '-1'),
+        ('high_low_alias', 'u64', 'u64', 'one=1,high=9223372036854775815,last=18446744073709551615', '9223372036854775809'),
+        ('max_hole', 'u64', 'u64', 'one=1,high=9223372036854775815,last=18446744073709551615', '18446744073709551614'),
+    ):
+        yield 'enum_invalid_' + label, (
+            f'const E=enum({destination}){{{tags}}}; '
+            f'noinline fn operation(n:{source_type})E{{return @enumFromInt(n);}} '
+            f'pub fn main()void{{_=operation({value});}}\n'), 'invalid enum value'
     prefix = 'const S=struct { a:u8,b:u64,c:u16, }; '
     yield 'struct_pointer_alignment', prefix + (
         'fn operation(n:usize) void { const p:*S=@ptrFromInt(n); _=p; } '

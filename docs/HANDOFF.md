@@ -24,6 +24,57 @@ Read this first when resuming work (the sandbox resets often).
 
 ## Latest follow-up checkpoint
 
+- M6.2a/b ordinary exhaustive unsigned enums implemented from aa6513c as one
+  nominal foundation + bounded runtime integration batch. TYPE_ENUM/VALUE_ENUM
+  remain nominal, with integer-tag ValueIds, not ordinals. Raw literals have a
+  distinct value kind. Contextual tag expressions and declaration literals use
+  dedicated IR; no struct default/capture or calling-convention expansion.
+- Layout/tag resolution is lazy and atomic. Explicit values precede implicit
+  numbering/duplicate checking; recursive self-metadata/tag access rejects based
+  on actual pinned-binary probes. Empty enums are noreturn/uninstantiable; known
+  u0 singleton values/metadata work, runtime/storage singleton classification is
+  explicitly closed. Metadata APIs never resolve or mutate and preserve outputs
+  on failure. Actual enum loads/indexing demand layout, pointer-only use stays lazy.
+- Runtime widths1..64 use backend-only integer backing classification, complete
+  scalar storage/private ABI consumers and narrow result normalization. Original
+  source width/sign sparse membership is tested BEFORE narrowing; invalid input
+  takes exact `invalid enum value` panic. Enum/literal undefined comparisons
+  propagate typed undefined bool until consumed. Language is_int stays unchanged.
+  C/direct/indirect/varargs, signed/wide/nonexhaustive, enum methods, memory builtins,
+  sentinels and bitcasts remain gated. No OPV or mutable-zero folding expansion.
+- Permanent checks:106 semantic/scope/emission scenarios,17 positive/13 negative
+  frontend protocol cases,4136 interning checks, API and cumulative budget tests.
+  Filtered tags count:999424 scans pass;1000448 across two functions rejects.
+ 18 new stage/error goldens,14 seeds,3 native fixtures/30 checks,5 safety cases.
+  Five reviewed legacy diagnostics advance to existing semantic gates; the named
+  const-assignment wording is aligned without changing source/rejection behavior.
+- Focused reference:80 enums/29 exact errors,15 scope gates,2 cycles,6 safety modes
+  on both compilers; same final native bytes pass official Debug/ReleaseFast6/6.
+  Defaults82/29 with all six ordered diagnostic lists, methods78/33 and ABI62/15
+  regressions pass. Audit evidence covers lazy pointee loads and undefined queries.
+- One grouped final gate: GCC/Clang C11 Werror ASan/UBSan12577 units/1369 goldens,
+ 161+4 natives, full process/driver/C/storage/alignment,106 actual volatile sequences,
+ 308 safety cases. Each compiler20000 standalone mutations/stage, seeds256/256/
+ 166/222. GCC-O2 native/safety/static2/mutable2 physical checks pass. Four fresh
+ 60-second libFuzzer runs1046540/24038/27356/26166 pass. All6501 paths match main
+  and three frozen trees before final README/HANDOFF/MILESTONES edits.
+- Evidence /data/enum-final/{gcc,clang,optimized}, manifest.json,verification.json,
+  provenance.json; /data/enum-final-*.log,/data/enum-regression-*.{json,log}. Frozen
+  validation trees are immutable and must not receive subsequent source edits.
+- Hosted aa6513c run39174648960 last checked QUEUED, not green. Local complete
+  gates do not resolve historical runner timeouts or unclassified failures below.
+  No deadline/assertion weakening or bootstrap/std claim.
+- Next M6.3: source plans /data/switch-{frontend,backend}-next-plan.md, bounded
+  actual24-program contract /data/switch-contract/PLAN.md. Integers/exhaustive enums,
+  inclusive integer-only ranges, all-case validation, deferred arms/joins. Scalar
+  value captures are valid (single-item capture is known even for runtime operand);
+  pointer captures are valid Zig too but can be separately gated. `_` is not else.
+  Agree exact IR/TIR interfaces before scratch edits, integrate one coherent batch
+  and test once at final gate. Q6 remains mandatory at M10.2; continue without
+  pausing for approval, using disjoint agents and parent-owned sema integration.
+
+## Previous follow-up checkpoint (M6.1k, aa6513c)
+
 - M6.1k ordinary instance method-call syntax implemented fromff6d66f as a single
   coherent frontend/binder/common-call batch. FIELD_CALL uses expression reference,
   normalized name/source, modifier and explicit count plus deferred argument bodies.

@@ -1,0 +1,10 @@
+function w $szc.main.1() {
+@start
+	ret 7
+}
+
+export function w $main() {
+@start
+	%status =w call $szc.main.1()
+	ret %status
+}

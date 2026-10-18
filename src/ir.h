@@ -124,6 +124,7 @@ typedef enum IrDataKind {
  */
 #define IR_OP_LIST(X) \
 	/* Declarations and functions */ \
+	X(ENUM_DECL, "enum_decl", IR_DATA_PAYLOAD) /* IrContainerHeader + fields + decls */ \
 	X(STRUCT_DECL, "struct_decl", IR_DATA_PAYLOAD)	/* IrContainerHeader + fields + decls */ \
 	X(FN_TYPE, "fn_type", IR_DATA_PAYLOAD)	/* IrFuncHeader + params; signature only */ \
 	X(FUNC, "func", IR_DATA_PAYLOAD)	/* IrFuncHeader, params, bodies */ \
@@ -138,6 +139,7 @@ typedef enum IrDataKind {
 	X(TYPEOF_BUILTIN, "typeof_builtin", IR_DATA_PAYLOAD) /* IrTypeOf + operands; unevaluated body */ \
 	X(THIS, "this", IR_DATA_NONE)	/* nearest lexical container type */ \
 	X(DECL_TYPE, "decl_type", IR_DATA_NONE)	/* explicit mutable global initializer result type */ \
+	X(ENUM_TAG_TYPE, "enum_tag_type", IR_DATA_NONE) /* current resolved enum backing type in tag body */ \
 	X(FIELD_DEFAULT_TYPE, "field_default_type", IR_DATA_NONE) /* current resolved field type in default body */ \
 	X(FIELD_CAPTURE, "field_capture", IR_DATA_UN) /* immutable local value captured only by field type/default */ \
 	X(DECL_VAL, "decl_val", IR_DATA_NAME)	/* value of the declaration `name` */ \
@@ -147,6 +149,7 @@ typedef enum IrDataKind {
 	X(INT_BIG, "int_big", IR_DATA_PAYLOAD)	/* limb count, then 32-bit limbs, least significant first */ \
 	X(FLOAT, "float", IR_DATA_FLOAT)	/* comptime_float */ \
 	X(STR, "str", IR_DATA_NAME)	/* string literal bytes (interned) */ \
+	X(DECL_LITERAL, "decl_literal", IR_DATA_NAME) /* destination type, contextual name */ \
 	X(ENUM_LITERAL, "enum_literal", IR_DATA_NAME)	/* .name */ \
 	X(INT_TYPE, "int_type", IR_DATA_INT)	/* bit 16 = signed, bits 0..15 = bit count */ \
 	X(ALIGN, "align", IR_DATA_PAYLOAD)	/* comptime u29 byte alignment body */ \
@@ -212,6 +215,8 @@ typedef enum IrDataKind {
 	X(CLZ, "clz", IR_DATA_UN) \
 	X(CTZ, "ctz", IR_DATA_UN) \
 	X(POP_COUNT, "pop_count", IR_DATA_UN) \
+	X(INT_FROM_ENUM, "int_from_enum", IR_DATA_UN) /* enum value -> backing integer */ \
+	X(ENUM_FROM_INT, "enum_from_int", IR_DATA_BIN) /* destination enum type, raw integer */ \
 	X(INT_FROM_BOOL, "int_from_bool", IR_DATA_UN)	/* @intFromBool: u1 */ \
 	/* Arithmetic and logic */ \
 	X(ADD, "add", IR_DATA_BIN) \
@@ -332,7 +337,7 @@ typedef struct IrArrayType {
 	uint32_t	sentinel_src;
 } IrArrayType;
 
-/* STRUCT_DECL: header, then field_count IrField, then decl_count IrDecl. */
+/* STRUCT_DECL / ENUM_DECL: header, then field_count IrField, then decl_count IrDecl. */
 typedef enum IrContainerFlags {
 	IR_CONTAINER_KIND_MASK = 0x3,	/* AstContainerKind */
 	IR_CONTAINER_LAYOUT_SHIFT = 2,	/* AstContainerLayout << 2 */

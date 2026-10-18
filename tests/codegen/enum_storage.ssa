@@ -1,0 +1,47 @@
+function w $szc.main.1() {
+@start
+	%t0 =l call $szc.index.2()
+	%g2_index =w cugel %t0, 2
+	jnz %g2_index, @g2_index_panic, @g2_index_ok
+@g2_index_panic
+	call $szc.panic.7()
+	hlt
+@g2_index_ok
+	%e2_offset =l mul %t0, 16
+	%t2 =l add $szc.g.1, %e2_offset
+	%t3 =l copy %t2
+	storel 4294967297, %t3
+	%t6 =l add $szc.g.1, 16
+	%t7 =l loadl %t6
+	%t7 =l and %t7, 8589934591
+	%t9 =w ceql %t7, 4294967297
+	jnz %t9, @c15_then, @c15_else
+@c15_then
+	%t10 =w copy 0
+	jmp @b10
+@c15_else
+	%t10 =w copy 1
+	jmp @b10
+@b10
+	ret %t10
+}
+
+function l $szc.index.2() {
+@start
+	ret 1
+}
+
+data $szc.g.1 = align 8 { l 4294967297, b 7, z 7, l 1, b 7, z 7 }
+data $szc.panic.msg.7 = { b "index out of bounds\n", b 0 }
+function $szc.panic.7() {
+@start
+	call $write(w 2, l $szc.panic.msg.7, l 20)
+	call $abort()
+	hlt
+}
+
+export function w $main() {
+@start
+	%status =w call $szc.main.1()
+	ret %status
+}

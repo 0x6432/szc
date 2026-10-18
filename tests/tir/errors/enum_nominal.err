@@ -1,0 +1,3 @@
+tests/tir/errors/enum_nominal.zig:1:66: error: expected type 'enum_nominal.E', found 'enum_nominal.F'
+const E=enum{a,b};const F=enum{a,b};pub fn main()void{const e:E=F.a;_=e;}
+                                                                 ^

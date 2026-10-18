@@ -5,6 +5,7 @@
 #include <stdint.h>
 
 #include "arena.h"
+#include "intern.h"
 
 /*
  * Comptime values and arithmetic (comptime.c). Values are structurally interned:
@@ -31,6 +32,8 @@ typedef enum ValueKind {
 	VALUE_VOID,
 	VALUE_BOOL,
 	VALUE_INT,	/* integer of any integer type, including comptime_int */
+	VALUE_ENUM,	/* nominal enum with a sema-validated canonical integer tag ID */
+	VALUE_ENUM_LITERAL,	/* contextual enum name, represented by interned StringId */
 	VALUE_TYPE,
 	VALUE_FUNCTION,
 	VALUE_GLOBAL,	/* stable declaration address; contents resolve separately */
@@ -100,6 +103,8 @@ typedef struct Value {
 	union {
 		bool   boolean;
 		BigInt integer;
+		ValueId enum_tag;
+		StringId enum_literal;
 		TypeId type_value;
 		FuncId function;
 		GlobalId global;
@@ -160,6 +165,9 @@ ValueId value_bool(ValueTable *table, TypeId bool_type, bool value);
 ValueId value_type(ValueTable *table, TypeId type_type, TypeId type);
 ValueId value_int_u64(ValueTable *table, TypeId type, uint64_t value);
 ValueId value_int(ValueTable *table, TypeId type, const BigInt *value);
+/* Sema validates enum membership/tag type and contextual literal type. */
+ValueId value_enum(ValueTable *table, TypeId type, ValueId tag);
+ValueId value_enum_literal(ValueTable *table, TypeId type, StringId name);
 ValueId value_undefined(ValueTable *table, TypeId type);
 ValueId value_function(ValueTable *table, TypeId fn_type, FuncId function);
 

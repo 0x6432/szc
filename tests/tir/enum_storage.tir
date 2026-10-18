@@ -1,0 +1,27 @@
+global szc.g.1: [2]enum_storage.S = array(2 elements)
+fn szc.main.1: fn () u8 {
+  %0: usize = call szc.index.2()
+  %1: *[2]enum_storage.S = const szc.g.1
+  %2: *enum_storage.S = array_elem_ptr %1, %0
+  %3: *enum_storage.E = struct_field_ptr %2, 0
+  %4: enum_storage.E = const enum(enum_storage.E, 4294967297)
+  %5: void = store %3, %4
+  %6: *enum_storage.E = const struct_field(base.20, index.0, offset.16)
+  %7: enum_storage.E = load %6
+  %8: enum_storage.E = const enum(enum_storage.E, 4294967297)
+  %9: bool = cmp_eq %7, %8
+  %10: u8 = block {
+    %15: noreturn = condbr %9 then {
+      %11: u8 = const 0
+      %12: noreturn = br %10, %11
+    } else {
+      %13: u8 = const 1
+      %14: noreturn = br %10, %13
+    }
+  }
+  %16: noreturn = ret %10
+}
+fn szc.index.2: fn () usize {
+  %0: usize = const 1
+  %1: noreturn = ret %0
+}

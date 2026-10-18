@@ -33,6 +33,7 @@ typedef enum TypeKind {
 	TYPE_ARRAY,
 	TYPE_FN,
 	TYPE_STRUCT,
+	TYPE_ENUM,
 	TYPE_ANYOPAQUE,
 	TYPE_ANYERROR,
 	TYPE_NULL,
@@ -94,7 +95,7 @@ typedef struct Type {
 		TypePointer   pointer;
 		TypeArray     array;
 		TypeFn        fn;
-		SemaNamespace *structure;	/* the struct's namespace (nominal type) */
+		SemaNamespace *structure;	/* nominal struct or enum namespace */
 	} as;
 	StringId name;	/* for named types (structs), STRING_NONE otherwise */
 } Type;
@@ -194,6 +195,11 @@ typedef struct SemaStructFieldLayout {
 	TypeId type;
 	uint64_t offset;
 } SemaStructFieldLayout;
+
+/* Read-only enum metadata. Unresolved/failed types return0/false; outputs stay
+ * untouched on failure. Tag IDs are backing integers, not enum wrappers. */
+TypeId sema_enum_tag_type(const Sema *sema, TypeId type);
+bool sema_enum_tags(const Sema *sema, TypeId type, const ValueId **tags, uint32_t *count);
 
 bool sema_struct_layout(const Sema *sema, TypeId type, const uint32_t **order, uint32_t *count);
 bool sema_struct_field_layout(const Sema *sema, TypeId type, uint32_t index, SemaStructFieldLayout *out);

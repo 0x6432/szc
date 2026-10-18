@@ -1,0 +1,41 @@
+function w $szc.main.1() {
+@start
+	%t1 =w call $szc.decode.2(w 7)
+	%t1 =w and %t1, 255
+	%t2 =w copy %t1
+	ret %t2
+}
+
+function w $szc.decode.2(w %t0) {
+@start
+	%g1_enum_match =w copy 0
+	%g1_enum_tag0 =w ceqw %t0, 1
+	%g1_enum_match =w or %g1_enum_match, %g1_enum_tag0
+	%g1_enum_tag1 =w ceqw %t0, 7
+	%g1_enum_match =w or %g1_enum_match, %g1_enum_tag1
+	%g1_enum_tag2 =w ceqw %t0, 250
+	%g1_enum_match =w or %g1_enum_match, %g1_enum_tag2
+	%g1_enum_invalid =w ceqw %g1_enum_match, 0
+	jnz %g1_enum_invalid, @g1_enum_invalid_panic, @g1_enum_invalid_ok
+@g1_enum_invalid_panic
+	call $szc.panic.15()
+	hlt
+@g1_enum_invalid_ok
+	%t1 =w copy %t0
+	%t1 =w and %t1, 255
+	ret %t1
+}
+
+data $szc.panic.msg.15 = { b "invalid enum value\n", b 0 }
+function $szc.panic.15() {
+@start
+	call $write(w 2, l $szc.panic.msg.15, l 19)
+	call $abort()
+	hlt
+}
+
+export function w $main() {
+@start
+	%status =w call $szc.main.1()
+	ret %status
+}

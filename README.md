@@ -59,6 +59,12 @@ widths beyond 64 bits, but runtime
 wide-integer values/arithmetic are still unsupported. Ordinary structs support metadata and physical layout,
 constant and runtime values, typed field pointers, immutable and mutable internal globals,
 private by-value calls/returns, checked ordinary field defaults and call-specific instance methods.
+Ordinary exhaustive nominal enums support inferred/explicit unsigned tags through
+64 bits, contextual literals, metadata, exact integer conversions and checked
+sparse membership before runtime narrowing. Backing widths 1..64 support scalar
+storage, nested aggregates and private calls; known singleton u0 values/metadata
+are supported without opening zero-width runtime storage. Signed/wide and
+non-exhaustive enums, enum methods, enum C ABI and switch remain pending.
 Packed/extern structs, C aggregate ABI, non-scalar sentinels, modules/imports,
 generic functions and the full comptime interpreter remain pending; szc does not yet
 bootstrap Zig.

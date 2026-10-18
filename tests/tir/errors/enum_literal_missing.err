@@ -1,0 +1,3 @@
+tests/tir/errors/enum_literal_missing.zig:1:47: error: enum 'enum_literal_missing.E' has no member named 'missing'
+const E=enum{a,b};pub fn main()void{const e:E=.missing;_=e;}
+                                              ^

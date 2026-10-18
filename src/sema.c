@@ -84,6 +84,8 @@ struct SemaNamespace {
 	FileId        file;
 	IrInstIndex   inst;
 	TypeId        type;
+	TypeId enum_tag_type;
+	ValueId *enum_tags;	/* atomically published backing integer values */
 	SemaDecl      *decls;
 	uint32_t      decl_count;
 	bool					exports_resolved;
@@ -133,6 +135,7 @@ struct Sema {
 	uint32_t runtime_storage_work;
 	uint32_t array_elements;	/* work/storage charged by dense constant construction */
 	uint32_t layout_depth;
+	uint32_t enum_work;
 	SemaNamespace **defaults_queue; /* stable namespaces, never borrowed Type entries */
 	uint32_t defaults_queue_count;
 	uint32_t defaults_queue_capacity;
@@ -198,6 +201,7 @@ typedef struct Block {
 	uint32_t      capacity;
 	ControlTarget *control;
 	TypeId declaration_type;	/* explicit mutable global initializer context */
+	TypeId enum_tag_type;	/* resolved backing type, never the enum under construction */
 	TypeId field_default_type;	/* already resolved definition-context field type */
 } Block;
 
@@ -303,6 +307,7 @@ type_equal(const Type *a, const Type *b)
 		}
 		return true;
 	case TYPE_STRUCT:
+	case TYPE_ENUM:
 		return false;	/* nominal: never interned */
 	default:
 		return true;
@@ -420,6 +425,7 @@ sema_void_type(const Sema *sema)
 #define T_COMPTIME_INT type_id_of_well_known(IR_REF_TYPE_COMPTIME_INT)
 #define T_USIZE type_id_of_well_known(IR_REF_TYPE_USIZE)
 #define T_UNDEFINED type_id_of_well_known(IR_REF_TYPE_UNDEFINED)
+#define T_ENUM_LITERAL type_id_of_well_known(IR_REF_TYPE_ENUM_LITERAL)
 
 /* Creates the builtin types at the ids of their well-known IR refs. */
 static void
@@ -605,6 +611,7 @@ sema_type_name(Sema *sema, TypeId type_id)
 		return arena_sprintf(sema->arena, "%s%s)%s %s", text, type->as.fn.is_var_args ? (type->as.fn.param_count == 0 ? "..." : ", ...") : "", convention, sema_type_name(sema, type->as.fn.ret));
 	}
 	case TYPE_STRUCT:
+	case TYPE_ENUM:
 		return namespace_name(sema, type->as.structure);
 	case TYPE_ANYOPAQUE:
 		return "anyopaque";
@@ -615,7 +622,7 @@ sema_type_name(Sema *sema, TypeId type_id)
 	case TYPE_UNDEFINED:
 		return "@TypeOf(undefined)";
 	case TYPE_ENUM_LITERAL:
-		return "@TypeOf(.enum_literal)";
+		return "@EnumLiteral()";
 	}
 	return "?";
 }
@@ -659,6 +666,11 @@ sema_type_size(const Sema *sema, TypeId type_id, uint64_t *out)
 		size = count * child;
 		break;
 	}
+	case TYPE_ENUM:
+		if (type->as.structure->layout_state != STRUCT_RESOLVED
+			|| type->as.structure->enum_tag_type == T_NORETURN)
+			return false;
+		return sema_type_size(sema, type->as.structure->enum_tag_type, out);
 	case TYPE_STRUCT:
 		if (type->as.structure->layout_state != STRUCT_RESOLVED)
 			return false;
@@ -682,6 +694,11 @@ sema_type_align(const Sema *sema, TypeId type_id)
 {
 	if (sema->types[type_id].kind == TYPE_STRUCT)
 		return sema->types[type_id].as.structure->alignment;
+	if (sema->types[type_id].kind == TYPE_ENUM) {
+		const SemaNamespace *ns = sema->types[type_id].as.structure;
+		return ns->layout_state == STRUCT_RESOLVED
+			? sema_type_align(sema, ns->enum_tag_type) : 0;
+	}
 	if (sema->types[type_id].kind == TYPE_ARRAY)
 		return sema_type_align(sema, sema->types[type_id].as.array.child);
 	uint64_t size;
@@ -700,6 +717,26 @@ static bool
 is_slice(const Sema *sema, TypeId type)
 {
 	return sema->types[type].kind == TYPE_POINTER && sema->types[type].as.pointer.size == POINTER_SLICE;
+}
+
+TypeId
+sema_enum_tag_type(const Sema *sema, TypeId type)
+{
+	if (sema->types[type].kind != TYPE_ENUM)
+		return 0;
+	const SemaNamespace *ns = sema->types[type].as.structure;
+	return ns->layout_state == STRUCT_RESOLVED ? ns->enum_tag_type : 0;
+}
+
+bool
+sema_enum_tags(const Sema *sema, TypeId type, const ValueId **tags, uint32_t *count)
+{
+	if (sema_enum_tag_type(sema, type) == 0)
+		return false;
+	const SemaNamespace *ns = sema->types[type].as.structure;
+	*tags = ns->enum_tags;
+	*count = ns->field_count;
+	return true;
 }
 
 bool
@@ -1047,6 +1084,8 @@ queue_function_address(Block *block, Operand operand)
  * descriptor/array/struct storage. Static admission does not enable runtime
  * aggregate values. Layout is established when roots are constructed, never
  * effectfully resolved while these cached queue/state arrays are borrowed. */
+static bool enum_runtime_allowed(const Sema *sema, TypeId type);
+
 static bool
 runtime_constant_allowed(Block *block, ValueId root, uint32_t src)
 {
@@ -1082,6 +1121,11 @@ runtime_constant_allowed(Block *block, ValueId root, uint32_t src)
 		const ValueId *children = one;
 		uint32_t child_count = 0;
 		switch (value->kind) {
+		case VALUE_ENUM:
+			allowed = enum_runtime_allowed(sema, value->type);
+			one[0] = value->as.enum_tag;
+			child_count = 1;
+			break;
 		case VALUE_STRUCT:
 			allowed = sema_type_static_storage_allowed(sema, value->type);
 			children = value->as.structure.fields;
@@ -1093,7 +1137,7 @@ runtime_constant_allowed(Block *block, ValueId root, uint32_t src)
 			TypeId leaf = type;
 			while (sema->types[leaf].kind == TYPE_ARRAY)
 				leaf = sema->types[leaf].as.array.child;
-			if (sema->types[leaf].kind == TYPE_STRUCT)
+			if (sema->types[leaf].kind == TYPE_STRUCT || sema->types[leaf].kind == TYPE_ENUM)
 				allowed = sema_type_static_storage_allowed(sema, type);
 			child_count = 1;
 			break;
@@ -1155,6 +1199,8 @@ runtime_constant_allowed(Block *block, ValueId root, uint32_t src)
 	return allowed;
 }
 
+static bool enum_runtime_allowed(const Sema *sema, TypeId type);
+
 /* Turns an operand into a typed-IR instruction (materializing constants). */
 static TirRef
 materialize(Block *block, Operand operand, uint32_t src)
@@ -1166,6 +1212,15 @@ materialize(Block *block, Operand operand, uint32_t src)
 	}
 	if (block->sema->types[operand.type].kind == TYPE_STRUCT) {
 		sema_error(block, src, "not supported by szc yet: runtime struct values");
+		return TIR_REF_NONE;
+	}
+	if (block->sema->types[operand.type].kind == TYPE_ENUM
+		&& !enum_runtime_allowed(block->sema, operand.type)) {
+		sema_error(block, src, "not supported by szc yet: zero-width or unresolved runtime enum");
+		return TIR_REF_NONE;
+	}
+	if (block->sema->types[operand.type].kind == TYPE_ENUM_LITERAL) {
+		sema_error(block, src, "not supported by szc yet: runtime enum literal");
 		return TIR_REF_NONE;
 	}
 	if (operand.kind == OPERAND_RUNTIME)
@@ -1211,6 +1266,23 @@ type_has_struct_value(const Sema *sema, TypeId type)
 	return sema->types[type].kind == TYPE_STRUCT;
 }
 
+static bool
+type_has_enum_value(const Sema *sema, TypeId type)
+{
+	while (sema->types[type].kind == TYPE_ARRAY)
+		type = sema->types[type].as.array.child;
+	return sema->types[type].kind == TYPE_ENUM;
+}
+
+static bool
+enum_runtime_allowed(const Sema *sema, TypeId type)
+{
+	TypeId tag = sema_enum_tag_type(sema, type);
+	return tag != 0 && sema->types[tag].kind == TYPE_INT
+		&& !sema->types[tag].as.integer.is_signed
+		&& sema->types[tag].as.integer.bits > 0 && sema->types[tag].as.integer.bits <= 64;
+}
+
 static bool func_validate_internal_signature(Sema *sema, FuncId id);
 
 /* Marks a function as referenced at runtime: its body will be analysed. */
@@ -1227,6 +1299,15 @@ func_queue(Sema *sema, FuncId id)
 	bool struct_value = type_has_struct_value(sema, fn.ret);
 	for (uint32_t i = 0; i < fn.param_count; i++)
 		struct_value |= type_has_struct_value(sema, fn.params[i]);
+	bool enum_value = type_has_enum_value(sema, fn.ret);
+	for (uint32_t i = 0; i < fn.param_count; i++)
+		enum_value |= type_has_enum_value(sema, fn.params[i]);
+	if (enum_value && fn.convention == FUNCTION_C) {
+		diag_report(sema->diag, DIAG_ERROR, func->ir->file, func->ir->insts[func->func_inst].src,
+			"not supported by szc yet: enum values in C function signatures");
+		func->state = FUNC_FAILED;
+		return;
+	}
 	if (struct_value && fn.convention == FUNCTION_C) {
 		diag_report(sema->diag, DIAG_ERROR, func->ir->file, func->ir->insts[func->func_inst].src,
 			"not supported by szc yet: struct values in runtime function signatures");
@@ -1252,7 +1333,7 @@ func_queue(Sema *sema, FuncId id)
 	}
 	if (func->is_extern)
 		return;
-	if (struct_value && !func_validate_internal_signature(sema, id)) {
+	if ((struct_value || enum_value) && !func_validate_internal_signature(sema, id)) {
 		func->state = FUNC_FAILED;
 		return;
 	}
@@ -1304,16 +1385,17 @@ namespace_create(Sema *sema, SemaNamespace *parent, const IrFile *ir, IrInstInde
 	IrContainerHeader header;
 	IR_READ(ir, payload, &header);
 	uint32_t decls = payload + IR_WORDS(IrContainerHeader) + header.field_count * IR_WORDS(IrField);
-	ns->captures = header.field_count == 0 ? NULL : inst_map_capture(sema, captures);
+	bool is_enum = ir->insts[inst].op == IR_ENUM_DECL;
+	ns->captures = header.field_count == 0 && !is_enum ? NULL : inst_map_capture(sema, captures);
 	ns->field_count = header.field_count;
 	ns->fields = ARENA_ARRAY(sema->arena, SemaField, header.field_count);
 	for (uint32_t i = 0; i < header.field_count; i++)
 		IR_READ(ir, payload + IR_WORDS(IrContainerHeader) + i * IR_WORDS(IrField), &ns->fields[i].ir);
 	ns->defaults_state = DEFAULTS_RESOLVED;
 	for (uint32_t i = 0; i < header.field_count; i++)
-		if (ns->fields[i].ir.default_body != 0)
+		if (!is_enum && ns->fields[i].ir.default_body != 0)
 			ns->defaults_state = DEFAULTS_UNRESOLVED;
-	ns->layout_state = header.field_count == 0 ? STRUCT_RESOLVED : STRUCT_UNRESOLVED;
+	ns->layout_state = header.field_count == 0 && !is_enum ? STRUCT_RESOLVED : STRUCT_UNRESOLVED;
 	ns->alignment = header.field_count == 0 ? 1 : 0;
 	ns->decl_count = header.decl_count;
 	ns->decls = ARENA_ARRAY(sema->arena, SemaDecl, header.decl_count + 1);
@@ -1322,7 +1404,7 @@ namespace_create(Sema *sema, SemaNamespace *parent, const IrFile *ir, IrInstInde
 		ns->decls[i].state = DECL_UNRESOLVED;
 		ns->decls[i].value = operand_none;
 	}
-	Type type = make_type(TYPE_STRUCT);
+	Type type = make_type(is_enum ? TYPE_ENUM : TYPE_STRUCT);
 	type.as.structure = ns;
 	type.name = name;
 	ns->type = type_append(sema, &type, type_hash(&type));
@@ -1366,6 +1448,8 @@ block_init_comptime(Block *block, Sema *sema, SemaNamespace *ns, InstMap *map, S
 
 static bool operand_to_type(Block *block, Operand operand, uint32_t src, TypeId *out);
 static bool ensure_type_layout(Block *block, TypeId type, uint32_t src);
+static bool ensure_enum_layout(Block *block, TypeId type, uint32_t src, const char *reason);
+static Operand enum_field_value(Block *block, TypeId type, StringId name, uint32_t src);
 static bool ensure_struct_defaults(Block *block, SemaNamespace *ns, uint32_t src);
 static bool validate_internal_value_type(Block *block, TypeId type, uint32_t src);
 static bool require_runtime(Block *block, uint32_t src);
@@ -1399,7 +1483,7 @@ global_type_allowed(Block *block, TypeId type, uint32_t src)
 	}
 	/* Stable mutable symbols publish only complete, checked value layouts.
 	 * Pointer-only types stay lazy and legacy array admission stays unchanged. */
-	if (type_has_struct_value(sema, type)) {
+	if (type_has_struct_value(sema, type) || type_has_enum_value(sema, type)) {
 		if (!ensure_type_layout(block, type, src))
 			return false;
 		if (!sema_type_runtime_storage_allowed(sema, type)) {
@@ -1466,7 +1550,8 @@ static bool
 constant_storage_type(Sema *sema, TypeId type)
 {
 	TypeKind kind = sema->types[type].kind;
-	return kind == TYPE_INT || kind == TYPE_BOOL || kind == TYPE_POINTER || kind == TYPE_VOID;
+	return kind == TYPE_INT || kind == TYPE_BOOL || kind == TYPE_POINTER || kind == TYPE_VOID
+		|| (kind == TYPE_ENUM && enum_runtime_allowed(sema, type));
 }
 
 /* A declaration address is independent of its initializer, unlike an anonymous value ref. */
@@ -1662,6 +1747,8 @@ type_tag_name(const Sema *sema, TypeId type)
 		return "fn";
 	case TYPE_STRUCT:
 		return "struct";
+	case TYPE_ENUM:
+		return "enum";
 	case TYPE_ANYOPAQUE:
 		return "opaque";
 	case TYPE_ANYERROR:
@@ -1983,7 +2070,8 @@ coerce(Block *block, Operand operand, TypeId dest, uint32_t src)
 		leaf = sema->types[leaf].as.array.child;
 	/* A by-value destination demands layout before same-type/undefined fast
 	 * paths. Pointer types themselves must not demand their child's layout. */
-	if (sema->types[leaf].kind == TYPE_STRUCT && !ensure_type_layout(block, dest, src))
+	if ((sema->types[leaf].kind == TYPE_STRUCT || sema->types[leaf].kind == TYPE_ENUM)
+		&& !ensure_type_layout(block, dest, src))
 		return operand_none;
 	if (operand.type == dest || operand.type == T_NORETURN)
 		return operand;
@@ -2046,6 +2134,8 @@ coerce(Block *block, Operand operand, TypeId dest, uint32_t src)
 	if (operand.kind == OPERAND_COMPTIME) {
 		/* Pointer compatibility may resolve fields and grow the value table. */
 		Value value = *operand_value(block, operand);
+		if (dest_kind == TYPE_ENUM && value.kind == VALUE_ENUM_LITERAL)
+			return enum_field_value(block, dest, value.as.enum_literal, src);
 		if (dest_kind == TYPE_ARRAY && sema->types[operand.type].kind == TYPE_ARRAY) {
 			TypeArray target = sema->types[dest].as.array;
 			TypeArray source = sema->types[operand.type].as.array;
@@ -2135,7 +2225,7 @@ bit_cast_width(Block *block, TypeId type, bool destination, uint32_t src, uint32
 	TypeKind kind = sema->types[leaf].kind;
 	if (kind != TYPE_INT && kind != TYPE_BOOL && kind != TYPE_VOID) {
 		const char *message = destination ? "cannot @bitCast to '%s'" : "cannot @bitCast from '%s'";
-		if (kind == TYPE_FLOAT)
+		if (kind == TYPE_FLOAT || kind == TYPE_ENUM)
 			message = destination ? "not supported by szc yet: @bitCast to '%s'" : "not supported by szc yet: @bitCast from '%s'";
 		sema_error(block, src, message, sema_type_name(sema, type));
 		return false;
@@ -3036,6 +3126,128 @@ queue_struct_defaults(Block *block, SemaNamespace *ns, uint32_t src)
 	return true;
 }
 
+/* Tag expressions are independent definition-context bodies. Resolve every
+ * explicit value before implicit numbering/duplicate checks; publish atomically. */
+static bool
+ensure_enum_layout(Block *block, TypeId type, uint32_t src, const char *reason)
+{
+	Sema *sema = block->sema;
+	SemaNamespace *ns = sema->types[type].as.structure;
+	if (ns->layout_state == STRUCT_RESOLVED)
+		return true;
+	if (ns->layout_state == STRUCT_FAILED)
+		return false;
+	if (ns->layout_state == STRUCT_IN_PROGRESS) {
+		sema_error(block, src, "type '%s' depends on itself for %s here", sema_type_name(sema, type), reason);
+		return false;
+	}
+	if (sema->layout_depth >= 256 || ns->field_count > 1048576 - sema->enum_work) {
+		sema_error(block, src, "not supported by szc yet: enum layout depth/work limit exceeded");
+		ns->layout_state = STRUCT_FAILED;
+		return false;
+	}
+	sema->enum_work += ns->field_count;
+	sema->layout_depth++;
+	ns->layout_state = STRUCT_IN_PROGRESS;
+	InstMap map;
+	inst_map_init(&map, sema->arena);
+	map.parent = ns->captures;
+	Block fields;
+	block_init_comptime(&fields, sema, ns, &map, STRING_NONE);
+	fields.comptime_value_required = true;
+	IrContainerHeader header;
+	IR_READ(ns->ir, ns->ir->insts[ns->inst].data.payload, &header);
+	TypeId tag;
+	if (header.arg_body != 0) {
+		BodyResult result = analyze_body(&fields, header.arg_body);
+		if (result.end != BODY_BREAK_RESULT || !operand_to_type(&fields, result.result, src, &tag))
+			goto fail;
+		if (sema->types[tag].kind != TYPE_INT && tag != T_NORETURN) {
+			sema_error(&fields, src, "expected integer tag type, found '%s'", sema_type_name(sema, tag));
+			goto fail;
+		}
+		if (ns->field_count == 0 && tag != T_NORETURN) {
+			sema_error(&fields, src, "empty exhaustive enums must be backed by 'noreturn'");
+			goto fail;
+		}
+		if (ns->field_count != 0 && tag == T_NORETURN) {
+			sema_error(&fields, src, "non-empty enums cannot be backed by 'noreturn'");
+			goto fail;
+		}
+		if (tag != T_NORETURN && (sema->types[tag].as.integer.is_signed || sema->types[tag].as.integer.bits > 64)) {
+			sema_error(&fields, src, "not supported by szc yet: signed or wide enum backing type");
+			goto fail;
+		}
+	} else if (ns->field_count == 0) {
+		tag = T_NORETURN;
+	} else {
+		uint16_t bits = 0;
+		for (uint32_t highest = ns->field_count - 1; highest != 0; highest >>= 1)
+			bits++;
+		tag = type_int(sema, false, bits);
+	}
+	fields.enum_tag_type = tag;
+	ValueId *values = ARENA_ARRAY(sema->arena, ValueId, ns->field_count);
+	for (uint32_t i = 0; i < ns->field_count; i++) {
+		values[i] = VALUE_NONE;
+		SemaField *field = &ns->fields[i];
+		if (field->ir.default_body == 0)
+			continue;
+		BodyResult result = analyze_body(&fields, field->ir.default_body);
+		if (result.end != BODY_BREAK_RESULT || result.result.kind == OPERAND_NONE)
+			goto fail;
+		uint32_t value_src = ns->ir->insts[ir_body_insts(ns->ir, field->ir.default_body)
+			[ir_body_count(ns->ir, field->ir.default_body) - 1]].src;
+		Operand value = coerce(&fields, result.result, tag, value_src);
+		if (value.kind == OPERAND_NONE || !check_defined(&fields, value, value_src))
+			goto fail;
+		if (value.kind != OPERAND_COMPTIME) {
+			sema_error(&fields, value_src, "unable to resolve comptime value");
+			goto fail;
+		}
+		values[i] = value.value;
+	}
+	uint32_t capacity = 1;
+	while (capacity < ns->field_count * 2u)
+		capacity *= 2;
+	ValueId *seen = arena_zalloc(sema->arena, capacity * sizeof(ValueId), alignof(ValueId));
+	BigInt zero = bigint_from_u64(sema->arena, 0);
+	BigInt one = bigint_from_u64(sema->arena, 1);
+	for (uint32_t i = 0; i < ns->field_count; i++) {
+		SemaField *field = &ns->fields[i];
+		if (values[i] == VALUE_NONE) {
+			BigInt previous = i == 0 ? zero : value_get(&sema->values, values[i - 1])->as.integer;
+			BigInt number = i == 0 ? zero : bigint_add(sema->arena, &previous, &one);
+			if (!bigint_fits(&number, false, sema->types[tag].as.integer.bits)) {
+				sema_error(&fields, field->ir.src, "enum tag value '%s' too large for type '%s'",
+					bigint_to_string(sema->arena, &number), sema_type_name(sema, tag));
+				goto fail;
+			}
+			values[i] = value_int(&sema->values, tag, &number);
+		}
+		uint32_t slot = hash_word(2166136261u, values[i]) & (capacity - 1);
+		while (seen[slot] != VALUE_NONE && seen[slot] != values[i])
+			slot = (slot + 1) & (capacity - 1);
+		if (seen[slot] != VALUE_NONE) {
+			BigInt number = value_get(&sema->values, values[i])->as.integer;
+			sema_error(&fields, field->ir.src, "enum tag value '%s' for field '%s' already taken",
+				bigint_to_string(sema->arena, &number), intern_text(sema->interner, field->ir.name));
+			goto fail;
+		}
+		seen[slot] = values[i];
+	}
+	ns->enum_tag_type = tag;
+	ns->enum_tags = values;
+	ns->alignment = sema_type_align(sema, tag);
+	ns->layout_state = STRUCT_RESOLVED;
+	sema->layout_depth--;
+	return true;
+fail:
+	ns->layout_state = STRUCT_FAILED;
+	sema->layout_depth--;
+	return false;
+}
+
 /* Layout is independent of runtime value support. Publish nominal identity before
  * entering field bodies so pointer recursion never becomes a by-value cycle. */
 static bool
@@ -3044,6 +3256,8 @@ ensure_type_layout(Block *block, TypeId type, uint32_t src)
 	Sema *sema = block->sema;
 	while (sema->types[type].kind == TYPE_ARRAY)
 		type = sema->types[type].as.array.child;
+	if (sema->types[type].kind == TYPE_ENUM)
+		return ensure_enum_layout(block, type, src, "size query");
 	if (sema->types[type].kind != TYPE_STRUCT)
 		return true;
 	SemaNamespace *ns = sema->types[type].as.structure;
@@ -3181,6 +3395,10 @@ analyze_type_layout(Block *block, const IrInst *inst)
 	}
 	if (!ensure_type_layout(block, type, inst->src))
 		return operand_none;
+	if (sema->types[leaf].kind == TYPE_ENUM && sema_enum_tag_type(sema, leaf) == T_NORETURN) {
+		sema_error(block, inst->src, "no %s available for uninstantiable type '%s'", name, sema_type_name(sema, type));
+		return operand_none;
+	}
 	uint64_t result;
 	if (!size_of) {
 		result = sema_type_align(sema, type);
@@ -3225,6 +3443,14 @@ analyze_bit_size(Block *block, const IrInst *inst)
 		has_representation = sema->types[leaf].as.pointer.size != POINTER_SLICE;
 		bits = 64;
 		break;
+	case TYPE_ENUM: {
+		if (!ensure_enum_layout(block, leaf, inst->src, "size query"))
+			return operand_none;
+		TypeId tag = sema_enum_tag_type(sema, leaf);
+		has_representation = tag != T_NORETURN;
+		bits = has_representation ? sema->types[tag].as.integer.bits : 0;
+		break;
+	}
 	case TYPE_STRUCT:
 		/* Ordinary structs have no bit representation, even inside [0]S.
 		 * Reject before demanding fields or layout, using the requested type. */
@@ -3278,6 +3504,10 @@ peer_type(Block *block, Operand lhs, Operand rhs, uint32_t src, TypeId *out)
 	}
 	if (bk == TYPE_UNDEFINED || bk == TYPE_NORETURN) {
 		*out = a;
+		return true;
+	}
+	if ((ak == TYPE_ENUM && bk == TYPE_ENUM_LITERAL) || (bk == TYPE_ENUM && ak == TYPE_ENUM_LITERAL)) {
+		*out = ak == TYPE_ENUM ? a : b;
 		return true;
 	}
 	if (ak == TYPE_COMPTIME_INT && bk == TYPE_INT) {
@@ -4222,6 +4452,35 @@ analyze_compare(Block *block, const IrInst *inst)
 	bool is_equality = op == IR_CMP_EQ || op == IR_CMP_NEQ;
 	TypeKind lk = sema->types[lhs.type].kind;
 	TypeKind rk = sema->types[rhs.type].kind;
+	if (is_equality && ((lk == TYPE_ENUM && (rk == TYPE_ENUM || rk == TYPE_ENUM_LITERAL))
+		|| (rk == TYPE_ENUM && lk == TYPE_ENUM_LITERAL))) {
+		TypeId type;
+		if (!peer_type(block, lhs, rhs, src, &type))
+			return operand_none;
+		lhs = coerce(block, lhs, type, src);
+		rhs = coerce(block, rhs, type, src);
+		if (lhs.kind == OPERAND_NONE || rhs.kind == OPERAND_NONE)
+			return operand_none;
+		if (operand_is_undefined(block, lhs) || operand_is_undefined(block, rhs))
+			return comptime_operand(T_BOOL, value_undefined(&sema->values, T_BOOL));
+		if (lhs.kind == OPERAND_COMPTIME && rhs.kind == OPERAND_COMPTIME) {
+			bool equal = operand_value(block, lhs)->as.enum_tag == operand_value(block, rhs)->as.enum_tag;
+			return bool_operand(sema, (op == IR_CMP_EQ) == equal);
+		}
+		if (!require_runtime(block, src))
+			return operand_none;
+		TirRef left = materialize(block, lhs, src);
+		TirRef right = materialize(block, rhs, src);
+		if (left == TIR_REF_NONE || right == TIR_REF_NONE)
+			return operand_none;
+		return runtime_operand(T_BOOL, emit_tir_bin(block, tir_arith_op(op), T_BOOL, src, left, right));
+	}
+	if (is_equality && lk == TYPE_ENUM_LITERAL && rk == TYPE_ENUM_LITERAL) {
+		if (operand_is_undefined(block, lhs) || operand_is_undefined(block, rhs))
+			return comptime_operand(T_BOOL, value_undefined(&sema->values, T_BOOL));
+		bool equal = operand_value(block, lhs)->as.enum_literal == operand_value(block, rhs)->as.enum_literal;
+		return bool_operand(sema, (op == IR_CMP_EQ) == equal);
+	}
 	if (is_equality && lk == TYPE_TYPE && rk == TYPE_TYPE) {
 		bool equal = operand_value(block, lhs)->as.type_value == operand_value(block, rhs)->as.type_value;
 		return bool_operand(sema, (op == IR_CMP_EQ) == equal);
@@ -4928,6 +5187,13 @@ analyze_call_core(Block *block, IrInstIndex index, Operand callee,
 	bool struct_value = type_has_struct_value(sema, fn.ret);
 	for (uint32_t i = 0; i < fn.param_count; i++)
 		struct_value |= type_has_struct_value(sema, fn.params[i]);
+	bool enum_value = type_has_enum_value(sema, fn.ret);
+	for (uint32_t i = 0; i < fn.param_count; i++)
+		enum_value |= type_has_enum_value(sema, fn.params[i]);
+	if (enum_value && fn.convention == FUNCTION_C) {
+		sema_error(block, src, "not supported by szc yet: enum values in C function signatures");
+		return INST_CONTINUE;
+	}
 	if (struct_value && fn.convention == FUNCTION_C) {
 		sema_error(block, src, "not supported by szc yet: struct values in runtime function signatures");
 		return INST_CONTINUE;
@@ -4983,6 +5249,10 @@ analyze_call_core(Block *block, IrInstIndex index, Operand callee,
 		args[i] = result.result;
 		if (result.end != BODY_BREAK_RESULT || args[i].kind == OPERAND_NONE)
 			failed = true;
+		if (!failed && i >= fn.param_count && type_has_enum_value(sema, args[i].type)) {
+			sema_error(block, src, "not supported by szc yet: variadic enum arguments");
+			failed = true;
+		}
 		if (!failed && i >= fn.param_count && sema_type_is_aggregate(sema, args[i].type)) {
 			sema_error(block, src, "not supported by szc yet: variadic array arguments");
 			failed = true;
@@ -5091,6 +5361,8 @@ storage_type_allowed(const Sema *sema, TypeId id, uint32_t depth, uint32_t *work
 	if (sema_type_array_storage_allowed(sema, id))
 		return true;
 	const Type *type = &sema->types[id];
+	if (type->kind == TYPE_ENUM)
+		return enum_runtime_allowed(sema, id);
 	if (type->kind == TYPE_ARRAY)
 		return storage_type_allowed(sema, type->as.array.child, depth + 1, work);
 	if (type->kind != TYPE_STRUCT || type->as.structure->layout_state != STRUCT_RESOLVED)
@@ -5123,7 +5395,7 @@ sema_type_runtime_storage_allowed(const Sema *sema, TypeId type)
 static bool
 validate_internal_value_type(Block *block, TypeId type, uint32_t src)
 {
-	if (!type_has_struct_value(block->sema, type))
+	if (!type_has_struct_value(block->sema, type) && !type_has_enum_value(block->sema, type))
 		return true;
 	if (!ensure_type_layout(block, type, src))
 		return false;
@@ -5270,7 +5542,8 @@ analyze_ref(Block *block, Operand value, uint32_t src, uint32_t identity, uint32
 		/* An actual typed root demands its by-value layout; pointer TYPE-only
 		 * construction still does not. Do this before cached provenance walks,
 		 * never while their queue/state arrays are borrowed. */
-		if (sema->types[leaf].kind == TYPE_STRUCT && !ensure_type_layout(block, value.type, src))
+		if ((sema->types[leaf].kind == TYPE_STRUCT || sema->types[leaf].kind == TYPE_ENUM)
+			&& !ensure_type_layout(block, value.type, src))
 			return operand_none;
 		return comptime_operand(pointer, value_ref(&sema->values, pointer, value.value, identity, alignment));
 	}
@@ -5278,7 +5551,8 @@ analyze_ref(Block *block, Operand value, uint32_t src, uint32_t identity, uint32
 		sema_error(block, src, "unable to evaluate comptime expression");
 		return operand_none;
 	}
-	if (kind != TYPE_INT && kind != TYPE_BOOL && kind != TYPE_POINTER && kind != TYPE_VOID) {
+	if (kind != TYPE_INT && kind != TYPE_BOOL && kind != TYPE_POINTER && kind != TYPE_VOID
+		&& !(kind == TYPE_ENUM && enum_runtime_allowed(sema, value.type))) {
 		sema_error(block, src, "not supported by szc yet: address of runtime '%s'", sema_type_name(sema, value.type));
 		return operand_none;
 	}
@@ -5308,6 +5582,12 @@ analyze_alloc(Block *block, const IrInst *inst)
 		init = coerce(block, init, type, src);
 		if (init.kind == OPERAND_NONE)
 			return operand_none;
+	}
+	if (sema->types[type].kind == TYPE_ENUM && !ensure_type_layout(block, type, src))
+		return operand_none;
+	if (sema->types[type].kind == TYPE_ENUM && !enum_runtime_allowed(sema, type)) {
+		sema_error(block, src, "not supported by szc yet: zero-width runtime enum storage");
+		return operand_none;
 	}
 	if (is_comptime_only_type(sema, type)) {
 		sema_error(block, src, "variable of type '%s' must be const or comptime", sema_type_name(sema, type));
@@ -5451,6 +5731,8 @@ load_pointer(Block *block, Operand pointer, uint32_t src)
 	TypeId leaf = child;
 	while (sema->types[leaf].kind == TYPE_ARRAY)
 		leaf = sema->types[leaf].as.array.child;
+	if (sema->types[leaf].kind == TYPE_ENUM && !ensure_type_layout(block, child, src))
+		return operand_none;
 	if (pointer_type.is_volatile && sema->types[leaf].kind == TYPE_STRUCT) {
 		sema_error(block, src, "not supported by szc yet: volatile struct loads");
 		return operand_none;
@@ -5624,7 +5906,8 @@ load_pointer(Block *block, Operand pointer, uint32_t src)
 			return operand_none;
 		return aggregate_snapshot(block, pointer, 0, src);
 	}
-	if (kind != TYPE_INT && kind != TYPE_BOOL && kind != TYPE_POINTER) {
+	if (kind != TYPE_INT && kind != TYPE_BOOL && kind != TYPE_POINTER
+		&& !(kind == TYPE_ENUM && enum_runtime_allowed(sema, child))) {
 		sema_error(block, src, "not supported by szc yet: dereference of '%s'", sema_type_name(sema, child));
 		return operand_none;
 	}
@@ -5671,7 +5954,7 @@ static const char *
 namespace_name(Sema *sema, SemaNamespace *ns)
 {
 	StringId id = sema->types[ns->type].name;
-	const char *name = id == STRING_NONE ? "struct" : intern_text(sema->interner, id);
+	const char *name = id == STRING_NONE ? (sema->types[ns->type].kind == TYPE_ENUM ? "enum" : "struct") : intern_text(sema->interner, id);
 	if (ns->parent == NULL)
 		return name;
 	return arena_sprintf(sema->arena, "%s.%s", namespace_name(sema, ns->parent), name);
@@ -5696,6 +5979,96 @@ sema_name_error(Block *block, uint32_t src, const char *prefix, StringId name, c
 	memcpy(text + head + length, suffix, tail);
 	text[head + length + tail] = '\0';
 	diag_report_bytes(sema->diag, DIAG_ERROR, block->ir->file, src, text, head + length + tail);
+}
+
+/* Tags share the declaration namespace but never masquerade as declarations. */
+static Operand
+enum_field_value(Block *block, TypeId type, StringId name, uint32_t src)
+{
+	Sema *sema = block->sema;
+	if (!ensure_enum_layout(block, type, src, "field usage"))
+		return operand_none;
+	SemaNamespace *ns = sema->types[type].as.structure;
+	for (uint32_t i = 0; i < ns->field_count; i++)
+		if (ns->fields[i].ir.name == name)
+			return comptime_operand(type, value_enum(&sema->values, type, ns->enum_tags[i]));
+	const char *prefix = arena_sprintf(sema->arena, "enum '%s' has no member named '", sema_type_name(sema, type));
+	sema_name_error(block, src, prefix, name, "'");
+	return operand_none;
+}
+
+/* Conversion checks membership in the original integer domain, never after a
+ * truncating cast. The backend receives that same original operand at runtime. */
+static Operand
+analyze_enum_from_int(Block *block, const IrInst *inst)
+{
+	Sema *sema = block->sema;
+	TypeId type;
+	if (!operand_to_type(block, resolve_ref(block, inst->data.bin.lhs), inst->src, &type))
+		return operand_none;
+	if (sema->types[type].kind != TYPE_ENUM) {
+		sema_error(block, inst->src, "expected enum, found '%s'", sema_type_name(sema, type));
+		return operand_none;
+	}
+	Operand operand = resolve_ref(block, inst->data.bin.rhs);
+	if (operand.kind == OPERAND_NONE)
+		return operand_none;
+	if (!is_int_or_comptime_int(sema, operand.type)) {
+		sema_error(block, inst->src, "expected integer type, found '%s'", sema_type_name(sema, operand.type));
+		return operand_none;
+	}
+	if (!ensure_enum_layout(block, type, inst->src, "field usage") || !check_defined(block, operand, inst->src))
+		return operand_none;
+	SemaNamespace *ns = sema->types[type].as.structure;
+	if (operand.kind == OPERAND_COMPTIME) {
+		BigInt number = operand_value(block, operand)->as.integer;
+		if (ns->field_count > 1048576 - sema->enum_work) {
+			sema_error(block, inst->src, "not supported by szc yet: enum membership work limit exceeded");
+			return operand_none;
+		}
+		sema->enum_work += ns->field_count;
+		for (uint32_t i = 0; i < ns->field_count; i++)
+			if (bigint_compare(&number, &value_get(&sema->values, ns->enum_tags[i])->as.integer) == 0)
+				return comptime_operand(type, value_enum(&sema->values, type, ns->enum_tags[i]));
+		sema_error(block, inst->src, "enum '%s' has no tag with value '%s'", sema_type_name(sema, type), bigint_to_string(sema->arena, &number));
+		return operand_none;
+	}
+	if (!enum_runtime_allowed(sema, type) || sema->types[operand.type].as.integer.bits > 64) {
+		sema_error(block, inst->src, "not supported by szc yet: zero-width enum or wide runtime enum conversion");
+		return operand_none;
+	}
+	if (!require_runtime(block, inst->src))
+		return operand_none;
+	TirRef source = materialize(block, operand, inst->src);
+	if (source == TIR_REF_NONE)
+		return operand_none;
+	return runtime_operand(type, emit_tir_un(block, TIR_ENUM_FROM_INT, type, inst->src, source));
+}
+
+static Operand
+analyze_int_from_enum(Block *block, const IrInst *inst)
+{
+	Sema *sema = block->sema;
+	Operand operand = resolve_ref(block, inst->data.un.operand);
+	if (operand.kind == OPERAND_NONE)
+		return operand_none;
+	if (sema->types[operand.type].kind != TYPE_ENUM) {
+		sema_error(block, inst->src, "expected enum or tagged union, found '%s'", sema_type_name(sema, operand.type));
+		return operand_none;
+	}
+	if (!ensure_enum_layout(block, operand.type, inst->src, "field usage"))
+		return operand_none;
+	TypeId tag = sema_enum_tag_type(sema, operand.type);
+	if (operand.kind == OPERAND_COMPTIME) {
+		if (operand_is_undefined(block, operand))
+			return comptime_operand(tag, value_undefined(&sema->values, tag));
+		return comptime_operand(tag, operand_value(block, operand)->as.enum_tag);
+	}
+	if (!enum_runtime_allowed(sema, operand.type) || !require_runtime(block, inst->src)) {
+		sema_error(block, inst->src, "not supported by szc yet: zero-width runtime enum conversion");
+		return operand_none;
+	}
+	return runtime_operand(tag, emit_tir_un(block, TIR_INT_CAST, tag, inst->src, operand.inst));
 }
 
 /* Address-oriented IR passes a pointer to the type binding. Do not confuse
@@ -5730,12 +6103,18 @@ namespace_member(Block *block, Operand base, StringId name, bool as_reference, u
 		sema_name_error(block, src, "opaque 'anyopaque' has no member named '", name, "'");
 		return true;
 	}
-	if (sema->types[type].kind != TYPE_STRUCT) {
+	if (sema->types[type].kind != TYPE_STRUCT && sema->types[type].kind != TYPE_ENUM) {
 		sema_error(block, src, "type '%s' has no members", sema_type_name(sema, type));
 		return true;
 	}
 	SemaNamespace *ns = sema->types[type].as.structure;
 	SemaDecl *decl = namespace_find(ns, name);
+	if (decl == NULL && sema->types[type].kind == TYPE_ENUM) {
+		*out = enum_field_value(block, type, name, src);
+		if (as_reference && out->kind != OPERAND_NONE)
+			*out = analyze_ref(block, *out, src, 0, 0);
+		return true;
+	}
 	if (decl == NULL) {
 		const char *prefix = arena_sprintf(sema->arena, "%sstruct '%s' has no member named '",
 			ns->parent == NULL ? "root source file " : "", namespace_name(sema, ns));
@@ -5881,6 +6260,7 @@ analyze_has_member(Block *block, const IrInst *inst)
 		/* Declarations are not instance fields; no implicit pointer dereference. */
 		bool found;
 		switch (sema->types[type].kind) {
+		case TYPE_ENUM:
 		case TYPE_STRUCT:
 			if (!ensure_type_layout(block, type, payload.type_src))
 				return operand_none;
@@ -5903,7 +6283,7 @@ analyze_has_member(Block *block, const IrInst *inst)
 	}
 	if (sema->types[type].kind == TYPE_ANYOPAQUE)
 		return bool_operand(sema, false);
-	if (sema->types[type].kind != TYPE_STRUCT) {
+	if (sema->types[type].kind != TYPE_STRUCT && sema->types[type].kind != TYPE_ENUM) {
 		sema_error(block, payload.type_src, "expected struct, enum, union, or opaque; found '%s'", sema_type_name(sema, type));
 		return operand_none;
 	}
@@ -6972,6 +7352,10 @@ analyze_field_call(Block *block, IrInstIndex index, Operand *out)
 			header.arg_count, bodies, receiver, out);
 	if (!ensure_type_layout(block, concrete, inst->src))
 		return INST_CONTINUE;
+	if (sema->types[concrete].kind == TYPE_ENUM) {
+		sema_error(block, header.name_src, "not supported by szc yet: enum method calls");
+		return INST_CONTINUE;
+	}
 	if (sema->types[concrete].kind == TYPE_STRUCT) {
 		SemaNamespace *ns = sema->types[concrete].as.structure;
 		bool field_found = false;
@@ -7222,8 +7606,11 @@ runtime_array_element(Block *block, Operand base, Operand index, TypeArray array
 		sema_error(block, src, "unable to evaluate comptime expression");
 		return operand_none;
 	}
+	if (type_has_enum_value(sema, array.child) && !ensure_type_layout(block, array.child, src))
+		return operand_none;
 	TypeKind kind = sema->types[array.child].kind;
-	if (kind != TYPE_INT && kind != TYPE_BOOL && kind != TYPE_POINTER && kind != TYPE_VOID && kind != TYPE_ARRAY && kind != TYPE_STRUCT) {
+	if (kind != TYPE_INT && kind != TYPE_BOOL && kind != TYPE_POINTER && kind != TYPE_VOID && kind != TYPE_ARRAY && kind != TYPE_STRUCT
+		&& !(kind == TYPE_ENUM && enum_runtime_allowed(sema, array.child))) {
 		sema_error(block, src, "not supported by szc yet: runtime array element type '%s'", sema_type_name(sema, array.child));
 		return operand_none;
 	}
@@ -8093,10 +8480,11 @@ analyze_inst(Block *block, IrInstIndex index, Operand *break_value)
 			result = unsupported_inst(block, inst);
 		break;
 	}
+	case IR_ENUM_DECL:
 	case IR_STRUCT_DECL: {
 		IrContainerHeader header;
 		IR_READ(block->ir, inst->data.payload, &header);
-		if ((header.flags & IR_CONTAINER_KIND_MASK) != AST_CONTAINER_STRUCT || header.arg_body != 0) {
+		if (inst->op == IR_STRUCT_DECL && ((header.flags & IR_CONTAINER_KIND_MASK) != AST_CONTAINER_STRUCT || header.arg_body != 0)) {
 			result = unsupported_inst(block, inst);
 			break;
 		}
@@ -8132,6 +8520,36 @@ analyze_inst(Block *block, IrInstIndex index, Operand *break_value)
 			sema_error(block, src, "not supported by szc yet: field capture requires a comptime-known immutable local");
 		break;
 	}
+	case IR_ENUM_TAG_TYPE:
+		if (block->enum_tag_type != 0)
+			result = type_operand(sema, block->enum_tag_type);
+		break;
+	case IR_ENUM_LITERAL:
+		result = comptime_operand(T_ENUM_LITERAL, value_enum_literal(&sema->values, T_ENUM_LITERAL, inst->data.name.name));
+		break;
+	case IR_DECL_LITERAL: {
+		TypeId type;
+		if (!operand_to_type(block, resolve_ref(block, inst->data.name.operand), src, &type))
+			break;
+		if (sema->types[type].kind == TYPE_ENUM_LITERAL) {
+			result = comptime_operand(type, value_enum_literal(&sema->values, type, inst->data.name.name));
+			break;
+		}
+		if (sema->types[type].kind != TYPE_ENUM) {
+			sema_error(block, src, "not supported by szc yet: declaration literal for '%s'", sema_type_name(sema, type));
+			break;
+		}
+		Operand member;
+		if (namespace_member(block, type_operand(sema, type), inst->data.name.name, false, src, &member))
+			result = coerce(block, member, type, src);
+		break;
+	}
+	case IR_INT_FROM_ENUM:
+		result = analyze_int_from_enum(block, inst);
+		break;
+	case IR_ENUM_FROM_INT:
+		result = analyze_enum_from_int(block, inst);
+		break;
 	case IR_FIELD_DEFAULT_TYPE:
 		if (block->field_default_type != 0)
 			result = type_operand(sema, block->field_default_type);
@@ -8586,7 +9004,6 @@ analyze_inst(Block *block, IrInstIndex index, Operand *break_value)
 		/* Parameters are bound before the function body is analysed. */
 		break;
 	case IR_FLOAT:
-	case IR_ENUM_LITERAL:
 		result = unsupported_inst(block, inst);
 		break;
 	case IR_OP_COUNT:
@@ -8915,6 +9332,10 @@ value_text(Sema *sema, ValueId id)
 			(unsigned)value->as.field.base, value->as.field.length ? "len" : "ptr", value->as.field.offset);
 	case VALUE_SLICE:
 		return arena_sprintf(sema->arena, "slice(ptr.%u, len.%s)", (unsigned)value->as.slice.pointer, value_text(sema, value->as.slice.length));
+	case VALUE_ENUM:
+		return arena_sprintf(sema->arena, "enum(%s, %s)", sema_type_name(sema, value->type), value_text(sema, value->as.enum_tag));
+	case VALUE_ENUM_LITERAL:
+		return arena_sprintf(sema->arena, ".%s", intern_text(sema->interner, value->as.enum_literal));
 	case VALUE_STRUCT:
 		return arena_sprintf(sema->arena, "struct.%u", (unsigned)id);
 	case VALUE_ARRAY:

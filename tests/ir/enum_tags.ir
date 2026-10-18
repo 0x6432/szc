@@ -1,0 +1,96 @@
+%66 = struct_decl (flags=0) {
+  decl const "E" value {
+    %16 = enum_decl (flags=1) {
+       tag_type {
+        %0 = int_type u9
+        %1 = break_inline result, %0
+      }
+      field "first" default {
+        %2 = enum_tag_type
+        %3 = int 1
+        %4 = break_inline result, %3
+      }
+      field "second" default {
+        %5 = enum_tag_type
+        %6 = int 257
+        %7 = break_inline result, %6
+      }
+      field "last" default {
+        %8 = enum_tag_type
+        %9 = int 511
+        %10 = break_inline result, %9
+      }
+      decl const "answer" pub type {
+        %11 = break_inline result, @type_u8
+      } value {
+        %12 = decl_type
+        %13 = int 7
+        %14 = as %12, %13
+        %15 = break_inline result, %14
+      }
+    }
+    %17 = break_inline result, %16
+  }
+  decl fn "main" pub value {
+    %64 = func "main" {
+      ret type {
+        %18 = break_inline result, @type_u8
+      }
+      body insts {
+        %19 = decl_val "E"
+        %20 = as @type_type, %19
+        %21 = decl_literal "second", %20
+        %22 = decl_val "E"
+        %23 = field_val "second", %22
+        %24 = cmp_eq %21, %23
+        %34 = bool_and %24 rhs {
+          %25 = decl_val "E"
+          %26 = as @type_type, %25
+          %31 = has_field %26 name {
+            %27 = ptr_type @type_u8, @true slice
+            %28 = str "first"
+            %29 = as %27, %28
+            %30 = break_inline result, %29
+          }
+          %32 = as @type_bool, %31
+          %33 = break_inline result, %32
+        }
+        %45 = bool_and %34 rhs {
+          %35 = decl_val "E"
+          %36 = as @type_type, %35
+          %41 = has_decl %36 name {
+            %37 = ptr_type @type_u8, @true slice
+            %38 = str "first"
+            %39 = as %37, %38
+            %40 = break_inline result, %39
+          }
+          %42 = as @type_bool, %41
+          %43 = bool_not %42
+          %44 = break_inline result, %43
+        }
+        %52 = bool_and %45 rhs {
+          %46 = decl_val "E"
+          %47 = as @type_type, %46
+          %48 = bit_size_of %47
+          %49 = int 9
+          %50 = cmp_eq %48, %49
+          %51 = break_inline result, %50
+        }
+        %60 = if %52 then {
+          %53 = decl_val "E"
+          %54 = field_val "answer", %53
+          %55 = as @type_u8, %54
+          %56 = break_inline result, %55
+        } else {
+          %57 = int 256
+          %58 = as @type_u8, %57
+          %59 = break_inline result, %58
+        }
+        %61 = ret_type
+        %62 = as_return %61, %60
+        %63 = ret %62
+      }
+    }
+    %65 = break_inline result, %64
+  }
+}

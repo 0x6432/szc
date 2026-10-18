@@ -1,0 +1,118 @@
+%78 = struct_decl (flags=0) {
+  decl const "E" value {
+    %8 = enum_decl (flags=1) {
+       tag_type {
+        %0 = int_type u33
+        %1 = break_inline result, %0
+      }
+      field "lo" default {
+        %2 = enum_tag_type
+        %3 = int 1
+        %4 = break_inline result, %3
+      }
+      field "hi" default {
+        %5 = enum_tag_type
+        %6 = int 4294967297
+        %7 = break_inline result, %6
+      }
+    }
+    %9 = break_inline result, %8
+  }
+  decl const "S" value {
+    %20 = struct_decl (flags=0) {
+      field "e" type {
+        %10 = decl_val "E"
+        %11 = as @type_type, %10
+        %12 = break_inline result, %11
+      } default {
+        %13 = field_default_type
+        %14 = decl_literal "hi", %13
+        %15 = break_inline result, %14
+      }
+      field "n" type {
+        %16 = break_inline result, @type_u8
+      } default {
+        %17 = field_default_type
+        %18 = int 7
+        %19 = break_inline result, %18
+      }
+    }
+    %21 = break_inline result, %20
+  }
+  decl var "g" type {
+    %22 = int 2
+    %23 = as @type_usize, %22
+    %24 = decl_val "S"
+    %25 = as @type_type, %24
+    %26 = array_type %23, %25
+    %27 = as @type_type, %26
+    %28 = break_inline result, %27
+  } value {
+    %29 = decl_type
+    %30 = array_elem_type %29
+    %31 = struct_init %30 typed
+    %32 = as %30, %31
+    %36 = struct_init %30 typed "e" value {
+      %33 = struct_field_type "e", %30
+      %34 = decl_literal "lo", %33
+      %35 = break_inline result, %34
+    }
+    %37 = as %30, %36
+    %38 = array_init %29, %32, %37
+    %39 = as %29, %38
+    %40 = break_inline result, %39
+  }
+  decl fn "index" value {
+    %46 = func "index" noinline {
+      ret type {
+        %41 = break_inline result, @type_usize
+      }
+      body insts {
+        %42 = ret_type
+        %43 = int 1
+        %44 = as_return %42, %43
+        %45 = ret %44
+      }
+    }
+    %47 = break_inline result, %46
+  }
+  decl fn "main" pub value {
+    %76 = func "main" {
+      ret type {
+        %48 = break_inline result, @type_u8
+      }
+      body insts {
+        %49 = decl_ref "g"
+        %50 = array_base_ptr %49
+        %51 = decl_val "index"
+        %52 = call %51
+        %53 = as @type_usize, %52
+        %54 = array_index_ptr %50, %53
+        %55 = field_ptr "e", %54
+        %56 = elem_type %55
+        %57 = decl_literal "hi", %56
+        %58 = store %55, %57
+        %59 = ret_type
+        %60 = decl_ref "g"
+        %61 = array_base_ptr %60
+        %62 = int 1
+        %63 = as @type_usize, %62
+        %64 = array_index_ptr %61, %63
+        %65 = field_ref "e", %64
+        %66 = enum_literal "hi"
+        %67 = cmp_eq %65, %66
+        %74 = if %67 then {
+          %68 = int 0
+          %69 = as %59, %68
+          %70 = break_inline result, %69
+        } else {
+          %71 = int 1
+          %72 = as %59, %71
+          %73 = break_inline result, %72
+        }
+        %75 = ret %74
+      }
+    }
+    %77 = break_inline result, %76
+  }
+}
