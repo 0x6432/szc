@@ -1,0 +1,95 @@
+%58 = struct_decl (flags=0) {
+  decl const "S" value {
+    %8 = struct_decl (flags=0) {
+      field "x" type {
+        %0 = break_inline result, @type_u8
+      } default {
+        %1 = field_default_type
+        %2 = int 7
+        %3 = break_inline result, %2
+      }
+      field "y" type {
+        %4 = break_inline result, @type_u16
+      } default {
+        %5 = field_default_type
+        %6 = int 513
+        %7 = break_inline result, %6
+      }
+    }
+    %9 = break_inline result, %8
+  }
+  decl fn "make" value {
+    %22 = func "make" {
+      %11 = param "x" type {
+        %10 = break_inline result, @type_u8
+      }
+      ret type {
+        %12 = decl_val "S"
+        %13 = as @type_type, %12
+        %14 = break_inline result, %13
+      }
+      body insts {
+        %15 = ret_type
+        %19 = struct_init %15 "x" value {
+          %16 = struct_field_type "x", %15
+          %17 = as %16, %11
+          %18 = break_inline result, %17
+        }
+        %20 = as_return %15, %19
+        %21 = ret %20
+      }
+    }
+    %23 = break_inline result, %22
+  }
+  decl fn "copy" value {
+    %34 = func "copy" {
+      %27 = param "s" type {
+        %24 = decl_val "S"
+        %25 = as @type_type, %24
+        %26 = break_inline result, %25
+      }
+      ret type {
+        %28 = decl_val "S"
+        %29 = as @type_type, %28
+        %30 = break_inline result, %29
+      }
+      body insts {
+        %31 = ret_type
+        %32 = as_return %31, %27
+        %33 = ret %32
+      }
+    }
+    %35 = break_inline result, %34
+  }
+  decl fn "main" pub value {
+    %56 = func "main" {
+      ret type {
+        %36 = break_inline result, @type_u8
+      }
+      body insts {
+        %37 = decl_val "copy"
+        %38 = call %37 arg0 {
+          %39 = arg_type %38, 0
+          %40 = decl_val "make"
+          %41 = call %40 arg0 {
+            %42 = arg_type %41, 0
+            %43 = int 5
+            %44 = as %42, %43
+            %45 = break_inline result, %44
+          }
+          %46 = as %39, %41
+          %47 = break_inline result, %46
+        }
+        %48 = alloc type=inferred init=%38
+        %49 = init_empty_ptr %48
+        %50 = store %48, %49
+        %51 = ret_type
+        %52 = load %48
+        %53 = field_val "x", %52
+        %54 = as_return %51, %53
+        %55 = ret %54
+      }
+    }
+    %57 = break_inline result, %56
+  }
+}

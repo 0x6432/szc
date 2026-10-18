@@ -1,0 +1,106 @@
+%69 = struct_decl (flags=0) {
+  decl const "S" value {
+    %12 = struct_decl (flags=0) {
+      field "a" type {
+        %0 = break_inline result, @type_u8
+      } default {
+        %1 = field_default_type
+        %2 = int 9
+        %3 = break_inline result, %2
+      }
+      field "b" type {
+        %4 = break_inline result, @type_u8
+      } default {
+        %5 = field_default_type
+        %6 = int 8
+        %7 = break_inline result, %6
+      }
+      field "c" type {
+        %8 = break_inline result, @type_u8
+      } default {
+        %9 = field_default_type
+        %10 = int 7
+        %11 = break_inline result, %10
+      }
+    }
+    %13 = break_inline result, %12
+  }
+  decl var "g" type {
+    %14 = decl_val "S"
+    %15 = as @type_type, %14
+    %16 = break_inline result, %15
+  } value {
+    %17 = decl_type
+    %27 = struct_init %17 typed "a" value {
+      %18 = struct_field_type "a", %17
+      %19 = int 1
+      %20 = break_inline result, %19
+    } "b" value {
+      %21 = struct_field_type "b", %17
+      %22 = int 2
+      %23 = break_inline result, %22
+    } "c" value {
+      %24 = struct_field_type "c", %17
+      %25 = int 3
+      %26 = break_inline result, %25
+    }
+    %28 = as %17, %27
+    %29 = break_inline result, %28
+  }
+  decl fn "partial" value {
+    %42 = func "partial" noinline {
+      ret type {
+        %30 = break_inline result, @type_void
+      }
+      body insts {
+        %31 = decl_ref "g"
+        %39 = struct_init_ptr %31 "b" value {
+          %32 = field_ptr "b", %31
+          %33 = int 5
+          %34 = elem_type %32
+          %35 = as %34, %33
+          %36 = break_inline result, %35
+        } "c" value {
+          %37 = field_ptr "c", %31
+          %38 = ret @void_value
+        }
+        %40 = store %31, %39
+        %41 = ret_implicit
+      }
+    }
+    %43 = break_inline result, %42
+  }
+  decl fn "main" pub value {
+    %67 = func "main" {
+      ret type {
+        %44 = break_inline result, @type_u8
+      }
+      body insts {
+        %45 = decl_ref "g"
+        %52 = struct_init_ptr %45 "b" value {
+          %46 = field_ptr "b", %45
+          %47 = decl_val "g"
+          %48 = field_val "a", %47
+          %49 = elem_type %46
+          %50 = as %49, %48
+          %51 = break_inline result, %50
+        }
+        %53 = store %45, %52
+        %54 = decl_val "partial"
+        %55 = call %54
+        %56 = ret_type
+        %57 = decl_val "g"
+        %58 = field_val "a", %57
+        %59 = decl_val "g"
+        %60 = field_val "b", %59
+        %61 = add %58, %60
+        %62 = decl_val "g"
+        %63 = field_val "c", %62
+        %64 = add %61, %63
+        %65 = as_return %56, %64
+        %66 = ret %65
+      }
+    }
+    %68 = break_inline result, %67
+  }
+}

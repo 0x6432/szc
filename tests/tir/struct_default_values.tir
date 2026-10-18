@@ -1,0 +1,5 @@
+constant szc.g.1: u8 = 11
+fn szc.main.1: fn () u8 {
+  %0: u8 = const 23
+  %1: noreturn = ret %0
+}

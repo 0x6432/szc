@@ -60,9 +60,18 @@ typedef enum StructState {
 	STRUCT_FAILED,
 } StructState;
 
+typedef enum StructDefaultsState {
+	DEFAULTS_UNRESOLVED,
+	DEFAULTS_QUEUED,
+	DEFAULTS_IN_PROGRESS,
+	DEFAULTS_RESOLVED,
+	DEFAULTS_FAILED,
+} StructDefaultsState;
+
 typedef struct SemaField {
 	IrField ir;
 	TypeId type;
+	ValueId default_value;	/* VALUE_NONE is absent; typed undefined is a value */
 	uint64_t size;
 	uint64_t offset;
 	uint32_t alignment;
@@ -82,6 +91,7 @@ struct SemaNamespace {
 	uint32_t *field_order;
 	uint32_t field_count;
 	StructState layout_state;
+	StructDefaultsState defaults_state;
 	uint64_t size;
 	uint32_t alignment;
 };
@@ -122,6 +132,11 @@ struct Sema {
 	uint32_t runtime_storage_work;
 	uint32_t array_elements;	/* work/storage charged by dense constant construction */
 	uint32_t layout_depth;
+	SemaNamespace **defaults_queue; /* stable namespaces, never borrowed Type entries */
+	uint32_t defaults_queue_count;
+	uint32_t defaults_queue_capacity;
+	uint32_t defaults_depth;
+	uint32_t defaults_work;
 	uint32_t bit_cast_words;	/* bounded packed constant work/storage */
 
 	SemaFunc   **funcs;	/* funcs[0] is unused; each SemaFunc stays at its address */
@@ -182,6 +197,7 @@ typedef struct Block {
 	uint32_t      capacity;
 	ControlTarget *control;
 	TypeId declaration_type;	/* explicit mutable global initializer context */
+	TypeId field_default_type;	/* already resolved definition-context field type */
 } Block;
 
 /* How the analysis of a body ended. */
@@ -1292,6 +1308,10 @@ namespace_create(Sema *sema, SemaNamespace *parent, const IrFile *ir, IrInstInde
 	ns->fields = ARENA_ARRAY(sema->arena, SemaField, header.field_count);
 	for (uint32_t i = 0; i < header.field_count; i++)
 		IR_READ(ir, payload + IR_WORDS(IrContainerHeader) + i * IR_WORDS(IrField), &ns->fields[i].ir);
+	ns->defaults_state = DEFAULTS_RESOLVED;
+	for (uint32_t i = 0; i < header.field_count; i++)
+		if (ns->fields[i].ir.default_body != 0)
+			ns->defaults_state = DEFAULTS_UNRESOLVED;
 	ns->layout_state = header.field_count == 0 ? STRUCT_RESOLVED : STRUCT_UNRESOLVED;
 	ns->alignment = header.field_count == 0 ? 1 : 0;
 	ns->decl_count = header.decl_count;
@@ -1345,6 +1365,7 @@ block_init_comptime(Block *block, Sema *sema, SemaNamespace *ns, InstMap *map, S
 
 static bool operand_to_type(Block *block, Operand operand, uint32_t src, TypeId *out);
 static bool ensure_type_layout(Block *block, TypeId type, uint32_t src);
+static bool ensure_struct_defaults(Block *block, SemaNamespace *ns, uint32_t src);
 static bool validate_internal_value_type(Block *block, TypeId type, uint32_t src);
 static bool require_runtime(Block *block, uint32_t src);
 static bool analyze_alignment(Block *block, IrBody body, uint32_t src, uint32_t *out);
@@ -2979,6 +3000,41 @@ layout_is_comptime_only(const Sema *sema, TypeId type)
 	return is_comptime_only_type(sema, type);
 }
 
+/* Queueing layout obligations never runs user expressions. Defaults are separate
+ * analysis units so an owner can report its own errors before the queue drains. */
+static bool
+charge_defaults_work(Block *block, uint32_t src, uint32_t count)
+{
+	const uint32_t limit = 1048576;
+	if (count > limit - block->sema->defaults_work) {
+		sema_error(block, src, "not supported by szc yet: struct default work exceeds 1048576");
+		return false;
+	}
+	block->sema->defaults_work += count;
+	return true;
+}
+
+static bool
+queue_struct_defaults(Block *block, SemaNamespace *ns, uint32_t src)
+{
+	if (ns->defaults_state != DEFAULTS_UNRESOLVED)
+		return true;
+	Sema *sema = block->sema;
+	if (!charge_defaults_work(block, src, 1)) {
+		ns->defaults_state = DEFAULTS_FAILED;
+		return false;
+	}
+	if (sema->defaults_queue_count == sema->defaults_queue_capacity) {
+		uint32_t capacity = sema->defaults_queue_capacity == 0 ? 16 : sema->defaults_queue_capacity * 2;
+		sema->defaults_queue = arena_grow_array(sema->arena, sema->defaults_queue,
+			sema->defaults_queue_count, capacity, sizeof(SemaNamespace *), alignof(SemaNamespace *));
+		sema->defaults_queue_capacity = capacity;
+	}
+	ns->defaults_state = DEFAULTS_QUEUED;
+	sema->defaults_queue[sema->defaults_queue_count++] = ns;
+	return true;
+}
+
 /* Layout is independent of runtime value support. Publish nominal identity before
  * entering field bodies so pointer recursion never becomes a by-value cycle. */
 static bool
@@ -3013,8 +3069,8 @@ ensure_type_layout(Block *block, TypeId type, uint32_t src)
 	for (uint32_t i = 0; i < ns->field_count; i++) {
 		SemaField *field = &ns->fields[i];
 		if (field->ir.name == STRING_NONE || (field->ir.flags & IR_FIELD_COMPTIME) != 0
-			|| field->ir.align_body != 0 || field->ir.default_body != 0) {
-			sema_error(&fields, field->ir.src, "not supported by szc yet: tuple, comptime, aligned or defaulted struct fields");
+			|| field->ir.align_body != 0) {
+			sema_error(&fields, field->ir.src, "not supported by szc yet: tuple, comptime or aligned struct fields");
 			goto fail;
 		}
 		BodyResult result = analyze_body(&fields, field->ir.type_body);
@@ -3082,7 +3138,7 @@ ensure_type_layout(Block *block, TypeId type, uint32_t src)
 	ns->field_order = order;
 	ns->layout_state = STRUCT_RESOLVED;
 	sema->layout_depth--;
-	return true;
+	return queue_struct_defaults(block, ns, src);
 fail:
 	ns->layout_state = STRUCT_FAILED;
 	sema->layout_depth--;
@@ -6556,6 +6612,71 @@ require_struct_field(Block *block, SemaNamespace *ns, StringId name, uint32_t sr
 	return field;
 }
 
+/* Resolve the whole ordinary-default set in its definition context. Layout is
+ * already published: a fully explicit self-type value is not a defaults cycle.
+ * Caches are committed together; failed or active sets never expose partial data. */
+static bool
+ensure_struct_defaults(Block *block, SemaNamespace *ns, uint32_t src)
+{
+	if (ns->defaults_state == DEFAULTS_RESOLVED)
+		return true;
+	if (ns->defaults_state == DEFAULTS_FAILED)
+		return false;
+	if (ns->defaults_state == DEFAULTS_IN_PROGRESS) {
+		sema_error(block, src, "default value of type '%s' depends on itself here", namespace_name(block->sema, ns));
+		return false;
+	}
+	Sema *sema = block->sema;
+	if (sema->defaults_depth >= 256) {
+		sema_error(block, src, "not supported by szc yet: struct default dependency depth exceeds 256");
+		ns->defaults_state = DEFAULTS_FAILED;
+		return false;
+	}
+	if (!charge_defaults_work(block, src, ns->field_count)) {
+		ns->defaults_state = DEFAULTS_FAILED;
+		return false;
+	}
+	ns->defaults_state = DEFAULTS_IN_PROGRESS;
+	sema->defaults_depth++;
+	ValueId *values = arena_zalloc(sema->arena, ns->field_count * sizeof(ValueId), alignof(ValueId));
+	InstMap map;
+	inst_map_init(&map, sema->arena);
+	map.parent = ns->captures;
+	Block defaults;
+	block_init_comptime(&defaults, sema, ns, &map, STRING_NONE);
+	defaults.comptime_value_required = true;
+	for (uint32_t i = 0; i < ns->field_count; i++) {
+		SemaField *field = &ns->fields[i];
+		if (field->ir.default_body == 0)
+			continue;
+		defaults.field_default_type = field->type;
+		IrBody body = field->ir.default_body;
+		uint32_t count = ir_body_count(ns->ir, body);
+		uint32_t value_src = count == 0 ? field->ir.src
+			: ns->ir->insts[ir_body_insts(ns->ir, body)[count - 1]].src;
+		BodyResult result = analyze_body(&defaults, body);
+		if (result.end != BODY_BREAK_RESULT || result.result.kind == OPERAND_NONE)
+			goto fail;
+		Operand value = coerce(&defaults, result.result, field->type, value_src);
+		if (value.kind == OPERAND_NONE)
+			goto fail;
+		if (value.kind != OPERAND_COMPTIME) {
+			sema_error(&defaults, value_src, "unable to resolve comptime value");
+			goto fail;
+		}
+		values[i] = value.value;
+	}
+	for (uint32_t i = 0; i < ns->field_count; i++)
+		ns->fields[i].default_value = values[i];
+	ns->defaults_state = DEFAULTS_RESOLVED;
+	sema->defaults_depth--;
+	return true;
+fail:
+	ns->defaults_state = DEFAULTS_FAILED;
+	sema->defaults_depth--;
+	return false;
+}
+
 static Operand
 analyze_struct_init(Block *block, const IrInst *inst, bool *noreturn)
 {
@@ -6616,8 +6737,15 @@ analyze_struct_init(Block *block, const IrInst *inst, bool *noreturn)
 	}
 	for (uint32_t i = 0; i < ns->field_count; i++) {
 		if (!seen[i]) {
-			sema_name_error(block, inst->src, "missing struct field: ", ns->fields[i].ir.name, "");
-			return operand_none;
+			if (!ensure_struct_defaults(block, ns, inst->src)) {
+				*noreturn = true;
+				return operand_none;
+			}
+			if (ns->fields[i].default_value == VALUE_NONE) {
+				sema_name_error(block, inst->src, "missing struct field: ", ns->fields[i].ir.name, "");
+				return operand_none;
+			}
+			selected[i] = comptime_operand(ns->fields[i].type, ns->fields[i].default_value);
 		}
 		if (known)
 			values[i] = selected[i].value;
@@ -6690,10 +6818,21 @@ struct_init_destination(Block *block, Operand pointer, const IrStructInitField *
 		seen[(uint32_t)(field - ns->fields)] = true;
 	}
 	for (uint32_t i = 0; i < ns->field_count; i++) {
-		if (!seen[i]) {
-			sema_name_error(block, src, "missing struct field: ", ns->fields[i].ir.name, "");
+		if (seen[i])
+			continue;
+		if (!ensure_struct_defaults(block, ns, src)) {
+			*noreturn = true;
 			return operand_none;
 		}
+		SemaField *field = &ns->fields[i];
+		if (field->default_value == VALUE_NONE) {
+			sema_name_error(block, src, "missing struct field: ", field->ir.name, "");
+			return operand_none;
+		}
+		Operand destination = struct_field_address(block, pointer, shape.child, field->ir.name, src);
+		Operand value = comptime_operand(field->type, field->default_value);
+		if (destination.kind == OPERAND_NONE || store_value(block, destination, value, src).kind == OPERAND_NONE)
+			return operand_none;
 	}
 	return load_pointer(block, pointer, src);
 }
@@ -7880,6 +8019,18 @@ analyze_inst(Block *block, IrInstIndex index, Operand *break_value)
 	case IR_THIS:
 		result = type_operand(sema, block->namespace_scope->type);
 		break;
+	case IR_FIELD_CAPTURE: {
+		Operand captured = resolve_ref(block, inst->data.un.operand);
+		if (captured.kind == OPERAND_COMPTIME)
+			result = captured;
+		else
+			sema_error(block, src, "not supported by szc yet: field capture requires a comptime-known immutable local");
+		break;
+	}
+	case IR_FIELD_DEFAULT_TYPE:
+		if (block->field_default_type != 0)
+			result = type_operand(sema, block->field_default_type);
+		break;
 	case IR_DECL_TYPE:
 		if (block->declaration_type != 0)
 			result = type_operand(sema, block->declaration_type);
@@ -8449,10 +8600,50 @@ file_struct_name(Sema *sema, FileId file)
 	return intern(sema->interner, base, (uint32_t)length);
 }
 
+/* With deferred ordinary defaults, discovery order crosses analysis units.
+ * For this single-file subset, order an all-error semantic suffix by source.
+ * Keep notes/multi-file diagnostics untouched until they have explicit groups. */
+typedef struct DefaultDiagnostic {
+	Diagnostic item;
+	uint32_t ordinal;
+} DefaultDiagnostic;
+
+static int
+compare_default_diagnostic(const void *left, const void *right)
+{
+	const DefaultDiagnostic *a = left;
+	const DefaultDiagnostic *b = right;
+	if (a->item.offset != b->item.offset)
+		return a->item.offset < b->item.offset ? -1 : 1;
+	return a->ordinal < b->ordinal ? -1 : a->ordinal != b->ordinal;
+}
+
+static void
+sort_default_diagnostics(Sema *sema, uint32_t start)
+{
+	Diag *diag = sema->diag;
+	uint32_t count = diag->count - start;
+	if (sema->defaults_queue_count == 0 || count < 2)
+		return;
+	FileId file = diag->items[start].file;
+	for (uint32_t i = start; i < diag->count; i++)
+		if (diag->items[i].level != DIAG_ERROR || diag->items[i].file != file)
+			return;
+	DefaultDiagnostic *items = ARENA_ARRAY(sema->arena, DefaultDiagnostic, count);
+	for (uint32_t i = 0; i < count; i++) {
+		items[i].item = diag->items[start + i];
+		items[i].ordinal = i;
+	}
+	qsort(items, count, sizeof(*items), compare_default_diagnostic);
+	for (uint32_t i = 0; i < count; i++)
+		diag->items[start + i] = items[i].item;
+}
+
 bool
 sema_analyze_executable(Sema *sema, FileId file, const IrFile *ir)
 {
 	uint32_t errors_before = sema->diag->error_count;
+	uint32_t diagnostics_before = sema->diag->count;
 	StringId root_name = file_struct_name(sema, file);
 	SemaNamespace *root = namespace_create(sema, NULL, ir, ir->root, root_name, NULL);
 	InstMap map;
@@ -8492,8 +8683,9 @@ sema_analyze_executable(Sema *sema, FileId file, const IrFile *ir)
 	uint32_t function_index = 0;
 	GlobalId global_index = 1;
 	TypeId namespace_index = 1;
+	uint32_t defaults_index = 0;
 	while (function_index < sema->queue_count || global_index < sema->global_count
-		|| namespace_index < sema->type_count) {
+		|| namespace_index < sema->type_count || defaults_index < sema->defaults_queue_count) {
 		while (namespace_index < sema->type_count) {
 			Type type = sema->types[namespace_index++];
 			if (type.kind == TYPE_STRUCT)
@@ -8506,7 +8698,12 @@ sema_analyze_executable(Sema *sema, FileId file, const IrFile *ir)
 			if (global->decl->state == DECL_TYPED)
 				resolve_decl(&block, global->result.src, global->namespace_scope, global->decl, false);
 		}
+		while (defaults_index < sema->defaults_queue_count) {
+			SemaNamespace *ns = sema->defaults_queue[defaults_index++];
+			ensure_struct_defaults(&block, ns, ns->ir->insts[ns->inst].src);
+		}
 	}
+	sort_default_diagnostics(sema, diagnostics_before);
 	return sema->diag->error_count == errors_before;
 }
 

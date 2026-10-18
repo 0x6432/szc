@@ -19,6 +19,8 @@ CASES = (
     ('align-size-irgen-gate', 'const S=struct { a:u8 align(16), };', '@bitSizeOf(S)'),
 )
 
+CONTROLS = {'default-offset'}
+
 def main():
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument('szc')
@@ -31,9 +33,12 @@ def main():
             path.write_text(source)
             result=run_compiler([args.szc,'emit-qbe',str(path)],source,f'struct bit layout NYI case {index} szc',timeout=120)
             error=primary_error(result.stderr)
-            if result.returncode!=1 or error is None or 'not supported by szc yet:' not in error:
+            if label in CONTROLS:
+                if result.returncode!=0:
+                    failures.append('expected supported control '+label+': '+str(error))
+            elif result.returncode!=1 or error is None or 'not supported by szc yet:' not in error:
                 failures.append(label+': '+str(error))
-    print(f'struct bit layout NYI: {len(CASES)} cases; {len(failures)} failures')
+    print(f'struct bit layout NYI: {len(CASES)-len(CONTROLS)} NYI cases; {len(CONTROLS)} supported controls; {len(failures)} failures')
     if failures:
         raise SystemExit('\n'.join(failures))
 

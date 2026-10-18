@@ -24,6 +24,80 @@ Read this first when resuming work (the sandbox resets often).
 
 ## Latest follow-up checkpoint
 
+- M6.1j ordinary named typed field defaults is implemented from8240e1e as one
+  coherent batch: frontend contextual lowering, definition-time constant caches,
+  lazy/queued validation, omitted-field completion and local/global/private-ABI
+  composition. No backend/comptime value-representation or C ABI expansion.
+- Physical layout and defaults have separate states. Publish checked layout first,
+  then enqueue a stable namespace exactly once. Drain at sema finish alongside
+  functions/globals/namespace exports until fixed point, even after owner errors.
+  Synchronous omission forces ALL ordinary defaults before a missing-required error;
+  fully supplied initializers rely on queued validation. Explicit evaluation and
+  coercions precede completion; destination stores precede declaration-order default
+  stores. Early exits skip completion. Fully explicit self-type construction is
+  valid; actual default dependency cycles fail. Cached ValueIds publish atomically,
+  with typed undefined distinct from absent VALUE_NONE. Depth256/work1048576 limits.
+- FIELD_DEFAULT_TYPE supplies the resolved field type without repeating layout or
+  default analysis. FIELD_CAPTURE allows only comptime-known immutable local values
+  in field type/default expressions; references are anchored after that check.
+  Runtime/aggregate captured operands reject before foreign TIR access. Nested
+  expression bodies inherit permission; namespace boundaries stop it. Existing
+  general namespace/function/mutable/direct-parameter capture gates remain closed.
+- Definition maps use arena-owned snapshots and namespace/IR, never caller maps or
+  borrowed Type/Value table entries across analysis. Default callback address-taking
+  retains existing liveness, matching official metadata-only bad-body rejection.
+  No effectful resolution occurs inside cached backing/storage/dependency walkers.
+  Independent review found no remaining queue/cache/capture/ownership blocker.
+- Queued versus synchronous validation preserves different diagnostic sets. Only
+  when actual defaults were queued, same-file/all-error diagnostics added by sema
+  are sorted by source offset and original ordinal at finish. No-default analysis,
+  parser/IR diagnostics, notes/multifile suffixes and codegen retain their ordering.
+  This scoped policy is not general Zig diagnostic-unit ordering. All six permanent
+  multi-error comparisons are mandatory, not opt-in primary-only checks.
+- Limits: arbitrary comptime calls/mutation, runtime captures, comptime/tuple/aligned/
+  packed/extern fields, methods, C aggregate ABI and whole volatile operations stay
+  gated. Singleton/OPV struct classification remains separate; zero-sized mutable
+  struct comptime reads still explicitly NYI. Cycle checks assert failure/dependency
+  evidence without pretending szc matches official unlabeled loop notes exactly.
+- Added94 semantic/emission cases,19 frontend protocol cases, five bounded resource
+  cases (failed-cache reuse, depth256/257, queue growth and defaults/function fixed
+  point), plus failed-default physical-layout API coverage.16 net stage/error goldens,
+  six seeds each irgen/sema and three natives/26 checks. Old default NYI source is
+  preserved as a positive metadata golden.148 prior checker sources/labels/order
+  retained; exactly seven default rows updated, six supported and one exact invalid.
+  Current counts: metadata38 NYI+11 controls+1 invalid, values6+39, bit-layout8+1,
+  static9+10, runtime3+6, internal ABI10+2, globals10+1 plus two value-cycle rejects;
+  new defaults nine NYIs and three dependency-cycle failures all pass.
+- Official comparisons: defaults82 cases/29 exact-primary failures and all six full
+  ordered diagnostic lists; metadata100/29, globals60/15, private ABI62/15 pass.
+  Three formatted natives pass official Debug and ReleaseFast. Four new compact
+  stage-source programs also compile official. Full/generated e2e remains szc-only,
+  targeted references separate; this is not std/bootstrap coverage.
+- One final full grouped gate passes in frozen independent GCC/Clang C11 Werror
+  ASan/UBSan:7541 units,1335 goldens,155+4 natives, full driver/C/storage/alignment,
+  106 actual volatile sequences and303 safety cases. Each compiler20000 standalone
+  mutations/stage, seeds256/256/153/209. Four fresh60-second libFuzzer campaigns
+  2520198/80662/89554/92602 pass. Separate GCC-O2 full/native,303 safety and both
+  static2/mutable2 physical adapters pass. Main targeted unit/golden tests pass;
+  all6394 paths match main and three frozen trees before final README/HANDOFF/
+  MILESTONES edits. No full gate per individual frontend/resolver integration slice.
+  Evidence /data/struct-defaults-final/{gcc,clang,optimized}, manifest.json,
+  verification.json; /data/struct-defaults-final-*.log, /data/struct-defaults-diff.json,
+  /data/struct-defaults-regression-*.{json,log}, /data/struct-defaults-releasefast.json,
+  /data/struct-defaults-resource-results.json, /data/struct-defaults-stage-reference.json.
+- Hosted8240e1e run39170456757 was IN_PROGRESS at last check, NOT confirmed green.
+  Older3251935 last observed queued;4021366 recorded safety timeouts/nonreproduction
+  and unclassified Clang log remain as recorded below. No deadlines, assertions or
+  hosted failure classifications weakened; no blind reruns.
+- Next M6.1k instance method CALLS, not general bound-function closures. Plans:
+  /data/struct-methods-next-plan.md and /data/struct-methods-contract/PLAN.md.
+  Dot-call syntax binds a transient receiver; namespace functions/callable fields
+  remain ordinary calls. Freeze value receiver snapshots and pointer/callee loads
+  before later arguments. Reuse shared call/ABI/liveness gates. No implementation
+  included in this defaults commit. Q6 remains mandatory only at M10.2.
+
+## Previous follow-up checkpoint (M6.1i)
+
 - M6.1i internal mutable ordinary-struct/recursively struct-array globals is
   implemented from3251935. Supported source-known initializers use stable typed
   mutable symbols and the existing exact serializer; no backend opcode, ABI,

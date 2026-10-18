@@ -22,7 +22,7 @@ CASES=(
  ('generic-call',BASE+'fn f(comptime T:type,s:T)T{return s;}pub fn main()void{_=f(S,.{.a=1});}',('not supported by szc yet:',)),
 )
 # M6.1i: retain the former mutable-global rejection as an emission control.
-CONTROLS = {'mutable-global'}
+CONTROLS = {'mutable-global', 'default-field-signature'}
 
 def main():
  p=argparse.ArgumentParser(description=__doc__);p.add_argument('szc');args=p.parse_args();bad=[]

@@ -56,7 +56,10 @@ many-pointer tails. Known descriptors support borrowed `&slice.*` array
 addresses and direct dereference following Zig 0.17.0 constant-load rules
 (see docs/IR.md for zero-bit and mutable-backing behavior). Integer ABI sizes and pointer strides include
 widths beyond 64 bits, but runtime
-wide-integer values/arithmetic are still unsupported. Structs, non-scalar sentinels, modules/imports,
+wide-integer values/arithmetic are still unsupported. Ordinary structs support metadata and physical layout,
+constant and runtime values, typed field pointers, immutable and mutable internal globals,
+private by-value calls/returns, and checked ordinary field defaults. Instance method-call binding,
+packed/extern structs, C aggregate ABI, non-scalar sentinels, modules/imports,
 generic functions and the full comptime interpreter remain pending; szc does not yet
 bootstrap Zig.
 

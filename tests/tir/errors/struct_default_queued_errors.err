@@ -1,0 +1,6 @@
+tests/tir/errors/struct_default_queued_errors.zig:1:21: error: type 'u8' cannot represent integer value '256'
+const S=struct{x:u8=256};
+                    ^
+tests/tir/errors/struct_default_queued_errors.zig:2:44: error: type 'u16' cannot represent integer value '65536'
+pub fn main()void{_=@sizeOf(S);const n:u16=65536;_=n;}
+                                           ^

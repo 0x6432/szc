@@ -22,6 +22,8 @@ CASES=(
  ('self-value-cycle',BASE+'var g:S=g;pub fn main()void{_=g.a;}',True),
  ('mutual-value-cycle',BASE+'var a:S=b;var b:S=a;pub fn main()void{_=a.a;}',True),
 )
+CONTROLS = {'default'}
+
 def main():
  p=argparse.ArgumentParser(description=__doc__);p.add_argument('szc');args=p.parse_args();bad=[]
  with tempfile.TemporaryDirectory(prefix='szc-struct-mutable-global-nyi-') as directory:
@@ -30,7 +32,9 @@ def main():
    path.write_text(source)
    r=run_compiler([args.szc,'emit-qbe',str(path)],source,f'struct mutable global NYI case {index} szc',timeout=120)
    text=r.stderr.decode(errors='replace')
-   if r.returncode!=1 or not ('depend' in text.lower() if cycle else 'not supported by szc yet:' in text):bad.append(label+': '+str(primary_error(r.stderr)))
- print(f'struct mutable global scope: {len(CASES)-2} NYI gates; 2 dependency-cycle rejections; {len(bad)} failures')
+   if label in CONTROLS:
+    if r.returncode!=0:bad.append('expected supported control '+label+': '+str(primary_error(r.stderr)))
+   elif r.returncode!=1 or not ('depend' in text.lower() if cycle else 'not supported by szc yet:' in text):bad.append(label+': '+str(primary_error(r.stderr)))
+ print(f'struct mutable global scope: {len(CASES)-2-len(CONTROLS)} NYI gates; 2 dependency-cycle rejections; {len(CONTROLS)} supported controls; {len(bad)} failures')
  if bad:raise SystemExit('\n'.join(bad))
 if __name__=='__main__':main()

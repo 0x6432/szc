@@ -1,0 +1,3 @@
+tests/tir/errors/struct_default_runtime_capture.zig:3:32: error: not supported by szc yet: field capture requires a comptime-known immutable local
+    const S = struct { x: u8 = n };
+                               ^

@@ -1273,3 +1273,36 @@ aggregate copies, C aggregate ABI and deferred field forms remain closed. Canoni
 singleton structs are still deferred: comptime reads of zero-sized mutable
 struct-bearing storage diagnose explicit NYI, not a size-based value fold. Scalar
 zero-bit fields and established empty-array behavior are unchanged.
+
+### Ordinary struct defaults and checked field captures
+
+Ordinary named typed field defaults retain their existing deferred `IrBody`.
+`FIELD_DEFAULT_TYPE` supplies the already-resolved current field type in its
+captured definition context. Lowering uses a coerced result hint, not declaration
+RLS; the defaults resolver performs final coercion and requires a constant value.
+`FIELD_CAPTURE` checks an immutable outer-local value before use in field type or
+default bodies. Only known operands cross builders; runtime/aggregate operands
+remain explicit NYI. Nested expression bodies inherit capture permission, while
+namespace boundaries stop it. Ordinary member/function captures stay unchanged.
+
+Physical layout and defaults have independent states. A successfully published
+layout enqueues defaults once; the finish loop drains obligations to a fixed point
+alongside functions, globals and namespace exports, even after owner errors.
+Missing-field completion forces the whole defaults set synchronously. Cached
+ValueIds publish atomically after all defaults succeed; `VALUE_NONE` means absent,
+not typed undefined. Defaults resolution has depth256 and cumulative queue/field
+work1048576 limits, independent of existing aggregate storage and constant budgets.
+
+All explicit field expressions/coercions finish before omitted-field completion.
+True destination initialization stores explicit fields in source order, then stores
+omitted defaults in declaration order; early exits skip completion. Explicit typed
+literals and `@as` retain owned value boundaries. Overridden defaults still undergo
+queued validation. Comptime calls/mutation, unsupported field forms, whole volatile
+aggregates and singleton struct classification are not admitted by this feature.
+
+For demanded ordinary defaults, the single-file semantic diagnostic suffix is
+source-ordered at finish when it contains errors only; equal locations retain
+original order. No-default analysis, pre-sema diagnostics, notes and multi-file
+suffixes preserve prior ordering. This scoped compatibility policy is not a general
+Zig diagnostic-unit ordering implementation. Six permanent differential cases
+compare all ordered errors, not merely the first primary.

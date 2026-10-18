@@ -63,8 +63,10 @@ CONTROLS = {
     # M6.1h internal direct/indirect value transport; keep exact old sources.
     'direct-argument', 'return', 'indirect-argument',
     # M6.1i mutable internal struct storage; preserve the old source.
-    'global-storage',
+    'global-storage', 'valid-default',
 }
+
+EXACT_ERRORS = {'invalid-default': "type 'u8' cannot represent integer value '256'"}
 
 def main():
     parser=argparse.ArgumentParser(description=__doc__)
@@ -79,9 +81,12 @@ def main():
             if label in CONTROLS:
                 if result.returncode != 0:
                     raise SystemExit(f'expected supported control: {label}\n{source}\n'+result.stderr.decode(errors='replace'))
+            elif label in EXACT_ERRORS:
+                if result.returncode != 1 or error != EXACT_ERRORS[label]:
+                    raise SystemExit(f'expected exact invalid default: {label}\n{source}\n'+result.stderr.decode(errors='replace'))
             elif result.returncode!=1 or not error or not NYI.search(error):
                 raise SystemExit(f'expected explicit NYI: {label}\n{source}\n'+result.stderr.decode(errors='replace'))
-    print(f'struct metadata: {index-len(CONTROLS)} explicit unsupported-feature rejections; {len(CONTROLS)} supported controls')
+    print(f'struct metadata: {index-len(CONTROLS)-len(EXACT_ERRORS)} explicit unsupported-feature rejections; {len(CONTROLS)} supported controls; {len(EXACT_ERRORS)} exact invalid defaults')
 
 if __name__=='__main__':
     main()

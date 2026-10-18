@@ -145,8 +145,9 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
   - [x] **M6.1g Runtime local struct storage**: owned snapshots, typed lvalues, sequential contextual result locations, nested aggregates and dynamic/absolute field pointers.
   - [x] **M6.1h Internal struct-bearing by-value ABI**: direct/typed indirect private aggregate transport, argument-time snapshots, private callee copies and fresh result slots.
   - [x] **M6.1i Internal mutable struct globals**: checked stable symbols, source-known initialization, writable relocations, runtime snapshots and typed self/mutual address references.
-  - [ ] **M6.1j Ordinary field defaults**: definition-context constants, demanded validation and omitted-field completion.
-  - Instance methods and remaining field forms stay deferred; struct singleton comptime classification remains separate.
+  - [x] **M6.1j Ordinary field defaults**: definition-context constants, demanded validation and omitted-field completion.
+  - [ ] **M6.1k Ordinary instance method calls**: call-specific receiver binding, exact-once receiver evaluation and existing call transport.
+  - Remaining field forms stay deferred; struct singleton comptime classification remains separate.
 - [ ] **M6.2 Enums**: tag values, `@intFromEnum`, `@enumFromInt`, enum literals.
 - [ ] **M6.3 switch** on ints/enums with ranges.
 - [ ] **M6.4 Optionals**: `?T`, `orelse`, `.?`, if-payloads, optional pointers.
@@ -207,6 +208,38 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
 ## Completed milestone log
 
 (newest first; each entry: what, limitations, interactions)
+
+### M6.1j Ordinary field defaults and checked field captures
+
+- **What**: supported ordinary named typed fields cache constant defaults in their
+  definition namespace/captured context, including nested values, typed undefined,
+  pointers/slices and callback addresses. FIELD_DEFAULT_TYPE supplies a coerced type
+  hint; FIELD_CAPTURE admits known immutable local values in field type/default
+  expressions without leaking runtime TIR across builders. Ordinary namespace and
+  function captures remain closed; no backend or private ABI change.
+- **Scheduling**: physical layout publishes before deduplicated default queueing.
+  Finish drains defaults/functions/globals/types to a fixed point despite owner
+  errors. Omitted fields synchronously force the whole set; explicit bodies/coercions
+  and destination stores finish first. Cache publication is atomic; active/failed
+  state, depth256 and cumulative work1048576 bound recursion and queue work.
+- **Parity**: overridden defaults still validate; unused types, hasDecl and pointer
+  child layout stay lazy. Six ordered multi-error scenarios compare all errors.
+  Source sorting is scoped to demanded-default same-file/all-error semantic suffixes;
+  no-default diagnostics, notes/multifile suffixes and earlier stages stay unchanged.
+- **Limits**: no arbitrary comptime calls/mutation, runtime captures, new field forms,
+  whole volatile aggregates or struct singleton classification. Dependency cycles
+  reject separately without claiming identical official unlabeled cycle diagnostics.
+- **Coverage/validation**:94 semantic/emission cases,19 frontend protocol scenarios,
+  five resource cases, failed-default physical-layout API checks,16 net stage/error
+  goldens, six seeds each irgen/sema, three natives/26 checks. Seven old gate rows
+  retain sources/order (six acceptances, one exact-invalid default); old NYI golden
+  source becomes positive metadata coverage. Frozen GCC/Clang Werror ASan/UBSan7541
+  units/1335 goldens,155+4 natives, full storage/alignment,106 volatile and303 safety
+  pass; each compiler20000 mutations/stage, seeds256/256/153/209. Fresh fuzz runs
+  2520198/80662/89554/92602 pass; GCC-O2 native/safety and both physical adapters pass.
+  Official defaults82/29 including six full diagnostic lists, metadata100/29,
+  mutable-global60/15, internal-ABI62/15 and three Debug/ReleaseFast natives pass.
+  Hosted8240e1e was in progress at last check, not green. Parent structs stays PARTIAL.
 
 ### M6.1i Internal mutable ordinary-struct globals
 

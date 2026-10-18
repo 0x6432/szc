@@ -1,0 +1,47 @@
+%31 = struct_decl (flags=0) {
+  decl fn "main" pub value {
+    %29 = func "main" {
+      ret type {
+        %0 = break_inline result, @type_u8
+      }
+      body insts {
+        %1 = int 7
+        %2 = as @type_u8, %1
+        %18 = struct_decl (flags=0) {
+          field "x" type {
+            %3 = field_capture @type_u8
+            %4 = as @type_type, %3
+            %5 = break_inline result, %4
+          } default {
+            %6 = field_default_type
+            %7 = field_capture %2
+            %8 = break_inline result, %7
+          }
+          field "p" type {
+            %9 = field_capture @type_u8
+            %10 = as @type_type, %9
+            %11 = ptr_type %10, @true
+            %12 = as @type_type, %11
+            %13 = break_inline result, %12
+          } default {
+            %14 = field_default_type
+            %15 = field_capture %2
+            %16 = ref %15
+            %17 = break_inline result, %16
+          }
+        }
+        %19 = as @type_type, %18
+        %20 = struct_init %19
+        %21 = as %19, %20
+        %22 = ret_type
+        %23 = field_val "x", %21
+        %24 = field_val "p", %21
+        %25 = deref %24
+        %26 = add %23, %25
+        %27 = as_return %22, %26
+        %28 = ret %27
+      }
+    }
+    %30 = break_inline result, %29
+  }
+}

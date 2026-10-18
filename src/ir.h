@@ -138,6 +138,8 @@ typedef enum IrDataKind {
 	X(TYPEOF_BUILTIN, "typeof_builtin", IR_DATA_PAYLOAD) /* IrTypeOf + operands; unevaluated body */ \
 	X(THIS, "this", IR_DATA_NONE)	/* nearest lexical container type */ \
 	X(DECL_TYPE, "decl_type", IR_DATA_NONE)	/* explicit mutable global initializer result type */ \
+	X(FIELD_DEFAULT_TYPE, "field_default_type", IR_DATA_NONE) /* current resolved field type in default body */ \
+	X(FIELD_CAPTURE, "field_capture", IR_DATA_UN) /* immutable local value captured only by field type/default */ \
 	X(DECL_VAL, "decl_val", IR_DATA_NAME)	/* value of the declaration `name` */ \
 	X(DECL_REF, "decl_ref", IR_DATA_NAME)	/* pointer to the declaration `name` */ \
 	/* Constants */ \

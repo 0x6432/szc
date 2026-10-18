@@ -80,6 +80,7 @@ typedef struct GenBody {
 	uint32_t    capacity;
 	bool        is_comptime;
 	bool        in_function;	/* inside a function body: `return` is allowed */
+	bool        field_capture;	/* immutable captures only within field type/default expressions */
 } GenBody;
 
 /* What the value of an expression is used for. */
@@ -295,6 +296,7 @@ body_init(GenBody *body, IrGen *gen, Scope *parent, bool is_comptime)
 		for (Scope *scope = parent; scope != NULL; scope = scope->parent) {
 			if (scope->kind == SCOPE_BODY) {
 				body->in_function = ((GenBody *)scope)->in_function;
+				body->field_capture = ((GenBody *)scope)->field_capture;
 				break;
 			}
 			if (scope->kind == SCOPE_NAMESPACE)
@@ -530,6 +532,15 @@ check_capture(IrGen *gen, Lookup found, uint32_t src)
 		: "not supported by szc yet: capturing local '%s' across a namespace";
 	error_at(gen, src, format, intern_text(gen->interner, found.local->name));
 	return true;
+}
+
+/* Namespace members do not inherit this permission; only field type/default
+ * bodies and their nested expression bodies can capture an immutable local. */
+static bool
+field_capture_allowed(const GenBody *body, Lookup found)
+{
+	return body->field_capture && found.kind == LOOKUP_CAPTURED_LOCAL
+		&& found.local->local_kind == LOCAL_CONST;
 }
 
 /* Reports `name` if it shadows a local or declaration in scope. */
@@ -946,6 +957,8 @@ identifier(GenBody *body, Scope *scope, ResultInfo info, AstNode *node)
 		return rvalue(body, info, ref, node->offset);
 	StringId name = intern_span(gen, identifier_node->name);
 	Lookup found = lookup_name(scope, name);
+	if (field_capture_allowed(body, found))
+		return rvalue(body, info, emit_un(body, IR_FIELD_CAPTURE, node->offset, found.local->ref), node->offset);
 	if (check_capture(gen, found, node->offset))
 		return IR_REF_VOID_VALUE;
 	if (found.kind == LOOKUP_LOCAL) {
@@ -981,6 +994,10 @@ lvalue(GenBody *body, Scope *scope, AstNode *node)
 		}
 		StringId name = intern_span(gen, identifier_node->name);
 		Lookup found = lookup_name(scope, name);
+		if (field_capture_allowed(body, found)) {
+			error_at(gen, node->offset, "cannot assign to constant '%s'", intern_text(gen->interner, name));
+			return IR_REF_VOID_VALUE;
+		}
 		if (check_capture(gen, found, node->offset))
 			return IR_REF_VOID_VALUE;
 		if (found.kind == LOOKUP_LOCAL) {
@@ -1031,6 +1048,10 @@ address_of(GenBody *body, Scope *scope, ResultInfo info, AstNode *node)
 		&& !is_primitive_name(body->gen->source + node->offset, node->end - node->offset)) {
 		StringId name = intern_span(body->gen, AST_CAST(AstIdentifier, node, AST_IDENTIFIER)->name);
 		Lookup found = lookup_name(scope, name);
+		if (field_capture_allowed(body, found)) {
+			IrRef captured = emit_un(body, IR_FIELD_CAPTURE, node->offset, found.local->ref);
+			return reference_value(body, captured, node->offset);
+		}
 		if (check_capture(body->gen, found, node->offset))
 			return IR_REF_VOID_VALUE;
 		if (found.kind == LOOKUP_LOCAL)
@@ -2764,6 +2785,7 @@ container_decl(GenBody *body, Scope *scope, AstContainerDecl *decl, StringId nam
 			out->flags = IR_FIELD_HAS_TYPE | (field->is_comptime ? IR_FIELD_COMPTIME : 0);
 			GenBody type_body;
 			body_init(&type_body, gen, member_scope, true);
+			type_body.field_capture = true;
 			IrRef type = type_expr(&type_body, &type_body.base, field->type);
 			emit_break(&type_body, IR_BREAK_INLINE, member->offset, IR_BODY_RESULT, type);
 			out->type_body = body_finish(&type_body);
@@ -2772,8 +2794,10 @@ container_decl(GenBody *body, Scope *scope, AstContainerDecl *decl, StringId nam
 			if (field->default_value != NULL) {
 				GenBody default_body;
 				body_init(&default_body, gen, member_scope, true);
-				IrRef value = expr(&default_body, &default_body.base, result_none, field->default_value);
-				emit_break(&default_body, IR_BREAK_INLINE, member->offset, IR_BODY_RESULT, value);
+				default_body.field_capture = true;
+				IrRef type_hint = emit_none(&default_body, IR_FIELD_DEFAULT_TYPE, field->default_value->offset);
+				IrRef value = expr(&default_body, &default_body.base, result_coerced_type(type_hint), field->default_value);
+				emit_break(&default_body, IR_BREAK_INLINE, field->default_value->offset, IR_BODY_RESULT, value);
 				out->default_body = body_finish(&default_body);
 			}
 			continue;

@@ -1,0 +1,12 @@
+function w $szc.main.1() {
+@start
+	ret 23
+}
+
+section ".rodata"
+data $szc.g.1 = align 1 { b 11 }
+export function w $main() {
+@start
+	%status =w call $szc.main.1()
+	ret %status
+}

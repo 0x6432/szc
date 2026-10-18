@@ -36,7 +36,7 @@ CONTROLS = {
  # M6.1h fixed internal value parameters/results.
  'runtime-parameter', 'runtime-return',
  # M6.1i mutable symbols; immutable address cycles remain closed.
- 'mutable-global',
+ 'mutable-global', 'default-layout',
 }
 
 def main():

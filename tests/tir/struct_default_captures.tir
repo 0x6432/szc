@@ -1,0 +1,4 @@
+fn szc.main.1: fn () u8 {
+  %0: u8 = const 14
+  %1: noreturn = ret %0
+}

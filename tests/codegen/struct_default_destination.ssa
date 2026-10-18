@@ -1,0 +1,67 @@
+function w $szc.main.1() {
+@start
+	%t0 =l alloc4 3
+	%t13 =l alloc4 3
+	%t19 =l alloc4 3
+	%t24 =l alloc4 3
+	%t30 =l alloc4 3
+	call $memmove(l %t0, l $szc.g.1, l 3)
+	%t3 =l copy %t0
+	%t4 =w loadub %t3
+	%t5 =l add $szc.g.1, 1
+	storeb %t4, %t5
+	storeb 9, $szc.g.1
+	%t10 =l add $szc.g.1, 2
+	storeb 7, %t10
+	call $memmove(l %t13, l $szc.g.1, l 3)
+	call $memmove(l $szc.g.1, l %t13, l 3)
+	call $szc.partial.2()
+	call $memmove(l %t19, l $szc.g.1, l 3)
+	%t22 =l copy %t19
+	%t23 =w loadub %t22
+	call $memmove(l %t24, l $szc.g.1, l 3)
+	%t27 =l add %t24, 1
+	%t28 =w loadub %t27
+	%t29 =w add %t23, %t28
+	%t29 =w and %t29, 255
+	%g29_overflow =w cultw %t29, %t23
+	jnz %g29_overflow, @g29_overflow_panic, @g29_overflow_ok
+@g29_overflow_panic
+	call $szc.panic.0()
+	hlt
+@g29_overflow_ok
+	call $memmove(l %t30, l $szc.g.1, l 3)
+	%t33 =l add %t30, 2
+	%t34 =w loadub %t33
+	%t35 =w add %t29, %t34
+	%t35 =w and %t35, 255
+	%g35_overflow =w cultw %t35, %t29
+	jnz %g35_overflow, @g35_overflow_panic, @g35_overflow_ok
+@g35_overflow_panic
+	call $szc.panic.0()
+	hlt
+@g35_overflow_ok
+	ret %t35
+}
+
+function $szc.partial.2() {
+@start
+	%t0 =l add $szc.g.1, 1
+	storeb 5, %t0
+	ret
+}
+
+data $szc.g.1 = align 1 { b 1, b 2, b 3 }
+data $szc.panic.msg.0 = { b "integer overflow\n", b 0 }
+function $szc.panic.0() {
+@start
+	call $write(w 2, l $szc.panic.msg.0, l 17)
+	call $abort()
+	hlt
+}
+
+export function w $main() {
+@start
+	%status =w call $szc.main.1()
+	ret %status
+}

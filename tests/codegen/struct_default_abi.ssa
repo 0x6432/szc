@@ -1,0 +1,49 @@
+function w $szc.main.1() {
+@start
+	%t1 =l alloc4 4
+	%t4 =l alloc4 4
+	%t7 =l alloc4 4
+	%t15 =l alloc4 4
+	%t18 =l alloc4 4
+	call $szc.make.3(w 5, l %t1)
+	%t3 =l copy %t1
+	call $szc.copy.2(l %t3, l %t4)
+	%t6 =l copy %t4
+	call $memmove(l %t7, l %t6, l 4)
+	%t9 =l add %t7, 2
+	storeb 7, %t9
+	%t12 =l copy %t7
+	storeh 513, %t12
+	call $memmove(l %t15, l %t7, l 4)
+	call $memmove(l %t7, l %t15, l 4)
+	call $memmove(l %t18, l %t7, l 4)
+	%t20 =l add %t18, 2
+	%t21 =w loadub %t20
+	ret %t21
+}
+
+function $szc.copy.2(l %t0, l %t3) {
+@start
+	%t1 =l alloc4 4
+	call $memmove(l %t1, l %t0, l 4)
+	call $memmove(l %t3, l %t1, l 4)
+	ret
+}
+
+function $szc.make.3(w %t0, l %t1) {
+@start
+	%t2 =l alloc4 4
+	%t3 =l add %t2, 2
+	storeb %t0, %t3
+	%t5 =l copy %t2
+	storeh 513, %t5
+	%t8 =l copy %t2
+	call $memmove(l %t1, l %t8, l 4)
+	ret
+}
+
+export function w $main() {
+@start
+	%status =w call $szc.main.1()
+	ret %status
+}

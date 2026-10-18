@@ -2659,7 +2659,7 @@ test_struct_internal_abi(void)
 		/* nyi/volatile-whole-return-source */
 		{"const S=struct{a:u8,}; fn f(p:*const volatile S)S{return p.*;}pub fn main()void{var s:S=.{.a=1};_=f(&s);}", "not supported by szc yet:"},
 		/* nyi/default-field-signature */
-		{"const S=struct{a:u8=7,};fn f(s:S)S{return s;}pub fn main()void{_=f(.{.a=1});}", "not supported by szc yet:"},
+		{"const S=struct{a:u8=7,};fn f(s:S)S{return s;}pub fn main()void{_=f(.{.a=1});}", NULL},
 		/* nyi/generic-call */
 		{"const S=struct{a:u8,}; fn f(comptime T:type,s:T)T{return s;}pub fn main()void{_=f(S,.{.a=1});}", "not supported by szc yet:"},
 	};
@@ -2866,7 +2866,7 @@ test_struct_mutable_globals(void)
 		/* scope/packed */
 		{"const S=packed struct{a:u8,};var g:S=.{.a=1};pub fn main()void{_= &g;}", "not supported by szc yet:"},
 		/* scope/default */
-		{"const S=struct{a:u8=7,};var g:S=.{};pub fn main()void{_= &g;}", "not supported by szc yet:"},
+		{"const S=struct{a:u8=7,};var g:S=.{};pub fn main()void{_= &g;}", NULL},
 		/* scope/field-align */
 		{"const S=struct{a:u8 align(16),};var g:S=.{.a=1};pub fn main()void{_= &g;}", "not supported by szc yet:"},
 		/* scope/whole-volatile-load */
@@ -2915,6 +2915,481 @@ test_struct_mutable_globals(void)
 			if (assembly != NULL)
 				fclose(assembly);
 		}
+		arena_free(&arena);
+	}
+}
+
+/* Defaults are checked once per nominal type; omitted values compose with
+ * runtime storage, globals and the private ABI without changing value ownership. */
+static void
+test_struct_defaults(void)
+{
+	const struct {
+		const char *source;
+		const char *error;
+	} cases[] = {
+		/* all-explicit */
+		{"const S=struct{a:u8=7,b:u16=513,};pub fn main()void{const s=S{.a=1,.b=2};const check:u8=if(s.a==1 and s.b==2)0 else 256;_=check;}\n", NULL},
+		/* all-defaults-explicit */
+		{"const S=struct{a:u8=7,b:u16=513,};pub fn main()void{const s=S{};const check:u8=if(s.a==7 and s.b==513)0 else 256;_=check;}\n", NULL},
+		/* all-defaults-context */
+		{"const S=struct{a:u8=7,b:u16=513,};pub fn main()void{const s:S=.{};const check:u8=if(s.a==7 and s.b==513)0 else 256;_=check;}\n", NULL},
+		/* all-defaults-as */
+		{"const S=struct{a:u8=7,b:u16=513,};pub fn main()void{const s=@as(S,.{});const check:u8=if(s.a==7 and s.b==513)0 else 256;_=check;}\n", NULL},
+		/* first-override */
+		{"const S=struct{a:u8=7,b:u16=513,};pub fn main()void{const s:S=.{.a=2};const check:u8=if(s.a==2 and s.b==513)0 else 256;_=check;}\n", NULL},
+		/* last-override */
+		{"const S=struct{a:u8=7,b:u16=513,};pub fn main()void{const s:S=.{.b=3};const check:u8=if(s.a==7 and s.b==3)0 else 256;_=check;}\n", NULL},
+		/* required-and-default */
+		{"const S=struct{a:u8,b:u16=513,};pub fn main()void{const s:S=.{.a=7};const check:u8=if(s.b==513)0 else 256;_=check;}\n", NULL},
+		/* undefined-is-default */
+		{"const S=struct{a:u8=undefined,b:u8=7,};pub fn main()void{const s:S=.{};const check:u8=if(s.b==7)0 else 256;_=check;}\n", NULL},
+		/* whole-undefined-ignores-valid-default */
+		{"const S=struct{a:u8=7,b:u16=513,};pub fn main()void{const s:S=undefined;_=@TypeOf(s.a);}\n", NULL},
+		/* void-zero */
+		{"const S=struct{a:u0=0,v:void={},};pub fn main()void{const s:S=.{};const check:u8=if(s.a==0)0 else 256;_=check;}\n", NULL},
+		/* odd-width */
+		{"const S=struct{x:u3=7,y:i9=-256,};pub fn main()void{const s:S=.{};const check:u8=if(s.x==7 and s.y == -256)0 else 256;_=check;}\n", NULL},
+		/* wide-known */
+		{"const S=struct{x:u128=18446744073709551616,};pub fn main()void{const s:S=.{};const check:u8=if(s.x==18446744073709551616)0 else 256;_=check;}\n", NULL},
+		/* bool-if */
+		{"const S=struct{x:bool=true,y:u8=if(true)7 else 9,};pub fn main()void{const s:S=.{};const check:u8=if(s.x and s.y==7)0 else 256;_=check;}\n", NULL},
+		/* arithmetic */
+		{"const n:u8=3;const S=struct{x:u8=n+4,};pub fn main()void{const s:S=.{};const check:u8=if(s.x==7)0 else 256;_=check;}\n", NULL},
+		/* block */
+		{"const S=struct{x:u8=blk:{const n:u8=3;break :blk n+4;},};pub fn main()void{const s:S=.{};const check:u8=if(s.x==7)0 else 256;_=check;}\n", NULL},
+		/* intCast-context */
+		{"const S=struct{x:u8=@intCast(@as(u16,7)),};pub fn main()void{const s:S=.{};const check:u8=if(s.x==7)0 else 256;_=check;}\n", NULL},
+		/* truncate-context */
+		{"const S=struct{x:u8=@truncate(@as(u16,263)),};pub fn main()void{const s:S=.{};const check:u8=if(s.x==7)0 else 256;_=check;}\n", NULL},
+		/* nested-context */
+		{"const I=struct{x:u8=7,y:u16=513,};const O=struct{i:I=.{},};pub fn main()void{const o:O=.{};const check:u8=if(o.i.x==7 and o.i.y==513)0 else 256;_=check;}\n", NULL},
+		/* nested-overridden */
+		{"const I=struct{x:u8=7,y:u16=513,};const O=struct{i:I=.{.x=9},};pub fn main()void{const o:O=.{};const check:u8=if(o.i.x==9 and o.i.y==513)0 else 256;_=check;}\n", NULL},
+		/* nested-explicit */
+		{"const I=struct{x:u8=7,y:u16=513,};const O=struct{i:I=I{},};pub fn main()void{const o:O=.{};const check:u8=if(o.i.x==7)0 else 256;_=check;}\n", NULL},
+		/* array-default */
+		{"const S=struct{a:[2]u8=.{1,2},};pub fn main()void{const s:S=.{};const check:u8=if(s.a[0]==1 and s.a[1]==2)0 else 256;_=check;}\n", NULL},
+		/* sentinel-default */
+		{"const S=struct{a:[2:9]u8=.{1,2},};pub fn main()void{const s:S=.{};const check:u8=if(s.a[2]==9)0 else 256;_=check;}\n", NULL},
+		/* zero-array-default */
+		{"const S=struct{a:[0]u64=.{},x:u8=7,};pub fn main()void{const s:S=.{};const check:u8=if(s.a.len==0 and s.x==7)0 else 256;_=check;}\n", NULL},
+		/* zero-sentinel-default */
+		{"const S=struct{a:[0:9]u8=.{},};pub fn main()void{const s:S=.{};const check:u8=if(s.a[0]==9)0 else 256;_=check;}\n", NULL},
+		/* array-struct-default */
+		{"const I=struct{x:u8=7,y:u16=513,};const O=struct{a:[2]I=.{.{},.{.x=4}},};pub fn main()void{const o:O=.{};const check:u8=if(o.a[0].x==7 and o.a[1].x==4)0 else 256;_=check;}\n", NULL},
+		/* recursive-array-default */
+		{"const I=struct{x:u8=7,y:u16=513,};const O=struct{a:[1][1]I=.{.{.{}}},};pub fn main()void{const o:O=.{};const check:u8=if(o.a[0][0].y==513)0 else 256;_=check;}\n", NULL},
+		/* pointer-default */
+		{"const byte:u8=7;const S=struct{p:*const u8=&byte,};pub fn main()void{const s:S=.{};const check:u8=if(s.p.*==7)0 else 256;_=check;}\n", NULL},
+		/* slice-default */
+		{"const bytes=[_]u8{1,2};const S=struct{s:[]const u8=&bytes,};pub fn main()void{const s:S=.{};const check:u8=if(s.s.len==2 and s.s[1]==2)0 else 256;_=check;}\n", NULL},
+		/* mutable-pointer-default */
+		{"var byte:u8=7;const S=struct{p:*u8=&byte,};pub fn main()void{var s:S=.{};s.p.*=8;_= &s;}\n", NULL},
+		/* nul-name-invalid */
+		{"const S=struct{@\"a b\":u8=7,@\"a\\x00b\":u8=9,};pub fn main()void{const s:S=.{};const check:u8=if(@field(s,\"a b\")==7 and @field(s,\"a\\x00b\")==9)0 else 256;_=check;}\n", "identifier cannot contain null bytes"},
+		/* quoted-space-name */
+		{"const S=struct{@\"a b\":u8=7,};pub fn main()void{const s:S=.{};const check:u8=if(@field(s,\"a b\")==7)0 else 256;_=check;}\n", NULL},
+		/* unused-callback-default-lazy */
+		{"fn bad(x:u8)u8{return @as(u8,256)+x;}const H=struct{p:*const fn(u8)u8=&bad,};pub fn main()void{}\n", NULL},
+		/* declaration-same-name */
+		{"const x:u8=7;const S=struct{x:u8=x,};pub fn main()void{const s:S=.{};const check:u8=if(s.x==7)0 else 256;_=check;}\n", NULL},
+		/* namespace-constant */
+		{"const S=struct{x:u8=n,const n:u8=7;};pub fn main()void{const s:S=.{};const check:u8=if(s.x==7)0 else 256;_=check;}\n", NULL},
+		/* local-capture */
+		{"pub fn main()void{const n:u8=7;const S=struct{x:u8=n,};const s:S=.{};const check:u8=if(s.x==7)0 else 256;_=check;}\n", NULL},
+		/* local-type-capture */
+		{"pub fn main()void{const T=u8;const n:T=7;const S=struct{x:T=n,};const s:S=.{};const check:u8=if(s.x==7)0 else 256;_=check;}\n", NULL},
+		/* self-explicit-default */
+		{"const S=struct{x:u8=(S{.x=7}).x,};pub fn main()void{const s:S=.{};const check:u8=if(s.x==7)0 else 256;_=check;}\n", NULL},
+		/* self-layout-query-default */
+		{"const S=struct{x:u8=@intCast(@sizeOf(S)),};pub fn main()void{const s:S=.{};const check:u8=if(s.x==1)0 else 256;_=check;}\n", NULL},
+		/* mutable-local */
+		{"const S=struct{a:u8=7,b:u16=513,};pub fn main()void{var s:S=.{};s.a=9;_= &s;}\n", NULL},
+		/* runtime-field-plus-default */
+		{"const S=struct{a:u8=7,b:u16=513,};fn f(n:u8)S{return .{.a=n};}pub fn main()void{_=f(3);}\n", NULL},
+		/* runtime-assignment */
+		{"const S=struct{a:u8=7,b:u16=513,};fn f(p:*S,n:u8)void{p.*=.{.a=n};}pub fn main()void{var s:S=.{};f(&s,3);}\n", NULL},
+		/* global-default */
+		{"const S=struct{a:u8=7,b:u16=513,};var g:S=.{};pub fn main()void{g.a=9;}\n", NULL},
+		/* global-array-default */
+		{"const S=struct{a:u8=7,b:u16=513,};var g:[2]S=.{.{},.{.a=3}};pub fn main()void{g[1].b=7;}\n", NULL},
+		/* known-address */
+		{"const S=struct{a:u8=7,b:u16=513,};const g:S=.{};fn f(p:*const u16)u16{return p.*;}pub fn main()void{_=f(&g.b);}\n", NULL},
+		/* internal-abi */
+		{"const S=struct{a:u8=7,b:u16=513,};fn f(s:S)S{return s;}pub fn main()void{_=f(.{});}\n", NULL},
+		/* indirect-abi */
+		{"const S=struct{a:u8=7,b:u16=513,};fn f(s:S)S{return s;}fn call(p:*const fn(S)S,s:S)S{return p(s);}pub fn main()void{_=call(&f,.{});}\n", NULL},
+		/* callback-default */
+		{"const S=struct{a:u8=7,b:u16=513,};fn f(s:S)S{return s;}const H=struct{p:*const fn(S)S=&f,};pub fn main()void{const h:H=.{};_=h.p(.{});}\n", NULL},
+		/* callback-default-body-live */
+		{"fn bad(x:u8)u8{return @as(u8,256)+x;}const H=struct{p:*const fn(u8)u8=&bad,};pub fn main()void{_=@sizeOf(H);}\n", "type 'u8' cannot represent integer value '256'"},
+		/* unused-invalid-default */
+		{"const S=struct{a:u8=256,b:u16,};pub fn main()void{}\n", NULL},
+		/* hasDecl-invalid-lazy */
+		{"const S=struct{a:u8=256,b:u16,};pub fn main()void{_=@hasDecl(S,\"a\");}\n", NULL},
+		/* pointer-size-invalid-lazy */
+		{"const S=struct{a:u8=256,b:u16,};pub fn main()void{_=@sizeOf(*S);}\n", NULL},
+		/* pointer-type-invalid-lazy */
+		{"const S=struct{a:u8=256,b:u16,};pub fn main()void{const P=*S;_=@alignOf(P);}\n", NULL},
+		/* size-valid */
+		{"const S=struct{a:u8=7,b:u16=513,};pub fn main()void{_=@sizeOf(S);}\n", NULL},
+		/* offset-valid */
+		{"const S=struct{a:u8=7,b:u16=513,};pub fn main()void{_=@offsetOf(S,\"b\");}\n", NULL},
+		/* bitOffset-valid */
+		{"const S=struct{a:u8=7,b:u16=513,};pub fn main()void{_=@bitOffsetOf(S,\"b\");}\n", NULL},
+		/* size-invalid */
+		{"const S=struct{a:u8=256,b:u16,};pub fn main()void{_=@sizeOf(S);}\n", "type 'u8' cannot represent integer value '256'"},
+		/* align-invalid */
+		{"const S=struct{a:u8=256,b:u16,};pub fn main()void{_=@alignOf(S);}\n", "type 'u8' cannot represent integer value '256'"},
+		/* hasField-invalid */
+		{"const S=struct{a:u8=256,b:u16,};pub fn main()void{_=@hasField(S,\"a\");}\n", "type 'u8' cannot represent integer value '256'"},
+		/* FieldType-invalid */
+		{"const S=struct{a:u8=256,b:u16,};pub fn main()void{_=@FieldType(S,\"a\");}\n", "type 'u8' cannot represent integer value '256'"},
+		/* offset-invalid */
+		{"const S=struct{a:u8=256,b:u16,};pub fn main()void{_=@offsetOf(S,\"b\");}\n", "type 'u8' cannot represent integer value '256'"},
+		/* bitOffset-invalid */
+		{"const S=struct{a:u8=256,b:u16,};pub fn main()void{_=@bitOffsetOf(S,\"b\");}\n", "type 'u8' cannot represent integer value '256'"},
+		/* overridden-invalid */
+		{"const S=struct{a:u8=256,b:u16,};pub fn main()void{const s=S{.a=1,.b=2};_=s;}\n", "type 'u8' cannot represent integer value '256'"},
+		/* undefined-still-layout-invalid */
+		{"const S=struct{a:u8=256,b:u16,};pub fn main()void{const s:S=undefined;_=&s;}\n", "type 'u8' cannot represent integer value '256'"},
+		/* omitted-invalid */
+		{"const S=struct{a:u8=256,b:u16,};pub fn main()void{const s:S=.{.b=2};_=s;}\n", "type 'u8' cannot represent integer value '256'"},
+		/* missing-before-invalid */
+		{"const S=struct{required:u16,a:u8=256,};pub fn main()void{const s:S=.{};_=s;}\n", "type 'u8' cannot represent integer value '256'"},
+		/* missing-valid-default */
+		{"const S=struct{required:u16,a:u8=7,};pub fn main()void{const s:S=.{};_=s;}\n", "missing struct field: required"},
+		/* wrong-default-type */
+		{"const S=struct{x:u8=\"bad\",};pub fn main()void{_=@sizeOf(S);}\n", "expected type 'u8', found '*const [3:0]u8'"},
+		/* negative-default */
+		{"const S=struct{x:u8=-1,};pub fn main()void{const s:S=.{};_=s;}\n", "type 'u8' cannot represent integer value '-1'"},
+		/* default-runtime-global */
+		{"var n:u8=7;const S=struct{x:u8=n,};pub fn main()void{const s:S=.{};_=s;}\n", "unable to resolve comptime value"},
+		/* nominal-default */
+		{"const I=struct{x:u8,};const J=struct{x:u8,};const S=struct{i:I=J{.x=7},};pub fn main()void{const s:S=.{};_=s;}\n", "expected type 'test.I', found 'test.J'"},
+		/* array-length-default */
+		{"const S=struct{x:[2]u8=.{1},};pub fn main()void{const s:S=.{};_=s;}\n", "expected 2 array elements; found 1"},
+		/* nested-missing-default */
+		{"const I=struct{x:u8,};const S=struct{i:I=.{},};pub fn main()void{const s:S=.{};_=s;}\n", "missing struct field: x"},
+		/* unknown-over-valid */
+		{"const S=struct{a:u8=7,b:u16=513,};pub fn main()void{const s=S{.other=1};_=s;}\n", "no field named 'other' in struct 'test.S'"},
+		/* duplicate-over-valid */
+		{"const S=struct{a:u8=7,b:u16=513,};pub fn main()void{const s=S{.a=1,.a=2};_=s;}\n", "duplicate struct field name"},
+		/* explicit-overflow-valid-default */
+		{"const S=struct{a:u8=7,b:u16=513,};pub fn main()void{const s:S=.{.a=256};_=s;}\n", "type 'u8' cannot represent integer value '256'"},
+		/* default-pointer-const */
+		{"const byte:u8=7;const S=struct{p:*u8=&byte,};pub fn main()void{const s:S=.{};_=s;}\n", "expected type '*u8', found '*const u8'"},
+		/* diagnostics/queue-then-main */
+		{"const S=struct{a:u8=256,b:u16,};pub fn main()void{_=@sizeOf(S);const n:u16=65536;_=n;}\n", "type 'u8' cannot represent integer value '256'"},
+		/* diagnostics/sync-suppresses-main */
+		{"const S=struct{a:u8=256,b:u16,};pub fn main()void{const s:S=.{.b=2};_=s;const n:u16=65536;_=n;}\n", "type 'u8' cannot represent integer value '256'"},
+		/* diagnostics/explicit-value-and-queue */
+		{"const S=struct{a:u8=256,b:u16,};pub fn main()void{const s=S{.b=65536};_=s;}\n", "type 'u8' cannot represent integer value '256'"},
+		/* diagnostics/context-value-and-queue */
+		{"const S=struct{a:u8=256,b:u16,};pub fn main()void{const s:S=.{.b=65536};_=s;}\n", "type 'u8' cannot represent integer value '256'"},
+		/* diagnostics/queue-definition-after-main */
+		{"pub fn main()void{_=@sizeOf(S);const n:u16=65536;_=n;}\nconst S=struct{a:u8=256,b:u16,};\n", "type 'u16' cannot represent integer value '65536'"},
+		/* diagnostics/return-and-main-independent */
+		{"const S=struct{a:u8=256,b:u16,};fn f()S{return .{.b=2};}pub fn main()void{_=f();const n:u16=65536;_=n;}\n", "type 'u8' cannot represent integer value '256'"},
+		/* cycle/self-default */
+		{"const S=struct{x:u8=(S{}).x,};pub fn main()void{const s:S=.{};_=s;}", "depend"},
+		/* cycle/mutual-default */
+		{"const A=struct{x:u8=(B{}).x,};const B=struct{x:u8=(A{}).x,};pub fn main()void{const a:A=.{};_=a;}", "depend"},
+		/* cycle/byvalue-layout */
+		{"const S=struct{x:S=.{},};pub fn main()void{_=@sizeOf(S);}", "depend"},
+		/* scope/default-call */
+		{"fn make()u8{return 7;}const S=struct{x:u8=make(),};pub fn main()void{const s:S=.{};_=s;}", "not supported by szc yet:"},
+		/* scope/default-comptime-mutation */
+		{"const S=struct{x:u8=blk:{var n:u8=3;n+=4;break :blk n;},};pub fn main()void{const s:S=.{};_=s;}", "not supported by szc yet:"},
+		/* scope/comptime-field */
+		{"const S=struct{comptime x:u8=7,};pub fn main()void{const s:S=.{};_=s;}", "not supported by szc yet:"},
+		/* scope/aligned-field */
+		{"const S=struct{x:u8 align(16)=7,};pub fn main()void{const s:S=.{};_=s;}", "not supported by szc yet:"},
+		/* scope/packed-field */
+		{"const S=packed struct{x:u8=7,};pub fn main()void{const s:S=.{};_=s;}", "not supported by szc yet:"},
+		/* scope/extern-field */
+		{"const S=extern struct{x:u8=7,};pub fn main()void{const s:S=.{};_=s;}", "not supported by szc yet:"},
+		/* scope/opv-global-comptime-read */
+		{"const Z=struct{a:u0=0,v:void={},};var a:Z=.{};var b:Z=a;pub fn main()void{_= &b;}", "not supported by szc yet:"},
+		/* scope/whole-volatile-default */
+		{"const S=struct{x:u8=7,};var g:S=.{};pub fn main()void{const p:*volatile S=&g;const old=p.*;_=old;}", "not supported by szc yet:"},
+		/* scope/C-ABI-default */
+		{"const S=struct{x:u8=7,};fn f(s:S)callconv(.c)u8{return s.x;}pub fn main()void{_=f(.{});}", "not supported by szc yet:"},
+	};
+	for (uint32_t i = 0; i < sizeof(cases) / sizeof(cases[0]); i++) {
+		Arena arena;
+		arena_init(&arena);
+		SourceTable sources;
+		source_table_init(&sources, &arena);
+		Diag diag;
+		diag_init(&diag, &arena, &sources);
+		Interner interner;
+		intern_init(&interner, &arena);
+		const char *source = cases[i].source;
+		FileId file = source_add_memory(&sources, "test.zig", source, (uint32_t)strlen(source));
+		AstContainerDecl *root = parse_file(&arena, &diag, &sources, file);
+		IrFile *ir = irgen_file(&arena, &diag, &interner, source_get(&sources, file), file, root);
+		Sema *sema = sema_create(&arena, &diag, &interner, &sources);
+		bool success = !diag_has_errors(&diag) && sema_analyze_executable(sema, file, ir);
+		CHECK(success == (cases[i].error == NULL));
+		if (cases[i].error != NULL) {
+			CHECK(diag.count != 0 && strstr(diag.items[0].message, cases[i].error) != NULL);
+		} else if (success) {
+			FILE *output = tmpfile();
+			FILE *assembly = tmpfile();
+			CHECK(output != NULL && assembly != NULL);
+			if (output != NULL && assembly != NULL)
+				CHECK(codegen_qbe(output, assembly, sema, &diag));
+			if (output != NULL)
+				fclose(output);
+			if (assembly != NULL)
+				fclose(assembly);
+		}
+		arena_free(&arena);
+	}
+}
+
+/* Frontend-only CHECK fragment: paste before main and invoke once.
+ * These tests require no sema admission of defaults or comptime function calls. */
+static void
+test_struct_default_type_ir(void)
+{
+	const struct {
+		const char *source;
+		uint32_t defaults;
+		bool raw_integer;
+	} cases[] = {
+		{"const S=struct{x:u8};", 0, false},
+		{"const S=struct{x:u8=7};", 1, true},
+		{"const S=struct{x:u8=@intCast(@as(u16,7))};", 1, false},
+		{"const I=struct{x:u8=7}; const S=struct{i:I=.{}};", 2, false},
+		{"const I=struct{x:u8}; const S=struct{i:I=.{.x=7}};", 1, false},
+		{"const S=struct{a:[2]u8=.{1,2}};", 1, false},
+		{"const S=struct{@\"\\x61\":u8=1,b:u8=2};", 2, true},
+		{"fn f() void {const n:u8=7; const S=struct{x:u8=n}; _=S;}", 1, false},
+	};
+	for (uint32_t i = 0; i < sizeof(cases) / sizeof(cases[0]); i++) {
+		Arena arena;
+		arena_init(&arena);
+		SourceTable sources;
+		source_table_init(&sources, &arena);
+		Diag diag;
+		diag_init(&diag, &arena, &sources);
+		Interner interner;
+		intern_init(&interner, &arena);
+		const char *source = cases[i].source;
+		FileId file = source_add_memory(&sources, "struct_default_type_ir.zig", source, (uint32_t)strlen(source));
+		AstContainerDecl *root = parse_file(&arena, &diag, &sources, file);
+		CHECK(!diag_has_errors(&diag));
+		if (diag_has_errors(&diag)) {
+			arena_free(&arena);
+			continue;
+		}
+		IrFile *ir = irgen_file(&arena, &diag, &interner, source_get(&sources, file), file, root);
+		CHECK(!diag_has_errors(&diag));
+		if (diag_has_errors(&diag)) {
+			arena_free(&arena);
+			continue;
+		}
+		uint32_t hints = 0;
+		uint32_t defaults = 0;
+		bool protocol = true;
+		bool typed_context = true;
+		bool raw_results = true;
+		for (uint32_t j = 0; j < ir->inst_count; j++) {
+			const IrInst *inst = &ir->insts[j];
+			hints += inst->op == IR_FIELD_DEFAULT_TYPE;
+			if (inst->op == IR_STRUCT_INIT) {
+				IrStructInit header;
+				IR_READ(ir, inst->data.payload, &header);
+				typed_context = typed_context && (header.flags & IR_STRUCT_INIT_TYPED) != 0;
+			}
+			if (inst->op != IR_STRUCT_DECL)
+				continue;
+			IrContainerHeader container;
+			IR_READ(ir, inst->data.payload, &container);
+			uint32_t cursor = inst->data.payload + IR_WORDS(IrContainerHeader);
+			for (uint32_t k = 0; k < container.field_count; k++) {
+				IrField field;
+				IR_READ(ir, cursor, &field);
+				cursor += IR_WORDS(IrField);
+				if (field.default_body == 0)
+					continue;
+				defaults++;
+				uint32_t count = ir_body_count(ir, field.default_body);
+				if (count < 2) {
+					protocol = false;
+					continue;
+				}
+				const IrInstIndex *body = ir_body_insts(ir, field.default_body);
+				const IrInst *first = &ir->insts[body[0]];
+				const IrInst *last = &ir->insts[body[count - 1]];
+				protocol = protocol && first->op == IR_FIELD_DEFAULT_TYPE
+					&& last->op == IR_BREAK_INLINE && last->data.brk.block == IR_BODY_RESULT;
+				if (cases[i].raw_integer)
+					raw_results = raw_results && ir_ref_is_inst(last->data.brk.operand)
+						&& ir->insts[ir_ref_inst(last->data.brk.operand)].op == IR_INT;
+			}
+		}
+		CHECK(hints == cases[i].defaults);
+		CHECK(defaults == cases[i].defaults);
+		CHECK(protocol);
+		CHECK(typed_context);
+		CHECK(raw_results);
+		arena_free(&arena);
+	}
+}
+
+/* Additional frontend-only tests; parent executes after integration. */
+static void
+test_struct_default_capture_ir(void)
+{
+	const struct {
+		const char *source;
+		bool rejected;
+		uint32_t captures;
+		uint32_t captured_refs;
+	} cases[] = {
+		{"fn f() void {const n:u8=7; const S=struct{x:u8=n}; _=S;}", false, 1, 0},
+		{"fn f() void {const T=u8; const n:T=7; const S=struct{x:T=n}; _=S;}", false, 2, 0},
+		{"const I=struct{x:u8}; fn f() void {const n:u8=7; const S=struct{i:I=.{.x=n}}; _=S;}", false, 1, 0},
+		{"fn f() void {const n:u8=7; const S=struct{x:u8=@as(u8,n)}; _=S;}", false, 1, 0},
+		{"fn f() void {const n:u8=7; const S=struct{p:*const u8=&n}; _=S;}", false, 1, 1},
+		/* A runtime-valued const is lowered safely but must fail in sema. */
+		{"fn f(v:u8) void {const n:u8=v; const S=struct{x:u8=n}; _=S;}", false, 1, 0},
+		{"fn f() void {var n:u8=7; const S=struct{x:u8=n}; _=S;}", true, 0, 0},
+		{"fn f(n:u8) void {const S=struct{x:u8=n}; _=S;}", true, 0, 0},
+		{"fn f() void {const n:u8=7; const S=struct{const x=n;}; _=S;}", true, 0, 0},
+		{"fn f() void {const n:u8=7; const S=struct{fn g()u8{return n;}}; _=S;}", true, 0, 0},
+		{"fn f() void {const n:u8=7; const S=struct{x:u8=blk:{n=2;break :blk 7;}}; _=S;}", true, 0, 0},
+	};
+	for (uint32_t i = 0; i < sizeof(cases) / sizeof(cases[0]); i++) {
+		Arena arena;
+		arena_init(&arena);
+		SourceTable sources;
+		source_table_init(&sources, &arena);
+		Diag diag;
+		diag_init(&diag, &arena, &sources);
+		Interner interner;
+		intern_init(&interner, &arena);
+		const char *source = cases[i].source;
+		FileId file = source_add_memory(&sources, "struct_default_capture_ir.zig", source, (uint32_t)strlen(source));
+		AstContainerDecl *root = parse_file(&arena, &diag, &sources, file);
+		CHECK(!diag_has_errors(&diag));
+		if (diag_has_errors(&diag)) {
+			arena_free(&arena);
+			continue;
+		}
+		IrFile *ir = irgen_file(&arena, &diag, &interner, source_get(&sources, file), file, root);
+		CHECK(diag_has_errors(&diag) == cases[i].rejected);
+		if (diag_has_errors(&diag)) {
+			arena_free(&arena);
+			continue;
+		}
+		uint32_t captures = 0;
+		uint32_t captured_refs = 0;
+		bool source_locations = true;
+		for (uint32_t j = 0; j < ir->inst_count; j++) {
+			const IrInst *inst = &ir->insts[j];
+			captures += inst->op == IR_FIELD_CAPTURE;
+			if (inst->op == IR_REF && ir_ref_is_inst(inst->data.un.operand)
+				&& ir->insts[ir_ref_inst(inst->data.un.operand)].op == IR_FIELD_CAPTURE)
+				captured_refs++;
+			if (inst->op != IR_STRUCT_DECL)
+				continue;
+			IrContainerHeader header;
+			IR_READ(ir, inst->data.payload, &header);
+			uint32_t cursor = inst->data.payload + IR_WORDS(IrContainerHeader);
+			for (uint32_t k = 0; k < header.field_count; k++) {
+				IrField field;
+				IR_READ(ir, cursor, &field);
+				cursor += IR_WORDS(IrField);
+				if (field.default_body == 0)
+					continue;
+				uint32_t count = ir_body_count(ir, field.default_body);
+				const IrInstIndex *body = ir_body_insts(ir, field.default_body);
+				source_locations = source_locations && count >= 2;
+				if (count >= 2)
+					source_locations = source_locations && ir->insts[body[0]].src == ir->insts[body[count - 1]].src;
+			}
+		}
+		CHECK(captures == cases[i].captures);
+		CHECK(captured_refs == cases[i].captured_refs);
+		CHECK(source_locations);
+		arena_free(&arena);
+	}
+}
+
+/* Bounded generated sources exercise recursive defaults, queue reallocation and
+ * failed caches without huge allocations or changing the configured limits. */
+static void
+test_struct_defaults_work(void)
+{
+	const struct {
+		const char *parts[16];
+		bool success;
+		uint32_t errors;
+		const char *first;
+	} cases[] = {
+		/* failed-cache-reuse */
+		{{"const S=struct{good:u8=7,bad:u8=256};\nfn first()void{_=S{};}fn second()void{_=S{};}\nfn independent()void{const n:u16=65536;_=n;}\npub fn main()void{_=&first;_=&second;_=&independent;}\n"}, false, 2, "type 'u8' cannot represent integer value '256'"},
+		/* depth-256 */
+		{{"const T0=struct{x:u8=(T1{}).x};\nconst T1=struct{x:u8=(T2{}).x};\nconst T2=struct{x:u8=(T3{}).x};\nconst T3=struct{x:u8=(T4{}).x};\nconst T4=struct{x:u8=(T5{}).x};\nconst T5=struct{x:u8=(T6{}).x};\nconst T6=struct{x:u8=(T7{}).x};\nconst T7=struct{x:u8=(T8{}).x};\nconst T8=struct{x:u8=(T9{}).x};\nconst T9=struct{x:u8=(T10{}).x};\nconst T10=struct{x:u8=(T11{}).x};\nconst T11=struct{x:u8=(T12{}).x};\nconst T12=struct{x:u8=(T13{}).x};\nconst T13=struct{x:u8=(T14{}).x};\nconst T14=struct{x:u8=(T15{}).x};\nconst T15=struct{x:u8=(T16{}).x};\nconst T16=struct{x:u8=(T17{}).x};\nconst T17=struct{x:u8=(T18{}).x};\nconst T18=struct{x:u8=(T19{}).x};\nconst T19=struct{x:u8=(T20{}).x};\nconst T20=struct{x:u8=(T21{}).x};\nconst T21=struct{x:u8=(T22{}).x};\nconst T22=struct{x:u8=(T23{}).x};\nconst T23=struct{x:u8=(T24{}).x};\nconst T24=struct{x:u8=(T25{}).x};\nconst T25=struct{x:u8=(T26{}).x};\nconst T26=struct{x:u8=(T27{}).x};\nconst T27=struct{x:u8=(T28{}).x};\nconst T28=struct{x:u8=(T29{}).x};\nconst T29=struct{x:u8=(T30{}).x};\nconst T30=struct{x:u8=(",
+		  "T31{}).x};\nconst T31=struct{x:u8=(T32{}).x};\nconst T32=struct{x:u8=(T33{}).x};\nconst T33=struct{x:u8=(T34{}).x};\nconst T34=struct{x:u8=(T35{}).x};\nconst T35=struct{x:u8=(T36{}).x};\nconst T36=struct{x:u8=(T37{}).x};\nconst T37=struct{x:u8=(T38{}).x};\nconst T38=struct{x:u8=(T39{}).x};\nconst T39=struct{x:u8=(T40{}).x};\nconst T40=struct{x:u8=(T41{}).x};\nconst T41=struct{x:u8=(T42{}).x};\nconst T42=struct{x:u8=(T43{}).x};\nconst T43=struct{x:u8=(T44{}).x};\nconst T44=struct{x:u8=(T45{}).x};\nconst T45=struct{x:u8=(T46{}).x};\nconst T46=struct{x:u8=(T47{}).x};\nconst T47=struct{x:u8=(T48{}).x};\nconst T48=struct{x:u8=(T49{}).x};\nconst T49=struct{x:u8=(T50{}).x};\nconst T50=struct{x:u8=(T51{}).x};\nconst T51=struct{x:u8=(T52{}).x};\nconst T52=struct{x:u8=(T53{}).x};\nconst T53=struct{x:u8=(T54{}).x};\nconst T54=struct{x:u8=(T55{}).x};\nconst T55=struct{x:u8=(T56{}).x};\nconst T56=struct{x:u8=(T57{}).x};\nconst T57=struct{x:u8=(T58{}).x};\nconst T58=struct{x:u8=(T59{}).x};\nconst T59=struct{x:u8=(T60{}).x};\nconst T60=struct{x:u8=(T61{",
+		  "}).x};\nconst T61=struct{x:u8=(T62{}).x};\nconst T62=struct{x:u8=(T63{}).x};\nconst T63=struct{x:u8=(T64{}).x};\nconst T64=struct{x:u8=(T65{}).x};\nconst T65=struct{x:u8=(T66{}).x};\nconst T66=struct{x:u8=(T67{}).x};\nconst T67=struct{x:u8=(T68{}).x};\nconst T68=struct{x:u8=(T69{}).x};\nconst T69=struct{x:u8=(T70{}).x};\nconst T70=struct{x:u8=(T71{}).x};\nconst T71=struct{x:u8=(T72{}).x};\nconst T72=struct{x:u8=(T73{}).x};\nconst T73=struct{x:u8=(T74{}).x};\nconst T74=struct{x:u8=(T75{}).x};\nconst T75=struct{x:u8=(T76{}).x};\nconst T76=struct{x:u8=(T77{}).x};\nconst T77=struct{x:u8=(T78{}).x};\nconst T78=struct{x:u8=(T79{}).x};\nconst T79=struct{x:u8=(T80{}).x};\nconst T80=struct{x:u8=(T81{}).x};\nconst T81=struct{x:u8=(T82{}).x};\nconst T82=struct{x:u8=(T83{}).x};\nconst T83=struct{x:u8=(T84{}).x};\nconst T84=struct{x:u8=(T85{}).x};\nconst T85=struct{x:u8=(T86{}).x};\nconst T86=struct{x:u8=(T87{}).x};\nconst T87=struct{x:u8=(T88{}).x};\nconst T88=struct{x:u8=(T89{}).x};\nconst T89=struct{x:u8=(T90{}).x};\nconst T90=struct{x:u8=(T91{}).x",
+		  "};\nconst T91=struct{x:u8=(T92{}).x};\nconst T92=struct{x:u8=(T93{}).x};\nconst T93=struct{x:u8=(T94{}).x};\nconst T94=struct{x:u8=(T95{}).x};\nconst T95=struct{x:u8=(T96{}).x};\nconst T96=struct{x:u8=(T97{}).x};\nconst T97=struct{x:u8=(T98{}).x};\nconst T98=struct{x:u8=(T99{}).x};\nconst T99=struct{x:u8=(T100{}).x};\nconst T100=struct{x:u8=(T101{}).x};\nconst T101=struct{x:u8=(T102{}).x};\nconst T102=struct{x:u8=(T103{}).x};\nconst T103=struct{x:u8=(T104{}).x};\nconst T104=struct{x:u8=(T105{}).x};\nconst T105=struct{x:u8=(T106{}).x};\nconst T106=struct{x:u8=(T107{}).x};\nconst T107=struct{x:u8=(T108{}).x};\nconst T108=struct{x:u8=(T109{}).x};\nconst T109=struct{x:u8=(T110{}).x};\nconst T110=struct{x:u8=(T111{}).x};\nconst T111=struct{x:u8=(T112{}).x};\nconst T112=struct{x:u8=(T113{}).x};\nconst T113=struct{x:u8=(T114{}).x};\nconst T114=struct{x:u8=(T115{}).x};\nconst T115=struct{x:u8=(T116{}).x};\nconst T116=struct{x:u8=(T117{}).x};\nconst T117=struct{x:u8=(T118{}).x};\nconst T118=struct{x:u8=(T119{}).x};\nconst T119=struct{x:u8=(T120{}",
+		  ").x};\nconst T120=struct{x:u8=(T121{}).x};\nconst T121=struct{x:u8=(T122{}).x};\nconst T122=struct{x:u8=(T123{}).x};\nconst T123=struct{x:u8=(T124{}).x};\nconst T124=struct{x:u8=(T125{}).x};\nconst T125=struct{x:u8=(T126{}).x};\nconst T126=struct{x:u8=(T127{}).x};\nconst T127=struct{x:u8=(T128{}).x};\nconst T128=struct{x:u8=(T129{}).x};\nconst T129=struct{x:u8=(T130{}).x};\nconst T130=struct{x:u8=(T131{}).x};\nconst T131=struct{x:u8=(T132{}).x};\nconst T132=struct{x:u8=(T133{}).x};\nconst T133=struct{x:u8=(T134{}).x};\nconst T134=struct{x:u8=(T135{}).x};\nconst T135=struct{x:u8=(T136{}).x};\nconst T136=struct{x:u8=(T137{}).x};\nconst T137=struct{x:u8=(T138{}).x};\nconst T138=struct{x:u8=(T139{}).x};\nconst T139=struct{x:u8=(T140{}).x};\nconst T140=struct{x:u8=(T141{}).x};\nconst T141=struct{x:u8=(T142{}).x};\nconst T142=struct{x:u8=(T143{}).x};\nconst T143=struct{x:u8=(T144{}).x};\nconst T144=struct{x:u8=(T145{}).x};\nconst T145=struct{x:u8=(T146{}).x};\nconst T146=struct{x:u8=(T147{}).x};\nconst T147=struct{x:u8=(T148{}).x};\nconst T148",
+		  "=struct{x:u8=(T149{}).x};\nconst T149=struct{x:u8=(T150{}).x};\nconst T150=struct{x:u8=(T151{}).x};\nconst T151=struct{x:u8=(T152{}).x};\nconst T152=struct{x:u8=(T153{}).x};\nconst T153=struct{x:u8=(T154{}).x};\nconst T154=struct{x:u8=(T155{}).x};\nconst T155=struct{x:u8=(T156{}).x};\nconst T156=struct{x:u8=(T157{}).x};\nconst T157=struct{x:u8=(T158{}).x};\nconst T158=struct{x:u8=(T159{}).x};\nconst T159=struct{x:u8=(T160{}).x};\nconst T160=struct{x:u8=(T161{}).x};\nconst T161=struct{x:u8=(T162{}).x};\nconst T162=struct{x:u8=(T163{}).x};\nconst T163=struct{x:u8=(T164{}).x};\nconst T164=struct{x:u8=(T165{}).x};\nconst T165=struct{x:u8=(T166{}).x};\nconst T166=struct{x:u8=(T167{}).x};\nconst T167=struct{x:u8=(T168{}).x};\nconst T168=struct{x:u8=(T169{}).x};\nconst T169=struct{x:u8=(T170{}).x};\nconst T170=struct{x:u8=(T171{}).x};\nconst T171=struct{x:u8=(T172{}).x};\nconst T172=struct{x:u8=(T173{}).x};\nconst T173=struct{x:u8=(T174{}).x};\nconst T174=struct{x:u8=(T175{}).x};\nconst T175=struct{x:u8=(T176{}).x};\nconst T176=struct{x:u8=(T1",
+		  "77{}).x};\nconst T177=struct{x:u8=(T178{}).x};\nconst T178=struct{x:u8=(T179{}).x};\nconst T179=struct{x:u8=(T180{}).x};\nconst T180=struct{x:u8=(T181{}).x};\nconst T181=struct{x:u8=(T182{}).x};\nconst T182=struct{x:u8=(T183{}).x};\nconst T183=struct{x:u8=(T184{}).x};\nconst T184=struct{x:u8=(T185{}).x};\nconst T185=struct{x:u8=(T186{}).x};\nconst T186=struct{x:u8=(T187{}).x};\nconst T187=struct{x:u8=(T188{}).x};\nconst T188=struct{x:u8=(T189{}).x};\nconst T189=struct{x:u8=(T190{}).x};\nconst T190=struct{x:u8=(T191{}).x};\nconst T191=struct{x:u8=(T192{}).x};\nconst T192=struct{x:u8=(T193{}).x};\nconst T193=struct{x:u8=(T194{}).x};\nconst T194=struct{x:u8=(T195{}).x};\nconst T195=struct{x:u8=(T196{}).x};\nconst T196=struct{x:u8=(T197{}).x};\nconst T197=struct{x:u8=(T198{}).x};\nconst T198=struct{x:u8=(T199{}).x};\nconst T199=struct{x:u8=(T200{}).x};\nconst T200=struct{x:u8=(T201{}).x};\nconst T201=struct{x:u8=(T202{}).x};\nconst T202=struct{x:u8=(T203{}).x};\nconst T203=struct{x:u8=(T204{}).x};\nconst T204=struct{x:u8=(T205{}).x};\nconst ",
+		  "T205=struct{x:u8=(T206{}).x};\nconst T206=struct{x:u8=(T207{}).x};\nconst T207=struct{x:u8=(T208{}).x};\nconst T208=struct{x:u8=(T209{}).x};\nconst T209=struct{x:u8=(T210{}).x};\nconst T210=struct{x:u8=(T211{}).x};\nconst T211=struct{x:u8=(T212{}).x};\nconst T212=struct{x:u8=(T213{}).x};\nconst T213=struct{x:u8=(T214{}).x};\nconst T214=struct{x:u8=(T215{}).x};\nconst T215=struct{x:u8=(T216{}).x};\nconst T216=struct{x:u8=(T217{}).x};\nconst T217=struct{x:u8=(T218{}).x};\nconst T218=struct{x:u8=(T219{}).x};\nconst T219=struct{x:u8=(T220{}).x};\nconst T220=struct{x:u8=(T221{}).x};\nconst T221=struct{x:u8=(T222{}).x};\nconst T222=struct{x:u8=(T223{}).x};\nconst T223=struct{x:u8=(T224{}).x};\nconst T224=struct{x:u8=(T225{}).x};\nconst T225=struct{x:u8=(T226{}).x};\nconst T226=struct{x:u8=(T227{}).x};\nconst T227=struct{x:u8=(T228{}).x};\nconst T228=struct{x:u8=(T229{}).x};\nconst T229=struct{x:u8=(T230{}).x};\nconst T230=struct{x:u8=(T231{}).x};\nconst T231=struct{x:u8=(T232{}).x};\nconst T232=struct{x:u8=(T233{}).x};\nconst T233=struct{x:u8",
+		  "=(T234{}).x};\nconst T234=struct{x:u8=(T235{}).x};\nconst T235=struct{x:u8=(T236{}).x};\nconst T236=struct{x:u8=(T237{}).x};\nconst T237=struct{x:u8=(T238{}).x};\nconst T238=struct{x:u8=(T239{}).x};\nconst T239=struct{x:u8=(T240{}).x};\nconst T240=struct{x:u8=(T241{}).x};\nconst T241=struct{x:u8=(T242{}).x};\nconst T242=struct{x:u8=(T243{}).x};\nconst T243=struct{x:u8=(T244{}).x};\nconst T244=struct{x:u8=(T245{}).x};\nconst T245=struct{x:u8=(T246{}).x};\nconst T246=struct{x:u8=(T247{}).x};\nconst T247=struct{x:u8=(T248{}).x};\nconst T248=struct{x:u8=(T249{}).x};\nconst T249=struct{x:u8=(T250{}).x};\nconst T250=struct{x:u8=(T251{}).x};\nconst T251=struct{x:u8=(T252{}).x};\nconst T252=struct{x:u8=(T253{}).x};\nconst T253=struct{x:u8=(T254{}).x};\nconst T254=struct{x:u8=(T255{}).x};\nconst T255=struct{x:u8=7};\nconst U=struct{y:u8=9};fn other()u8{return (U{}).y;}pub fn main()u8{_=&other;return (T0{}).x;}\n"}, true, 0, ""},
+		/* depth-257 */
+		{{"const T0=struct{x:u8=(T1{}).x};\nconst T1=struct{x:u8=(T2{}).x};\nconst T2=struct{x:u8=(T3{}).x};\nconst T3=struct{x:u8=(T4{}).x};\nconst T4=struct{x:u8=(T5{}).x};\nconst T5=struct{x:u8=(T6{}).x};\nconst T6=struct{x:u8=(T7{}).x};\nconst T7=struct{x:u8=(T8{}).x};\nconst T8=struct{x:u8=(T9{}).x};\nconst T9=struct{x:u8=(T10{}).x};\nconst T10=struct{x:u8=(T11{}).x};\nconst T11=struct{x:u8=(T12{}).x};\nconst T12=struct{x:u8=(T13{}).x};\nconst T13=struct{x:u8=(T14{}).x};\nconst T14=struct{x:u8=(T15{}).x};\nconst T15=struct{x:u8=(T16{}).x};\nconst T16=struct{x:u8=(T17{}).x};\nconst T17=struct{x:u8=(T18{}).x};\nconst T18=struct{x:u8=(T19{}).x};\nconst T19=struct{x:u8=(T20{}).x};\nconst T20=struct{x:u8=(T21{}).x};\nconst T21=struct{x:u8=(T22{}).x};\nconst T22=struct{x:u8=(T23{}).x};\nconst T23=struct{x:u8=(T24{}).x};\nconst T24=struct{x:u8=(T25{}).x};\nconst T25=struct{x:u8=(T26{}).x};\nconst T26=struct{x:u8=(T27{}).x};\nconst T27=struct{x:u8=(T28{}).x};\nconst T28=struct{x:u8=(T29{}).x};\nconst T29=struct{x:u8=(T30{}).x};\nconst T30=struct{x:u8=(",
+		  "T31{}).x};\nconst T31=struct{x:u8=(T32{}).x};\nconst T32=struct{x:u8=(T33{}).x};\nconst T33=struct{x:u8=(T34{}).x};\nconst T34=struct{x:u8=(T35{}).x};\nconst T35=struct{x:u8=(T36{}).x};\nconst T36=struct{x:u8=(T37{}).x};\nconst T37=struct{x:u8=(T38{}).x};\nconst T38=struct{x:u8=(T39{}).x};\nconst T39=struct{x:u8=(T40{}).x};\nconst T40=struct{x:u8=(T41{}).x};\nconst T41=struct{x:u8=(T42{}).x};\nconst T42=struct{x:u8=(T43{}).x};\nconst T43=struct{x:u8=(T44{}).x};\nconst T44=struct{x:u8=(T45{}).x};\nconst T45=struct{x:u8=(T46{}).x};\nconst T46=struct{x:u8=(T47{}).x};\nconst T47=struct{x:u8=(T48{}).x};\nconst T48=struct{x:u8=(T49{}).x};\nconst T49=struct{x:u8=(T50{}).x};\nconst T50=struct{x:u8=(T51{}).x};\nconst T51=struct{x:u8=(T52{}).x};\nconst T52=struct{x:u8=(T53{}).x};\nconst T53=struct{x:u8=(T54{}).x};\nconst T54=struct{x:u8=(T55{}).x};\nconst T55=struct{x:u8=(T56{}).x};\nconst T56=struct{x:u8=(T57{}).x};\nconst T57=struct{x:u8=(T58{}).x};\nconst T58=struct{x:u8=(T59{}).x};\nconst T59=struct{x:u8=(T60{}).x};\nconst T60=struct{x:u8=(T61{",
+		  "}).x};\nconst T61=struct{x:u8=(T62{}).x};\nconst T62=struct{x:u8=(T63{}).x};\nconst T63=struct{x:u8=(T64{}).x};\nconst T64=struct{x:u8=(T65{}).x};\nconst T65=struct{x:u8=(T66{}).x};\nconst T66=struct{x:u8=(T67{}).x};\nconst T67=struct{x:u8=(T68{}).x};\nconst T68=struct{x:u8=(T69{}).x};\nconst T69=struct{x:u8=(T70{}).x};\nconst T70=struct{x:u8=(T71{}).x};\nconst T71=struct{x:u8=(T72{}).x};\nconst T72=struct{x:u8=(T73{}).x};\nconst T73=struct{x:u8=(T74{}).x};\nconst T74=struct{x:u8=(T75{}).x};\nconst T75=struct{x:u8=(T76{}).x};\nconst T76=struct{x:u8=(T77{}).x};\nconst T77=struct{x:u8=(T78{}).x};\nconst T78=struct{x:u8=(T79{}).x};\nconst T79=struct{x:u8=(T80{}).x};\nconst T80=struct{x:u8=(T81{}).x};\nconst T81=struct{x:u8=(T82{}).x};\nconst T82=struct{x:u8=(T83{}).x};\nconst T83=struct{x:u8=(T84{}).x};\nconst T84=struct{x:u8=(T85{}).x};\nconst T85=struct{x:u8=(T86{}).x};\nconst T86=struct{x:u8=(T87{}).x};\nconst T87=struct{x:u8=(T88{}).x};\nconst T88=struct{x:u8=(T89{}).x};\nconst T89=struct{x:u8=(T90{}).x};\nconst T90=struct{x:u8=(T91{}).x",
+		  "};\nconst T91=struct{x:u8=(T92{}).x};\nconst T92=struct{x:u8=(T93{}).x};\nconst T93=struct{x:u8=(T94{}).x};\nconst T94=struct{x:u8=(T95{}).x};\nconst T95=struct{x:u8=(T96{}).x};\nconst T96=struct{x:u8=(T97{}).x};\nconst T97=struct{x:u8=(T98{}).x};\nconst T98=struct{x:u8=(T99{}).x};\nconst T99=struct{x:u8=(T100{}).x};\nconst T100=struct{x:u8=(T101{}).x};\nconst T101=struct{x:u8=(T102{}).x};\nconst T102=struct{x:u8=(T103{}).x};\nconst T103=struct{x:u8=(T104{}).x};\nconst T104=struct{x:u8=(T105{}).x};\nconst T105=struct{x:u8=(T106{}).x};\nconst T106=struct{x:u8=(T107{}).x};\nconst T107=struct{x:u8=(T108{}).x};\nconst T108=struct{x:u8=(T109{}).x};\nconst T109=struct{x:u8=(T110{}).x};\nconst T110=struct{x:u8=(T111{}).x};\nconst T111=struct{x:u8=(T112{}).x};\nconst T112=struct{x:u8=(T113{}).x};\nconst T113=struct{x:u8=(T114{}).x};\nconst T114=struct{x:u8=(T115{}).x};\nconst T115=struct{x:u8=(T116{}).x};\nconst T116=struct{x:u8=(T117{}).x};\nconst T117=struct{x:u8=(T118{}).x};\nconst T118=struct{x:u8=(T119{}).x};\nconst T119=struct{x:u8=(T120{}",
+		  ").x};\nconst T120=struct{x:u8=(T121{}).x};\nconst T121=struct{x:u8=(T122{}).x};\nconst T122=struct{x:u8=(T123{}).x};\nconst T123=struct{x:u8=(T124{}).x};\nconst T124=struct{x:u8=(T125{}).x};\nconst T125=struct{x:u8=(T126{}).x};\nconst T126=struct{x:u8=(T127{}).x};\nconst T127=struct{x:u8=(T128{}).x};\nconst T128=struct{x:u8=(T129{}).x};\nconst T129=struct{x:u8=(T130{}).x};\nconst T130=struct{x:u8=(T131{}).x};\nconst T131=struct{x:u8=(T132{}).x};\nconst T132=struct{x:u8=(T133{}).x};\nconst T133=struct{x:u8=(T134{}).x};\nconst T134=struct{x:u8=(T135{}).x};\nconst T135=struct{x:u8=(T136{}).x};\nconst T136=struct{x:u8=(T137{}).x};\nconst T137=struct{x:u8=(T138{}).x};\nconst T138=struct{x:u8=(T139{}).x};\nconst T139=struct{x:u8=(T140{}).x};\nconst T140=struct{x:u8=(T141{}).x};\nconst T141=struct{x:u8=(T142{}).x};\nconst T142=struct{x:u8=(T143{}).x};\nconst T143=struct{x:u8=(T144{}).x};\nconst T144=struct{x:u8=(T145{}).x};\nconst T145=struct{x:u8=(T146{}).x};\nconst T146=struct{x:u8=(T147{}).x};\nconst T147=struct{x:u8=(T148{}).x};\nconst T148",
+		  "=struct{x:u8=(T149{}).x};\nconst T149=struct{x:u8=(T150{}).x};\nconst T150=struct{x:u8=(T151{}).x};\nconst T151=struct{x:u8=(T152{}).x};\nconst T152=struct{x:u8=(T153{}).x};\nconst T153=struct{x:u8=(T154{}).x};\nconst T154=struct{x:u8=(T155{}).x};\nconst T155=struct{x:u8=(T156{}).x};\nconst T156=struct{x:u8=(T157{}).x};\nconst T157=struct{x:u8=(T158{}).x};\nconst T158=struct{x:u8=(T159{}).x};\nconst T159=struct{x:u8=(T160{}).x};\nconst T160=struct{x:u8=(T161{}).x};\nconst T161=struct{x:u8=(T162{}).x};\nconst T162=struct{x:u8=(T163{}).x};\nconst T163=struct{x:u8=(T164{}).x};\nconst T164=struct{x:u8=(T165{}).x};\nconst T165=struct{x:u8=(T166{}).x};\nconst T166=struct{x:u8=(T167{}).x};\nconst T167=struct{x:u8=(T168{}).x};\nconst T168=struct{x:u8=(T169{}).x};\nconst T169=struct{x:u8=(T170{}).x};\nconst T170=struct{x:u8=(T171{}).x};\nconst T171=struct{x:u8=(T172{}).x};\nconst T172=struct{x:u8=(T173{}).x};\nconst T173=struct{x:u8=(T174{}).x};\nconst T174=struct{x:u8=(T175{}).x};\nconst T175=struct{x:u8=(T176{}).x};\nconst T176=struct{x:u8=(T1",
+		  "77{}).x};\nconst T177=struct{x:u8=(T178{}).x};\nconst T178=struct{x:u8=(T179{}).x};\nconst T179=struct{x:u8=(T180{}).x};\nconst T180=struct{x:u8=(T181{}).x};\nconst T181=struct{x:u8=(T182{}).x};\nconst T182=struct{x:u8=(T183{}).x};\nconst T183=struct{x:u8=(T184{}).x};\nconst T184=struct{x:u8=(T185{}).x};\nconst T185=struct{x:u8=(T186{}).x};\nconst T186=struct{x:u8=(T187{}).x};\nconst T187=struct{x:u8=(T188{}).x};\nconst T188=struct{x:u8=(T189{}).x};\nconst T189=struct{x:u8=(T190{}).x};\nconst T190=struct{x:u8=(T191{}).x};\nconst T191=struct{x:u8=(T192{}).x};\nconst T192=struct{x:u8=(T193{}).x};\nconst T193=struct{x:u8=(T194{}).x};\nconst T194=struct{x:u8=(T195{}).x};\nconst T195=struct{x:u8=(T196{}).x};\nconst T196=struct{x:u8=(T197{}).x};\nconst T197=struct{x:u8=(T198{}).x};\nconst T198=struct{x:u8=(T199{}).x};\nconst T199=struct{x:u8=(T200{}).x};\nconst T200=struct{x:u8=(T201{}).x};\nconst T201=struct{x:u8=(T202{}).x};\nconst T202=struct{x:u8=(T203{}).x};\nconst T203=struct{x:u8=(T204{}).x};\nconst T204=struct{x:u8=(T205{}).x};\nconst ",
+		  "T205=struct{x:u8=(T206{}).x};\nconst T206=struct{x:u8=(T207{}).x};\nconst T207=struct{x:u8=(T208{}).x};\nconst T208=struct{x:u8=(T209{}).x};\nconst T209=struct{x:u8=(T210{}).x};\nconst T210=struct{x:u8=(T211{}).x};\nconst T211=struct{x:u8=(T212{}).x};\nconst T212=struct{x:u8=(T213{}).x};\nconst T213=struct{x:u8=(T214{}).x};\nconst T214=struct{x:u8=(T215{}).x};\nconst T215=struct{x:u8=(T216{}).x};\nconst T216=struct{x:u8=(T217{}).x};\nconst T217=struct{x:u8=(T218{}).x};\nconst T218=struct{x:u8=(T219{}).x};\nconst T219=struct{x:u8=(T220{}).x};\nconst T220=struct{x:u8=(T221{}).x};\nconst T221=struct{x:u8=(T222{}).x};\nconst T222=struct{x:u8=(T223{}).x};\nconst T223=struct{x:u8=(T224{}).x};\nconst T224=struct{x:u8=(T225{}).x};\nconst T225=struct{x:u8=(T226{}).x};\nconst T226=struct{x:u8=(T227{}).x};\nconst T227=struct{x:u8=(T228{}).x};\nconst T228=struct{x:u8=(T229{}).x};\nconst T229=struct{x:u8=(T230{}).x};\nconst T230=struct{x:u8=(T231{}).x};\nconst T231=struct{x:u8=(T232{}).x};\nconst T232=struct{x:u8=(T233{}).x};\nconst T233=struct{x:u8",
+		  "=(T234{}).x};\nconst T234=struct{x:u8=(T235{}).x};\nconst T235=struct{x:u8=(T236{}).x};\nconst T236=struct{x:u8=(T237{}).x};\nconst T237=struct{x:u8=(T238{}).x};\nconst T238=struct{x:u8=(T239{}).x};\nconst T239=struct{x:u8=(T240{}).x};\nconst T240=struct{x:u8=(T241{}).x};\nconst T241=struct{x:u8=(T242{}).x};\nconst T242=struct{x:u8=(T243{}).x};\nconst T243=struct{x:u8=(T244{}).x};\nconst T244=struct{x:u8=(T245{}).x};\nconst T245=struct{x:u8=(T246{}).x};\nconst T246=struct{x:u8=(T247{}).x};\nconst T247=struct{x:u8=(T248{}).x};\nconst T248=struct{x:u8=(T249{}).x};\nconst T249=struct{x:u8=(T250{}).x};\nconst T250=struct{x:u8=(T251{}).x};\nconst T251=struct{x:u8=(T252{}).x};\nconst T252=struct{x:u8=(T253{}).x};\nconst T253=struct{x:u8=(T254{}).x};\nconst T254=struct{x:u8=(T255{}).x};\nconst T255=struct{x:u8=(T256{}).x};\nconst T256=struct{x:u8=7};\nconst U=struct{y:u8=9};fn other()u8{return (U{}).y;}pub fn main()u8{_=&other;return (T0{}).x;}\n"}, false, 1, "not supported by szc yet: struct default dependency depth exceeds 256"},
+		/* queue-growth */
+		{{"const S0=struct{x:u8=1};\nconst S1=struct{x:u8=1};\nconst S2=struct{x:u8=1};\nconst S3=struct{x:u8=1};\nconst S4=struct{x:u8=1};\nconst S5=struct{x:u8=1};\nconst S6=struct{x:u8=1};\nconst S7=struct{x:u8=1};\nconst S8=struct{x:u8=1};\nconst S9=struct{x:u8=1};\nconst S10=struct{x:u8=1};\nconst S11=struct{x:u8=1};\nconst S12=struct{x:u8=1};\nconst S13=struct{x:u8=1};\nconst S14=struct{x:u8=1};\nconst S15=struct{x:u8=1};\nconst S16=struct{x:u8=1};\nconst S17=struct{x:u8=1};\nconst S18=struct{x:u8=1};\nconst S19=struct{x:u8=1};\nconst S20=struct{x:u8=1};\nconst S21=struct{x:u8=1};\nconst S22=struct{x:u8=1};\nconst S23=struct{x:u8=1};\nconst S24=struct{x:u8=1};\nconst S25=struct{x:u8=1};\nconst S26=struct{x:u8=1};\nconst S27=struct{x:u8=1};\nconst S28=struct{x:u8=1};\nconst S29=struct{x:u8=1};\nconst S30=struct{x:u8=1};\nconst S31=struct{x:u8=1};\nconst S32=struct{x:u8=1};\nconst S33=struct{x:u8=1};\nconst S34=struct{x:u8=1};\nconst S35=struct{x:u8=1};\nconst S36=struct{x:u8=1};\nconst S37=struct{x:u8=1};\nconst S38=struct{x:u8=1};\nconst S39=struct{x:u",
+		  "8=1};\nconst Root=struct{x:usize=@sizeOf(S0)+@sizeOf(S1)+@sizeOf(S2)+@sizeOf(S3)+@sizeOf(S4)+@sizeOf(S5)+@sizeOf(S6)+@sizeOf(S7)+@sizeOf(S8)+@sizeOf(S9)+@sizeOf(S10)+@sizeOf(S11)+@sizeOf(S12)+@sizeOf(S13)+@sizeOf(S14)+@sizeOf(S15)+@sizeOf(S16)+@sizeOf(S17)+@sizeOf(S18)+@sizeOf(S19)+@sizeOf(S20)+@sizeOf(S21)+@sizeOf(S22)+@sizeOf(S23)+@sizeOf(S24)+@sizeOf(S25)+@sizeOf(S26)+@sizeOf(S27)+@sizeOf(S28)+@sizeOf(S29)+@sizeOf(S30)+@sizeOf(S31)+@sizeOf(S32)+@sizeOf(S33)+@sizeOf(S34)+@sizeOf(S35)+@sizeOf(S36)+@sizeOf(S37)+@sizeOf(S38)+@sizeOf(S39)};pub fn main()void{_=@sizeOf(Root);}\n"}, true, 0, ""},
+		/* function-defaults-fixedpoint */
+		{{"const A=struct{cb:*const fn()u8=&callback};const B=struct{x:u8=256};fn callback()u8{return (B{}).x;}pub fn main()void{_=@sizeOf(A);}"}, false, 1, "type 'u8' cannot represent integer value '256'"},
+	};
+	for (uint32_t i = 0; i < sizeof(cases) / sizeof(cases[0]); i++) {
+		Arena arena;
+		arena_init(&arena);
+		SourceTable sources;
+		source_table_init(&sources, &arena);
+		Diag diag;
+		diag_init(&diag, &arena, &sources);
+		Interner interner;
+		intern_init(&interner, &arena);
+		size_t length = 0;
+		for (uint32_t j = 0; j < 16 && cases[i].parts[j] != NULL; j++)
+			length += strlen(cases[i].parts[j]);
+		char *source = ARENA_ARRAY(&arena, char, length + 1);
+		size_t offset = 0;
+		for (uint32_t j = 0; j < 16 && cases[i].parts[j] != NULL; j++) {
+			size_t count = strlen(cases[i].parts[j]);
+			memcpy(source + offset, cases[i].parts[j], count);
+			offset += count;
+		}
+		source[length] = '\0';
+		FileId file = source_add_memory(&sources, "defaults_work.zig", source, (uint32_t)length);
+		AstContainerDecl *root = parse_file(&arena, &diag, &sources, file);
+		CHECK(!diag_has_errors(&diag));
+		IrFile *ir = irgen_file(&arena, &diag, &interner, source_get(&sources, file), file, root);
+		CHECK(!diag_has_errors(&diag));
+		Sema *sema = sema_create(&arena, &diag, &interner, &sources);
+		CHECK(sema_analyze_executable(sema, file, ir) == cases[i].success);
+		CHECK(diag.error_count == cases[i].errors);
+		if (cases[i].errors != 0)
+			CHECK(diag.count != 0 && strcmp(diag.items[0].message, cases[i].first) == 0);
 		arena_free(&arena);
 	}
 }
@@ -3186,13 +3661,13 @@ test_struct_static_values(void)
 		/* typed-root-layout/opaque-typeof */
 		{"const S=struct{x:anyopaque,}; pub fn main() void {const s:S=undefined; _=@TypeOf(&s);}", "cannot directly embed opaque type 'anyopaque' in struct"},
 		/* typed-root-layout/default-discard */
-		{"const S=struct{x:u8=256,}; pub fn main() void {const s:S=undefined; const p=&s; _=p;}", "not supported by szc yet:"},
+		{"const S=struct{x:u8=256,}; pub fn main() void {const s:S=undefined; const p=&s; _=p;}", "type 'u8' cannot represent integer value '256'"},
 		/* typed-root-layout/pointer-type-only */
 		{"const S=struct{x:anyopaque,}; pub fn main() void {const p:*const S=undefined; const n:u8=if(@sizeOf(*const S)==8 and @alignOf(*const S)==8 and @TypeOf(p)==*const S)0 else 256; _=n;}", NULL},
 		/* typed-root-layout/valid-undefined-address */
 		{"const S=struct{x:u8,}; noinline fn address(p:*const S) usize {return @intFromPtr(p);} pub fn main() void {const s:S=undefined; _=address(&s); _=@intFromPtr(&s);}", NULL},
 		/* typed-root-layout/default-typeof */
-		{"const S=struct{x:u8=256,}; pub fn main() void {const s:S=undefined; _=@TypeOf(&s);}", "not supported by szc yet:"},
+		{"const S=struct{x:u8=256,}; pub fn main() void {const s:S=undefined; _=@TypeOf(&s);}", "type 'u8' cannot represent integer value '256'"},
 		/* arithmetic/same-field-difference */
 		{"const S=struct {a:[3:9]u8,before:u64,}; const s:S=.{.a=.{1,2,3},.before=17}; pub fn main() void { const p:[*]const u8=@ptrCast(&s.a); const q=p+2; const n:u8=if(q-p==2 and (q-2)[0]==1)0 else 256; _=n; }", NULL},
 		/* error/field-relative-underflow */
@@ -3315,9 +3790,9 @@ test_struct_metadata(void)
 		/* NYI/comptime-field */
 		{"const S=struct { comptime x:u8=1, }; pub fn main() void { _=@sizeOf(S); }", "not supported by szc yet"},
 		/* NYI/valid-default */
-		{"const S=struct { x:u8=7, }; pub fn main() void { _=@sizeOf(S); }", "not supported by szc yet"},
+		{"const S=struct { x:u8=7, }; pub fn main() void { _=@sizeOf(S); }", NULL},
 		/* NYI/invalid-default */
-		{"const S=struct { x:u8=256, }; pub fn main() void { _=@sizeOf(S); }", "not supported by szc yet"},
+		{"const S=struct { x:u8=256, }; pub fn main() void { _=@sizeOf(S); }", "type 'u8' cannot represent integer value '256'"},
 		/* NYI/explicit-align */
 		{"const S=struct { x:u8 align(16), }; pub fn main() void { _=@sizeOf(S); }", "not supported by szc yet"},
 		/* NYI/type/@sizeOf(S) */
@@ -3697,7 +4172,9 @@ test_struct_field_layout_api(void)
 		{"const S=struct { a:u8, }; fn use(p:*S) void { _=p; } pub fn main() void { use(undefined); }", true, false, 0},
 		{"const S=struct { a:u8, b:u64, z:[0]u64, }; fn use(p:*S) void { _=p; } pub fn main() void { use(undefined); _=@sizeOf(S); }", true, true, 3},
 		{"const S=struct {}; fn use(p:*S) void { _=p; } pub fn main() void { use(undefined); _=@sizeOf(S); }", true, true, 0},
-		{"const S=struct { a:u8=0, }; fn use(p:*S) void { _=p; } pub fn main() void { use(undefined); _=@sizeOf(S); }", false, false, 0},
+		{"const S=struct { a:u8=0, }; fn use(p:*S) void { _=p; } pub fn main() void { use(undefined); _=@sizeOf(S); }", true, true, 1},
+		/* Failed defaults do not unpublish a successfully checked physical layout. */
+		{"const S=struct { a:u8=256, }; fn use(p:*S) void { _=p; } pub fn main() void { use(undefined); _=@sizeOf(S); }", false, true, 1},
 		{"const S=struct { a:[4294967295]u8, b:u8, }; fn use(p:*S) void { _=p; } pub fn main() void { use(undefined); _=@sizeOf(S); }", false, false, 0},
 		{"const S=struct { a:[4294967291]u8, b:u32, }; fn use(p:*S) void { _=p; } pub fn main() void { use(undefined); _=@sizeOf(S); }", false, false, 0},
 	};
@@ -3737,6 +4214,11 @@ test_struct_field_layout_api(void)
 				CHECK(!sema_struct_field_layout(sema, type, 0, &field));
 				CHECK(field.name == STRING_NONE && field.type == UINT32_MAX && field.offset == 123);
 			}
+		}
+		if (cases[i].fields == 1) {
+			CHECK(sema_struct_field_layout(sema, type, 0, &field));
+			CHECK(strcmp(intern_text(&interner, field.name), "a") == 0);
+			CHECK(field.type == type_id_of_well_known(IR_REF_TYPE_U8) && field.offset == 0);
 		}
 		if (cases[i].fields == 3) {
 			CHECK(order[0] == 1 && order[1] == 2 && order[2] == 0);
@@ -4285,6 +4767,10 @@ main(void)
 	test_known_struct_values();
 	test_runtime_struct_values();
 	test_struct_mutable_globals();
+	test_struct_defaults();
+	test_struct_defaults_work();
+	test_struct_default_type_ir();
+	test_struct_default_capture_ir();
 	test_struct_internal_abi();
 	test_struct_global_publication();
 	test_runtime_struct_initializer_ir();
