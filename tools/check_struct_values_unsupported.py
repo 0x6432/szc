@@ -67,11 +67,16 @@ def all_cases():
 
 
 
-# M6.1f admits completed immutable backing and rooted field addresses. Keep
+# M6.1f backing and M6.1g runtime locals retain their former NYI sources. Keep
 # every former rejection as an emission acceptance control instead of dropping it.
 STATIC_CONTROLS = {
     'escaped-struct-address', 'field-address', 'builtin-field-address',
     'escaped-struct-array-slice-backing',
+    'mutable-local', 'mutable-context', 'runtime-field-init',
+    'runtime-context-field-init', 'pointer-instance-projection',
+    'whole-struct-load', 'runtime-struct-choice', 'dynamic-struct-array-index',
+    'backing/volatile_array', 'backing/volatile_dot', 'backing/volatile_many',
+    'backing/volatile_named',
 }
 
 

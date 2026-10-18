@@ -1,0 +1,14 @@
+constant szc.g.1: *struct_runtime_absolute.S = ptr(0x1000)
+fn szc.main.1: fn () u8 {
+  %0: *u16 = const struct_field(base.22, index.0, offset.10)
+  %1: usize = call szc.address.2(%0)
+  %2: usize = const 4106
+  %3: usize = sub %1, %2
+  %4: u8 = int_cast %3
+  %5: noreturn = ret %4
+}
+fn szc.address.2: fn (*u16) usize {
+  %0: *u16 = arg 0
+  %1: usize = ptr_to_int %0
+  %2: noreturn = ret %1
+}

@@ -1,0 +1,108 @@
+%73 = struct_decl (flags=0) {
+  decl const "I" value {
+    %1 = struct_decl (flags=0) {
+      field "x" type {
+        %0 = break_inline result, @type_u16
+      }
+    }
+    %2 = break_inline result, %1
+  }
+  decl const "S" value {
+    %11 = struct_decl (flags=0) {
+      field "tag" type {
+        %3 = break_inline result, @type_u64
+      }
+      field "items" type {
+        %4 = int 2
+        %5 = as @type_usize, %4
+        %6 = decl_val "I"
+        %7 = as @type_type, %6
+        %8 = array_type %5, %7
+        %9 = as @type_type, %8
+        %10 = break_inline result, %9
+      }
+    }
+    %12 = break_inline result, %11
+  }
+  decl const "p" type {
+    %13 = decl_val "S"
+    %14 = as @type_type, %13
+    %15 = ptr_type %14, @false
+    %16 = as @type_type, %15
+    %17 = break_inline result, %16
+  } value {
+    %18 = decl_type
+    %19 = int 4096
+    %20 = ptr_from_int %18, %19
+    %21 = break_inline result, %20
+  }
+  decl fn "address" value {
+    %31 = func "address" noinline {
+      %25 = param "q" type {
+        %22 = ptr_type @type_u16, @false
+        %23 = as @type_type, %22
+        %24 = break_inline result, %23
+      }
+      ret type {
+        %26 = break_inline result, @type_usize
+      }
+      body insts {
+        %27 = ret_type
+        %28 = int_from_ptr %25
+        %29 = as_return %27, %28
+        %30 = ret %29
+      }
+    }
+    %32 = break_inline result, %31
+  }
+  decl fn "main" pub value {
+    %71 = func "main" {
+      ret type {
+        %33 = break_inline result, @type_u8
+      }
+      body insts {
+        %34 = ret_type
+        %35 = decl_val "address"
+        %36 = call %35 arg0 {
+          %37 = arg_type %36, 0
+          %38 = decl_ref "p"
+          %39 = field_ptr "items", %38
+          %40 = array_base_ptr %39
+          %41 = int 1
+          %42 = as @type_usize, %41
+          %43 = array_index_ptr %40, %42
+          %44 = field_ptr "x", %43
+          %45 = as %37, %44
+          %46 = break_inline result, %45
+        }
+        %47 = int 4096
+        %48 = decl_val "S"
+        %49 = as @type_type, %48
+        %54 = offset_of %49 name {
+          %50 = ptr_type @type_u8, @true slice
+          %51 = str "items"
+          %52 = as %50, %51
+          %53 = break_inline result, %52
+        }
+        %55 = add %47, %54
+        %56 = decl_val "I"
+        %57 = as @type_type, %56
+        %58 = size_of %57
+        %59 = add %55, %58
+        %60 = decl_val "I"
+        %61 = as @type_type, %60
+        %66 = offset_of %61 name {
+          %62 = ptr_type @type_u8, @true slice
+          %63 = str "x"
+          %64 = as %62, %63
+          %65 = break_inline result, %64
+        }
+        %67 = add %59, %66
+        %68 = sub %36, %67
+        %69 = int_cast %34, %68
+        %70 = ret %69
+      }
+    }
+    %72 = break_inline result, %71
+  }
+}

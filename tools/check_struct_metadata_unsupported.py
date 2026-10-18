@@ -56,6 +56,12 @@ def cases():
     yield 'struct-padding-overflow', 'const S=struct { x:[18446744073709551608]u8,y:u64, }; pub fn main() void { _=@sizeOf(S); }'
 
 
+# Preserve former NYIs as supported emission controls after local runtime storage.
+CONTROLS = {
+    'runtime-struct-value', 'local-storage', 'store-undefined',
+    'runtime-join', 'array-storage', 'runtime-struct-load',
+}
+
 def main():
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument('szc')
@@ -66,9 +72,12 @@ def main():
             path.write_text(source+'\n')
             result=run_compiler([args.szc,SZC_MODE,str(path)],source,f'struct NYI {index} {label}',timeout=120)
             error=primary_error(result.stderr)
-            if result.returncode!=1 or not error or not NYI.search(error):
+            if label in CONTROLS:
+                if result.returncode != 0:
+                    raise SystemExit(f'expected supported control: {label}\n{source}\n'+result.stderr.decode(errors='replace'))
+            elif result.returncode!=1 or not error or not NYI.search(error):
                 raise SystemExit(f'expected explicit NYI: {label}\n{source}\n'+result.stderr.decode(errors='replace'))
-    print(f'struct metadata: {index} explicit unsupported-feature rejections')
+    print(f'struct metadata: {index-len(CONTROLS)} explicit unsupported-feature rejections; {len(CONTROLS)} supported controls')
 
 if __name__=='__main__':
     main()

@@ -1890,7 +1890,6 @@ test_struct_initializer_ir(void)
 		{"fn f() void {_=Missing{.@\"\\x61\"=missing,.a=missing2};}", "duplicate struct field name", "@\"\\x61\"=missing", 1},
 		{"const S=struct{a:u8,b:u8}; fn f() void {_=S{.a=missing,.b=0,.b=1,.a=2};}", "duplicate struct field name", "a=missing", 2},
 		{"fn f() void {_=[1]u8{.a=missing,.@\"\\x61\"=0};}", "initializing array with struct syntax", "[1]u8", 1},
-		{"const S=struct{a:u8}; fn f() void {var v:S=undefined; v=.{.a=1};}", "not supported by szc yet: in-place struct initialization", ".{.a=1}", 1},
 	};
 	for (uint32_t i = 0; i < sizeof(negatives) / sizeof(negatives[0]); i++) {
 		Arena arena;
@@ -2237,15 +2236,15 @@ test_known_struct_values(void)
 		/* provenance/escape_zero_array */
 		{"const S = struct { a: u8 };\nconst obj = S{ .a = 7 };\nconst items: [0]S = .{};\nfn use(p: *const [0]S) void { _ = p; }\npub fn main() void { use(&items); }\n", NULL},
 		/* provenance/volatile_array */
-		{"const S = struct { a: u8 };\nconst obj = S{ .a = 7 };\nconst items = [1]S{ obj };\npub fn main() u8 { const p: *const volatile [1]S = &items; return p[0].a; }\n", "not supported by szc yet"},
+		{"const S = struct { a: u8 };\nconst obj = S{ .a = 7 };\nconst items = [1]S{ obj };\npub fn main() u8 { const p: *const volatile [1]S = &items; return p[0].a; }\n", NULL},
 		/* provenance/volatile_deref */
 		{"const S = struct { a: u8 };\nconst obj = S{ .a = 7 };\npub fn main() void { const p: *const volatile S = &obj; _ = p.*; }\n", "not supported by szc yet"},
 		/* provenance/volatile_dot */
-		{"const S = struct { a: u8 };\nconst obj = S{ .a = 7 };\npub fn main() u8 { const p: *const volatile S = &obj; return p.a; }\n", "not supported by szc yet"},
+		{"const S = struct { a: u8 };\nconst obj = S{ .a = 7 };\npub fn main() u8 { const p: *const volatile S = &obj; return p.a; }\n", NULL},
 		/* provenance/volatile_many */
-		{"const S = struct { a: u8 };\nconst obj = S{ .a = 7 };\nconst items = [1]S{ obj };\npub fn main() u8 { const p: [*]const volatile S = &items; return p[0].a; }\n", "not supported by szc yet"},
+		{"const S = struct { a: u8 };\nconst obj = S{ .a = 7 };\nconst items = [1]S{ obj };\npub fn main() u8 { const p: [*]const volatile S = &items; return p[0].a; }\n", NULL},
 		/* provenance/volatile_named */
-		{"const S = struct { a: u8 };\nconst obj = S{ .a = 7 };\npub fn main() u8 { const p: *const volatile S = &obj; return @field(p, \"a\"); }\n", "not supported by szc yet"},
+		{"const S = struct { a: u8 };\nconst obj = S{ .a = 7 };\npub fn main() u8 { const p: *const volatile S = &obj; return @field(p, \"a\"); }\n", NULL},
 		/* indexed static and dynamic read references */
 		{"const I=struct { a:u8 };\nconst O=struct { items:[1]I };\nconst s=O{.items=.{I{.a=7}}};\npub fn main() u8 { return @field(s.items[0],\"a\") + @field(@field(s,\"items\")[0],\"a\") - 14; }\n", NULL},
 	};
@@ -2273,6 +2272,368 @@ test_known_struct_values(void)
 		arena_free(&arena);
 	}
 }
+
+static void
+test_runtime_struct_values(void)
+{
+	const struct {
+		const char *source;
+		const char *error;
+	} cases[] = {
+		/* init-context */
+		{"const S=struct{a:u8,b:u16,}; noinline fn seed(x:u8)u8{return x;}  pub fn main() void {var s:S=.{.a=seed(1),.b=seed(2)}; s.a+=1;}", NULL},
+		/* init-explicit */
+		{"const S=struct{a:u8,b:u16,}; noinline fn seed(x:u8)u8{return x;}  pub fn main() void {var s=S{.a=seed(1),.b=seed(2)}; s.b=9;}", NULL},
+		/* init-as */
+		{"const S=struct{a:u8,b:u16,}; noinline fn seed(x:u8)u8{return x;}  pub fn main() void {var s=@as(S,.{.a=seed(1),.b=seed(2)}); s.a=9;}", NULL},
+		/* whole-assign */
+		{"const S=struct{a:u8,b:u16,}; noinline fn seed(x:u8)u8{return x;}  pub fn main() void {var s:S=.{.a=seed(1),.b=seed(2)}; s=S{.a=seed(3),.b=seed(4)};}", NULL},
+		/* self-assign */
+		{"const S=struct{a:u8,b:u16,}; noinline fn seed(x:u8)u8{return x;}  pub fn main() void {var s:S=.{.a=seed(1),.b=seed(2)}; s=s;}", NULL},
+		/* contextual-overwrite */
+		{"const S=struct{a:u8,b:u16,}; noinline fn seed(x:u8)u8{return x;}  pub fn main() void {var s:S=.{.a=seed(1),.b=seed(2)}; s=.{.a=@intCast(s.b),.b=s.a};}", NULL},
+		/* explicit-overwrite */
+		{"const S=struct{a:u8,b:u16,}; noinline fn seed(x:u8)u8{return x;}  pub fn main() void {var s:S=.{.a=seed(1),.b=seed(2)}; s=S{.a=@intCast(s.b),.b=s.a};}", NULL},
+		/* as-overwrite */
+		{"const S=struct{a:u8,b:u16,}; noinline fn seed(x:u8)u8{return x;}  pub fn main() void {var s:S=.{.a=seed(1),.b=seed(2)}; s=@as(S,.{.a=@intCast(s.b),.b=s.a});}", NULL},
+		/* temporary-overwrite */
+		{"const S=struct{a:u8,b:u16,}; noinline fn seed(x:u8)u8{return x;}  pub fn main() void {var s:S=.{.a=seed(1),.b=seed(2)}; const t:S=.{.a=@intCast(s.b),.b=s.a};s=t;}", NULL},
+		/* value-snapshot */
+		{"const S=struct{a:u8,b:u16,}; noinline fn seed(x:u8)u8{return x;}  pub fn main() void {var s:S=.{.a=seed(1),.b=seed(2)}; const t=s; s.a=7; _=t.b;}", NULL},
+		/* scalar-snapshot */
+		{"const S=struct{a:u8,b:u16,}; noinline fn seed(x:u8)u8{return x;}  pub fn main() void {var s:S=.{.a=seed(1),.b=seed(2)}; const t=s.a; s.a=7; _=t;}", NULL},
+		/* dot-write */
+		{"const S=struct{a:u8,b:u16,}; noinline fn seed(x:u8)u8{return x;}  pub fn main() void {var s:S=.{.a=seed(1),.b=seed(2)}; s.a=7;s.b+=2;}", NULL},
+		/* builtin-write */
+		{"const S=struct{a:u8,b:u16,}; noinline fn seed(x:u8)u8{return x;}  pub fn main() void {var s:S=.{.a=seed(1),.b=seed(2)}; @field(s,\"a\")=7;@field(s,\"b\")+=2;}", NULL},
+		/* pointer-dot */
+		{"const S=struct{a:u8,b:u16,}; noinline fn seed(x:u8)u8{return x;}  pub fn main() void {var s:S=.{.a=seed(1),.b=seed(2)}; const p=&s;p.a=7;_=p.b;}", NULL},
+		/* pointer-builtin */
+		{"const S=struct{a:u8,b:u16,}; noinline fn seed(x:u8)u8{return x;}  pub fn main() void {var s:S=.{.a=seed(1),.b=seed(2)}; const p=&s;@field(p,\"a\")=7;_= @field(p,\"b\");}", NULL},
+		/* pointer-deref */
+		{"const S=struct{a:u8,b:u16,}; noinline fn seed(x:u8)u8{return x;}  pub fn main() void {var s:S=.{.a=seed(1),.b=seed(2)}; const p=&s; p.*.a=7;}", NULL},
+		/* field-alias */
+		{"const S=struct{a:u8,b:u16,}; noinline fn seed(x:u8)u8{return x;}  pub fn main() void {var s:S=.{.a=seed(1),.b=seed(2)}; const p=&s.a;s.a=7;p.*+=1;}", NULL},
+		/* qualified-read */
+		{"const S=struct{a:u8,b:u16,}; noinline fn seed(x:u8)u8{return x;}  pub fn main() void {var s:S=.{.a=seed(1),.b=seed(2)}; const p:*const S=&s;_=p.a;}", NULL},
+		/* volatile-scalar */
+		{"const S=struct{a:u8,b:u16,}; noinline fn seed(x:u8)u8{return x;}  pub fn main() void {var s:S=.{.a=seed(1),.b=seed(2)}; const p:*volatile S=&s;p.a=7;_=p.b;}", NULL},
+		/* allowzero-fields */
+		{"const S=struct{a:u8,b:u16,}; noinline fn seed(x:u8)u8{return x;}  pub fn main() void {var s:S=.{.a=seed(1),.b=seed(2)}; const p:*allowzero S=&s;p.a=7;_=p.b;}", NULL},
+		/* under-aligned */
+		{"const S=struct{a:u8,b:u16,}; noinline fn seed(x:u8)u8{return x;}  pub fn main() void {var s:S=.{.a=seed(1),.b=seed(2)}; const p:*align(1) S=&s;p.b=513;_=p.b;}", NULL},
+		/* all-flags */
+		{"const S=struct{a:u8,b:u16,}; noinline fn seed(x:u8)u8{return x;}  pub fn main() void {var s:S=.{.a=seed(1),.b=seed(2)}; const p:*align(1) volatile allowzero S=&s;p.b=513;_=p.b;}", NULL},
+		/* root-overalign */
+		{"const S=struct{a:u8,b:u16,}; noinline fn seed(x:u8)u8{return x;}  pub fn main() void {var s:S align(64)=.{.a=seed(1),.b=2};s.b=9;_= &s;}", NULL},
+		/* if-value */
+		{"const S=struct{a:u8,b:u16,}; noinline fn seed(x:u8)u8{return x;}  pub fn main() void {var s:S=.{.a=seed(1),.b=seed(2)}; const t:S=if(seed(1)==1)s else S{.a=3,.b=4};s.a=9;_=t.b;}", NULL},
+		/* block-value */
+		{"const S=struct{a:u8,b:u16,}; noinline fn seed(x:u8)u8{return x;}  pub fn main() void {var s:S=.{.a=seed(1),.b=seed(2)}; const t:S=blk:{if(seed(1)==1)break :blk s;break :blk S{.a=3,.b=4};};s.a=9;_=t.b;}", NULL},
+		/* if-assignment */
+		{"const S=struct{a:u8,b:u16,}; noinline fn seed(x:u8)u8{return x;}  pub fn main() void {var s:S=.{.a=seed(1),.b=seed(2)}; s=if(seed(1)==1)S{.a=3,.b=4} else s;}", NULL},
+		/* undefined-whole */
+		{"const S=struct{a:u8,b:u16,}; noinline fn seed(x:u8)u8{return x;}  pub fn main() void {var s:S=undefined;s.a=seed(7);s.b=2;_=s.a;}", NULL},
+		/* undefined-field */
+		{"const S=struct{a:u8,b:u16,}; noinline fn seed(x:u8)u8{return x;}  pub fn main() void {var s:S=.{.a=undefined,.b=seed(2)};s.a=7;}", NULL},
+		/* nested-snapshot */
+		{"noinline fn seed(x:u8)u8{return x;} const I=struct{x:u8,};const O=struct{i:I,a:u8,}; pub fn main() void {var s:O=.{.i=.{.x=seed(1)},.a=2};const t=s.i;s.i.x=7;_=t.x;}", NULL},
+		/* nested-context */
+		{"noinline fn seed(x:u8)u8{return x;} const I=struct{x:u8,y:u8,};const O=struct{i:I,}; pub fn main() void {var s:O=.{.i=.{.x=seed(1),.y=2}};s=.{.i=.{.x=s.i.y,.y=s.i.x}};}", NULL},
+		/* nested-address */
+		{"noinline fn seed(x:u8)u8{return x;} const I=struct{x:u16,};const O=struct{i:I,}; pub fn main() void {var s:O=.{.i=.{.x=seed(1)}};const p=&s.i.x;p.*=9;}", NULL},
+		/* array-field */
+		{"noinline fn seed(x:u8)u8{return x;} const O=struct{a:[2]u8,}; pub fn main() void {var s:O=.{.a=.{seed(1),2}};s.a[seed(1)]=7;}", NULL},
+		/* array-field-snapshot */
+		{"noinline fn seed(x:u8)u8{return x;} const O=struct{a:[2]u8,}; pub fn main() void {var s:O=.{.a=.{seed(1),2}};const t=s.a;s.a[0]=7;_=t[0];}", NULL},
+		/* array-of-structs */
+		{"noinline fn seed(x:u8)u8{return x;} const I=struct{x:u8,}; pub fn main() void {var a=[_]I{.{.x=seed(1)},.{.x=2}};a[seed(1)].x=7;_=a[0].x;}", NULL},
+		/* array-struct-snapshot */
+		{"noinline fn seed(x:u8)u8{return x;} const I=struct{x:u8,}; pub fn main() void {var a=[_]I{.{.x=seed(1)},.{.x=2}};const t=a[seed(0)];a[0].x=7;_=t.x;}", NULL},
+		/* nested-array-struct */
+		{"noinline fn seed(x:u8)u8{return x;} const I=struct{x:u16,};const O=struct{a:[2]I,}; pub fn main() void {var s:O=.{.a=.{.{.x=seed(1)},.{.x=2}}};s.a[seed(1)].x=7;}", NULL},
+		/* matrix-struct */
+		{"noinline fn seed(x:u8)u8{return x;} const I=struct{x:u8,}; pub fn main() void {var a:[2][1]I=.{.{.{.x=seed(1)}},.{.{.x=2}}};a[seed(1)][0].x=7;}", NULL},
+		/* slice-of-structs */
+		{"noinline fn seed(x:u8)u8{return x;} const I=struct{x:u8,}; pub fn main() void {var a=[_]I{.{.x=seed(1)},.{.x=2}};const p:[]I=&a;p[seed(1)].x=7;}", NULL},
+		/* slice-field */
+		{"noinline fn seed(x:u8)u8{return x;} const O=struct{s:[]u8,}; pub fn main() void {var a=[_]u8{seed(1),2};var s:O=.{.s=&a};s.s[1]=7;s.s=s.s[0..1];}", NULL},
+		/* slice-field-snapshot */
+		{"noinline fn seed(x:u8)u8{return x;} const O=struct{s:[]u8,}; pub fn main() void {var a=[_]u8{seed(1),2};var s:O=.{.s=&a};const t=s;s.s=s.s[0..1];_=t.s.len;}", NULL},
+		/* pointer-field */
+		{"noinline fn seed(x:u8)u8{return x;} const O=struct{p:*u8,}; pub fn main() void {var a:u8=seed(1);var b:u8=2;var s:O=.{.p=&a};s.p.*=7;s.p=&b;}", NULL},
+		/* sentinel-field */
+		{"noinline fn seed(x:u8)u8{return x;} const O=struct{a:[2:9]u8,}; pub fn main() void {var s:O=.{.a=.{seed(1),2}};s.a[0]=7;_=s.a[2];}", NULL},
+		/* zero-sentinel */
+		{"noinline fn seed(x:u8)u8{return x;} const O=struct{a:[0:9]u8,x:u8,}; pub fn main() void {var s:O=.{.a=.{},.x=seed(1)};s.x=7;_=s.a[0];}", NULL},
+		/* zero-size-fields */
+		{"noinline fn seed(x:u8)u8{return x;} const E=struct{};const O=struct{a:void,b:u0,c:[0]u64,e:E,x:u8,}; pub fn main() void {var s:O=.{.a={},.b=0,.c=.{},.e=.{},.x=seed(1)};s.b=0;s.e=E{};s.x=7;_= &s.c;}", NULL},
+		/* empty-runtime-local */
+		{"noinline fn seed(x:u8)u8{return x;} const E=struct{}; pub fn main() void {var e:E=.{};e=E{};_= &e;}", NULL},
+		/* odd-bool */
+		{"noinline fn seed(x:u8)u8{return x;} const O=struct{n:u9,flag:bool,}; pub fn main() void {var s:O=.{.n=seed(1),.flag=true};s.n+=256;s.flag=false;}", NULL},
+		/* quoted-name */
+		{"noinline fn seed(x:u8)u8{return x;} const O=struct{@\"two words\":u8,}; pub fn main() void {var s:O=.{.@\"two words\"=seed(1)};@field(s,\"two words\")=7;}", NULL},
+		/* single-nul-name */
+		{"noinline fn seed(x:u8)u8{return x;} const O=struct{x:u8,}; pub fn main() void {var s:O=.{.x=seed(1)};@field(s,\"x\\x00\")=7;}", NULL},
+		/* dynamic-root */
+		{"const S=struct{a:u8,b:u16,}; noinline fn seed(x:u8)u8{return x;} noinline fn root(p:*S)*S{return p;}  pub fn main() void {var s:S=.{.a=seed(1),.b=seed(2)}; const p=root(&s);p.a=7;_=p.b;}", NULL},
+		/* absolute-root */
+		{"const S=struct{a:u8,b:u16,}; noinline fn seed(x:u8)u8{return x;} noinline fn address(p:*S)usize{return @intFromPtr(p);}  pub fn main() void {var s:S=.{.a=seed(1),.b=seed(2)}; const p:*S=@ptrFromInt(address(&s));p.a=7;_=p.b;}", NULL},
+		/* pointer-scalar-helper */
+		{"const S=struct{a:u8,b:u16,}; noinline fn seed(x:u8)u8{return x;} noinline fn mutate(p:*S)u8{p.a=7;return p.a;}  pub fn main() void {var s:S=.{.a=seed(1),.b=seed(2)}; _=mutate(&s);}", NULL},
+		/* compound-once */
+		{"const S=struct{a:u8,b:u16,}; noinline fn seed(x:u8)u8{return x;} noinline fn field(p:*S)*u8{return &p.a;}  pub fn main() void {var s:S=.{.a=seed(1),.b=seed(2)}; field(&s).*+=2;}", NULL},
+		/* builtin-dynamic */
+		{"const S=struct{a:u8,b:u16,}; noinline fn seed(x:u8)u8{return x;} noinline fn root(p:*S)*S{return p;}  pub fn main() void {var s:S=.{.a=seed(1),.b=seed(2)}; @field(root(&s),\"a\")=7;}", NULL},
+		/* error/const-write */
+		{"const S=struct{a:u8,b:u16,}; noinline fn seed(x:u8)u8{return x;}  pub fn main() void {const s:S=.{.a=1,.b=2};s.a=7;}", "cannot assign to constant"},
+		/* error/const-pointer-write */
+		{"const S=struct{a:u8,b:u16,}; noinline fn seed(x:u8)u8{return x;}  pub fn main() void {var s:S=.{.a=seed(1),.b=seed(2)}; const p:*const S=&s;p.a=7;}", "cannot assign to constant"},
+		/* error/discard-const */
+		{"const S=struct{a:u8,b:u16,}; noinline fn seed(x:u8)u8{return x;}  pub fn main() void {var s:S=.{.a=seed(1),.b=seed(2)}; const p:*const S=&s;const q:*u8=&p.a;_=q;}", "expected type '*u8', found '*const u8'"},
+		/* error/discard-volatile */
+		{"const S=struct{a:u8,b:u16,}; noinline fn seed(x:u8)u8{return x;}  pub fn main() void {var s:S=.{.a=seed(1),.b=seed(2)}; const p:*volatile S=&s;const q:*u8=&p.a;_=q;}", "expected type '*u8', found '*volatile u8'"},
+		/* error/discard-allowzero */
+		{"const S=struct{a:u8,b:u16,}; noinline fn seed(x:u8)u8{return x;}  pub fn main() void {var s:S=.{.a=seed(1),.b=seed(2)}; const p:*allowzero S=&s;const q:*u8=&p.a;_=q;}", "expected type '*u8', found '*allowzero u8'"},
+		/* error/promote-alignment */
+		{"const S=struct{a:u8,b:u16,}; noinline fn seed(x:u8)u8{return x;}  pub fn main() void {var s:S=.{.a=seed(1),.b=seed(2)}; const p:*align(1) S=&s;const q:*u16=&p.b;_=q;}", "expected type '*u16', found '*align(1) u16'"},
+		/* error/missing */
+		{"const S=struct{a:u8,b:u16,}; noinline fn seed(x:u8)u8{return x;}  pub fn main() void {var s:S=.{.a=seed(1)};s.a=2;}", "missing struct field: b"},
+		/* error/duplicate */
+		{"const S=struct{a:u8,b:u16,}; noinline fn seed(x:u8)u8{return x;}  pub fn main() void {var s:S=.{.a=seed(1),.a=2,.b=3};s.a=2;}", "duplicate struct field name"},
+		/* error/unknown */
+		{"const S=struct{a:u8,b:u16,}; noinline fn seed(x:u8)u8{return x;}  pub fn main() void {var s:S=.{.a=seed(1),.b=2,.extra=3};s.a=2;}", "no field named 'extra' in struct 'test.S'"},
+		/* error/overflow */
+		{"const S=struct{a:u8,b:u16,}; noinline fn seed(x:u8)u8{return x;}  pub fn main() void {var s:S=.{.a=256,.b=seed(2)};s.a=2;}", "type 'u8' cannot represent integer value '256'"},
+		/* error/bad-write-type */
+		{"const S=struct{a:u8,b:u16,}; noinline fn seed(x:u8)u8{return x;}  pub fn main() void {var s:S=.{.a=seed(1),.b=seed(2)}; s.a=\"bad\";}", "expected type 'u8', found '*const [3:0]u8'"},
+		/* error/missing-projection */
+		{"const S=struct{a:u8,b:u16,}; noinline fn seed(x:u8)u8{return x;}  pub fn main() void {var s:S=.{.a=seed(1),.b=seed(2)}; s.nope=7;}", "no field named 'nope' in struct 'test.S'"},
+		/* error/bad-field-name */
+		{"const S=struct{a:u8,b:u16,}; noinline fn seed(x:u8)u8{return x;}  pub fn main() void {var s:S=.{.a=seed(1),.b=seed(2)}; @field(s,3)=7;}", "expected type '[]const u8', found 'comptime_int'"},
+		/* error/double-nul */
+		{"const S=struct{a:u8,b:u16,}; noinline fn seed(x:u8)u8{return x;}  pub fn main() void {var s:S=.{.a=seed(1),.b=seed(2)}; @field(s,\"a\\x00\\x00\")=7;}", "no field named 'a"},
+		/* error/array-oob */
+		{"const O=struct{a:[2]u8,};noinline fn seed(x:u8)u8{return x;} pub fn main() void {var s:O=.{.a=.{seed(1),2}};s.a[2]=7;}", "index 2 outside array of length 2"},
+		/* error/nominal-mismatch */
+		{"const A=struct{x:u8,};const B=struct{x:u8,};noinline fn seed(x:u8)u8{return x;} pub fn main() void {var a:A=.{.x=seed(1)};const b:B=.{.x=seed(2)};a=b;}", "expected type 'test.A', found 'test.B'"},
+		/* error/missing-zero-field */
+		{"const O=struct{x:u8,z:void,};noinline fn seed(x:u8)u8{return x;} pub fn main() void {var s:O=.{.x=seed(1)};s.x=2;}", "missing struct field: z"},
+		/* order/local-overflow-before-unknown */
+		{"const S=struct{a:u8,b:u16,}; noinline fn seed(x:u8)u8{return x;}  pub fn main() void {var s:S=.{.a=256,.unknown=1,.b=2};s.a=1;}", "type 'u8' cannot represent integer value '256'"},
+		/* order/explicit-unknown-before-overflow */
+		{"const S=struct{a:u8,b:u16,}; noinline fn seed(x:u8)u8{return x;}  pub fn main() void {var s=S{.a=256,.unknown=1,.b=2};s.a=1;}", "no field named 'unknown' in struct 'test.S'"},
+		/* order/as-unknown-before-overflow */
+		{"const S=struct{a:u8,b:u16,}; noinline fn seed(x:u8)u8{return x;}  pub fn main() void {var s=@as(S,.{.a=256,.unknown=1,.b=2});s.a=1;}", "no field named 'unknown' in struct 'test.S'"},
+		/* order/overflow-before-missing */
+		{"const S=struct{a:u8,b:u16,}; noinline fn seed(x:u8)u8{return x;}  pub fn main() void {var s:S=.{.a=256};s.a=1;}", "type 'u8' cannot represent integer value '256'"},
+		/* order/duplicate-before-overflow */
+		{"const S=struct{a:u8,b:u16,}; noinline fn seed(x:u8)u8{return x;}  pub fn main() void {var s:S=.{.a=256,.a=2,.b=3};s.a=1;}", "duplicate struct field name"},
+		/* absolute/field-numeric-comptime */
+		{"const T=struct{wide:u64,byte:u8,};const p:*T=@ptrFromInt(4096);  pub fn main() void {const n:u8=if(@intFromPtr(&p.byte)==4096+@offsetOf(T,\"byte\"))0 else 256;_=n;}", NULL},
+		/* absolute/field-provenance */
+		{"const T=struct{wide:u64,byte:u8,};const p:*T=@ptrFromInt(4096);  pub fn main() void {const n:u8=if(@as(*anyopaque,@ptrCast(p))!=@as(*anyopaque,@ptrCast(&p.wide)))0 else 256;_=n;}", NULL},
+		/* absolute/field-flags */
+		{"const T=struct{wide:u64,byte:u8,};const p:*align(16) volatile allowzero T=@ptrFromInt(4096);  pub fn main() void {const q:*align(1) volatile allowzero T=p;const n:u8=if(@TypeOf(&p.wide)==*volatile allowzero u64 and @TypeOf(&q.wide)==*align(1) volatile allowzero u64)0 else 256;_=n;}", NULL},
+		/* byvalue-parameter */
+		{"const S=struct{a:u8,}; fn f(s:S)u8{return s.a;}pub fn main()void{_=f(.{.a=1});}", "not supported by szc yet:"},
+		/* byvalue-return */
+		{"const S=struct{a:u8,}; fn f()S{return .{.a=1};}pub fn main()void{_=f();}", "not supported by szc yet:"},
+		/* recursive-array-parameter */
+		{"const S=struct{a:u8,}; fn f(a:[2][1]S)u8{return a[0][0].a;}pub fn main()void{_=f(.{.{.{.a=1}},.{.{.a=2}}});}", "not supported by szc yet:"},
+		/* recursive-array-return */
+		{"const S=struct{a:u8,}; fn f()[1]S{return .{.{.a=1}};}pub fn main()void{_=f();}", "not supported by szc yet:"},
+		/* mutable-global */
+		{"const S=struct{a:u8,}; var s:S=.{.a=1};pub fn main()void{s.a=2;}", "not supported by szc yet:"},
+		/* mutable-global-array */
+		{"const S=struct{a:u8,}; var a:[1]S=.{.{.a=1}};pub fn main()void{a[0].a=2;}", "not supported by szc yet:"},
+		/* volatile-whole-load */
+		{"const S=struct{a:u8,}; pub fn main()void{var s:S=.{.a=1};const p:*volatile S=&s;const copy=p.*;_=copy;}", "not supported by szc yet:"},
+		/* volatile-whole-store */
+		{"const S=struct{a:u8,}; pub fn main()void{var s:S=.{.a=1};const p:*volatile S=&s;p.*=S{.a=2};}", "not supported by szc yet:"},
+		/* cabi-struct-parameter */
+		{"const S=struct{a:u8,}; export fn consume(s:S)u8{return s.a;}pub fn main()void{}", "not supported by szc yet:"},
+		/* edge/nested-absolute-scalar-read */
+		{"const I=struct{x:u8,wide:u64,};const O=struct{tag:u8,inner:I,array:[3]u16,slice:[]const u8,}; const p:*const O=@ptrFromInt(4096); noinline fn read()u8{return p.inner.x;} pub fn main()void{_=read();}", NULL},
+		/* edge/absolute-array-index */
+		{"const I=struct{x:u8,wide:u64,};const O=struct{tag:u8,inner:I,array:[3]u16,slice:[]const u8,}; const p:*const O=@ptrFromInt(4096);  pub fn main()void{const n:u8=if(@intFromPtr(&p.array[1])==4096+@offsetOf(O,\"array\")+@sizeOf(u16))0 else 256;_=n;}", NULL},
+		/* edge/absolute-array-struct-inner */
+		{"const I=struct{x:u8,wide:u64,};const O=struct{tag:u8,inner:I,array:[3]u16,slice:[]const u8,}; const W=struct{a:u8,inner:I,};const p:*const [3]W=@ptrFromInt(4096); pub fn main()void{const n:u8=if(@intFromPtr(&p[1].inner.x)==4096+@sizeOf(W)+@offsetOf(W,\"inner\")+@offsetOf(I,\"x\"))0 else 256;_=n;}", NULL},
+		/* edge/near-max-formation */
+		{"const T=struct{a:u64,b:u64,};const p:*const T=@ptrFromInt(18446744073709551608);pub fn main()void{const q=&p.b;_=q;}", NULL},
+		/* edge/near-max-numeric-wrap */
+		{"const T=struct{a:u64,b:u64,};const p:*const T=@ptrFromInt(18446744073709551608);pub fn main()void{const n:u8=if(@intFromPtr(&p.b)==0)0 else 256;_=n;}", NULL},
+		/* edge/volatile-many-index-read */
+		{"const I=struct{x:u8,wide:u64,};const O=struct{tag:u8,inner:I,array:[3]u16,slice:[]const u8,}; noinline fn read(p:[*]const volatile I)u8{return p[0].x;}pub fn main()void{_=read(@ptrFromInt(4096));}", NULL},
+		/* edge/volatile-nested-read */
+		{"const I=struct{x:u8,wide:u64,};const O=struct{tag:u8,inner:I,array:[3]u16,slice:[]const u8,}; noinline fn read(p:*const volatile O)u8{return p.inner.x;}pub fn main()void{_=read(@ptrFromInt(4096));}", NULL},
+		/* error/runtime-struct-to-[0]u8 */
+		{"const S=struct{x:u8,};noinline fn seed()u8{return 1;}pub fn main()void{var s:S=.{.x=seed()};const a:[0]u8=s;_=a;s.x=2;}", "expected type '[0]u8', found 'test.S'"},
+		/* error/runtime-struct-to-[1]u8 */
+		{"const S=struct{x:u8,};noinline fn seed()u8{return 1;}pub fn main()void{var s:S=.{.x=seed()};const a:[1]u8=s;_=a;s.x=2;}", "expected type '[1]u8', found 'test.S'"},
+		/* error/runtime-struct-to-[]u8 */
+		{"const S=struct{x:u8,};noinline fn seed()u8{return 1;}pub fn main()void{var s:S=.{.x=seed()};const a:[]u8=s;_=a;s.x=2;}", "expected type '[]u8', found 'test.S'"},
+		/* absolute/nominal-field-base */
+		{"const A=struct {x:u8,};\nconst B=struct {x:u8,};\nconst a:*A=@ptrFromInt(4096);\nconst b:*B=@ptrFromInt(4096);\npub fn main()void{\nconst x:*u8=&a.x;\nconst y:*u8=&b.x;\nconst n:u8=if(x!=y)0 else 256;\n_=n;\n}\n", NULL},
+	};
+	for (uint32_t i = 0; i < sizeof(cases) / sizeof(cases[0]); i++) {
+		Arena arena;
+		arena_init(&arena);
+		SourceTable sources;
+		source_table_init(&sources, &arena);
+		Diag diag;
+		diag_init(&diag, &arena, &sources);
+		Interner interner;
+		intern_init(&interner, &arena);
+		const char *source = cases[i].source;
+		FileId file = source_add_memory(&sources, "test.zig", source, (uint32_t)strlen(source));
+		AstContainerDecl *root = parse_file(&arena, &diag, &sources, file);
+		IrFile *ir = irgen_file(&arena, &diag, &interner, source_get(&sources, file), file, root);
+		bool success = false;
+		if (!diag_has_errors(&diag)) {
+			Sema *sema = sema_create(&arena, &diag, &interner, &sources);
+			success = sema_analyze_executable(sema, file, ir);
+		}
+		CHECK(success == (cases[i].error == NULL));
+		if (cases[i].error != NULL)
+			CHECK(diag.count != 0 && strstr(diag.items[0].message, cases[i].error) != NULL);
+		arena_free(&arena);
+	}
+}
+
+/* Frontend-only protocol coverage. Paste before main() and call once.
+ * Existing normalized-duplicate negative tests remain in their original suite. */
+static void
+test_runtime_struct_initializer_ir(void)
+{
+	const struct {
+		const char *source;
+		uint32_t pointer_inits;
+		uint32_t value_inits;
+		uint32_t empty_inits;
+		uint32_t nested_destinations;
+		uint32_t field_refs;
+		uint32_t read_refs;
+		uint32_t named_read_refs;
+		uint32_t field_values;
+		uint32_t field_pointers;
+		uint32_t index_pointers;
+	} cases[] = {
+		/* Source order differs from declaration order; quoted a is normalized. */
+		{"const S=struct{a:u8,b:u8}; fn f() void {var s:S=undefined; s=.{.b=2,.@\"\\x61\"=1};}", 1, 0, 0, 0, 0, 0, 0, 0, 2, 0},
+		/* A nested contextual body receives its parent's actual field pointer. */
+		{"const I=struct{x:u8}; const S=struct{inner:I}; fn f() void {var s:S=undefined; s=.{.inner=.{.x=1}};}", 2, 0, 0, 1, 0, 0, 0, 0, 2, 0},
+		/* Explicit and @as RHS boundaries must not inherit that destination. */
+		{"const I=struct{x:u8}; const S=struct{inner:I}; fn f() void {var s:S=undefined; s=.{.inner=I{.x=1}};}", 1, 1, 0, 0, 0, 0, 0, 0, 1, 0},
+		{"const I=struct{x:u8}; const S=struct{inner:I}; fn f() void {var s:S=undefined; s=.{.inner=@as(I,.{.x=1})};}", 1, 1, 0, 0, 0, 0, 0, 0, 1, 0},
+		/* Empty destinations retain ambiguous array/struct semantic dispatch. */
+		{"fn f() void {var a:[0]u8=undefined; var b:[0:7]u8=undefined; a=.{}; b=.{};}", 0, 0, 2, 0, 0, 0, 0, 0, 0, 0},
+		{"const S=struct{}; fn f() void {var s:S=undefined; s=.{};}", 0, 0, 1, 0, 0, 0, 0, 0, 0, 0},
+		/* These chains must project from references, not whole aggregate reads. */
+		{"const S=struct{x:u8}; fn f(p:[*]volatile S) void {_=p[0].x;}", 0, 0, 0, 0, 1, 0, 0, 0, 0, 1},
+		{"const S=struct{x:u8}; fn f(p:*volatile S) void {_=(p.*).x;}", 0, 0, 0, 0, 1, 0, 0, 0, 0, 0},
+		{"const I=struct{x:u8}; const S=struct{inner:I}; fn f(p:*volatile S) void {_=p.inner.x;}", 0, 0, 0, 0, 1, 1, 0, 0, 0, 0},
+		{"const I=struct{x:u8}; const S=struct{inner:I}; fn f(p:*volatile S) void {_=(@field(p,\"inner\")).x;}", 0, 0, 0, 0, 1, 0, 1, 0, 0, 0},
+		/* Ordinary direct identifier reads and true address-taking stay distinct. */
+		{"const S=struct{x:u8}; fn f(p:*volatile S) void {_=p.x;}", 0, 0, 0, 0, 0, 0, 0, 1, 0, 0},
+		{"const I=struct{x:u8}; const S=struct{inner:I}; fn f(p:*S) void {_=&p.inner.x;}", 0, 0, 0, 0, 0, 0, 0, 0, 2, 0},
+	};
+	for (uint32_t i = 0; i < sizeof(cases) / sizeof(cases[0]); i++) {
+		Arena arena;
+		arena_init(&arena);
+		SourceTable sources;
+		source_table_init(&sources, &arena);
+		Diag diag;
+		diag_init(&diag, &arena, &sources);
+		Interner interner;
+		intern_init(&interner, &arena);
+		const char *source = cases[i].source;
+		FileId file = source_add_memory(&sources, "runtime_struct_initializer_ir.zig", source, (uint32_t)strlen(source));
+		AstContainerDecl *root = parse_file(&arena, &diag, &sources, file);
+		CHECK(!diag_has_errors(&diag));
+		if (diag_has_errors(&diag)) {
+			arena_free(&arena);
+			continue;
+		}
+		IrFile *ir = irgen_file(&arena, &diag, &interner, source_get(&sources, file), file, root);
+		CHECK(!diag_has_errors(&diag));
+		if (diag_has_errors(&diag)) {
+			arena_free(&arena);
+			continue;
+		}
+		uint32_t counts[IR_OP_COUNT] = {0};
+		uint32_t nested_destinations = 0;
+		bool protocol = true;
+		bool source_order = true;
+		bool normalized_order = true;
+		bool borrowed_reads = true;
+		for (uint32_t j = 0; j < ir->inst_count; j++) {
+			const IrInst *inst = &ir->insts[j];
+			counts[inst->op]++;
+			if (inst->op == IR_FIELD_REF) {
+				IrRef base = inst->data.name.operand;
+				if (!ir_ref_is_inst(base))
+					borrowed_reads = false;
+				else {
+					IrOp op = ir->insts[ir_ref_inst(base)].op;
+					borrowed_reads = borrowed_reads && op != IR_FIELD_VAL
+						&& op != IR_FIELD_NAMED_VAL && op != IR_ARRAY_INDEX && op != IR_DEREF;
+				}
+			}
+			if (inst->op != IR_STRUCT_INIT_PTR)
+				continue;
+			IrStructInitPtr header;
+			IR_READ(ir, inst->data.payload, &header);
+			if (ir_ref_is_inst(header.pointer) && ir->insts[ir_ref_inst(header.pointer)].op == IR_FIELD_PTR)
+				nested_destinations++;
+			uint32_t cursor = inst->data.payload + IR_WORDS(IrStructInitPtr);
+			uint32_t previous_src = 0;
+			for (uint32_t k = 0; k < header.field_count; k++) {
+				IrStructInitField field;
+				IR_READ(ir, cursor, &field);
+				cursor += IR_WORDS(IrStructInitField);
+				if (k != 0 && field.src <= previous_src)
+					source_order = false;
+				previous_src = field.src;
+				if (i == 0)
+					normalized_order = normalized_order && strcmp(intern_text(&interner, field.name), k == 0 ? "b" : "a") == 0;
+				uint32_t length = ir_body_count(ir, field.body);
+				if (length < 2) {
+					protocol = false;
+					continue;
+				}
+				const IrInstIndex *body = ir_body_insts(ir, field.body);
+				const IrInst *first = &ir->insts[body[0]];
+				const IrInst *last = &ir->insts[body[length - 1]];
+				protocol = protocol && first->op == IR_FIELD_PTR
+					&& first->data.name.operand == header.pointer && first->data.name.name == field.name
+					&& last->op == IR_BREAK_INLINE && last->data.brk.block == IR_BODY_RESULT;
+				/* Every contextual pointee hint in this body uses the derived field,
+				 * never the enclosing aggregate pointer or a synthetic type value. */
+				for (uint32_t n = 1; n + 1 < length; n++) {
+					const IrInst *part = &ir->insts[body[n]];
+					if (part->op == IR_ELEM_TYPE)
+						protocol = protocol && part->data.un.operand == ir_ref_of_inst(body[0]);
+				}
+			}
+		}
+		CHECK(counts[IR_STRUCT_INIT_PTR] == cases[i].pointer_inits);
+		CHECK(counts[IR_STRUCT_INIT] == cases[i].value_inits);
+		CHECK(counts[IR_INIT_EMPTY_PTR] == cases[i].empty_inits);
+		CHECK(nested_destinations == cases[i].nested_destinations);
+		CHECK(protocol && source_order && normalized_order);
+		CHECK(counts[IR_FIELD_REF] == cases[i].field_refs && borrowed_reads);
+		CHECK(counts[IR_FIELD_READ_REF] == cases[i].read_refs);
+		CHECK(counts[IR_FIELD_NAMED_READ_REF] == cases[i].named_read_refs);
+		CHECK(counts[IR_FIELD_VAL] == cases[i].field_values);
+		CHECK(counts[IR_FIELD_PTR] == cases[i].field_pointers);
+		CHECK(counts[IR_ARRAY_INDEX_PTR] == cases[i].index_pointers);
+		CHECK(counts[IR_DEREF] == 0 && counts[IR_ARRAY_INDEX] == 0);
+		arena_free(&arena);
+	}
+}
+
 
 static void
 test_struct_static_values(void)
@@ -2550,8 +2911,8 @@ test_struct_metadata(void)
 		{"const S=struct { x:noreturn, }; pub fn main() void { _=@sizeOf(S); }", "not supported by szc yet"},
 		/* Immutable known struct values need no runtime transport. */
 		{"const S=struct { x:u8, }; pub fn main() u8 { const s:S=.{.x=7}; return s.x-7; }", NULL},
-		/* NYI/runtime-struct-load */
-		{"const S=struct { x:u8, }; fn f(p:*S) void { const value=p.*; _=value; } pub fn main() void { const p:*S=@ptrFromInt(4096); f(p); }", "not supported by szc yet"},
+		/* Runtime aggregate loads now own local snapshots. */
+		{"const S=struct { x:u8, }; fn f(p:*S) void { const value=p.*; _=value; } pub fn main() void { const p:*S=@ptrFromInt(4096); f(p); }", NULL},
 	};
 	for (uint32_t i = 0; i < sizeof(cases) / sizeof(cases[0]); i++) {
 		Arena arena;
@@ -3507,6 +3868,8 @@ main(void)
 	test_struct_static_values();
 	test_struct_field_pointers();
 	test_known_struct_values();
+	test_runtime_struct_values();
+	test_runtime_struct_initializer_ir();
 	test_struct_initializer_ir();
 	test_struct_offsets();
 	test_struct_bit_layout();

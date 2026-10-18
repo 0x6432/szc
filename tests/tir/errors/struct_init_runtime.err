@@ -1,3 +1,3 @@
-tests/tir/errors/struct_init_runtime.zig:3:19: error: not supported by szc yet: runtime struct initialization
-    const s = S{ .a = x };
-                  ^
+tests/tir/errors/struct_init_runtime.zig:1:90: error: not supported by szc yet: volatile whole-struct initialization
+const S=struct { a:u8, }; pub fn main() void {var s:S=.{.a=1};const p:*volatile S=&s;p.*=.{.a=2};}
+                                                                                         ^

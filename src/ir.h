@@ -154,8 +154,9 @@ typedef enum IrDataKind {
 	X(ARRAY_ELEM_TYPE, "array_elem_type", IR_DATA_UN)	/* array type -> child type */ \
 	X(ARRAY_INIT, "array_init", IR_DATA_PAYLOAD)	/* type ref, count, element refs */ \
 	X(STRUCT_INIT, "struct_init", IR_DATA_PAYLOAD) /* IrStructInit; zero fields also permits arrays */ \
+	X(STRUCT_INIT_PTR, "struct_init_ptr", IR_DATA_PAYLOAD) /* IrStructInitPtr; source-order destination writes */ \
 	X(STRUCT_FIELD_TYPE, "struct_field_type", IR_DATA_NAME) /* initializer field name, container type */ \
-	X(INIT_EMPTY_PTR, "init_empty_ptr", IR_DATA_UN) /* empty anonymous array destination; structs NYI */ \
+	X(INIT_EMPTY_PTR, "init_empty_ptr", IR_DATA_UN) /* empty anonymous array or struct destination */ \
 	X(ARRAY_BASE_PTR, "array_base_ptr", IR_DATA_UN)	/* normalize array slot or pointer slot */ \
 	X(ARRAY_INDEX_PTR, "array_index_ptr", IR_DATA_BIN)	/* checked element address */ \
 	X(ARRAY_INDEX_BASE, "array_index_base", IR_DATA_BIN)	/* borrow nested array storage for indexing */ \
@@ -491,10 +492,19 @@ typedef struct IrStructInit {
 	uint32_t flags;
 } IrStructInit;
 
+/* STRUCT_INIT_PTR: header, then field_count IrStructInitField records.
+ * Each body derives its field pointer from the actual destination, evaluates
+ * the RHS with that result location, and returns its value for sema to store
+ * before the next body. Empty anonymous destinations use INIT_EMPTY_PTR. */
+typedef struct IrStructInitPtr {
+	IrRef pointer;
+	uint32_t field_count;
+} IrStructInitPtr;
+
 typedef struct IrStructInitField {
 	StringId name;
 	uint32_t src;
-	IrBody body;	/* contextual field type, value, then IR_BODY_RESULT */
+	IrBody body;	/* contextual field type/pointer, value, then IR_BODY_RESULT */
 } IrStructInitField;
 
 typedef struct IrHasMember {

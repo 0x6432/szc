@@ -1,0 +1,27 @@
+fn szc.main.1: fn () u8 {
+  %0: u8 = const 1
+  %1: u8 = call szc.byte.2(%0)
+  %2: *struct_runtime_snapshot.S = alloc
+  %3: *u8 = struct_field_ptr %2, 0
+  %4: void = store %3, %1
+  %5: *u8 = struct_field_ptr %2, 1
+  %6: u8 = const 2
+  %7: void = store %5, %6
+  %8: *const struct_runtime_snapshot.S = ptr_cast %2
+  %9: *struct_runtime_snapshot.S = alloc
+  %10: void = array_copy %9, %8
+  %11: *const struct_runtime_snapshot.S = alloc
+  %12: void = array_copy %11, %9
+  %13: *u8 = struct_field_ptr %9, 0
+  %14: u8 = const 7
+  %15: void = store %13, %14
+  %16: *const u8 = struct_field_ptr %11, 0
+  %17: u8 = load %16
+  %18: u8 = const 1
+  %19: u8 = sub %17, %18
+  %20: noreturn = ret %19
+}
+fn szc.byte.2: fn (u8) u8 {
+  %0: u8 = arg 0
+  %1: noreturn = ret %0
+}

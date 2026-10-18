@@ -1,0 +1,5 @@
+fn szc.main.1: fn () u8 {
+  %0: *const volatile u8 = const struct_field(base.10, index.0, offset.0)
+  %1: u8 = load_volatile %0
+  %2: noreturn = ret %1
+}

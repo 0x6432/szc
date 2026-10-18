@@ -50,6 +50,25 @@ def fixtures(safety=True, include_memset=True, include_memcpy=True):
             f'if (&cancel_{offset}.* != cancel_{offset}) return 8;',
             'if (!observe_finish(0, 0)) return 9;',
         ])
+    # Dynamic foreign pointers borrow nested fields; never copy a whole volatile
+    # aggregate. Reuse memory_0 and the existing exact wwrrwr scalar observer.
+    for offset in (0, 1):
+        checks.extend([
+            f'const nested_struct_{offset}: *volatile struct {{ inner: struct {{ x: u8 }} }} = @ptrCast(memory_0({offset}));',
+            f'nested_struct_{offset}.inner.x = 3;', f'nested_struct_{offset}.inner.x = 4;',
+            f'_ = nested_struct_{offset}.inner.x;', f'_ = nested_struct_{offset}.inner.x;',
+            f'nested_struct_{offset}.inner.x = 3;',
+            f'const nested_struct_value_{offset} = nested_struct_{offset}.inner.x;',
+            'if (!observe_finish(3, 3)) return 32;',
+            f'if (nested_struct_value_{offset} != 3) return 33;',
+            f'const many_struct_{offset}: [*]volatile struct {{ x: u8 }} = @ptrCast(memory_0({offset}));',
+            f'many_struct_{offset}[1].x = 3;', f'many_struct_{offset}[1].x = 4;',
+            f'_ = many_struct_{offset}[1].x;', f'_ = many_struct_{offset}[1].x;',
+            f'many_struct_{offset}[1].x = 3;',
+            f'const many_struct_value_{offset} = many_struct_{offset}[1].x;',
+            'if (!observe_finish(3, 3)) return 34;',
+            f'if (many_struct_value_{offset} != 3) return 35;',
+        ])
     slice_index = len(TYPES) + 2
     declarations.append(f'extern fn memory_{slice_index}(offset: usize) *align(1) volatile []u8;')
     for offset in (0, 1):
@@ -210,7 +229,7 @@ def main():
                      '-O' + mode, '-j2', '-lc', f'-femit-bin={executable}'])
                 result = run([str(executable)])
                 assert not result.stdout and not result.stderr
-    print(f'volatile accesses: {2 * (len(TYPES) + 13) + 12 + 24 + 6} observed sequences, 0 failed', flush=True)
+    print(f'volatile accesses: {text.count("if (!observe_finish")} observed sequences, 0 failed', flush=True)
 
 
 if __name__ == '__main__':

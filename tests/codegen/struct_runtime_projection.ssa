@@ -1,0 +1,90 @@
+function w $szc.main.1() {
+@start
+	%t0 =l alloc4 4
+	call $memmove(l %t0, l $szc.const.1, l 4)
+	%t4 =w call $szc.set.2(l %t0, l 1)
+	%t4 =w and %t4, 255
+	%t6 =w sub %t4, 7
+	%t6 =w and %t6, 255
+	%g6_overflow =w cultw %t4, 7
+	jnz %g6_overflow, @g6_overflow_panic, @g6_overflow_ok
+@g6_overflow_panic
+	call $szc.panic.0()
+	hlt
+@g6_overflow_ok
+	ret %t6
+}
+
+function w $szc.set.2(l %t0, l %t1) {
+@start
+	%t2 =l alloc8 8
+	storel %t0, %t2
+	%t4 =l loadl %t2
+	%t5 =l copy %t4
+	%t6 =l copy %t5
+	storeh 513, %t6
+	%t9 =l loadl %t2
+	%t10 =l add %t9, 2
+	%g11_index =w cugel %t1, 2
+	jnz %g11_index, @g11_index_panic, @g11_index_ok
+@g11_index_panic
+	call $szc.panic.7()
+	hlt
+@g11_index_ok
+	%e11_offset =l mul %t1, 1
+	%t11 =l add %t10, %e11_offset
+	storeb 7, %t11
+	%t14 =l loadl %t2
+	%t15 =l copy %t14
+	%t16 =l copy %t15
+	%t17 =w loaduh %t16
+	%t19 =w sub %t17, 506
+	%t19 =w and %t19, 65535
+	%g19_overflow =w cultw %t17, 506
+	jnz %g19_overflow, @g19_overflow_panic, @g19_overflow_ok
+@g19_overflow_panic
+	call $szc.panic.0()
+	hlt
+@g19_overflow_ok
+	%g20_high =w cugtw %t19, 255
+	jnz %g20_high, @g20_high_panic, @g20_high_ok
+@g20_high_panic
+	call $szc.panic.1()
+	hlt
+@g20_high_ok
+	%t20 =w copy %t19
+	%t20 =w and %t20, 255
+	ret %t20
+}
+
+section ".rodata"
+data $szc.const.1 = align 2 { h 0, b 1, b 2 }
+data $szc.panic.msg.0 = { b "integer overflow\n", b 0 }
+function $szc.panic.0() {
+@start
+	call $write(w 2, l $szc.panic.msg.0, l 17)
+	call $abort()
+	hlt
+}
+
+data $szc.panic.msg.1 = { b "integer does not fit in destination type\n", b 0 }
+function $szc.panic.1() {
+@start
+	call $write(w 2, l $szc.panic.msg.1, l 41)
+	call $abort()
+	hlt
+}
+
+data $szc.panic.msg.7 = { b "index out of bounds\n", b 0 }
+function $szc.panic.7() {
+@start
+	call $write(w 2, l $szc.panic.msg.7, l 20)
+	call $abort()
+	hlt
+}
+
+export function w $main() {
+@start
+	%status =w call $szc.main.1()
+	ret %status
+}

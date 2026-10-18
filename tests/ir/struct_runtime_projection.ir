@@ -1,0 +1,120 @@
+%85 = struct_decl (flags=0) {
+  decl const "I" value {
+    %1 = struct_decl (flags=0) {
+      field "x" type {
+        %0 = break_inline result, @type_u16
+      }
+    }
+    %2 = break_inline result, %1
+  }
+  decl const "S" value {
+    %11 = struct_decl (flags=0) {
+      field "i" type {
+        %3 = decl_val "I"
+        %4 = as @type_type, %3
+        %5 = break_inline result, %4
+      }
+      field "a" type {
+        %6 = int 2
+        %7 = as @type_usize, %6
+        %8 = array_type %7, @type_u8
+        %9 = as @type_type, %8
+        %10 = break_inline result, %9
+      }
+    }
+    %12 = break_inline result, %11
+  }
+  decl fn "set" value {
+    %44 = func "set" noinline {
+      %18 = param "p" type {
+        %13 = decl_val "S"
+        %14 = as @type_type, %13
+        %15 = ptr_type %14, @false
+        %16 = as @type_type, %15
+        %17 = break_inline result, %16
+      }
+      %20 = param "n" type {
+        %19 = break_inline result, @type_usize
+      }
+      ret type {
+        %21 = break_inline result, @type_u8
+      }
+      body insts {
+        %22 = ref %18
+        %23 = field_ptr "i", %22
+        %24 = field_ptr "x", %23
+        %25 = int 513
+        %26 = elem_type %24
+        %27 = as %26, %25
+        %28 = store %24, %27
+        %29 = field_ptr "a", %22
+        %30 = array_base_ptr %29
+        %31 = as @type_usize, %20
+        %32 = array_index_ptr %30, %31
+        %33 = int 7
+        %34 = elem_type %32
+        %35 = as %34, %33
+        %36 = store %32, %35
+        %37 = ret_type
+        %38 = field_read_ref "i", %22
+        %39 = field_ref "x", %38
+        %40 = int 506
+        %41 = sub %39, %40
+        %42 = int_cast %37, %41
+        %43 = ret %42
+      }
+    }
+    %45 = break_inline result, %44
+  }
+  decl fn "main" pub value {
+    %83 = func "main" {
+      ret type {
+        %46 = break_inline result, @type_u8
+      }
+      body insts {
+        %47 = decl_val "S"
+        %48 = as @type_type, %47
+        %66 = struct_init %48 "i" value {
+          %49 = struct_field_type "i", %48
+          %54 = struct_init %49 "x" value {
+            %50 = struct_field_type "x", %49
+            %51 = int 0
+            %52 = as %50, %51
+            %53 = break_inline result, %52
+          }
+          %55 = as %49, %54
+          %56 = break_inline result, %55
+        } "a" value {
+          %57 = struct_field_type "a", %48
+          %58 = array_elem_type %57
+          %59 = int 1
+          %60 = as %58, %59
+          %61 = int 2
+          %62 = as %58, %61
+          %63 = array_init %57, %60, %62
+          %64 = as %57, %63
+          %65 = break_inline result, %64
+        }
+        %67 = as %48, %66
+        %68 = alloc type=%48 init=%67
+        %69 = ret_type
+        %70 = decl_val "set"
+        %71 = call %70 arg0 {
+          %72 = arg_type %71, 0
+          %73 = as %72, %68
+          %74 = break_inline result, %73
+        } arg1 {
+          %75 = arg_type %71, 1
+          %76 = int 1
+          %77 = as %75, %76
+          %78 = break_inline result, %77
+        }
+        %79 = int 7
+        %80 = sub %71, %79
+        %81 = as_return %69, %80
+        %82 = ret %81
+      }
+    }
+    %84 = break_inline result, %83
+  }
+}

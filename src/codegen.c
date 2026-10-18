@@ -162,6 +162,11 @@ print_pointer_address(Codegen *cg, FILE *out, ValueId id, bool outlined, bool wi
 		return;
 	}
 	switch (root->kind) {
+	case VALUE_INT_PTR:
+		/* The flattened offset already includes this numeric root. A caller
+		 * omitting offsets adds that full address in its TIR_CONST lowering. */
+		fprintf(out, "%" PRIu64, with_offset ? address.offset : UINT64_C(0));
+		return;
 	case VALUE_REF:
 		cg->constants_used[root->as.object] = true;
 		fprintf(out, "%sszc.const.%u", prefix, (unsigned)root->as.object);
@@ -978,6 +983,17 @@ emit_inst(Codegen *cg, TirRef ref)
 		fputs(inst->op == TIR_PTR_SUB ? "sub " : "add ", out);
 		print_operand(cg, inst->data.bin.lhs);
 		fprintf(out, ", %%e%u_offset\n", (unsigned)ref);
+		return;
+	}
+	case TIR_STRUCT_FIELD_PTR: {
+		TirStructFieldPtr field;
+		memcpy(&field, &cg->tir->extra[inst->data.payload], sizeof(field));
+		print_dest(cg, ref, QBE_L);
+		fputs(field.offset == 0 ? "copy " : "add ", out);
+		print_operand(cg, field.base);
+		if (field.offset != 0)
+			fprintf(out, ", %" PRIu32, field.offset);
+		fputc('\n', out);
 		return;
 	}
 	case TIR_SLICE_LEN_PTR:

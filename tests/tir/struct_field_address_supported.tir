@@ -1,0 +1,13 @@
+fn szc.main.1: fn () void {
+  %0: *const struct_field_address_supported.S = const ptr(0x1000)
+  %1: *const u8 = call szc.field.2(%0)
+  %2: noreturn = ret
+}
+fn szc.field.2: fn (*const struct_field_address_supported.S) *const u8 {
+  %0: *const struct_field_address_supported.S = arg 0
+  %1: *const *const struct_field_address_supported.S = alloc
+  %2: void = store %1, %0
+  %3: *const struct_field_address_supported.S = load %1
+  %4: *const u8 = struct_field_ptr %3, 0
+  %5: noreturn = ret %4
+}

@@ -30,6 +30,11 @@ CASES=(
  ('typed-mutual-address-cycle','const S=struct {p:*const S,}; const a:S=.{.p=&b}; const b:S=.{.p=&a}; pub fn main() void {_=@intFromPtr(a.p);}'),
 )
 
+CONTROLS = {
+ 'mutable-local', 'runtime-init', 'runtime-array-index', 'mutable-array',
+ 'dynamic-root-field-address', 'absolute-root-field-address',
+}
+
 def main():
     parser=argparse.ArgumentParser(description=__doc__);parser.add_argument('szc');args=parser.parse_args()
     failures=[]
@@ -42,8 +47,11 @@ def main():
             # Cycles may retain existing dependency diagnostics rather than an NYI.
             cycle='address-cycle' in label
             diagnostic=result.stderr.decode(errors='replace')
-            if result.returncode!=1 or not ('not supported by szc yet:' in diagnostic or (cycle and 'depend' in diagnostic.lower())):
+            if label in CONTROLS:
+                if result.returncode != 0:
+                    failures.append(label+': '+str(error))
+            elif result.returncode!=1 or not ('not supported by szc yet:' in diagnostic or (cycle and 'depend' in diagnostic.lower())):
                 failures.append(label+': '+str(error))
-    print(f'struct static NYI: {len(CASES)} cases; {len(failures)} failures')
+    print(f'struct static NYI: {len(CASES)-len(CONTROLS)} NYI cases, {len(CONTROLS)} supported controls; {len(failures)} failures')
     if failures:raise SystemExit('\n'.join(failures))
 if __name__=='__main__':main()

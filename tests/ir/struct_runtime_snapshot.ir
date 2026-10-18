@@ -1,0 +1,72 @@
+%45 = struct_decl (flags=0) {
+  decl const "S" value {
+    %2 = struct_decl (flags=0) {
+      field "a" type {
+        %0 = break_inline result, @type_u8
+      }
+      field "b" type {
+        %1 = break_inline result, @type_u8
+      }
+    }
+    %3 = break_inline result, %2
+  }
+  decl fn "byte" value {
+    %10 = func "byte" noinline {
+      %5 = param "x" type {
+        %4 = break_inline result, @type_u8
+      }
+      ret type {
+        %6 = break_inline result, @type_u8
+      }
+      body insts {
+        %7 = ret_type
+        %8 = as_return %7, %5
+        %9 = ret %8
+      }
+    }
+    %11 = break_inline result, %10
+  }
+  decl fn "main" pub value {
+    %43 = func "main" {
+      ret type {
+        %12 = break_inline result, @type_u8
+      }
+      body insts {
+        %13 = decl_val "S"
+        %14 = as @type_type, %13
+        %28 = struct_init %14 "a" value {
+          %15 = struct_field_type "a", %14
+          %16 = decl_val "byte"
+          %17 = call %16 arg0 {
+            %18 = arg_type %17, 0
+            %19 = int 1
+            %20 = as %18, %19
+            %21 = break_inline result, %20
+          }
+          %22 = as %15, %17
+          %23 = break_inline result, %22
+        } "b" value {
+          %24 = struct_field_type "b", %14
+          %25 = int 2
+          %26 = as %24, %25
+          %27 = break_inline result, %26
+        }
+        %29 = as %14, %28
+        %30 = alloc type=%14 init=%29
+        %31 = load %30
+        %32 = field_ptr "a", %30
+        %33 = int 7
+        %34 = elem_type %32
+        %35 = as %34, %33
+        %36 = store %32, %35
+        %37 = ret_type
+        %38 = field_val "a", %31
+        %39 = int 1
+        %40 = sub %38, %39
+        %41 = as_return %37, %40
+        %42 = ret %41
+      }
+    }
+    %44 = break_inline result, %43
+  }
+}

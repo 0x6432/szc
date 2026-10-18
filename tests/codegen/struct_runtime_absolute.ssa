@@ -1,0 +1,51 @@
+function w $szc.main.1() {
+@start
+	%t0 =l add 0, 4106
+	%t1 =l call $szc.address.2(l %t0)
+	%t3 =l sub %t1, 4106
+	%g3_overflow =w cultl %t1, 4106
+	jnz %g3_overflow, @g3_overflow_panic, @g3_overflow_ok
+@g3_overflow_panic
+	call $szc.panic.0()
+	hlt
+@g3_overflow_ok
+	%g4_high =w cugtl %t3, 255
+	jnz %g4_high, @g4_high_panic, @g4_high_ok
+@g4_high_panic
+	call $szc.panic.1()
+	hlt
+@g4_high_ok
+	%t4 =w copy %t3
+	%t4 =w and %t4, 255
+	ret %t4
+}
+
+function l $szc.address.2(l %t0) {
+@start
+	%t1 =l copy %t0
+	ret %t1
+}
+
+section ".data.rel.ro"
+data $szc.g.1 = align 8 { l 4096 }
+data $szc.panic.msg.0 = { b "integer overflow\n", b 0 }
+function $szc.panic.0() {
+@start
+	call $write(w 2, l $szc.panic.msg.0, l 17)
+	call $abort()
+	hlt
+}
+
+data $szc.panic.msg.1 = { b "integer does not fit in destination type\n", b 0 }
+function $szc.panic.1() {
+@start
+	call $write(w 2, l $szc.panic.msg.1, l 41)
+	call $abort()
+	hlt
+}
+
+export function w $main() {
+@start
+	%status =w call $szc.main.1()
+	ret %status
+}

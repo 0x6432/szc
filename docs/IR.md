@@ -1097,7 +1097,8 @@ This is not an all-name prepass: eager expression failures beat later unknown
 names, while bare literal final coercions may not. Missing fields are checked last.
 Zero-field syntax is shared by arrays/structs; sema dispatches the resolved type.
 `INIT_EMPTY_PTR` preserves array destination/qualifier/sentinel validation and
-returns the loaded initialized array. Direct struct destinations remain NYI.
+returns the loaded initialized aggregate. Runtime struct destinations use the
+separate sequential `STRUCT_INIT_PTR` protocol described below.
 
 `FIELD_READ_REF` and `FIELD_NAMED_READ_REF` are internal read-reference operations.
 Known struct field values receive logical immutable references; namespace/array/
@@ -1108,7 +1109,8 @@ silently snapshot volatile descriptor storage.
 
 Known structs use a distinct nominal `VALUE_STRUCT`, with arena-owned IDs in
 **declaration order**, never physical-layout order or array-value aliasing. Runtime
-struct storage/ABI is not implemented. Runtime emission/global publication checks
+local storage uses owned snapshots; struct-by-value ABI remains gated. Runtime
+emission/global publication checks
 all immutable backing dependencies so pointer casts or nested relocations cannot
 hide unsupported struct storage. Pure logical references are not runtime escapes.
 
@@ -1166,6 +1168,53 @@ the 16777216-byte limit; static traversal/serialization is bounded by 4194304
 node/edge steps and depth512. Relocation-bearing immutable objects use RELRO;
 alignment above64 uses outlined assembly with ELF OBJECT size metadata.
 
-Mutable/runtime struct values/storage/copies/by-value ABI, dynamic or absolute
-root field addresses, physical reinterpret loads, early struct-address cycles,
-and packed/extern/default/comptime/tuple/aligned-field extensions remain closed.
+Mutable struct globals and struct-bearing by-value ABI remain closed. Runtime
+local storage and dynamic/absolute typed field addresses are described below.
+Known physical reinterpret loads, early struct-address cycles, and packed/extern/
+default/comptime/tuple/aligned-field extensions remain closed.
+
+
+## Runtime local struct storage and actual result locations
+
+`STRUCT_INIT_PTR` has `IrStructInitPtr { pointer, field_count }` followed by the
+same source-ordered field records as `STRUCT_INIT`. Each deferred body derives
+`FIELD_PTR` from the actual destination and evaluates its RHS with that field as
+the result location. Sema stores the completed field before analyzing the next
+body. Missing fields are checked last; a noreturn body stops all subsequent
+stores and missing-field validation. `INIT_EMPTY_PTR` dispatches empty structs
+and arrays without changing array sentinel/qualifier behavior.
+
+This is distinct from typed `STRUCT_INIT`: already-valued RHS operands own their
+snapshots before later effects, and the finished value is copied afterward.
+For `s={a=1,b=2}`, contextual `s=.{.a=s.b,.b=s.a}` yields22; explicit `S{...}`,
+`@as(S,.{...})`, and temporary-then-assignment yield21. A contextual earlier
+field write remains observable if a later field returns from the function.
+
+Runtime structs are `OPERAND_AGGREGATE`, not scalar QBE values. Owned slots,
+loads/snapshots, nested arrays/slices, copies and branch/block merges use the
+same checked aggregate storage helpers. `TIR_ARRAY_COPY` retains its existing
+opcode and overlap-safe memmove lowering; it is an owned aggregate copy, not an
+array-only representation. Runtime local admission uses
+`sema_type_runtime_storage_allowed`, independently of immutable static admission,
+mutable-global admission, builtin element admission and by-value ABI admission.
+The 16777216-byte stack cap, alignment, zero-size anchors and TypeOf isolation
+remain in force. Whole volatile aggregate operations are still rejected.
+
+`TIR_STRUCT_FIELD_PTR` stores `TirStructFieldPtr { base, offset }` and returns a
+typed pointer: copy the base for offset0, otherwise add the checked byte offset.
+The result preserves const/volatile/allowzero and min(base,natural) ordinary
+field alignment. Nested/indexed read-reference chains borrow actual storage so
+scalar volatile fields do not require a whole aggregate read. Aggregate-valued
+reads still snapshot at their evaluation point.
+
+Known absolute roots retain typed `VALUE_STRUCT_FIELD_PTR` provenance too.
+Payload offsets are root-relative; numeric flattening adds the root address
+exactly once, including composed array/slice/field paths. Numeric conversion may
+fold, while logical comparison preserves the nominal aggregate field base and
+index—even at an offset-zero or overlapping physical address. QBE/static data
+emission handles numeric roots without inventing symbolic relocations.
+
+Recursive struct-bearing array signatures, direct/indirect/internal/C aggregate
+transport, mutable struct globals, and occupied struct-element memory builtins
+remain explicitly gated. Pointer and slice descriptors do not transport their
+pointee structs by value and retain their existing ABI.

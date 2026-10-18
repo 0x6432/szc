@@ -142,7 +142,8 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
   - [x] **M6.1d Immutable ordinary struct values**: named/contextual initialization, nominal declaration-ordered constants and logical instance field reads; runtime storage/ABI remains closed.
   - [x] **M6.1e Ordinary struct bit-layout parity**: @bitOffsetOf and exact ordinary-struct @bitSizeOf rejection before layout.
   - [x] **M6.1f Immutable static struct backing**: completed-object field pointers, typed provenance, exact physical serialization and relocations.
-  - Mutable/runtime struct values/storage/ABI, defaults and instance methods remain unimplemented.
+  - [x] **M6.1g Runtime local struct storage**: owned snapshots, typed lvalues, sequential contextual result locations, nested aggregates and dynamic/absolute field pointers.
+  - Internal struct-bearing by-value ABI, mutable struct globals, defaults and instance methods remain unimplemented.
 - [ ] **M6.2 Enums**: tag values, `@intFromEnum`, `@enumFromInt`, enum literals.
 - [ ] **M6.3 switch** on ints/enums with ranges.
 - [ ] **M6.4 Optionals**: `?T`, `orelse`, `.?`, if-payloads, optional pointers.
@@ -203,6 +204,52 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
 ## Completed milestone log
 
 (newest first; each entry: what, limitations, interactions)
+
+### M6.1g Runtime local struct storage, initialization and snapshots
+
+- **What**: ordinary local var/const structs and nested arrays/slices use checked
+  owned aggregate slots, immediate value snapshots, overlap-safe copies and existing
+  branch/block joins. Runtime struct values never masquerade as scalar QBE values.
+  A distinct runtime admission predicate leaves global/builtin/ABI domains separate.
+- **Result locations**: STRUCT_INIT_PTR deferred bodies derive the actual field
+  destination, evaluate once and store before the next body. Contextual overwrite
+  yields22 versus explicit/@as/temporary21; early return exposes only completed
+  contextual writes. Empty struct/array destinations share dispatch while keeping
+  array qualifier/sentinel validation. Typed value bodies retain prior coercion
+  order and snapshot aggregate operands before later effects.
+- **Pointers**: typed TIR_STRUCT_FIELD_PTR preserves qualifiers and ordinary field
+  alignment. Nested/indexed reads borrow lvalues before scalar volatile access.
+  Known numeric roots retain typed field provenance and nominal base identity;
+  path displacements remain root-relative and numeric emission adds the root once.
+  Audited array/slice/field composition, stored numeric pointer data, zero offsets,
+  wrapping numeric conversion and distinct nominal roots have focused regressions.
+- **Boundaries**: no recursively struct-bearing array/struct by-value signatures,
+  direct/indirect/C aggregate transport, mutable struct globals, whole volatile
+  struct copies/init or occupied struct-element memory builtin expansion. Existing
+  storage/work/stack limits, legacy empty arrays, static backing and pointer-only
+  layout laziness remain. Deferred layouts/methods/comptime memory stay closed.
+- **Verification**: independent disjoint frontend/backend/reference ownership and
+  read-only integration audits.98 semantic and12 frontend protocol scenarios,
+  16 net goldens, seven seeds per irgen/sema, four native fixtures. Old NYI sources
+  retained as controls: metadata44+6, values10+35, static13+6; runtime9 and bit9
+  rejection gates pass. Four new observer sequences prove scalar volatile access.
+- **Reference**: runtime89/25 exact errors; static60/18, values118/55, metadata100/29,
+  field201/92, empty-array112/24, known-slice casts48/16 pass. Four natives official
+  Debug/ReleaseFast pass; observer70 each official mode. Installed official
+  absolute slice-len numeric-fold anomaly is contract-only, not copied into szc.
+- **Final gate**: frozen GCC/Clang C11 Werror ASan/UBSan6782units/1286goldens,
+  144+4native,16driver/61runner, full C/ABI/storage/alignment,106 observed volatile
+  sequences/303safety; each20000mutations/stage, seeds256/256/135/191. Fresh four
+  60-second fuzz runs2465301/47260/44994/68037 pass. Separate GCC-O2 generated/full
+  natives/safety/storage and forced main tests pass. All6240 source/config/test/doc
+  paths match three frozen copies and main before final two checkpoint doc edits.
+  Full e2e itself remains szc-only; references are targeted, not std/bootstrap.
+- **CI**:67da844 has71success+2failure. Clang actual compiler timeout then runner
+  shutdown/exit143; exact historical3/3 replay passes original deadlines/assertions,
+  not proof of infrastructure-only cause. GCC failure log404 remains unclassified.
+- **Next**: internal private aggregate argument/return transport with snapshot and
+  aliasing tests, explicit indirect-C ABI guards; C/SysV aggregate ABI separate.
+  M6.1 remains partial, and Q6 remains deferred until M10.2.
 
 ### M6.1f Completed immutable struct backing and typed field pointers
 

@@ -1,0 +1,46 @@
+fn szc.main.1: fn () u8 {
+  %0: u8 = const 1
+  %1: u8 = call szc.byte.2(%0)
+  %2: *struct_runtime_init.S = alloc
+  %3: *u8 = struct_field_ptr %2, 0
+  %4: void = store %3, %1
+  %5: *u8 = struct_field_ptr %2, 1
+  %6: u8 = const 2
+  %7: void = store %5, %6
+  %8: *const struct_runtime_init.S = ptr_cast %2
+  %9: *struct_runtime_init.S = alloc
+  %10: void = array_copy %9, %8
+  %11: *u8 = struct_field_ptr %9, 0
+  %12: *const struct_runtime_init.S = alloc
+  %13: void = array_copy %12, %9
+  %14: *const u8 = struct_field_ptr %12, 1
+  %15: u8 = load %14
+  %16: *u8 = struct_field_ptr %9, 0
+  %17: void = store %16, %15
+  %18: *u8 = struct_field_ptr %9, 1
+  %19: *const struct_runtime_init.S = alloc
+  %20: void = array_copy %19, %9
+  %21: *const u8 = struct_field_ptr %19, 0
+  %22: u8 = load %21
+  %23: *u8 = struct_field_ptr %9, 1
+  %24: void = store %23, %22
+  %25: *const struct_runtime_init.S = alloc
+  %26: void = array_copy %25, %9
+  %27: void = array_copy %9, %25
+  %28: *const struct_runtime_init.S = alloc
+  %29: void = array_copy %28, %9
+  %30: *const u8 = struct_field_ptr %28, 0
+  %31: u8 = load %30
+  %32: *const struct_runtime_init.S = alloc
+  %33: void = array_copy %32, %9
+  %34: *const u8 = struct_field_ptr %32, 1
+  %35: u8 = load %34
+  %36: u8 = add %31, %35
+  %37: u8 = const 4
+  %38: u8 = sub %36, %37
+  %39: noreturn = ret %38
+}
+fn szc.byte.2: fn (u8) u8 {
+  %0: u8 = arg 0
+  %1: noreturn = ret %0
+}

@@ -1,0 +1,1 @@
+const I=struct {x:u16,};const S=struct {i:I,a:[2]u8,}; noinline fn set(p:*S,n:usize) u8 {p.i.x=513;p.a[n]=7;return @intCast(p.i.x-506);} pub fn main() u8 {var s:S=.{.i=.{.x=0},.a=.{1,2}};return set(&s,1)-7;}

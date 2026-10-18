@@ -24,6 +24,69 @@ Read this first when resuming work (the sandbox resets often).
 
 ## Latest follow-up checkpoint
 
+- M6.1g runtime LOCAL ordinary structs is implemented on67da844. Struct-bearing
+  by-value function ABI and mutable struct globals remain CLOSED. Runtime locals,
+  nested struct/array/slice storage, initialization, lvalues, typed field pointers,
+  whole/nested snapshots, assignments and branch/block joins use owned aggregate
+  slots and the existing overlap-safe copy lowering, never scalar struct QBE values.
+- Actual contextual destination initialization uses STRUCT_INIT_PTR deferred bodies
+  and source-order stores. Aliasing overwrite yields22; explicit S{...}, @as and
+  temporary-then-assignment yield21. Earlier contextual stores survive a later
+  return. Empty destination dispatch preserves array qualifier/sentinel behavior.
+  Aggregate-valued reads snapshot when evaluated, not when finally stored.
+- Dynamic and known absolute typed field pointers preserve qualifiers and ordinary
+  min(base,natural) alignment. Nested/indexed reads borrow real storage before
+  scalar volatile projection, rather than reading whole volatile aggregates.
+  Known absolute paths retain field provenance and root-relative offsets; numeric
+  flattening adds the address once across struct/array/slice composition. Numeric
+  addresses may fold/wrap while logical field equality retains nominal child type
+  and index, including offset-zero and distinct nominal roots at one address.
+- Independent audit caught composed numeric-root double-counting, wrapper/root
+  misclassification, an aggregate-to-array wrong-union assumption and nominal
+  absolute field identity. All have focused regressions. Serializer can emit
+  numeric-root typed paths both as QBE constants and stored static pointer data.
+  Scalar volatile nested/many-pointer reads add four actual observer sequences.
+- Boundaries: recursively struct-bearing array signatures, direct/indirect/C ABI
+  transport, mutable struct globals, occupied struct-element memory builtins and
+  whole volatile struct operations stay explicitly gated. Defaults/comptime/tuple/
+  aligned-field/packed/extern/methods, mutable comptime memory, imports/std/bootstrap
+  remain deferred. Pure pointer/slice descriptor transport does not pass pointees
+  by value. Existing static/empty-array admission and storage/work budgets remain.
+- Added98 semantic scenarios and12 frontend protocol cases;16 net stage/QBE/error
+  goldens, seven seeds each irgen/sema and four native fixtures. Former NYI inputs
+  are retained as acceptance controls: metadata44 rejections+6controls, values10+
+  35, static13+6; runtime9 and bit-layout9 closed gates pass. No assertions or
+  deadlines relaxed. Roadmap M6.1 remains PARTIAL.
+- Actual-Zig differential: runtime89 cases (64 successes/25 exact primary errors),
+  static60/18, values118/55, metadata100/29, field201/92, empty-array112/24 and
+  known-slice pointer casts48/16 pass. Four new natives pass official Debug and
+  ReleaseFast. Official observer passes70 sequences each Debug/ReleaseFast; szc
+  passes106. One installed-binary absolute slice-len numeric-fold anomaly remains
+  contract-only: preserve sound physical len offset8, do not copy the anomaly.
+- Final gate: frozen independent GCC/Clang C11 Werror ASan/UBSan6782 units/1286
+  goldens,144+4 native,16driver/61compiler-runner, all C/ABI/storage/alignment,
+  106 observed volatile sequences and303 safety cases. Each compiler20000 standalone
+  mutations per stage, seed counts256/256/135/191. Fresh four60-second libFuzzer
+  runs2465301/47260/44994/68037 pass. Separate GCC-O2 full/generated144+4 native,
+  303 safety and external physical-storage2 pass; forced main rebuild/test passes.
+  All6240 frozen paths match main and three trees before these final checkpoint
+  edits. /data/struct-runtime-final/{gcc,clang,optimized}, manifest.json and
+  /data/struct-runtime-final-*.log retain evidence; never mutate frozen sources.
+  Full e2e is szc-only; targeted reference matrices/natives are separate, not std.
+- Hosted CI remains NOT green:67da844 run39112582095 has71success/2failure.
+  Clang117631836681 records a real divExact_overflow_i1 compiler120s timeout then
+  runner shutdown/exit143; not cleanup-only. Exact historical frozen Clang bytes
+  match6181 tracked paths against67da844; original harness/deadlines/assertions
+  replay3/3 passes without rebuilding. This does not establish the timeout cause.
+  GCC117631836735 log retrieval404 leaves its cause unclassified. No blind reruns.
+- Next: internal struct and recursively struct-bearing array argument/return ABI,
+  reusing private aggregate pointer transport with explicit indirect-C guards,
+  evaluation-time argument snapshots, private callee copies and fresh return slots.
+  /data/struct-internal-abi-plan.md is research-only. C/SysV aggregate ABI remains
+  separate. Q6 must be asked only when reaching M10.2.
+
+## Previous follow-up checkpoint (M6.1f)
+
 - M6.1f completed immutable ordinary struct backing is implemented on bbed857.
   This is NOT mutable/runtime struct values/storage/ABI. Completed compiler-owned
   roots and nested struct/array fields have typed declaration-indexed field paths;

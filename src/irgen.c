@@ -2098,8 +2098,25 @@ struct_init(GenBody *body, Scope *scope, ResultInfo info, AstInitList *node)
 	if (node->type == NULL && info.kind == RESULT_PTR_ELEM) {
 		if (node->field_count == 0)
 			return emit_un(body, IR_INIT_EMPTY_PTR, node->base.offset, info.ref);
-		unsupported(body, &node->base, "in-place struct initialization");
-		return IR_REF_VOID_VALUE;
+		IrStructInitPtr header = {info.ref, node->field_count};
+		IrStructInitField *fields = ARENA_ARRAY(gen->arena, IrStructInitField, node->field_count);
+		for (uint32_t i = 0; i < node->field_count; i++) {
+			GenBody field_body;
+			body_init(&field_body, gen, scope, body->is_comptime);
+			AstFieldInit *field = &node->fields[i];
+			IrRef pointer = emit_name(&field_body, IR_FIELD_PTR, field->name.start, names[i], info.ref);
+			ResultInfo field_info = {RESULT_PTR_ELEM, pointer};
+			IrRef value = expr(&field_body, &field_body.base, field_info, field->value);
+			if (!body_is_terminated(&field_body))
+				emit_break(&field_body, IR_BREAK_INLINE, field->value->offset, IR_BODY_RESULT, value);
+			fields[i].name = names[i];
+			fields[i].src = field->name.start;
+			fields[i].body = body_finish(&field_body);
+		}
+		uint32_t payload = reserve_extra(gen, IR_WORDS(IrStructInitPtr) + node->field_count * IR_WORDS(IrStructInitField));
+		memcpy(gen->ir->extra + payload, &header, sizeof(header));
+		memcpy(gen->ir->extra + payload + IR_WORDS(IrStructInitPtr), fields, node->field_count * sizeof(*fields));
+		return emit_payload(body, IR_STRUCT_INIT_PTR, node->base.offset, payload);
 	}
 	IrRef type;
 	if (node->type != NULL) {
@@ -2223,8 +2240,10 @@ expr(GenBody *body, Scope *scope, ResultInfo info, AstNode *node)
 			Lookup found = lookup_name(scope, intern_span(body->gen, AST_CAST(AstIdentifier, lhs, AST_IDENTIFIER)->name));
 			borrow = found.kind == LOOKUP_DECL || (found.kind == LOOKUP_LOCAL && found.local->local_kind == LOCAL_VAR);
 		}
-		bool field_ref = borrow && name == intern_cstr(body->gen->interner, "len");
-		IrRef base = field_ref ? address_of(body, scope, result_none, field->lhs) : expr(body, scope, result_none, field->lhs);
+		bool chain = lhs->kind == AST_INDEX || lhs->kind == AST_DEREF
+			|| lhs->kind == AST_FIELD_ACCESS || is_field_builtin(body, lhs);
+		bool field_ref = chain || (borrow && name == intern_cstr(body->gen->interner, "len"));
+		IrRef base = field_ref ? read_reference(body, scope, field->lhs) : expr(body, scope, result_none, field->lhs);
 		return rvalue(body, info, emit_name(body, field_ref ? IR_FIELD_REF : IR_FIELD_VAL, node->offset, name, base), node->offset);
 	}
 	case AST_CHAR_LITERAL:
@@ -3189,6 +3208,22 @@ dump_inst(const IrDumper *dumper, IrInstIndex index, uint32_t depth)
 		if (header.flags & IR_STRUCT_INIT_TYPED)
 			fputs(" typed", out);
 		uint32_t cursor = inst->data.payload + IR_WORDS(IrStructInit);
+		for (uint32_t i = 0; i < header.field_count; i++) {
+			IrStructInitField field;
+			IR_READ(ir, cursor, &field);
+			cursor += IR_WORDS(IrStructInitField);
+			fputc(' ', out);
+			dump_string(dumper, field.name);
+			dump_labeled_body(dumper, "value", field.body, depth);
+		}
+		break;
+	}
+	case IR_STRUCT_INIT_PTR: {
+		IrStructInitPtr header;
+		IR_READ(ir, inst->data.payload, &header);
+		fputc(' ', out);
+		dump_ref(dumper, header.pointer);
+		uint32_t cursor = inst->data.payload + IR_WORDS(IrStructInitPtr);
 		for (uint32_t i = 0; i < header.field_count; i++) {
 			IrStructInitField field;
 			IR_READ(ir, cursor, &field);

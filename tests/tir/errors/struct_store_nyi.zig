@@ -1,3 +1,1 @@
-const S=struct { x:u8, };
-fn store(p:*S) void { p.*=undefined; }
-pub fn main() void { store(@ptrFromInt(4096)); }
+const S=struct { a:u8, }; pub fn main() void {var s:S=.{.a=1};const p:*volatile S=&s;p.*=S{.a=2};}

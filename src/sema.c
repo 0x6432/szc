@@ -714,7 +714,7 @@ sema_struct_field_layout(const Sema *sema, TypeId type, uint32_t index, SemaStru
 bool
 sema_type_is_aggregate(const Sema *sema, TypeId type)
 {
-	return sema->types[type].kind == TYPE_ARRAY || is_slice(sema, type);
+	return sema->types[type].kind == TYPE_ARRAY || sema->types[type].kind == TYPE_STRUCT || is_slice(sema, type);
 }
 
 static TypeId
@@ -1186,6 +1186,14 @@ func_create(Sema *sema)
 	return id;
 }
 
+static bool
+type_has_struct_value(const Sema *sema, TypeId type)
+{
+	while (sema->types[type].kind == TYPE_ARRAY)
+		type = sema->types[type].as.array.child;
+	return sema->types[type].kind == TYPE_STRUCT;
+}
+
 /* Marks a function as referenced at runtime: its body will be analysed. */
 static void
 func_queue(Sema *sema, FuncId id)
@@ -1197,9 +1205,9 @@ func_queue(Sema *sema, FuncId id)
 	/* Like Zig, only validate the machine ABI when a declaration is exported or
 	 * used at runtime. A discarded known address need not make an extern live. */
 	TypeFn fn = sema->types[func->type].as.fn;
-	bool struct_value = sema->types[fn.ret].kind == TYPE_STRUCT;
+	bool struct_value = type_has_struct_value(sema, fn.ret);
 	for (uint32_t i = 0; i < fn.param_count; i++)
-		struct_value |= sema->types[fn.params[i]].kind == TYPE_STRUCT;
+		struct_value |= type_has_struct_value(sema, fn.params[i]);
 	if (struct_value) {
 		diag_report(sema->diag, DIAG_ERROR, func->ir->file, func->ir->insts[func->func_inst].src,
 			"not supported by szc yet: struct values in runtime function signatures");
@@ -1334,10 +1342,10 @@ static bool ensure_type_layout(Block *block, TypeId type, uint32_t src);
 static bool require_runtime(Block *block, uint32_t src);
 static bool analyze_alignment(Block *block, IrBody body, uint32_t src, uint32_t *out);
 
-static TirRef array_slot(Block *block, TypeId pointer, uint32_t src);
-static Operand array_snapshot(Block *block, Operand source, uint32_t alignment, uint32_t src);
+static TirRef aggregate_slot(Block *block, TypeId pointer, uint32_t src);
+static Operand aggregate_snapshot(Block *block, Operand source, uint32_t alignment, uint32_t src);
 static Operand analyze_ref(Block *block, Operand value, uint32_t src, uint32_t identity, uint32_t alignment);
-static bool store_array(Block *block, Operand pointer, Operand value, uint32_t src);
+static bool store_aggregate(Block *block, Operand pointer, Operand value, uint32_t src);
 
 /* Until repeated/lazy aggregate values land, bound dense compile-time array work. */
 static bool
@@ -1808,7 +1816,7 @@ make_slice(Block *block, TypeId type, Operand pointer, Operand length, uint32_t 
 	if (pointer.kind == OPERAND_COMPTIME && length.kind == OPERAND_COMPTIME)
 		return comptime_operand(type, value_slice(&sema->values, type, pointer.value, length.value));
 	TypeId storage = type_pointer(sema, type, POINTER_ONE, true, false, 0);
-	TirRef slot = array_slot(block, storage, src);
+	TirRef slot = aggregate_slot(block, storage, src);
 	if (slot == TIR_REF_NONE)
 		return operand_none;
 	TypeId pointer_field = type_pointer(sema, slice_pointer_type(sema, type), POINTER_ONE, false, false, 0);
@@ -1935,7 +1943,8 @@ coerce(Block *block, Operand operand, TypeId dest, uint32_t src)
 	if (operand.type == dest || operand.type == T_NORETURN)
 		return operand;
 	TypeKind dest_kind = sema->types[dest].kind;
-	if (operand.kind == OPERAND_AGGREGATE && dest_kind == TYPE_ARRAY) {
+	if (operand.kind == OPERAND_AGGREGATE && dest_kind == TYPE_ARRAY
+		&& sema->types[operand.type].kind == TYPE_ARRAY) {
 		TypeArray target = sema->types[dest].as.array;
 		TypeArray source = sema->types[operand.type].as.array;
 		if (target.child == source.child && target.length == source.length
@@ -2261,7 +2270,7 @@ unpack_runtime_bit_cast(Block *block, TypeId type, TirRef bits, uint32_t offset,
 	if (!bit_cast_width(block, array.child, true, src, &element_bits))
 		return operand_none;
 	TypeId pointer = type_pointer(sema, type, POINTER_ONE, true, false, 0);
-	TirRef slot = array_slot(block, pointer, src);
+	TirRef slot = aggregate_slot(block, pointer, src);
 	if (slot == TIR_REF_NONE)
 		return operand_none;
 	TypeId child_pointer = type_pointer(sema, array.child, POINTER_ONE, true, false, 0);
@@ -2273,7 +2282,7 @@ unpack_runtime_bit_cast(Block *block, TypeId type, TirRef bits, uint32_t offset,
 		TirRef index = materialize(block, comptime_operand(T_USIZE, value_int_u64(&sema->values, T_USIZE, i)), src);
 		TirRef address = emit_tir_bin(block, TIR_ARRAY_ELEM_PTR, child_pointer, src, slot, index);
 		if (sema->types[array.child].kind == TYPE_ARRAY) {
-			if (!store_array(block, runtime_operand(child_pointer, address), element, src))
+			if (!store_aggregate(block, runtime_operand(child_pointer, address), element, src))
 				return operand_none;
 		} else {
 			emit_tir_bin(block, TIR_STORE, T_VOID, src, address, materialize(block, element, src));
@@ -2450,6 +2459,30 @@ static bool
 integer_pointer(Block *block, Operand pointer)
 {
 	return pointer.kind == OPERAND_COMPTIME && operand_value(block, pointer)->kind == VALUE_INT_PTR;
+}
+
+/* Unlike integer_pointer, this classification includes typed field paths and
+ * qualifier wrappers. Callers must not read their outer union as an address. */
+static bool
+absolute_pointer(Block *block, Operand pointer)
+{
+	if (pointer.kind != OPERAND_COMPTIME)
+		return false;
+	PointerAddress address = value_pointer_address(&block->sema->values, pointer.value);
+	return value_get(&block->sema->values, address.root)->kind == VALUE_INT_PTR;
+}
+
+/* Path payloads store displacement from a symbolic/numeric root. The direct
+ * integer constructors instead consume a complete address and canonicalize it.
+ * Normalize composed numeric paths without erasing their typed field origin. */
+static uint64_t
+pointer_path_offset(const Sema *sema, ValueId base, uint64_t address)
+{
+	if (value_get(&sema->values, base)->kind == VALUE_INT_PTR)
+		return address;
+	PointerAddress root = value_pointer_address(&sema->values, base);
+	const Value *value = value_get(&sema->values, root.root);
+	return value->kind == VALUE_INT_PTR ? address - value->as.address : address;
 }
 
 /* A physical view may occur below qualifier wrappers, indexing or slicing.
@@ -2892,6 +2925,11 @@ analyze_int_from_ptr(Block *block, const IrInst *inst)
 		return comptime_operand(T_USIZE, value_undefined(&sema->values, T_USIZE));
 	if (integer_pointer(block, pointer))
 		return comptime_operand(T_USIZE, value_int_u64(&sema->values, T_USIZE, operand_value(block, pointer)->as.address));
+	if (pointer.kind == OPERAND_COMPTIME) {
+		PointerAddress address = value_pointer_address(&sema->values, pointer.value);
+		if (value_get(&sema->values, address.root)->kind == VALUE_INT_PTR)
+			return comptime_operand(T_USIZE, value_int_u64(&sema->values, T_USIZE, address.offset));
+	}
 	TypeId leaf = sema->types[pointer.type].as.pointer.child;
 	while (sema->types[leaf].kind == TYPE_ARRAY)
 		leaf = sema->types[leaf].as.array.child;
@@ -3380,7 +3418,12 @@ known_pointer_equal(Block *block, ValueId lhs, ValueId rhs, uint32_t src, bool *
 		}
 		StructFieldPointer a = value_get(&sema->values, left_field)->as.struct_field;
 		StructFieldPointer b = value_get(&sema->values, right_field)->as.struct_field;
-		if (a.index != b.index || left.offset != right.offset
+		TypeId a_base = value_get(&sema->values, a.base)->type;
+		TypeId b_base = value_get(&sema->values, b.base)->type;
+		/* Canonical field bases erase qualifiers, not nominal aggregate type.
+		 * Numeric roots of two distinct structs can share the same address. */
+		if (sema->types[a_base].as.pointer.child != sema->types[b_base].as.pointer.child
+			|| a.index != b.index || left.offset != right.offset
 			|| (left.offset != 0 && left.logical != right.logical)) {
 			*out = false;
 			return true;
@@ -4462,7 +4505,7 @@ analyze_if(Block *block, const IrInst *inst)
 	TirRef array_result = TIR_REF_NONE;
 	if (array) {
 		TypeId pointer = type_pointer(sema, type, POINTER_ONE, true, false, 0);
-		array_result = array_slot(block, pointer, src);
+		array_result = aggregate_slot(block, pointer, src);
 		if (array_result == TIR_REF_NONE)
 			return operand_none;
 	}
@@ -4476,7 +4519,7 @@ analyze_if(Block *block, const IrInst *inst)
 			return operand_none;
 		if (array) {
 			Operand destination = runtime_operand(block->tir->insts[array_result].type, array_result);
-			if (!store_array(&arms[i], destination, operand, src))
+			if (!store_aggregate(&arms[i], destination, operand, src))
 				return operand_none;
 		}
 		TirRef ref = merge_type == T_VOID ? TIR_REF_NONE : materialize(&arms[i], operand, src);
@@ -4574,7 +4617,7 @@ analyze_control_block(Block *block, IrInstIndex index)
 	TirRef array_result = TIR_REF_NONE;
 	if (array) {
 		TypeId pointer = type_pointer(block->sema, type, POINTER_ONE, true, false, 0);
-		array_result = array_slot(block, pointer, inst->src);
+		array_result = aggregate_slot(block, pointer, inst->src);
 		if (array_result == TIR_REF_NONE)
 			return operand_none;
 	}
@@ -4589,7 +4632,7 @@ analyze_control_block(Block *block, IrInstIndex index)
 			continue;
 		if (array) {
 			Operand destination = runtime_operand(block->tir->insts[array_result].type, array_result);
-			if (!store_array(&branch, destination, value, exit.src))
+			if (!store_aggregate(&branch, destination, value, exit.src))
 				return operand_none;
 		}
 		TirRef operand = merge_type == T_VOID ? TIR_REF_NONE : materialize(&branch, value, exit.src);
@@ -4800,9 +4843,9 @@ analyze_call(Block *block, IrInstIndex index, Operand *out)
 		sema_error(block, src, "not supported by szc yet: calls of generic functions");
 		return INST_CONTINUE;
 	}
-	bool struct_value = sema->types[fn.ret].kind == TYPE_STRUCT;
+	bool struct_value = type_has_struct_value(sema, fn.ret);
 	for (uint32_t i = 0; i < fn.param_count; i++)
-		struct_value |= sema->types[fn.params[i]].kind == TYPE_STRUCT;
+		struct_value |= type_has_struct_value(sema, fn.params[i]);
 	if (struct_value) {
 		sema_error(block, src, "not supported by szc yet: struct values in runtime function signatures");
 		return INST_CONTINUE;
@@ -4831,7 +4874,7 @@ analyze_call(Block *block, IrInstIndex index, Operand *out)
 		args[i] = result.result;
 		if (result.end != BODY_BREAK_RESULT || args[i].kind == OPERAND_NONE)
 			failed = true;
-		if (!failed && sema->types[args[i].type].kind == TYPE_STRUCT) {
+		if (!failed && type_has_struct_value(sema, args[i].type)) {
 			sema_error(block, src, "not supported by szc yet: runtime struct arguments");
 			failed = true;
 		}
@@ -4868,7 +4911,7 @@ analyze_call(Block *block, IrInstIndex index, Operand *out)
 	TirRef result_pointer = TIR_REF_NONE;
 	if (array_return) {
 		TypeId pointer = type_pointer(sema, fn.ret, POINTER_ONE, false, false, 0);
-		result_pointer = array_slot(block, pointer, src);
+		result_pointer = aggregate_slot(block, pointer, src);
 		if (result_pointer == TIR_REF_NONE)
 			return INST_CONTINUE;
 		refs[header.arg_count] = result_pointer;
@@ -4920,10 +4963,10 @@ sema_type_array_storage_allowed(const Sema *sema, TypeId type)
 		|| (kind == TYPE_INT && (empty || sema->types[type].as.integer.bits <= 64));
 }
 
-/* Ordinary layout recursion is already limited to 256 levels. This separate
- * read-only walk bounds repeated type edges without opening runtime storage. */
+/* Ordinary layout recursion is already limited to 256 levels. This shared
+ * read-only shape walk bounds repeated edges; callers choose their own domain. */
 static bool
-static_storage_type_allowed(const Sema *sema, TypeId id, uint32_t depth, uint32_t *work)
+storage_type_allowed(const Sema *sema, TypeId id, uint32_t depth, uint32_t *work)
 {
 	if (depth >= 256 || *work >= 1048576)
 		return false;
@@ -4932,12 +4975,12 @@ static_storage_type_allowed(const Sema *sema, TypeId id, uint32_t depth, uint32_
 		return true;
 	const Type *type = &sema->types[id];
 	if (type->kind == TYPE_ARRAY)
-		return static_storage_type_allowed(sema, type->as.array.child, depth + 1, work);
+		return storage_type_allowed(sema, type->as.array.child, depth + 1, work);
 	if (type->kind != TYPE_STRUCT || type->as.structure->layout_state != STRUCT_RESOLVED)
 		return false;
 	const SemaNamespace *ns = type->as.structure;
 	for (uint32_t i = 0; i < ns->field_count; i++)
-		if (!static_storage_type_allowed(sema, ns->fields[i].type, depth + 1, work))
+		if (!storage_type_allowed(sema, ns->fields[i].type, depth + 1, work))
 			return false;
 	return true;
 }
@@ -4946,17 +4989,26 @@ bool
 sema_type_static_storage_allowed(const Sema *sema, TypeId type)
 {
 	uint32_t work = 0;
-	return static_storage_type_allowed(sema, type, 0, &work);
+	return storage_type_allowed(sema, type, 0, &work);
+}
+
+/* Storage shape is shared today, but callers choose admission deliberately.
+ * This does not admit struct signatures, globals or explicit memory builtins. */
+bool
+sema_type_runtime_storage_allowed(const Sema *sema, TypeId type)
+{
+	uint32_t work = 0;
+	return storage_type_allowed(sema, type, 0, &work);
 }
 
 static TirRef
-array_slot(Block *block, TypeId pointer, uint32_t src)
+aggregate_slot(Block *block, TypeId pointer, uint32_t src)
 {
 	Sema *sema = block->sema;
 	TypePointer shape = sema->types[pointer].as.pointer;
 	uint64_t size;
 	uint32_t alignment = pointer_alignment(block, shape, src);
-	if (!sema_type_array_storage_allowed(sema, shape.child) || !sema_type_size(sema, shape.child, &size)) {
+	if (!sema_type_runtime_storage_allowed(sema, shape.child) || !sema_type_size(sema, shape.child, &size)) {
 		sema_error(block, src, "not supported by szc yet: runtime array storage layout");
 		return TIR_REF_NONE;
 	}
@@ -4980,7 +5032,7 @@ array_slot(Block *block, TypeId pointer, uint32_t src)
 }
 
 static bool
-store_array(Block *block, Operand pointer, Operand value, uint32_t src)
+store_aggregate(Block *block, Operand pointer, Operand value, uint32_t src)
 {
 	Sema *sema = block->sema;
 	TypePointer shape = sema->types[pointer.type].as.pointer;
@@ -4988,7 +5040,7 @@ store_array(Block *block, Operand pointer, Operand value, uint32_t src)
 		sema_error(block, src, "not supported by szc yet: volatile whole-array copies");
 		return false;
 	}
-	if (!sema_type_array_storage_allowed(sema, shape.child)) {
+	if (!sema_type_runtime_storage_allowed(sema, shape.child)) {
 		sema_error(block, src, "not supported by szc yet: runtime array storage layout");
 		return false;
 	}
@@ -5010,12 +5062,12 @@ store_array(Block *block, Operand pointer, Operand value, uint32_t src)
 }
 
 static Operand
-array_snapshot(Block *block, Operand source, uint32_t alignment, uint32_t src)
+aggregate_snapshot(Block *block, Operand source, uint32_t alignment, uint32_t src)
 {
 	Sema *sema = block->sema;
 	TypeId type = sema->types[source.type].as.pointer.child;
 	TypeId pointer = type_pointer(sema, type, POINTER_ONE, true, false, alignment);
-	TirRef slot = array_slot(block, pointer, src);
+	TirRef slot = aggregate_slot(block, pointer, src);
 	if (slot == TIR_REF_NONE)
 		return operand_none;
 	if (sema->types[source.type].as.pointer.is_volatile) {
@@ -5050,7 +5102,7 @@ analyze_ref(Block *block, Operand value, uint32_t src, uint32_t identity, uint32
 			return operand_none;
 		TypePointer backing = sema->types[block->tir->insts[value.inst].type].as.pointer;
 		if (alignment != 0 && alignment > pointer_alignment(block, backing, src)) {
-			Operand copy = array_snapshot(block, runtime_operand(block->tir->insts[value.inst].type, value.inst), alignment, src);
+			Operand copy = aggregate_snapshot(block, runtime_operand(block->tir->insts[value.inst].type, value.inst), alignment, src);
 			if (copy.kind == OPERAND_NONE)
 				return operand_none;
 			return runtime_operand(pointer, copy.inst);
@@ -5107,7 +5159,7 @@ analyze_alloc(Block *block, const IrInst *inst)
 		sema_error(block, src, "variable of type '%s' must be const or comptime", sema_type_name(sema, type));
 		return operand_none;
 	}
-	if (sema->types[type].kind == TYPE_NORETURN || sema->types[type].kind == TYPE_STRUCT || sema->types[type].kind == TYPE_FN || sema->types[type].kind == TYPE_FLOAT) {
+	if (sema->types[type].kind == TYPE_NORETURN || sema->types[type].kind == TYPE_FN || sema->types[type].kind == TYPE_FLOAT) {
 		sema_error(block, src, "not supported by szc yet: variables of type '%s'", sema_type_name(sema, type));
 		return operand_none;
 	}
@@ -5123,11 +5175,11 @@ analyze_alloc(Block *block, const IrInst *inst)
 	}
 	TypeId pointer = type_pointer(sema, type, POINTER_ONE, (payload.flags & IR_ALLOC_CONST) != 0, false, alignment);
 	if (sema_type_is_aggregate(sema, type)) {
-		TirRef slot = array_slot(block, pointer, src);
+		TirRef slot = aggregate_slot(block, pointer, src);
 		if (slot == TIR_REF_NONE)
 			return operand_none;
 		Operand address = runtime_operand(pointer, slot);
-		return store_array(block, address, init, src) ? address : operand_none;
+		return store_aggregate(block, address, init, src) ? address : operand_none;
 	}
 	TirRef slot = emit_tir(block, TIR_ALLOC, pointer, src);
 	if (!operand_is_undefined(block, init))
@@ -5188,6 +5240,43 @@ pointer_operand(Block *block, Operand operand, uint32_t src)
 	return true;
 }
 
+static Operand
+store_value(Block *block, Operand pointer, Operand value, uint32_t src)
+{
+	Sema *sema = block->sema;
+	if (!pointer_type_operand(block, pointer, src) || value.kind == OPERAND_NONE)
+		return operand_none;
+	if (sema->types[pointer.type].as.pointer.is_const) {
+		sema_error(block, src, "cannot assign to constant");
+		return operand_none;
+	}
+	TypeId child = sema->types[pointer.type].as.pointer.child;
+
+	value = coerce(block, value, child, src);
+	if (value.kind == OPERAND_NONE)
+		return operand_none;
+	if (sema_type_is_aggregate(sema, child)) {
+		if (pointer_operand(block, pointer, src) && store_aggregate(block, pointer, value, src))
+			return void_operand(sema);
+		return operand_none;
+	}
+	bool no_storage = child == T_VOID || (is_int(sema, child) && sema->types[child].as.integer.bits == 0);
+	if (value.kind != OPERAND_NONE && !no_storage) {
+		if (block->is_comptime && mutable_global_pointer(block, pointer)) {
+			sema_error(block, src, "unable to evaluate comptime expression");
+			return operand_none;
+		}
+		if (!require_runtime(block, src))
+			return operand_none;
+		bool is_volatile = sema->types[pointer.type].as.pointer.is_volatile;
+		if ((is_volatile || !operand_is_undefined(block, value)) && pointer_operand(block, pointer, src)) {
+			TirRef address = materialize(block, pointer, src);
+			emit_tir_bin(block, is_volatile ? TIR_STORE_VOLATILE : TIR_STORE, T_VOID, src, address, materialize(block, value, src));
+		}
+	}
+	return void_operand(sema);
+}
+
 static bool type_has_one_value(const Sema *sema, TypeId type);
 static Operand one_value_operand(Block *block, TypeId type, uint32_t src);
 static Operand constant_array_element(Block *block, Operand base, TypeArray array, uint64_t index, uint32_t src);
@@ -5245,7 +5334,8 @@ load_pointer(Block *block, Operand pointer, uint32_t src)
 			return operand_none;
 		volatile_field = field != VALUE_NONE;
 	}
-	if (pointer.kind == OPERAND_COMPTIME && !mutable_global && !integer_pointer(block, pointer) && !physical_view && !volatile_field) {
+	bool absolute = absolute_pointer(block, pointer);
+	if (pointer.kind == OPERAND_COMPTIME && !mutable_global && !absolute && !physical_view && !volatile_field) {
 		const Value *value = operand_value(block, pointer);
 		if (value->kind == VALUE_FUNCTION && sema->types[child].kind == TYPE_FN)
 			return comptime_operand(child, value_function(&sema->values, child, value->as.function));
@@ -5371,7 +5461,7 @@ load_pointer(Block *block, Operand pointer, uint32_t src)
 	if (sema_type_is_aggregate(sema, child)) {
 		if (!pointer_operand(block, pointer, src))
 			return operand_none;
-		return array_snapshot(block, pointer, 0, src);
+		return aggregate_snapshot(block, pointer, 0, src);
 	}
 	if (kind != TYPE_INT && kind != TYPE_BOOL && kind != TYPE_POINTER) {
 		sema_error(block, src, "not supported by szc yet: dereference of '%s'", sema_type_name(sema, child));
@@ -5688,7 +5778,7 @@ slice_field_address(Block *block, Operand storage, bool length, uint32_t src)
 			return operand_none;
 		}
 		return comptime_operand(type, value_slice_field_pointer(&sema->values, type,
-			storage.value, address.offset + offset, length));
+			storage.value, pointer_path_offset(sema, storage.value, address.offset + offset), length));
 	}
 	if (!require_runtime(block, src))
 		return operand_none;
@@ -5712,21 +5802,6 @@ struct_field_address(Block *block, Operand storage, TypeId object, StringId name
 	SemaField *field = require_struct_field(block, ns, name, src);
 	if (field == NULL)
 		return operand_none;
-	if (storage.kind != OPERAND_COMPTIME || runtime_pointer_view(block, storage)) {
-		sema_error(block, src, "not supported by szc yet: struct field addresses from runtime or reinterpreted roots");
-		return operand_none;
-	}
-	PointerAddress address = value_pointer_address(&sema->values, storage.value);
-	const Value *root = value_get(&sema->values, address.root);
-	if (root->kind != VALUE_REF
-		|| !sema_type_static_storage_allowed(sema, value_get(&sema->values, sema->values.objects[root->as.object].value)->type)) {
-		sema_error(block, src, "not supported by szc yet: struct field addresses require completed immutable static backing");
-		return operand_none;
-	}
-	if (address.offset > UINT64_MAX - field->offset) {
-		sema_error(block, src, "pointer offset overflow");
-		return operand_none;
-	}
 	TypePointer pointer = sema->types[storage.type].as.pointer;
 	uint32_t alignment = pointer_alignment(block, pointer, src);
 	uint32_t natural = sema_type_align(sema, field->type);
@@ -5741,6 +5816,32 @@ struct_field_address(Block *block, Operand storage, TypeId object, StringId name
 	type.as.pointer.sentinel = VALUE_NONE;
 	type.as.pointer.alignment = alignment == natural ? 0 : alignment;
 	TypeId result = type_intern(sema, &type);
+	if (storage.kind != OPERAND_COMPTIME) {
+		if (!require_runtime(block, src))
+			return operand_none;
+		TirStructFieldPtr field_pointer = {materialize(block, storage, src), (uint32_t)field->offset};
+		TirRef ref = emit_tir(block, TIR_STRUCT_FIELD_PTR, result, src);
+		block->tir->insts[ref].data.payload = tir_extra(block->tir, sema->arena,
+			&field_pointer, TIR_WORDS(TirStructFieldPtr));
+		return runtime_operand(result, ref);
+	}
+	if (runtime_pointer_view(block, storage)) {
+		sema_error(block, src, "not supported by szc yet: struct field addresses from reinterpreted roots");
+		return operand_none;
+	}
+	PointerAddress address = value_pointer_address(&sema->values, storage.value);
+	const Value *root = value_get(&sema->values, address.root);
+	if (root->kind != VALUE_INT_PTR && (root->kind != VALUE_REF
+		|| !sema_type_static_storage_allowed(sema, value_get(&sema->values, sema->values.objects[root->as.object].value)->type))) {
+		sema_error(block, src, "not supported by szc yet: struct field addresses require completed immutable static backing");
+		return operand_none;
+	}
+	if (root->kind == VALUE_INT_PTR)
+		address.offset -= root->as.address;
+	if (address.offset > UINT64_MAX - field->offset) {
+		sema_error(block, src, "pointer offset overflow");
+		return operand_none;
+	}
 	ValueId value = value_struct_field_pointer(&sema->values, result, storage.value,
 		(uint32_t)(field - ns->fields), address.offset + field->offset);
 	return comptime_operand(result, value);
@@ -6288,7 +6389,7 @@ analyze_array_init(Block *block, const IrInst *inst)
 	if (all_known)
 		return comptime_operand(type, value_array(&sema->values, type, items, total));
 	TypeId pointer = type_pointer(sema, type, POINTER_ONE, true, false, 0);
-	TirRef slot = array_slot(block, pointer, inst->src);
+	TirRef slot = aggregate_slot(block, pointer, inst->src);
 	if (slot == TIR_REF_NONE)
 		return operand_none;
 	TypeId child_pointer = type_pointer(sema, array.child, POINTER_ONE, true, false, 0);
@@ -6296,7 +6397,7 @@ analyze_array_init(Block *block, const IrInst *inst)
 		Operand index = comptime_operand(T_USIZE, value_int_u64(&sema->values, T_USIZE, i));
 		TirRef address = emit_tir_bin(block, TIR_ARRAY_ELEM_PTR, child_pointer, inst->src, slot, materialize(block, index, inst->src));
 		if (sema_type_is_aggregate(sema, array.child)) {
-			if (!store_array(block, runtime_operand(child_pointer, address), elements[i], inst->src))
+			if (!store_aggregate(block, runtime_operand(child_pointer, address), elements[i], inst->src))
 				return operand_none;
 		} else if (!operand_is_undefined(block, elements[i])) {
 			emit_tir_bin(block, TIR_STORE, T_VOID, inst->src, address, materialize(block, elements[i], inst->src));
@@ -6389,8 +6490,10 @@ analyze_struct_init(Block *block, const IrInst *inst, bool *noreturn)
 	if (!reserve_array_elements(block, ns->field_count, inst->src))
 		return operand_none;
 	ValueId *values = ARENA_ARRAY(sema->arena, ValueId, ns->field_count);
+	Operand *selected = ARENA_ARRAY(sema->arena, Operand, ns->field_count);
 	Operand *pending = ARENA_ARRAY(sema->arena, Operand, header.field_count);
 	bool *seen = arena_zalloc(sema->arena, ns->field_count * sizeof(bool), alignof(bool));
+	bool known = true;
 	for (uint32_t i = 0; i < header.field_count; i++) {
 		SemaField *field = require_struct_field(block, ns, fields[i].name, fields[i].src);
 		if (field == NULL)
@@ -6406,12 +6509,9 @@ analyze_struct_init(Block *block, const IrInst *inst, bool *noreturn)
 		Operand value = coerce(block, body.result, field->type, fields[i].src);
 		if (value.kind == OPERAND_NONE)
 			return operand_none;
-		if (value.kind != OPERAND_COMPTIME) {
-			sema_error(block, fields[i].src, "not supported by szc yet: runtime struct initialization");
-			return operand_none;
-		}
 		uint32_t index = (uint32_t)(field - ns->fields);
-		values[index] = value.value;
+		selected[index] = value;
+		known &= value.kind == OPERAND_COMPTIME;
 		seen[index] = true;
 	}
 	if ((header.flags & IR_STRUCT_INIT_TYPED) != 0) {
@@ -6420,12 +6520,9 @@ analyze_struct_init(Block *block, const IrInst *inst, bool *noreturn)
 			Operand value = coerce(block, pending[i], field->type, fields[i].src);
 			if (value.kind == OPERAND_NONE)
 				return operand_none;
-			if (value.kind != OPERAND_COMPTIME) {
-				sema_error(block, fields[i].src, "not supported by szc yet: runtime struct initialization");
-				return operand_none;
-			}
 			uint32_t index = (uint32_t)(field - ns->fields);
-			values[index] = value.value;
+			selected[index] = value;
+			known &= value.kind == OPERAND_COMPTIME;
 			seen[index] = true;
 		}
 	}
@@ -6434,8 +6531,96 @@ analyze_struct_init(Block *block, const IrInst *inst, bool *noreturn)
 			sema_name_error(block, inst->src, "missing struct field: ", ns->fields[i].ir.name, "");
 			return operand_none;
 		}
+		if (known)
+			values[i] = selected[i].value;
 	}
-	return comptime_operand(type, value_struct(&sema->values, type, values, ns->field_count));
+	if (known)
+		return comptime_operand(type, value_struct(&sema->values, type, values, ns->field_count));
+	TypeId pointer = type_pointer(sema, type, POINTER_ONE, false, false, 0);
+	TirRef slot = aggregate_slot(block, pointer, inst->src);
+	if (slot == TIR_REF_NONE)
+		return operand_none;
+	Operand storage = runtime_operand(pointer, slot);
+	for (uint32_t i = 0; i < ns->field_count; i++) {
+		Operand field = struct_field_address(block, storage, type, ns->fields[i].ir.name, inst->src);
+		if (field.kind == OPERAND_NONE || store_value(block, field, selected[i], inst->src).kind == OPERAND_NONE)
+			return operand_none;
+	}
+	/* An aggregate operand owns these bytes. Only its initialization used a
+	 * mutable pointer; later references must not expose that write capability. */
+	TypeId immutable = type_pointer(sema, type, POINTER_ONE, true, false, 0);
+	TirRef owned = emit_tir_un(block, TIR_PTR_CAST, immutable, inst->src, slot);
+	Operand result = runtime_operand(type, owned);
+	result.kind = OPERAND_AGGREGATE;
+	return result;
+}
+
+/* Unlike a typed value initializer, this is a true destination protocol:
+ * every completed field becomes observable before the next body executes. */
+static Operand
+struct_init_destination(Block *block, Operand pointer, const IrStructInitField *fields,
+	uint32_t field_count, uint32_t src, bool *noreturn)
+{
+	Sema *sema = block->sema;
+	if (!pointer_type_operand(block, pointer, src))
+		return operand_none;
+	TypePointer shape = sema->types[pointer.type].as.pointer;
+	if (shape.is_const) {
+		sema_error(block, src, "cannot assign to constant");
+		return operand_none;
+	}
+	if (shape.size != POINTER_ONE || sema->types[shape.child].kind != TYPE_STRUCT) {
+		sema_error(block, src, "type '%s' does not support struct initialization syntax", sema_type_name(sema, shape.child));
+		return operand_none;
+	}
+	if (shape.is_volatile) {
+		sema_error(block, src, "not supported by szc yet: volatile whole-struct initialization");
+		return operand_none;
+	}
+	if (!ensure_type_layout(block, shape.child, src)
+		|| !check_defined(block, pointer, src))
+		return operand_none;
+	if (!sema_type_runtime_storage_allowed(sema, shape.child)) {
+		sema_error(block, src, "not supported by szc yet: runtime struct storage layout");
+		return operand_none;
+	}
+	SemaNamespace *ns = sema->types[shape.child].as.structure;
+	bool *seen = arena_zalloc(sema->arena, ns->field_count * sizeof(bool), alignof(bool));
+	for (uint32_t i = 0; i < field_count; i++) {
+		SemaField *field = require_struct_field(block, ns, fields[i].name, fields[i].src);
+		if (field == NULL)
+			return operand_none;
+		BodyResult body = analyze_body(block, fields[i].body);
+		if (body.end == BODY_NORETURN)
+			*noreturn = true;
+		if (body.end != BODY_BREAK_RESULT || body.result.kind == OPERAND_NONE)
+			return operand_none;
+		Operand destination = struct_field_address(block, pointer, shape.child, fields[i].name, fields[i].src);
+		if (destination.kind == OPERAND_NONE
+			|| store_value(block, destination, body.result, fields[i].src).kind == OPERAND_NONE)
+			return operand_none;
+		seen[(uint32_t)(field - ns->fields)] = true;
+	}
+	for (uint32_t i = 0; i < ns->field_count; i++) {
+		if (!seen[i]) {
+			sema_name_error(block, src, "missing struct field: ", ns->fields[i].ir.name, "");
+			return operand_none;
+		}
+	}
+	return load_pointer(block, pointer, src);
+}
+
+/* Numeric/runtime roots and volatile storage are actual lvalues, even when
+ * their address is wrapped in a known field path. Never read a whole aggregate
+ * merely to project a scalar field from one of these roots. */
+static bool
+logical_projection_pointer(Block *block, Operand pointer)
+{
+	if (pointer.kind != OPERAND_COMPTIME)
+		return false;
+	if (block->sema->types[pointer.type].as.pointer.is_volatile || mutable_global_pointer(block, pointer))
+		return false;
+	return !absolute_pointer(block, pointer);
 }
 
 /* Instance reads are logical projections, not field addresses or runtime loads.
@@ -6456,6 +6641,21 @@ struct_value_field(Block *block, Operand base, StringId name, uint32_t src,
 		&& sema->types[sema->types[type].as.pointer.child].kind == TYPE_STRUCT;
 	if (!indirect && sema->types[type].kind != TYPE_STRUCT)
 		return false;
+	if (base.kind != OPERAND_COMPTIME)
+		return false;
+	if (expression_address || indirect) {
+		if (!logical_projection_pointer(block, base))
+			return false;
+		if (expression_address && indirect) {
+			Operand target = load_pointer(block, base, src);
+			if (target.kind == OPERAND_NONE) {
+				*out = operand_none;
+				return true;
+			}
+			if (!logical_projection_pointer(block, target))
+				return false;
+		}
+	}
 	*out = operand_none;
 	if (expression_address)
 		base = load_pointer(block, base, src);
@@ -6678,7 +6878,7 @@ constant_array_pointer(Block *block, Operand base, Operand index, TypeArray arra
 		return operand_none;
 	}
 	uint64_t offset = address.offset + item * stride;
-	return comptime_operand(type, value_element_pointer(&sema->values, type, base.value, item, offset, logical));
+	return comptime_operand(type, value_element_pointer(&sema->values, type, base.value, item, pointer_path_offset(sema, base.value, offset), logical));
 }
 
 /* Runtime reads use real backing storage and a checked element address. */
@@ -6691,7 +6891,7 @@ runtime_array_element(Block *block, Operand base, Operand index, TypeArray array
 		return operand_none;
 	}
 	TypeKind kind = sema->types[array.child].kind;
-	if (kind != TYPE_INT && kind != TYPE_BOOL && kind != TYPE_POINTER && kind != TYPE_VOID && kind != TYPE_ARRAY) {
+	if (kind != TYPE_INT && kind != TYPE_BOOL && kind != TYPE_POINTER && kind != TYPE_VOID && kind != TYPE_ARRAY && kind != TYPE_STRUCT) {
 		sema_error(block, src, "not supported by szc yet: runtime array element type '%s'", sema_type_name(sema, array.child));
 		return operand_none;
 	}
@@ -6747,11 +6947,11 @@ analyze_many_index(Block *block, Operand base, Operand index, uint32_t src, bool
 			return operand_none;
 		}
 		pointer = comptime_operand(pointer_type, value_element_pointer(&sema->values, pointer_type,
-			base.value, item, address.offset + item * stride, logical));
+			base.value, item, pointer_path_offset(sema, base.value, address.offset + item * stride), logical));
 	} else {
 		if (!require_runtime(block, src))
 			return operand_none;
-		if (logical || !sema_type_array_storage_allowed(sema, shape.child)) {
+		if (logical || !sema_type_runtime_storage_allowed(sema, shape.child)) {
 			sema_error(block, src, "not supported by szc yet: runtime many-pointer element type '%s'", sema_type_name(sema, shape.child));
 			return operand_none;
 		}
@@ -6759,7 +6959,7 @@ analyze_many_index(Block *block, Operand base, Operand index, uint32_t src, bool
 		TirRef index_ref = materialize(block, index, src);
 		pointer = runtime_operand(pointer_type, emit_tir_bin(block, TIR_PTR_ELEM_PTR, pointer_type, src, base_ref, index_ref));
 	}
-	return address_only || (borrow && sema->types[shape.child].kind == TYPE_ARRAY)
+	return address_only || (borrow && (sema->types[shape.child].kind == TYPE_ARRAY || sema->types[shape.child].kind == TYPE_STRUCT))
 		? pointer : load_pointer(block, pointer, src);
 }
 
@@ -7040,9 +7240,9 @@ analyze_array_index(Block *block, const IrInst *inst, bool address_only, bool bo
 			return operand_none;
 		}
 		if (base.kind == OPERAND_COMPTIME) {
-			if (address_only || (borrow && sema->types[array.child].kind == TYPE_ARRAY))
+			if (address_only || (borrow && (sema->types[array.child].kind == TYPE_ARRAY || sema->types[array.child].kind == TYPE_STRUCT)))
 				return constant_array_pointer(block, base, index, array, inst->src);
-			if (mutable_global_pointer(block, base) || integer_pointer(block, base) || runtime_pointer_view(block, base)) {
+			if (mutable_global_pointer(block, base) || absolute_pointer(block, base) || runtime_pointer_view(block, base)) {
 				Operand pointer = constant_array_pointer(block, base, index, array, inst->src);
 				return load_pointer(block, pointer, inst->src);
 			}
@@ -7070,7 +7270,7 @@ analyze_array_index(Block *block, const IrInst *inst, bool address_only, bool bo
 		if (undefined)
 			return comptime_operand(array.child, value_undefined(&sema->values, array.child));
 	}
-	return runtime_array_element(block, base, index, array, inst->src, address_only || (borrow && sema->types[array.child].kind == TYPE_ARRAY));
+	return runtime_array_element(block, base, index, array, inst->src, address_only || (borrow && (sema->types[array.child].kind == TYPE_ARRAY || sema->types[array.child].kind == TYPE_STRUCT)));
 }
 
 static Operand
@@ -7387,6 +7587,18 @@ analyze_inst(Block *block, IrInstIndex index, Operand *break_value)
 			return INST_NORETURN;
 		break;
 	}
+	case IR_STRUCT_INIT_PTR: {
+		IrStructInitPtr header;
+		IR_READ(block->ir, inst->data.payload, &header);
+		const IrStructInitField *fields = (const IrStructInitField *)(block->ir->extra
+			+ inst->data.payload + IR_WORDS(IrStructInitPtr));
+		bool noreturn = false;
+		result = struct_init_destination(block, resolve_ref(block, header.pointer), fields,
+			header.field_count, src, &noreturn);
+		if (noreturn)
+			return INST_NORETURN;
+		break;
+	}
 	case IR_STRUCT_FIELD_TYPE: {
 		TypeId type;
 		if (!operand_to_type(block, resolve_ref(block, inst->data.name.operand), src, &type)
@@ -7402,11 +7614,21 @@ analyze_inst(Block *block, IrInstIndex index, Operand *break_value)
 		break;
 	}
 	case IR_INIT_EMPTY_PTR: {
-		Operand pointer = array_init_destination(block, resolve_ref(block, inst->data.un.operand), 0, src);
-		if (pointer.kind != OPERAND_NONE && finish_array_init(block, pointer, src).kind != OPERAND_NONE)
-			result = load_pointer(block, pointer, src);
+		Operand pointer = resolve_ref(block, inst->data.un.operand);
+		if (pointer.kind == OPERAND_NONE)
+			break;
+		if (sema->types[pointer.type].kind == TYPE_POINTER
+			&& sema->types[sema->types[pointer.type].as.pointer.child].kind == TYPE_STRUCT) {
+			bool noreturn = false;
+			result = struct_init_destination(block, pointer, NULL, 0, src, &noreturn);
+		} else {
+			pointer = array_init_destination(block, pointer, 0, src);
+			if (pointer.kind != OPERAND_NONE && finish_array_init(block, pointer, src).kind != OPERAND_NONE)
+				result = load_pointer(block, pointer, src);
+		}
 		break;
 	}
+
 	case IR_ARRAY_BASE_PTR: {
 		Operand pointer = resolve_ref(block, inst->data.un.operand);
 		if (!pointer_type_operand(block, pointer, src))
@@ -7490,6 +7712,17 @@ analyze_inst(Block *block, IrInstIndex index, Operand *break_value)
 			break;
 		if (struct_value_field(block, base, inst->data.name.name, src, inst->op == IR_FIELD_REF, &result))
 			break;
+		TypeId object = inst->op == IR_FIELD_REF && sema->types[base.type].kind == TYPE_POINTER
+			? sema->types[base.type].as.pointer.child : base.type;
+		if (sema->types[object].kind == TYPE_POINTER && sema->types[object].as.pointer.size == POINTER_ONE)
+			object = sema->types[object].as.pointer.child;
+		if (sema->types[object].kind == TYPE_STRUCT) {
+			Operand storage = inst->op == IR_FIELD_REF ? base : analyze_ref(block, base, src, 0, 0);
+			Operand address = storage.kind == OPERAND_NONE ? operand_none
+				: analyze_field_pointer(block, storage, inst->data.name.name, src);
+			result = address.kind == OPERAND_NONE ? operand_none : load_pointer(block, address, src);
+			break;
+		}
 		TypeId base_type = base.type;
 		if (inst->op == IR_FIELD_REF) {
 			if (!pointer_type_operand(block, base, src))
@@ -7648,7 +7881,7 @@ analyze_inst(Block *block, IrInstIndex index, Operand *break_value)
 		result = resolve_ref(block, inst->data.bin.lhs);
 		if (result.kind == OPERAND_AGGREGATE) {
 			Operand pointer = analyze_ref(block, result, src, 0, 0);
-			result = array_snapshot(block, pointer, alignment, src);
+			result = aggregate_snapshot(block, pointer, alignment, src);
 		}
 		break;
 	}
@@ -7913,43 +8146,11 @@ analyze_inst(Block *block, IrInstIndex index, Operand *break_value)
 	case IR_LOAD:
 		result = load_pointer(block, resolve_ref(block, inst->data.un.operand), src);
 		break;
-	case IR_STORE: {
-		Operand pointer = resolve_ref(block, inst->data.bin.lhs);
-		Operand value = resolve_ref(block, inst->data.bin.rhs);
-		if (!pointer_type_operand(block, pointer, src) || value.kind == OPERAND_NONE)
-			break;
-		if (sema->types[pointer.type].as.pointer.is_const) {
-			sema_error(block, src, "cannot assign to constant");
-			break;
-		}
-		TypeId child = sema->types[pointer.type].as.pointer.child;
-		if (sema->types[child].kind == TYPE_STRUCT) {
-			sema_error(block, src, "not supported by szc yet: runtime struct stores");
-			break;
-		}
-		value = coerce(block, value, child, src);
-		if (value.kind != OPERAND_NONE && sema_type_is_aggregate(sema, child)) {
-			if (pointer_operand(block, pointer, src) && store_array(block, pointer, value, src))
-				result = void_operand(sema);
-			break;
-		}
-		bool no_storage = child == T_VOID || (is_int(sema, child) && sema->types[child].as.integer.bits == 0);
-		if (value.kind != OPERAND_NONE && !no_storage) {
-			if (block->is_comptime && mutable_global_pointer(block, pointer)) {
-				sema_error(block, src, "unable to evaluate comptime expression");
-				break;
-			}
-			if (!require_runtime(block, src))
-				break;
-			bool is_volatile = sema->types[pointer.type].as.pointer.is_volatile;
-			if ((is_volatile || !operand_is_undefined(block, value)) && pointer_operand(block, pointer, src)) {
-				TirRef address = materialize(block, pointer, src);
-				emit_tir_bin(block, is_volatile ? TIR_STORE_VOLATILE : TIR_STORE, T_VOID, src, address, materialize(block, value, src));
-			}
-		}
-		result = void_operand(sema);
+	case IR_STORE:
+		result = store_value(block, resolve_ref(block, inst->data.bin.lhs),
+			resolve_ref(block, inst->data.bin.rhs), src);
 		break;
-	}
+
 	case IR_CALL:
 		if (analyze_call(block, index, &result) == INST_NORETURN)
 			return INST_NORETURN;
@@ -8001,7 +8202,7 @@ analyze_inst(Block *block, IrInstIndex index, Operand *break_value)
 		if (sema_type_is_aggregate(sema, ret)) {
 			TirRef pointer = block->func->return_pointer;
 			Operand destination = runtime_operand(block->tir->insts[pointer].type, pointer);
-			if (!store_array(block, destination, value, src))
+			if (!store_aggregate(block, destination, value, src))
 				return INST_NORETURN;
 			emit_tir_un(block, TIR_RET, T_NORETURN, src, TIR_REF_NONE);
 		} else {
@@ -8103,7 +8304,7 @@ analyze_func_body(Sema *sema, FuncId id)
 		func->tir.insts[arg].data.index = i;
 		Operand value = runtime_operand(type, arg);
 		if (array)
-			value = array_snapshot(&block, value, 0, src);
+			value = aggregate_snapshot(&block, value, 0, src);
 		inst_map_put(&map, sema->arena, params[i], value);
 	}
 	if (sema_type_is_aggregate(sema, fn.ret)) {
@@ -8402,6 +8603,12 @@ dump_tir_inst(FILE *out, Sema *sema, const TirFunc *tir, TirRef ref, uint32_t de
 			fprintf(out, ", %%%u", (unsigned)inst->data.bin.rhs);
 		fputs("\n", out);
 		return;
+	case TIR_STRUCT_FIELD_PTR: {
+		TirStructFieldPtr field;
+		memcpy(&field, &tir->extra[inst->data.payload], sizeof(field));
+		fprintf(out, " %%%u, %u\n", field.base, field.offset);
+		return;
+	}
 	case TIR_MEMCPY: {
 		TirMemcpy copy;
 		memcpy(&copy, &tir->extra[inst->data.payload], sizeof(copy));

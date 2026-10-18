@@ -1,0 +1,9 @@
+fn szc.main.1: fn () void {
+  %0: *struct_store_nyi_supported.S = const ptr(0x1000)
+  %1: void = call szc.store.2(%0)
+  %2: noreturn = ret
+}
+fn szc.store.2: fn (*struct_store_nyi_supported.S) void {
+  %0: *struct_store_nyi_supported.S = arg 0
+  %1: noreturn = ret
+}

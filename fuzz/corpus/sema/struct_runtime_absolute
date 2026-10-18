@@ -1,0 +1,1 @@
+const I=struct {x:u16,};const S=struct {tag:u64,items:[2]I,};const p:*S=@ptrFromInt(4096);noinline fn address(q:*u16)usize{return @intFromPtr(q);}pub fn main()u8{return @intCast(address(&p.items[1].x)-(4096+@offsetOf(S,"items")+@sizeOf(I)+@offsetOf(I,"x")));}

@@ -75,12 +75,13 @@ typedef uint32_t TirBody;	/* extra index of a body, 0 = none */
 	X(PTR_SUB, "ptr_sub")	/* bin: many pointer, usize element count */ \
 	X(PTR_ELEM_PTR, "ptr_elem_ptr")	/* bin: many pointer, usize index; no length bound */ \
 	X(ARRAY_ELEM_PTR, "array_elem_ptr")	/* bin: single array pointer, checked usize index */ \
+	X(STRUCT_FIELD_PTR, "struct_field_ptr")	/* payload: TirStructFieldPtr; typed field address */ \
 	X(SLICE_LEN_PTR, "slice_len_ptr")	/* un: pair address -> length field address */ \
 	X(SLICE_START_CHECK, "slice_start_check")	/* bin: start <= end */ \
 	X(SLICE_END_CHECK, "slice_end_check")	/* bin: end <= available length */ \
 	X(SENTINEL_CHECK, "sentinel_check")	/* bin: actual element equals sentinel */ \
 	X(INDEX_CHECK, "index_check")	/* bin: usize index < dynamic length */ \
-	X(ARRAY_COPY, "array_copy")	/* bin: destination and source array pointers; overlap-safe */ \
+	X(ARRAY_COPY, "array_copy")	/* bin: owned aggregate copy, destination/source pointers; overlap-safe */ \
 	X(ALLOC, "alloc")	/* type is the pointer type; stack slot */ \
 	X(LOAD, "load")	/* un: pointer */ \
 	X(STORE, "store")	/* bin: pointer, value */ \
@@ -128,6 +129,13 @@ typedef struct TirCall {
 	TirRef   indirect;	/* TIR_REF_NONE for direct call */
 	uint32_t arg_count;	/* followed by arg_count TirRefs */
 } TirCall;
+
+/* Resolved byte offset, not a declaration index. Result is a typed pointer;
+ * aggregate values themselves never enter scalar QBE temporaries. */
+typedef struct TirStructFieldPtr {
+	TirRef base;
+	uint32_t offset;
+} TirStructFieldPtr;
 
 typedef struct TirMemcpy {
 	TirRef destination;

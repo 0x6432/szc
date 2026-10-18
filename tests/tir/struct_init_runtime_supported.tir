@@ -1,0 +1,13 @@
+fn szc.main.1: fn () void {
+  %0: u8 = const 7
+  %1: void = call szc.f.2(%0)
+  %2: noreturn = ret
+}
+fn szc.f.2: fn (u8) void {
+  %0: u8 = arg 0
+  %1: *struct_init_runtime_supported.S = alloc
+  %2: *u8 = struct_field_ptr %1, 0
+  %3: void = store %2, %0
+  %4: *const struct_init_runtime_supported.S = ptr_cast %1
+  %5: noreturn = ret
+}
