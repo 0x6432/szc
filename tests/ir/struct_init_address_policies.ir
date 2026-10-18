@@ -1,0 +1,96 @@
+%77 = struct_decl (flags=0) {
+  decl const "S" value {
+    %1 = struct_decl (flags=0) {
+      field "a" type {
+        %0 = break_inline result, @type_u8
+      }
+    }
+    %2 = break_inline result, %1
+  }
+  decl const "Empty" value {
+    %3 = struct_decl (flags=0) {
+    }
+    %4 = break_inline result, %3
+  }
+  decl fn "main" pub value {
+    %75 = func "main" {
+      ret type {
+        %5 = break_inline result, @type_void
+      }
+      body insts {
+        %6 = decl_val "S"
+        %7 = as @type_type, %6
+        %8 = ptr_type %7, @true
+        %9 = as @type_type, %8
+        %10 = ref_type %9
+        %14 = struct_init %10 typed "a" value {
+          %11 = struct_field_type "a", %10
+          %12 = int 1
+          %13 = break_inline result, %12
+        }
+        %15 = as %10, %14
+        %16 = ref %15
+        %17 = as %9, %16
+        %18 = decl_val "S"
+        %19 = as @type_type, %18
+        %23 = struct_init %19 typed "a" value {
+          %20 = struct_field_type "a", %19
+          %21 = int 2
+          %22 = break_inline result, %21
+        }
+        %24 = ref %23
+        %25 = decl_val "Empty"
+        %26 = as @type_type, %25
+        %27 = ptr_type %26, @true
+        %28 = as @type_type, %27
+        %29 = int 0
+        %30 = as @type_usize, %29
+        %31 = ref_array_type %28, %30
+        %32 = struct_init %31 typed
+        %33 = as %31, %32
+        %34 = ref %33
+        %35 = as %28, %34
+        %36 = int 1
+        %37 = as @type_usize, %36
+        %38 = array_type %37, @type_u8
+        %39 = as @type_type, %38
+        %40 = ptr_type %39, @true
+        %41 = as @type_type, %40
+        %42 = int 1
+        %43 = as @type_usize, %42
+        %44 = ref_array_type %41, %43
+        %45 = array_elem_type %44
+        %46 = int 3
+        %47 = as %45, %46
+        %48 = array_init %44, %47
+        %49 = as %44, %48
+        %50 = ref %49
+        %51 = as %41, %50
+        %52 = int 7
+        %53 = as @type_u8, %52
+        %54 = ptr_type @type_u8, @true slice sentinel %53
+        %55 = as @type_type, %54
+        %56 = int 0
+        %57 = as @type_usize, %56
+        %58 = ref_array_type %55, %57
+        %59 = struct_init %58 typed
+        %60 = as %58, %59
+        %61 = ref %60
+        %62 = as %55, %61
+        %63 = int 7
+        %64 = as @type_u8, %63
+        %65 = ptr_type @type_u8, @true many sentinel %64
+        %66 = as @type_type, %65
+        %67 = int 0
+        %68 = as @type_usize, %67
+        %69 = ref_array_type %66, %68
+        %70 = struct_init %69 typed
+        %71 = as %69, %70
+        %72 = ref %71
+        %73 = as %66, %72
+        %74 = ret_implicit
+      }
+    }
+    %76 = break_inline result, %75
+  }
+}

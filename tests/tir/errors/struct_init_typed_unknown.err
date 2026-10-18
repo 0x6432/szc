@@ -1,0 +1,3 @@
+tests/tir/errors/struct_init_typed_unknown.zig:3:29: error: no field named 'unknown' in struct 'struct_init_typed_unknown.S'
+    const s = S{ .a = 256, .unknown = 1 };
+                            ^

@@ -1,0 +1,3 @@
+tests/tir/errors/struct_init_runtime.zig:3:19: error: not supported by szc yet: runtime struct initialization
+    const s = S{ .a = x };
+                  ^

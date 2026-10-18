@@ -29,7 +29,7 @@ def cases():
     for ty in ('noreturn','comptime_int','type','fn() void'):
         for query in ('@hasField(S,"x")','@FieldType(S,"x")','@sizeOf(S)','@alignOf(S)'):
             yield ty+'/'+query, 'const S=struct { x:'+ty+', }; pub fn main() void { _='+query+'; }'
-    yield 'runtime-struct-value', 'const S=struct { x:u8, }; pub fn main() u8 { const s:S=.{.x=7}; return s.x-7; }'
+    yield 'runtime-struct-value', 'const S=struct { x:u8, }; fn f(x:u8) u8 { const s:S=.{.x=x}; return s.x; } pub fn main() u8 { return f(7)-7; }'
 
     prefix = 'const S=struct { x:u8, }; '
     for label, body in (

@@ -1,0 +1,3 @@
+tests/tir/errors/struct_volatile_load.zig:5:12: error: not supported by szc yet: volatile struct loads
+    return @field(p, "a");
+           ^

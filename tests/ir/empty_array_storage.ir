@@ -1,4 +1,4 @@
-%72 = struct_decl (flags=0) {
+%70 = struct_decl (flags=0) {
   decl var "global" type {
     %0 = int 2
     %1 = as @type_usize, %0
@@ -47,7 +47,7 @@
     %35 = break_inline result, %34
   }
   decl fn "main" pub value {
-    %70 = func "main" {
+    %68 = func "main" {
       ret type {
         %36 = break_inline result, @type_void
       }
@@ -61,33 +61,31 @@
         %43 = array_type %38, %42
         %44 = as @type_type, %43
         %45 = array_elem_type %44
-        %46 = array_elem_type %45
-        %47 = array_init %45
-        %48 = as %45, %47
-        %49 = array_elem_type %45
-        %50 = array_init %45
-        %51 = as %45, %50
-        %52 = array_init %44, %48, %51
-        %53 = as %44, %52
-        %54 = alloc type=%44 init=%53
-        %55 = decl_val "identity"
-        %56 = call %55 arg0 {
-          %57 = arg_type %56, 0
-          %58 = load %54
-          %59 = as %57, %58
-          %60 = break_inline result, %59
+        %46 = struct_init %45
+        %47 = as %45, %46
+        %48 = struct_init %45
+        %49 = as %45, %48
+        %50 = array_init %44, %47, %49
+        %51 = as %44, %50
+        %52 = alloc type=%44 init=%51
+        %53 = decl_val "identity"
+        %54 = call %53 arg0 {
+          %55 = arg_type %54, 0
+          %56 = load %52
+          %57 = as %55, %56
+          %58 = break_inline result, %57
         }
-        %61 = elem_type %54
-        %62 = as %61, %56
-        %63 = store %54, %62
-        %64 = decl_ref "global"
-        %65 = load %54
-        %66 = elem_type %64
-        %67 = as %66, %65
-        %68 = store %64, %67
-        %69 = ret_implicit
+        %59 = elem_type %52
+        %60 = as %59, %54
+        %61 = store %52, %60
+        %62 = decl_ref "global"
+        %63 = load %52
+        %64 = elem_type %62
+        %65 = as %64, %63
+        %66 = store %62, %65
+        %67 = ret_implicit
       }
     }
-    %71 = break_inline result, %70
+    %69 = break_inline result, %68
   }
 }

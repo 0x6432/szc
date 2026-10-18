@@ -1403,6 +1403,10 @@ mark_value_dependencies(Codegen *cg, ValueId id)
 		ArrayValue array = value->as.array;
 		for (uint32_t i = 0; i < array.count; i++)
 			mark_value_dependencies(cg, array.items[i]);
+	} else if (value->kind == VALUE_STRUCT) {
+		StructValue structure = value->as.structure;
+		for (uint32_t i = 0; i < structure.count; i++)
+			mark_value_dependencies(cg, structure.fields[i]);
 	}
 }
 

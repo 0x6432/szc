@@ -1,0 +1,3 @@
+tests/tir/errors/struct_init_duplicate.zig:3:19: error: duplicate struct field name
+    const s = S{ .a = missing, .a = other };
+                  ^

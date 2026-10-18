@@ -1,0 +1,138 @@
+%91 = struct_decl (flags=0) {
+  decl const "Inner" value {
+    %1 = struct_decl (flags=0) {
+      field "value" type {
+        %0 = break_inline result, @type_u8
+      }
+    }
+    %2 = break_inline result, %1
+  }
+  decl const "S" value {
+    %12 = struct_decl (flags=0) {
+      field "inner" type {
+        %3 = decl_val "Inner"
+        %4 = as @type_type, %3
+        %5 = break_inline result, %4
+      }
+      field "p" type {
+        %6 = ptr_type @type_u8, @true
+        %7 = as @type_type, %6
+        %8 = break_inline result, %7
+      }
+      field "bytes" type {
+        %9 = ptr_type @type_u8, @true slice
+        %10 = as @type_type, %9
+        %11 = break_inline result, %10
+      }
+    }
+    %13 = break_inline result, %12
+  }
+  decl const "number" type {
+    %14 = break_inline result, @type_u8
+  } value {
+    %15 = decl_type
+    %16 = int 7
+    %17 = as %15, %16
+    %18 = break_inline result, %17
+  }
+  decl const "object" value {
+    %19 = decl_val "S"
+    %20 = as @type_type, %19
+    %33 = struct_init %20 typed "bytes" value {
+      %21 = struct_field_type "bytes", %20
+      %22 = str "abc"
+      %23 = break_inline result, %22
+    } "inner" value {
+      %24 = struct_field_type "inner", %20
+      %28 = struct_init %24 typed "value" value {
+        %25 = struct_field_type "value", %24
+        %26 = int 3
+        %27 = break_inline result, %26
+      }
+      %29 = break_inline result, %28
+    } "p" value {
+      %30 = struct_field_type "p", %20
+      %31 = decl_ref "number"
+      %32 = break_inline result, %31
+    }
+    %34 = break_inline result, %33
+  }
+  decl fn "sum" value {
+    %55 = func "sum" {
+      %36 = param "a" type {
+        %35 = break_inline result, @type_u8
+      }
+      %40 = param "p" type {
+        %37 = ptr_type @type_u8, @true
+        %38 = as @type_type, %37
+        %39 = break_inline result, %38
+      }
+      %44 = param "bytes" type {
+        %41 = ptr_type @type_u8, @true slice
+        %42 = as @type_type, %41
+        %43 = break_inline result, %42
+      }
+      ret type {
+        %45 = break_inline result, @type_u8
+      }
+      body insts {
+        %46 = ret_type
+        %47 = deref %40
+        %48 = add %36, %47
+        %49 = int 1
+        %50 = as @type_usize, %49
+        %51 = array_index %44, %50
+        %52 = add %48, %51
+        %53 = as_return %46, %52
+        %54 = ret %53
+      }
+    }
+    %56 = break_inline result, %55
+  }
+  decl fn "main" pub value {
+    %89 = func "main" {
+      ret type {
+        %57 = break_inline result, @type_u8
+      }
+      body insts {
+        %58 = decl_val "object"
+        %59 = ref %58
+        %64 = ref %59
+        %60 = ret_type
+        %61 = decl_val "sum"
+        %62 = call %61 arg0 {
+          %63 = arg_type %62, 0
+          %69 = field_named_read_ref %64 name {
+            %65 = ptr_type @type_u8, @true slice
+            %66 = str "inner"
+            %67 = as %65, %66
+            %68 = break_inline result, %67
+          }
+          %74 = field_named_val %69 name {
+            %70 = ptr_type @type_u8, @true slice
+            %71 = str "value"
+            %72 = as %70, %71
+            %73 = break_inline result, %72
+          }
+          %75 = as %63, %74
+          %76 = break_inline result, %75
+        } arg1 {
+          %77 = arg_type %62, 1
+          %78 = field_val "p", %59
+          %79 = as %77, %78
+          %80 = break_inline result, %79
+        } arg2 {
+          %81 = arg_type %62, 2
+          %82 = field_val "bytes", %59
+          %83 = as %81, %82
+          %84 = break_inline result, %83
+        }
+        %85 = int 108
+        %86 = sub %62, %85
+        %87 = as_return %60, %86
+        %88 = ret %87
+      }
+    }
+    %90 = break_inline result, %89
+  }
+}

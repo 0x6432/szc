@@ -24,6 +24,57 @@ Read this first when resuming work (the sandbox resets often).
 
 ## Latest follow-up checkpoint
 
+- M6.1d immutable ordinary struct values is implemented on top of 0c4ebca.
+  VALUE_STRUCT retains nominal identity and declaration-ordered fields with deep
+  arena interning. Typed/contextual initialization, known nested structs/arrays,
+  undefined fields and logical dot/@field/indexed reads work without physical
+  struct storage. Deferred field bodies preserve source-order eager evaluation;
+  typed/global/@as paths defer final coercions, while local/return virtual result
+  destinations coerce sequentially. Missing fields follow declaration order.
+  Logical read references preserve mutable-array borrowing and volatile descriptor
+  behavior; actual struct field addresses remain explicitly unsupported.
+  Runtime construction/storage/by-value ABI stays closed. A cached provenance walk
+  rejects physical struct backing hidden by pointer casts, arrays/slices or globals,
+  but accepts absolute/runtime struct pointers. Its cumulative 1048576-node/edge
+  budget clears pending states on exhaustion. Volatile struct reads reject before
+  constant folding. Shared empty-array destination/sentinel handling is preserved.
+  Independent frontend/value/reference specialists and safety reviewers contributed
+  disjoint scratch changes; parent owns integration. Plan: /data/struct-values-plan.md.
+  Final frozen /data/struct-values-final/{gcc,clang,optimized}: GCC/Clang strict C11
+  Werror ASan/UBSan pass 6264 unit checks, 1239 goldens, 133 standard/generated plus
+  4 szc-only native tests, 16 driver, 57 compiler-runner, full C/ABI/storage/alignment,
+  102 observed volatile sequences and 303 safety cases. Optimized native/safety and
+  forced main rebuild/tests pass. Both compilers pass 20000 mutations per stage;
+  seeds lexer/parser/irgen/sema = 256/256/118/174. Four fresh 60-second libFuzzer
+  campaigns pass: 3015979/83662/78725/78775 executions. All 6083 frozen source/config/
+  test/corpus/license paths match main; documentation is recorded separately.
+  Final reference suites pass: struct values 118/55 exact primary errors, field
+  201/92, empty array storage 112/24, TypeOf 207/51, offsetOf 91/51, hasField 220/68,
+  namespaces 76/40, arrays 949 and slice fields 168. Metadata 100/29 and 51 prior
+  unsupported gates pass; new guards pass 40 unsupported cases plus 5 supported
+  provenance controls. Three new native fixtures pass official Debug/ReleaseFast.
+  Separate independent scratch control-flow checks pass 7 native programs plus
+  1 exact missing-field error on frozen szc and official Zig; not a full ABI claim.
+  Full e2e remains szc-only, not a complete official-Zig/std/bootstrap differential.
+  Evidence: /data/struct-values-final-*.log, source-hashes.json, /data/struct-values-
+  tests/controlflow/, /data/struct-values-ci-replay-results.json and historical GCC
+  /data/struct-values-ci-replay-gcc/replay-evidence/.
+  Hosted b319e2b run 39057048659 had a runner-lost-communication annotation; its
+  investigated job rerun was accepted (201), latest attempt 2 still running.
+  0c4ebca run 39058814700 recorded Clang div_zero_u32 native timeout and GCC four
+  compile/native timeouts followed by runner shutdown/cancellation. Exact-source
+  local Clang 10 and GCC 20 targeted replays pass with original 120s/15s deadlines
+  and exact panic assertions. No semantic/sanitizer regression reproduced; this
+  supports an interruption hypothesis but does not prove root cause or make CI
+  green. Clang rerun accepted (201); separate GCC rerun request returned 403 while
+  the run was restarting. Do not blindly repeat it or label either old run green.
+  Next: source-verified bitOffsetOf and ordinary-struct bitSizeOf rejection ordering;
+  research /data/struct-bit-layout-research/PLAN.md, scratch frontend/tests ready.
+  Ordinary structs have NO bit representation even when empty/[0]S; reject before
+  field layout, not sizeOf*8. Runtime structs, defaults/comptime/tuple/aligned/
+  packed/extern fields, general comptime calls/captures remain deferred. M6.1 and
+  M7.6 remain partial. Q6 is still mandatory at M10.2.
+
 - M6.1c exact ordinary struct field layout is implemented on top of b319e2b.
   A separate declaration-index permutation preserves pinned Zig's exact unstable
   PDQ field order; checked byte offsets remain private until full layout success.

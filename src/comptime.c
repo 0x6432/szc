@@ -569,6 +569,11 @@ value_hash(const Value *value)
 		for (uint32_t i = 0; i < value->as.array.count; i++)
 			hash = hash_mix(hash, value->as.array.items[i]);
 		break;
+	case VALUE_STRUCT:
+		hash = hash_mix(hash, value->as.structure.count);
+		for (uint32_t i = 0; i < value->as.structure.count; i++)
+			hash = hash_mix(hash, value->as.structure.fields[i]);
+		break;
 	case VALUE_BYTES:
 		hash = hash_mix(hash, value->as.bytes.length);
 		for (uint32_t i = 0; i < value->as.bytes.length; i++)
@@ -618,6 +623,9 @@ value_equal(const Value *a, const Value *b)
 	case VALUE_ARRAY:
 		return a->as.array.count == b->as.array.count && (a->as.array.count == 0
 			|| memcmp(a->as.array.items, b->as.array.items, (size_t)a->as.array.count * sizeof(ValueId)) == 0);
+	case VALUE_STRUCT:
+		return a->as.structure.count == b->as.structure.count && (a->as.structure.count == 0
+			|| memcmp(a->as.structure.fields, b->as.structure.fields, (size_t)a->as.structure.count * sizeof(ValueId)) == 0);
 	case VALUE_BYTES:
 		return a->as.bytes.length == b->as.bytes.length && (a->as.bytes.length == 0 || memcmp(a->as.bytes.data, b->as.bytes.data, a->as.bytes.length) == 0);
 	case VALUE_FUNCTION:
@@ -681,6 +689,12 @@ value_intern(ValueTable *table, const Value *value)
 		if (value->as.array.count != 0)
 			memcpy(copy, value->as.array.items, (size_t)value->as.array.count * sizeof(ValueId));
 		table->values[id].as.array.items = copy;
+	}
+	if (value->kind == VALUE_STRUCT) {
+		ValueId *copy = ARENA_ARRAY(table->arena, ValueId, value->as.structure.count);
+		if (value->as.structure.count != 0)
+			memcpy(copy, value->as.structure.fields, (size_t)value->as.structure.count * sizeof(ValueId));
+		table->values[id].as.structure.fields = copy;
 	}
 	if (value->kind == VALUE_BYTES) {
 		uint8_t *copy = arena_zalloc(table->arena, (size_t)value->as.bytes.length + 1, 1);
@@ -779,6 +793,16 @@ value_array(ValueTable *table, TypeId type, const ValueId *items, uint32_t count
 	Value value = make_value(VALUE_ARRAY, type);
 	value.as.array.items = items;
 	value.as.array.count = count;
+	return value_intern(table, &value);
+}
+
+/* Store field IDs in declaration order, independent of physical layout. */
+ValueId
+value_struct(ValueTable *table, TypeId type, const ValueId *fields, uint32_t count)
+{
+	Value value = make_value(VALUE_STRUCT, type);
+	value.as.structure.fields = fields;
+	value.as.structure.count = count;
 	return value_intern(table, &value);
 }
 

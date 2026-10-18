@@ -42,6 +42,7 @@ typedef enum ValueKind {
 	VALUE_SLICE_FIELD_PTR,	/* address of one descriptor word in original backing */
 	VALUE_SLICE,	/* pointer/usize length, not the pointee contents */
 	VALUE_ARRAY,	/* immutable aggregate of interned element IDs */
+	VALUE_STRUCT,	/* nominal immutable aggregate in declaration-field order */
 	VALUE_BYTES,	/* immutable bytes; length excludes the zero sentinel */
 	VALUE_UNDEFINED,	/* `undefined` of any type */
 } ValueKind;
@@ -55,6 +56,12 @@ typedef struct ArrayValue {
 	const ValueId *items;
 	uint32_t count;
 } ArrayValue;
+
+/* Field count and types are validated by sema before construction. */
+typedef struct StructValue {
+	const ValueId *fields;
+	uint32_t count;
+} StructValue;
 
 typedef struct SliceValue {
 	ValueId pointer;
@@ -91,6 +98,7 @@ typedef struct Value {
 		GlobalId global;
 		ByteString bytes;
 		ArrayValue array;
+		StructValue structure;
 		SliceValue slice;
 		ConstObjectId object;
 		ElementPointer element;
@@ -123,7 +131,7 @@ typedef struct ValueTable {
 } ValueTable;
 
 void         value_table_init(ValueTable *table, Arena *arena);
-ValueId      value_intern(ValueTable *table, const Value *value);	/* copies limbs */
+ValueId      value_intern(ValueTable *table, const Value *value);	/* copies limbs, aggregate IDs and bytes */
 const Value *value_get(const ValueTable *table, ValueId id);
 
 ValueId value_global(ValueTable *table, TypeId type, GlobalId global);
@@ -136,6 +144,7 @@ ValueId value_pointer_reinterpret(ValueTable *table, TypeId type, ValueId pointe
 PointerAddress value_pointer_address(const ValueTable *table, ValueId id);
 ValueId value_slice(ValueTable *table, TypeId type, ValueId pointer, ValueId length);
 ValueId value_array(ValueTable *table, TypeId type, const ValueId *items, uint32_t count);
+ValueId value_struct(ValueTable *table, TypeId type, const ValueId *fields, uint32_t count);
 ValueId value_bytes(ValueTable *table, TypeId type, const uint8_t *data, uint32_t length);
 ValueId value_void(ValueTable *table, TypeId void_type);
 ValueId value_bool(ValueTable *table, TypeId bool_type, bool value);

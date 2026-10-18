@@ -1084,3 +1084,30 @@ storage remain rejected. A zero-length array with a sentinel is not empty for
 this proof. Logical slice lengths remain meaningful: zero-byte memcpy still
 checks their equality. Empty array indexing rejects before inspecting a defined
 index or undefined pointer, using the reference's distinct value/pointer messages.
+
+## Immutable named struct initialization and logical reads
+
+`STRUCT_INIT` stores `IrStructInit { type, field_count, flags }`, followed by
+source-ordered `IrStructInitField { name, src, body }` records. Each body starts
+with `STRUCT_FIELD_TYPE`, evaluates the contextual expression, and breaks with
+`IR_BODY_RESULT`. `IR_STRUCT_INIT_TYPED` means type/expression analysis occurs in
+source order and final field coercions happen after all bodies. Without it,
+virtual result-location initialization coerces each supplied field sequentially.
+This is not an all-name prepass: eager expression failures beat later unknown
+names, while bare literal final coercions may not. Missing fields are checked last.
+Zero-field syntax is shared by arrays/structs; sema dispatches the resolved type.
+`INIT_EMPTY_PTR` preserves array destination/qualifier/sentinel validation and
+returns the loaded initialized array. Direct struct destinations remain NYI.
+
+`FIELD_READ_REF` and `FIELD_NAMED_READ_REF` are internal read-reference operations.
+Known struct field values receive logical immutable references; namespace/array/
+slice fields retain existing borrowed pointers. Recursive static/dynamic/indexed
+read chains evaluate each base/index once. True lvalues still use `FIELD_PTR` or
+`FIELD_NAMED_PTR`; the read-reference protocol must not open physical struct field
+addresses or silently snapshot volatile descriptor storage.
+
+Known structs use a distinct nominal `VALUE_STRUCT`, with arena-owned IDs in
+**declaration order**, never physical-layout order or array-value aliasing. Runtime
+struct storage/ABI is not implemented. Runtime emission/global publication checks
+all immutable backing dependencies so pointer casts or nested relocations cannot
+hide unsupported struct storage. Pure logical references are not runtime escapes.

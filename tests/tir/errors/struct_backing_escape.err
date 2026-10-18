@@ -1,0 +1,3 @@
+tests/tir/errors/struct_backing_escape.zig:7:8: error: not supported by szc yet: runtime storage of immutable struct backing
+    use(@ptrCast(&obj));
+       ^

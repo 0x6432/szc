@@ -1,0 +1,3 @@
+tests/tir/errors/struct_init_eager_error.zig:3:34: error: division by zero here causes illegal behavior
+    const s = S{ .a = @as(u8, 1) / 0, .unknown = 1 };
+                                 ^

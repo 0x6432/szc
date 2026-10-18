@@ -1,0 +1,3 @@
+tests/tir/errors/struct_field_address.zig:4:11: error: not supported by szc yet: struct field addresses
+    _ = &s.a;
+          ^

@@ -139,6 +139,7 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
   - [x] **M6.1a Fieldless namespaces**: qualified declarations, lexical `@This()`, lazy nested exports.
   - [x] **M6.1b Ordinary struct type/layout foundation**: lazy declared field types, checked ABI size/alignment, @hasField/@FieldType and pointer-only layout integration.
   - [x] **M6.1c Exact ordinary struct field layout**: pinned unstable field permutation, checked byte offsets, read-only layout APIs and @offsetOf.
+  - [x] **M6.1d Immutable ordinary struct values**: named/contextual initialization, nominal declaration-ordered constants and logical instance field reads; runtime storage/ABI remains closed.
   - Runtime struct values, field offsets/projection, initializers, defaults and instance methods remain unimplemented.
 - [ ] **M6.2 Enums**: tag values, `@intFromEnum`, `@enumFromInt`, enum literals.
 - [ ] **M6.3 switch** on ints/enums with ranges.
@@ -200,6 +201,62 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
 ## Completed milestone log
 
 (newest first; each entry: what, limitations, interactions)
+
+### M6.1d Immutable ordinary struct values
+
+- **What**: distinct `VALUE_STRUCT` with nominal TypeId and declaration-ordered
+  field IDs, deep arena interning, hashing/equality and logical dependency/liveness
+  traversal. Named typed/contextual initializers, nested known struct/array fields,
+  arrays of known structs, whole/field undefined and existing scalar/pointer/slice
+  field types fold without physical struct storage. Dot and @field value reads
+  follow declared field identity, not unstable physical layout order. Known whole
+  references and slices of known struct arrays can remain purely logical.
+- **Evaluation/IR**: normalized duplicate prescan precedes type/value generation.
+  Each deferred field body evaluates its type and expression in source order.
+  Typed/global/@as paths defer only final field coercions, not explicit casts or
+  arithmetic failures; local/return virtual destinations coerce sequentially.
+  Nested anonymous initializers inherit that distinction; explicit types reset it.
+  Missing fields follow declaration order, including void/u0/empty fields.
+  Read-reference IR distinguishes logical projections from actual lvalue addresses,
+  preserving borrowed arrays and observable descriptor accesses. Indexed readers
+  normalize and bounds-check the borrowed base without enabling field addresses.
+- **Safety**: runtime struct construction/storage/by-value calls/returns remain
+  explicit NYI. Immutable struct backing cannot escape through runtime constants,
+  erased/reinterpreted pointers, arrays/slices of pointers, or global publication.
+  Absolute/runtime pointers to structs remain supported by existing pointer-only
+  paths. The immutable provenance graph uses cached iterative traversal and a
+  cumulative 1048576-node/edge work budget; exhaustion clears pending states.
+  Volatile struct/struct-array reads reject before immutable/one-value folds.
+  Empty initialization dispatches arrays/structs; shared array destination checks
+  and sentinel finalization preserve existing zero-length assignment semantics.
+- **Quality/reference**: disjoint frontend/value/reference specialists plus parent
+  sema integration and independent safety reviews. Permanent interning/growth tests,
+  406 frontend checks, 70 focused semantic cases, 14 new stage/error goldens, four
+  seeds each irgen/sema, three native fixtures and hosted differential matrix.
+  Independent actual-Zig matrix: 118 cases, 55 exact primary errors; separate
+  40 explicit unsupported gates and five supported provenance controls. Native
+  fixtures use root-level nested types because local cross-namespace type capture
+  is still deferred; the original scratch fixture exposed that existing limit.
+- **Final gate**: independent immutable GCC/Clang C11 Werror ASan/UBSan trees pass
+  6264 units/1239 goldens, 133+4 native, 16 driver/57 compiler-runner, full C/ABI/
+  storage/alignment, 102 volatile sequences and 303 safety cases. Separate optimized
+  native/safety and forced main tests pass. Each compiler passes 20000 mutations
+  per stage (256/256/118/174 seeds); fresh 60-second libFuzzer counts are
+  3015979/83662/78725/78775. All 6083 source/config/test/corpus/license paths match
+  frozen copies. Final reference dependencies pass field 201/92, empty arrays
+  112/24, TypeOf 207/51, offsetOf 91/51, hasField 220/68, namespaces 76/40,
+  arrays 949 and slice fields 168; new native fixtures pass official Debug and
+  ReleaseFast. Separate control-flow probes pass seven native and one negative.
+  Historical hosted failures remain investigated/pending, not green: exact-source
+  Clang 10 and GCC 20 replays pass unchanged deadlines; runner interruption is a
+  hypothesis, not a proven root cause. See latest HANDOFF for rerun status/evidence.
+- **Limits/next**: no mutable struct fields, physical field-pointer provenance,
+  runtime struct values/storage/internal or C ABI, implicit anonymous structural
+  coercion, default/comptime/tuple/aligned/packed/extern fields, general comptime
+  function execution or local cross-namespace captures. Primitive/array OPV folds
+  are reused; no broad struct OPV/value transport claim. Ordinary @bitSizeOf and
+  @bitOffsetOf behavior remain a separate source-verified follow-up. M6.1/M7.6
+  remain partial. Q6 remains required at M10.2.
 
 ### M6.1c Exact ordinary struct field layout
 

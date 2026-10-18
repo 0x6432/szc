@@ -1,0 +1,79 @@
+function w $szc.main.1() {
+@start
+	%t3 =w call $szc.sum.2(w 3, l $szc.g.1, l $szc.const.4)
+	%t3 =w and %t3, 255
+	%t5 =w sub %t3, 108
+	%t5 =w and %t5, 255
+	%g5_overflow =w cultw %t3, 108
+	jnz %g5_overflow, @g5_overflow_panic, @g5_overflow_ok
+@g5_overflow_panic
+	call $szc.panic.0()
+	hlt
+@g5_overflow_ok
+	ret %t5
+}
+
+function w $szc.sum.2(w %t0, l %t1, l %t2) {
+@start
+	%t3 =l alloc8 16
+	call $memmove(l %t3, l %t2, l 16)
+	%t5 =w loadub %t1
+	%t6 =w add %t0, %t5
+	%t6 =w and %t6, 255
+	%g6_overflow =w cultw %t6, %t0
+	jnz %g6_overflow, @g6_overflow_panic, @g6_overflow_ok
+@g6_overflow_panic
+	call $szc.panic.0()
+	hlt
+@g6_overflow_ok
+	%t7 =l add %t3, 8
+	%t8 =l loadl %t7
+	%t9 =l copy %t3
+	%t10 =l loadl %t9
+	%g12_index =w cugel 1, %t8
+	jnz %g12_index, @g12_index_panic, @g12_index_ok
+@g12_index_panic
+	call $szc.panic.7()
+	hlt
+@g12_index_ok
+	%e14_offset =l mul 1, 1
+	%t14 =l add %t10, %e14_offset
+	%t15 =w loadub %t14
+	%t16 =w add %t6, %t15
+	%t16 =w and %t16, 255
+	%g16_overflow =w cultw %t16, %t6
+	jnz %g16_overflow, @g16_overflow_panic, @g16_overflow_ok
+@g16_overflow_panic
+	call $szc.panic.0()
+	hlt
+@g16_overflow_ok
+	ret %t16
+}
+
+section ".data.rel.ro"
+data $szc.const.4 = align 8 { l $szc.bytes.9, l 3 }
+section ".rodata"
+data $szc.g.1 = align 1 { b 7 }
+section ".rodata"
+data $szc.bytes.9 = { b 97, b 98, b 99, b 0 }
+data $szc.panic.msg.0 = { b "integer overflow\n", b 0 }
+function $szc.panic.0() {
+@start
+	call $write(w 2, l $szc.panic.msg.0, l 17)
+	call $abort()
+	hlt
+}
+
+data $szc.panic.msg.7 = { b "index out of bounds\n", b 0 }
+function $szc.panic.7() {
+@start
+	call $write(w 2, l $szc.panic.msg.7, l 20)
+	call $abort()
+	hlt
+}
+
+export function w $main() {
+@start
+	%status =w call $szc.main.1()
+	ret %status
+}

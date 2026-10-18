@@ -86,6 +86,8 @@ typedef struct GenBody {
 typedef enum ResultKind {
 	RESULT_NONE,	/* any type */
 	RESULT_TYPE,	/* coerce to the type `ref` */
+	RESULT_COERCED_TYPE, /* type hint; enclosing initializer performs final coercion */
+	RESULT_INIT_TYPE, /* same coercion, but inherit declaration initializer order */
 	RESULT_PTR_ELEM,	/* coerce to the pointee type of pointer `ref` (assignment) */
 } ResultKind;
 
@@ -113,6 +115,22 @@ result_type(IrRef type)
 	ResultInfo info;
 	info.kind = RESULT_TYPE;
 	info.ref = type;
+	return info;
+}
+
+static ResultInfo
+result_coerced_type(IrRef type)
+{
+	ResultInfo info = {RESULT_COERCED_TYPE, type};
+	return info;
+}
+
+/* A virtual destination carries Zig's initializer ordering without creating
+ * physical struct storage. Explicit @as and typed literal syntax reset it. */
+static ResultInfo
+result_init_type(IrRef type)
+{
+	ResultInfo info = {RESULT_INIT_TYPE, type};
 	return info;
 }
 
@@ -542,7 +560,8 @@ static IrRef expr(GenBody *body, Scope *scope, ResultInfo info, AstNode *node);
 static IrRef type_expr(GenBody *body, Scope *scope, AstNode *node);
 static IrRef comptime_expr(GenBody *body, Scope *scope, ResultInfo info, AstNode *node);
 static bool is_field_builtin(GenBody *body, AstNode *node);
-static IrRef builtin_field(GenBody *body, Scope *scope, AstNode *node, bool as_reference);
+static IrRef builtin_field(GenBody *body, Scope *scope, AstNode *node, IrOp op);
+static IrRef read_reference(GenBody *body, Scope *scope, AstNode *node);
 static IrRef address_of(GenBody *body, Scope *scope, ResultInfo info, AstNode *node);
 static IrRef emit_usize(GenBody *body, uint32_t src, uint32_t value);
 static IrRef index_base_expr(GenBody *body, Scope *scope, AstNode *node);
@@ -582,8 +601,10 @@ rvalue(GenBody *body, ResultInfo info, IrRef value, uint32_t src)
 		return value;
 	switch (info.kind) {
 	case RESULT_NONE:
+	case RESULT_COERCED_TYPE:
 		return value;
 	case RESULT_TYPE:
+	case RESULT_INIT_TYPE:
 		if (is_coerced_to(body, value, info.ref))
 			return value;
 		return emit_bin(body, IR_AS, src, info.ref, value);
@@ -1000,7 +1021,7 @@ address_of(GenBody *body, Scope *scope, ResultInfo info, AstNode *node)
 		return emit_bin(body, IR_ARRAY_INDEX_PTR, node->offset, base, item);
 	}
 	if (is_field_builtin(body, node))
-		return builtin_field(body, scope, node, true);
+		return builtin_field(body, scope, node, IR_FIELD_NAMED_PTR);
 	if (node->kind == AST_FIELD_ACCESS) {
 		AstFieldAccess *field = AST_CAST(AstFieldAccess, node, AST_FIELD_ACCESS);
 		IrRef base = address_of(body, scope, result_none, field->lhs);
@@ -1020,8 +1041,9 @@ address_of(GenBody *body, Scope *scope, ResultInfo info, AstNode *node)
 	ResultInfo operand_info = result_none;
 	if (info.kind != RESULT_NONE && !(node->kind == AST_INIT_LIST
 		&& AST_CAST(AstInitList, node, AST_INIT_LIST)->type != NULL)) {
-		IrRef type = info.kind == RESULT_TYPE ? info.ref : emit_un(body, IR_ELEM_TYPE, node->offset, info.ref);
-		if (node->kind == AST_INIT_LIST) {
+		IrRef type = info.kind == RESULT_PTR_ELEM ? emit_un(body, IR_ELEM_TYPE, node->offset, info.ref) : info.ref;
+		if (node->kind == AST_INIT_LIST
+			&& AST_CAST(AstInitList, node, AST_INIT_LIST)->field_count == 0) {
 			uint32_t count = AST_CAST(AstInitList, node, AST_INIT_LIST)->elements.count;
 			IrRef length = emit_usize(body, node->offset, count);
 			operand_info = result_type(emit_bin(body, IR_REF_ARRAY_TYPE, node->offset, type, length));
@@ -1328,9 +1350,34 @@ const_name_expr(GenBody *body, Scope *scope, AstNode *node)
 	return body_finish(&name_body);
 }
 
-/* The base is evaluated once as an address; loads and lvalues share its storage. */
+/* A logical read reference can project immutable struct values without
+ * opening the physical field-address gate. Other objects keep borrowed storage. */
 static IrRef
-builtin_field(GenBody *body, Scope *scope, AstNode *node, bool as_reference)
+read_reference(GenBody *body, Scope *scope, AstNode *node)
+{
+	if (node->kind == AST_GROUPED)
+		return read_reference(body, scope, AST_CAST(AstWrap, node, AST_GROUPED)->operand);
+	if (node->kind == AST_INDEX) {
+		AstIndex *index = AST_CAST(AstIndex, node, AST_INDEX);
+		IrRef base = emit_un(body, IR_ARRAY_BASE_PTR, node->offset, read_reference(body, scope, index->lhs));
+		IrRef item = expr(body, scope, result_type(IR_REF_TYPE_USIZE), index->index);
+		return emit_bin(body, IR_ARRAY_INDEX_PTR, node->offset, base, item);
+	}
+	if (node->kind == AST_FIELD_ACCESS) {
+		AstFieldAccess *field = AST_CAST(AstFieldAccess, node, AST_FIELD_ACCESS);
+		IrRef base = read_reference(body, scope, field->lhs);
+		return emit_name(body, IR_FIELD_READ_REF, node->offset, intern_span(body->gen, field->name), base);
+	}
+	if (is_field_builtin(body, node))
+		return builtin_field(body, scope, node, IR_FIELD_NAMED_READ_REF);
+	return address_of(body, scope, result_none, node);
+}
+
+/* Evaluate the base once. True lvalues retain physical address semantics;
+ * reads may traverse logical struct references without copying borrowed arrays
+ * or volatile slice descriptors. */
+static IrRef
+builtin_field(GenBody *body, Scope *scope, AstNode *node, IrOp op)
 {
 	AstBuiltinCall *call = AST_CAST(AstBuiltinCall, node, AST_BUILTIN_CALL);
 	if (call->args.count != 2) {
@@ -1340,10 +1387,12 @@ builtin_field(GenBody *body, Scope *scope, AstNode *node, bool as_reference)
 		return IR_REF_VOID_VALUE;
 	}
 	IrNamedField payload;
-	payload.base = address_of(body, scope, result_none, call->args.items[0]);
+	payload.base = op == IR_FIELD_NAMED_PTR
+		? address_of(body, scope, result_none, call->args.items[0])
+		: read_reference(body, scope, call->args.items[0]);
 	payload.name_body = const_name_expr(body, scope, call->args.items[1]);
 	payload.name_src = call->args.items[1]->offset;
-	return emit_payload(body, as_reference ? IR_FIELD_NAMED_PTR : IR_FIELD_NAMED_VAL, node->offset, APPEND_EXTRA(body->gen, payload));
+	return emit_payload(body, op, node->offset, APPEND_EXTRA(body->gen, payload));
 }
 
 /* Parentheses do not break a pointer-cast chain; ordinary expressions do. */
@@ -1384,6 +1433,8 @@ cast_result_type(GenBody *body, ResultInfo info, AstNode *node, const char *name
 {
 	switch (info.kind) {
 	case RESULT_TYPE:
+	case RESULT_COERCED_TYPE:
+	case RESULT_INIT_TYPE:
 		return info.ref;
 	case RESULT_PTR_ELEM:
 		return emit_un(body, IR_ELEM_TYPE, node->offset, info.ref);
@@ -1502,7 +1553,7 @@ builtin_call(GenBody *body, Scope *scope, ResultInfo info, AstNode *node)
 		return rvalue(body, info, emit_payload(body, IR_TYPEOF_BUILTIN, node->offset, payload), node->offset);
 	}
 	case BUILTIN_FIELD:
-		return rvalue(body, info, builtin_field(body, scope, node, false), node->offset);
+		return rvalue(body, info, builtin_field(body, scope, node, IR_FIELD_NAMED_VAL), node->offset);
 	case BUILTIN_HAS_MEMBER: {
 		IrHasMember payload;
 		payload.container = type_expr(body, scope, args[0]);
@@ -1609,7 +1660,7 @@ return_expr(GenBody *body, Scope *scope, AstNode *node)
 	IrRef value = IR_REF_VOID_VALUE;
 	if (return_node->value != NULL) {
 		IrRef type = emit_none(body, IR_RET_TYPE, node->offset);
-		value = expr(body, scope, result_type(type), return_node->value);
+		value = expr(body, scope, result_init_type(type), return_node->value);
 		if (body_is_terminated(body)) {
 			error_at(body->gen, node->offset, "%s", "unreachable code");
 			return IR_REF_VOID_VALUE;
@@ -2010,20 +2061,90 @@ index_base_expr(GenBody *body, Scope *scope, AstNode *node)
 	return expr(body, scope, result_none, node);
 }
 
-/* Element result types propagate into nested literals and integer casts. */
+/* Named fields stay in source order. Typed initializers evaluate each field
+ * type and expression eagerly, but defer final field coercions until the end. */
 static IrRef
-array_init(GenBody *body, Scope *scope, ResultInfo info, AstInitList *node)
+struct_init(GenBody *body, Scope *scope, ResultInfo info, AstInitList *node)
 {
-	if (node->is_struct_init && node->field_count != 0) {
-		unsupported(body, &node->base, "struct field initializers");
+	IrGen *gen = body->gen;
+	if (node->field_count != 0 && node->type != NULL && node->type->kind == AST_ARRAY_TYPE) {
+		error_at(gen, node->type->offset, "%s", "initializing array with struct syntax");
+		return IR_REF_VOID_VALUE;
+	}
+	StringId *names = ARENA_ARRAY(gen->arena, StringId, node->field_count);
+	for (uint32_t i = 0; i < node->field_count; i++)
+		names[i] = intern_span(gen, node->fields[i].name);
+	bool duplicate = false;
+	for (uint32_t i = 0; i < node->field_count; i++) {
+		bool previous = false;
+		for (uint32_t j = 0; j < i; j++)
+			if (names[j] == names[i])
+				previous = true;
+		if (previous)
+			continue;
+		for (uint32_t j = i + 1; j < node->field_count; j++) {
+			if (names[j] == names[i]) {
+				error_at(gen, node->fields[i].name.start, "%s", "duplicate struct field name");
+				duplicate = true;
+				break;
+			}
+		}
+	}
+	if (duplicate)
+		return IR_REF_VOID_VALUE;
+	/* Do not turn an inherited destination into a temporary struct value.
+	 * Empty arrays still use their original in-place finalization semantics. */
+	if (node->type == NULL && info.kind == RESULT_PTR_ELEM) {
+		if (node->field_count == 0)
+			return emit_un(body, IR_INIT_EMPTY_PTR, node->base.offset, info.ref);
+		unsupported(body, &node->base, "in-place struct initialization");
 		return IR_REF_VOID_VALUE;
 	}
 	IrRef type;
 	if (node->type != NULL) {
 		type = node->type->kind == AST_ARRAY_TYPE
+			? array_type(body, scope, AST_CAST(AstArrayType, node->type, AST_ARRAY_TYPE), true, 0)
+			: type_expr(body, scope, node->type);
+	} else if (info.kind == RESULT_TYPE || info.kind == RESULT_COERCED_TYPE || info.kind == RESULT_INIT_TYPE) {
+		type = info.ref;
+	} else {
+		unsupported(body, &node->base, "anonymous tuples without an array result type");
+		return IR_REF_VOID_VALUE;
+	}
+	IrStructInit header = {type, node->field_count, node->type != NULL || info.kind == RESULT_TYPE || info.kind == RESULT_COERCED_TYPE ? IR_STRUCT_INIT_TYPED : 0};
+	IrStructInitField *fields = ARENA_ARRAY(gen->arena, IrStructInitField, node->field_count);
+	for (uint32_t i = 0; i < node->field_count; i++) {
+		GenBody field_body;
+		body_init(&field_body, gen, scope, body->is_comptime);
+		AstFieldInit *field = &node->fields[i];
+		IrRef child = emit_name(&field_body, IR_STRUCT_FIELD_TYPE, field->name.start, names[i], type);
+		ResultInfo field_info = header.flags & IR_STRUCT_INIT_TYPED ? result_coerced_type(child) : result_init_type(child);
+		IrRef value = expr(&field_body, &field_body.base, field_info, field->value);
+		if (!body_is_terminated(&field_body))
+			emit_break(&field_body, IR_BREAK_INLINE, field->value->offset, IR_BODY_RESULT, value);
+		fields[i].name = names[i];
+		fields[i].src = field->name.start;
+		fields[i].body = body_finish(&field_body);
+	}
+	uint32_t payload = reserve_extra(gen, IR_WORDS(IrStructInit) + node->field_count * IR_WORDS(IrStructInitField));
+	memcpy(gen->ir->extra + payload, &header, sizeof(header));
+	if (node->field_count != 0)
+		memcpy(gen->ir->extra + payload + IR_WORDS(IrStructInit), fields, node->field_count * sizeof(*fields));
+	return rvalue(body, info, emit_payload(body, IR_STRUCT_INIT, node->base.offset, payload), node->base.offset);
+}
+
+/* Element result types propagate into nested literals and integer casts. */
+static IrRef
+array_init(GenBody *body, Scope *scope, ResultInfo info, AstInitList *node)
+{
+	if (node->is_struct_init)
+		return struct_init(body, scope, info, node);
+	IrRef type;
+	if (node->type != NULL) {
+		type = node->type->kind == AST_ARRAY_TYPE
 			? array_type(body, scope, AST_CAST(AstArrayType, node->type, AST_ARRAY_TYPE), true, node->elements.count)
 			: type_expr(body, scope, node->type);
-	} else if (info.kind == RESULT_TYPE) {
+	} else if (info.kind == RESULT_TYPE || info.kind == RESULT_COERCED_TYPE || info.kind == RESULT_INIT_TYPE) {
 		type = info.ref;
 	} else if (info.kind == RESULT_PTR_ELEM) {
 		type = emit_un(body, IR_ELEM_TYPE, node->base.offset, info.ref);
@@ -2049,8 +2170,9 @@ array_init(GenBody *body, Scope *scope, ResultInfo info, AstInitList *node)
 		return emit_un(body, IR_LOAD, node->base.offset, destination);
 	}
 	IrRef *items = ARENA_ARRAY(body->gen->arena, IrRef, count);
+	ResultInfo element_info = node->type == NULL && info.kind == RESULT_INIT_TYPE ? result_init_type(child) : result_type(child);
 	for (uint32_t i = 0; i < count; i++)
-		items[i] = expr(body, scope, result_type(child), node->elements.items[i]);
+		items[i] = expr(body, scope, element_info, node->elements.items[i]);
 	uint32_t payload = reserve_extra(body->gen, count + 2);
 	body->gen->ir->extra[payload] = type;
 	body->gen->ir->extra[payload + 1] = count;
@@ -2198,7 +2320,7 @@ local_var_decl(GenBody *body, Scope *scope, AstVarDecl *decl)
 	IrRef alignment = IR_REF_NONE;
 	if (decl->align != NULL)
 		alignment = emit_payload(body, IR_ALIGN, decl->align->offset, alignment_body(gen, scope, decl->align));
-	ResultInfo info = type == IR_REF_NONE ? result_none : result_type(type);
+	ResultInfo info = type == IR_REF_NONE ? result_none : result_init_type(type);
 	IrRef init = decl->is_comptime ? comptime_expr(body, scope, info, decl->init)
 		: expr(body, scope, info, decl->init);
 
@@ -3019,6 +3141,7 @@ dump_inst(const IrDumper *dumper, IrInstIndex index, uint32_t depth)
 		break;
 	}
 	case IR_FIELD_NAMED_PTR:
+	case IR_FIELD_NAMED_READ_REF:
 	case IR_FIELD_NAMED_VAL: {
 		IrNamedField payload;
 		IR_READ(ir, inst->data.payload, &payload);
@@ -3054,6 +3177,24 @@ dump_inst(const IrDumper *dumper, IrInstIndex index, uint32_t depth)
 		IR_READ(ir, inst->data.payload, &payload);
 		fputc(' ', out);
 		dump_ref(dumper, payload.message);
+		break;
+	}
+	case IR_STRUCT_INIT: {
+		IrStructInit header;
+		IR_READ(ir, inst->data.payload, &header);
+		fputc(' ', out);
+		dump_ref(dumper, header.type);
+		if (header.flags & IR_STRUCT_INIT_TYPED)
+			fputs(" typed", out);
+		uint32_t cursor = inst->data.payload + IR_WORDS(IrStructInit);
+		for (uint32_t i = 0; i < header.field_count; i++) {
+			IrStructInitField field;
+			IR_READ(ir, cursor, &field);
+			cursor += IR_WORDS(IrStructInitField);
+			fputc(' ', out);
+			dump_string(dumper, field.name);
+			dump_labeled_body(dumper, "value", field.body, depth);
+		}
 		break;
 	}
 	case IR_ARRAY_INIT: {

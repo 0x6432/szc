@@ -152,6 +152,9 @@ typedef enum IrDataKind {
 	X(ARRAY_TYPE_SENTINEL, "array_type_sentinel", IR_DATA_PAYLOAD) /* IrArrayType */ \
 	X(ARRAY_ELEM_TYPE, "array_elem_type", IR_DATA_UN)	/* array type -> child type */ \
 	X(ARRAY_INIT, "array_init", IR_DATA_PAYLOAD)	/* type ref, count, element refs */ \
+	X(STRUCT_INIT, "struct_init", IR_DATA_PAYLOAD) /* IrStructInit; zero fields also permits arrays */ \
+	X(STRUCT_FIELD_TYPE, "struct_field_type", IR_DATA_NAME) /* initializer field name, container type */ \
+	X(INIT_EMPTY_PTR, "init_empty_ptr", IR_DATA_UN) /* empty anonymous array destination; structs NYI */ \
 	X(ARRAY_BASE_PTR, "array_base_ptr", IR_DATA_UN)	/* normalize array slot or pointer slot */ \
 	X(ARRAY_INDEX_PTR, "array_index_ptr", IR_DATA_BIN)	/* checked element address */ \
 	X(ARRAY_INDEX_BASE, "array_index_base", IR_DATA_BIN)	/* borrow nested array storage for indexing */ \
@@ -162,8 +165,10 @@ typedef enum IrDataKind {
 	X(SLICE, "slice", IR_DATA_PAYLOAD)	/* IrSlice: borrowed view with optional end */ \
 	X(ARRAY_CAT, "array_cat", IR_DATA_BIN)	/* concatenate indexable constants */ \
 	X(FIELD_NAMED_PTR, "field_named_ptr", IR_DATA_PAYLOAD) /* IrNamedField: address */ \
+	X(FIELD_NAMED_READ_REF, "field_named_read_ref", IR_DATA_PAYLOAD) /* IrNamedField: logical read reference or borrowed address */ \
 	X(FIELD_NAMED_VAL, "field_named_val", IR_DATA_PAYLOAD) /* IrNamedField: load */ \
 	X(FIELD_PTR, "field_ptr", IR_DATA_NAME)	/* named field address, borrowing the base */ \
+	X(FIELD_READ_REF, "field_read_ref", IR_DATA_NAME) /* named logical read reference or borrowed address */ \
 	X(FIELD_REF, "field_ref", IR_DATA_NAME)	/* type-only array .len through an expression address */ \
 	X(FIELD_VAL, "field_val", IR_DATA_NAME)	/* field name, base operand (array .len initially) */ \
 	X(PTR_TYPE, "ptr_type", IR_DATA_PAYLOAD)	/* IrPointerType */ \
@@ -470,6 +475,26 @@ typedef struct IrTypeOf {
 	uint32_t arg_count;
 	/* arg_count IrRefs follow. */
 } IrTypeOf;
+
+typedef enum IrStructInitFlags {
+	IR_STRUCT_INIT_TYPED = 0x1,
+} IrStructInitFlags;
+
+/* STRUCT_INIT: header, then field_count IrStructInitField records.
+ * A zero-field initializer is ambiguous syntax: sema dispatches arrays too.
+ * TYPED initializers evaluate field types and expressions in source order,
+ * then coerce fields at the end; virtual destinations coerce each field inline. */
+typedef struct IrStructInit {
+	IrRef type;
+	uint32_t field_count;
+	uint32_t flags;
+} IrStructInit;
+
+typedef struct IrStructInitField {
+	StringId name;
+	uint32_t src;
+	IrBody body;	/* contextual field type, value, then IR_BODY_RESULT */
+} IrStructInitField;
 
 typedef struct IrHasMember {
 	IrRef container;

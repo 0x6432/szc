@@ -1,0 +1,3 @@
+tests/tir/errors/struct_init_missing.zig:3:16: error: missing struct field: first
+    const s = S{ .a = 7 };
+               ^

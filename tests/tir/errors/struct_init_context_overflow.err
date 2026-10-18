@@ -1,0 +1,3 @@
+tests/tir/errors/struct_init_context_overflow.zig:3:26: error: type 'u8' cannot represent integer value '256'
+    const s: S = .{ .a = 256, .unknown = 1 };
+                         ^

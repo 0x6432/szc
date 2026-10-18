@@ -1,0 +1,30 @@
+constant szc.g.1: u8 = 7
+fn szc.main.1: fn () u8 {
+  %0: u8 = const 3
+  %1: *const u8 = const szc.g.1
+  %2: *const []const u8 = const ref(object.4)
+  %3: u8 = call szc.sum.2(%0, %1, %2)
+  %4: u8 = const 108
+  %5: u8 = sub %3, %4
+  %6: noreturn = ret %5
+}
+fn szc.sum.2: fn (u8, *const u8, []const u8) u8 {
+  %0: u8 = arg 0
+  %1: *const u8 = arg 1
+  %2: *align(1) const []const u8 = arg 2
+  %3: *const []const u8 = alloc
+  %4: void = array_copy %3, %2
+  %5: u8 = load %1
+  %6: u8 = add %0, %5
+  %7: *const usize = slice_len_ptr %3
+  %8: usize = load %7
+  %9: *const [*]const u8 = ptr_cast %3
+  %10: [*]const u8 = load %9
+  %11: usize = const 1
+  %12: void = index_check %11, %8
+  %13: usize = const 1
+  %14: *const u8 = ptr_elem_ptr %10, %13
+  %15: u8 = load %14
+  %16: u8 = add %6, %15
+  %17: noreturn = ret %16
+}

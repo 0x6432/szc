@@ -1,0 +1,214 @@
+%154 = struct_decl (flags=0) {
+  decl const "S" value {
+    %2 = struct_decl (flags=0) {
+      field "a" type {
+        %0 = break_inline result, @type_u8
+      }
+      field "b" type {
+        %1 = break_inline result, @type_u8
+      }
+    }
+    %3 = break_inline result, %2
+  }
+  decl const "Outer" value {
+    %7 = struct_decl (flags=0) {
+      field "inner" type {
+        %4 = decl_val "S"
+        %5 = as @type_type, %4
+        %6 = break_inline result, %5
+      }
+    }
+    %8 = break_inline result, %7
+  }
+  decl const "global_value" type {
+    %9 = decl_val "S"
+    %10 = as @type_type, %9
+    %11 = break_inline result, %10
+  } value {
+    %12 = decl_type
+    %19 = struct_init %12 typed "b" value {
+      %13 = struct_field_type "b", %12
+      %14 = int 2
+      %15 = break_inline result, %14
+    } "a" value {
+      %16 = struct_field_type "a", %12
+      %17 = int 1
+      %18 = break_inline result, %17
+    }
+    %20 = as %12, %19
+    %21 = break_inline result, %20
+  }
+  decl fn "returned" value {
+    %37 = func "returned" {
+      ret type {
+        %22 = decl_val "S"
+        %23 = as @type_type, %22
+        %24 = break_inline result, %23
+      }
+      body insts {
+        %25 = ret_type
+        %34 = struct_init %25 "b" value {
+          %26 = struct_field_type "b", %25
+          %27 = int 4
+          %28 = as %26, %27
+          %29 = break_inline result, %28
+        } "a" value {
+          %30 = struct_field_type "a", %25
+          %31 = int 3
+          %32 = as %30, %31
+          %33 = break_inline result, %32
+        }
+        %35 = as_return %25, %34
+        %36 = ret %35
+      }
+    }
+    %38 = break_inline result, %37
+  }
+  decl fn "returned_typed" value {
+    %54 = func "returned_typed" {
+      ret type {
+        %39 = decl_val "S"
+        %40 = as @type_type, %39
+        %41 = break_inline result, %40
+      }
+      body insts {
+        %42 = ret_type
+        %43 = decl_val "S"
+        %44 = as @type_type, %43
+        %51 = struct_init %44 typed "b" value {
+          %45 = struct_field_type "b", %44
+          %46 = int 6
+          %47 = break_inline result, %46
+        } "a" value {
+          %48 = struct_field_type "a", %44
+          %49 = int 5
+          %50 = break_inline result, %49
+        }
+        %52 = as_return %42, %51
+        %53 = ret %52
+      }
+    }
+    %55 = break_inline result, %54
+  }
+  decl fn "main" pub value {
+    %152 = func "main" {
+      ret type {
+        %56 = break_inline result, @type_void
+      }
+      body insts {
+        %57 = decl_val "S"
+        %58 = as @type_type, %57
+        %67 = struct_init %58 "b" value {
+          %59 = struct_field_type "b", %58
+          %60 = int 8
+          %61 = as %59, %60
+          %62 = break_inline result, %61
+        } "a" value {
+          %63 = struct_field_type "a", %58
+          %64 = int 7
+          %65 = as %63, %64
+          %66 = break_inline result, %65
+        }
+        %68 = as %58, %67
+        %69 = decl_val "S"
+        %70 = as @type_type, %69
+        %77 = struct_init %70 typed "b" value {
+          %71 = struct_field_type "b", %70
+          %72 = int 10
+          %73 = break_inline result, %72
+        } "a" value {
+          %74 = struct_field_type "a", %70
+          %75 = int 9
+          %76 = break_inline result, %75
+        }
+        %78 = decl_val "S"
+        %79 = as @type_type, %78
+        %86 = struct_init %79 typed "b" value {
+          %80 = struct_field_type "b", %79
+          %81 = int 12
+          %82 = break_inline result, %81
+        } "a" value {
+          %83 = struct_field_type "a", %79
+          %84 = int 11
+          %85 = break_inline result, %84
+        }
+        %87 = as %79, %86
+        %88 = decl_val "Outer"
+        %89 = as @type_type, %88
+        %102 = struct_init %89 "inner" value {
+          %90 = struct_field_type "inner", %89
+          %99 = struct_init %90 "b" value {
+            %91 = struct_field_type "b", %90
+            %92 = int 14
+            %93 = as %91, %92
+            %94 = break_inline result, %93
+          } "a" value {
+            %95 = struct_field_type "a", %90
+            %96 = int 13
+            %97 = as %95, %96
+            %98 = break_inline result, %97
+          }
+          %100 = as %90, %99
+          %101 = break_inline result, %100
+        }
+        %103 = as %89, %102
+        %104 = decl_val "Outer"
+        %105 = as @type_type, %104
+        %115 = struct_init %105 typed "inner" value {
+          %106 = struct_field_type "inner", %105
+          %113 = struct_init %106 typed "b" value {
+            %107 = struct_field_type "b", %106
+            %108 = int 16
+            %109 = break_inline result, %108
+          } "a" value {
+            %110 = struct_field_type "a", %106
+            %111 = int 15
+            %112 = break_inline result, %111
+          }
+          %114 = break_inline result, %113
+        }
+        %116 = as %105, %115
+        %117 = int 1
+        %118 = as @type_usize, %117
+        %119 = decl_val "S"
+        %120 = as @type_type, %119
+        %121 = array_type %118, %120
+        %122 = as @type_type, %121
+        %123 = array_elem_type %122
+        %132 = struct_init %123 "b" value {
+          %124 = struct_field_type "b", %123
+          %125 = int 18
+          %126 = as %124, %125
+          %127 = break_inline result, %126
+        } "a" value {
+          %128 = struct_field_type "a", %123
+          %129 = int 17
+          %130 = as %128, %129
+          %131 = break_inline result, %130
+        }
+        %133 = as %123, %132
+        %134 = array_init %122, %133
+        %135 = as %122, %134
+        %136 = int 1
+        %137 = as @type_usize, %136
+        %138 = decl_val "S"
+        %139 = as @type_type, %138
+        %140 = array_type %137, %139
+        %141 = array_elem_type %140
+        %148 = struct_init %141 typed "b" value {
+          %142 = struct_field_type "b", %141
+          %143 = int 20
+          %144 = break_inline result, %143
+        } "a" value {
+          %145 = struct_field_type "a", %141
+          %146 = int 19
+          %147 = break_inline result, %146
+        }
+        %149 = as %141, %148
+        %150 = array_init %140, %149
+        %151 = ret_implicit
+      }
+    }
+    %153 = break_inline result, %152
+  }
+}

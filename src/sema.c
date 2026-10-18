@@ -93,6 +93,13 @@ typedef struct Global {
 	SemaDecl *decl;
 } Global;
 
+typedef enum RuntimeStorageState {
+	RUNTIME_STORAGE_UNKNOWN,
+	RUNTIME_STORAGE_PENDING,
+	RUNTIME_STORAGE_ALLOWED,
+	RUNTIME_STORAGE_FORBIDDEN,
+} RuntimeStorageState;
+
 struct Sema {
 	Arena      *arena;
 	Diag       *diag;
@@ -109,6 +116,10 @@ struct Sema {
 	ValueTable values;
 	bool *queued_values;	/* immutable value DAG reachability, visited once */
 	uint32_t queued_value_capacity;
+	RuntimeStorageState *runtime_storage_states;
+	ValueId *runtime_storage_queue;
+	uint32_t runtime_storage_capacity;
+	uint32_t runtime_storage_work;
 	uint32_t array_elements;	/* work/storage charged by dense constant construction */
 	uint32_t layout_depth;
 	uint32_t bit_cast_words;	/* bounded packed constant work/storage */
@@ -981,6 +992,12 @@ queue_value_functions(Block *block, ValueId id, uint32_t src)
 			queue_value_functions(block, array.items[i], src);
 		return;
 	}
+	if (value->kind == VALUE_STRUCT) {
+		StructValue structure = value->as.structure;
+		for (uint32_t i = 0; i < structure.count; i++)
+			queue_value_functions(block, structure.fields[i], src);
+		return;
+	}
 	if (value->kind != VALUE_FUNCTION)
 		return;
 	if (sema->funcs[value->as.function]->is_generic) {
@@ -1007,6 +1024,111 @@ queue_function_address(Block *block, Operand operand)
 		func_queue(sema, value->as.function);
 }
 
+/* A thin pointer to a struct is supported; physical storage of a compiler-owned
+ * struct is not. Inspect immutable provenance, including relocations hidden in
+ * descriptor/array backing. Cached states and an iterative queue bound graph
+ * work without recursive host-stack growth or per-emission arena scratch. */
+static bool
+runtime_constant_allowed(Block *block, ValueId root, uint32_t src)
+{
+	Sema *sema = block->sema;
+	uint32_t capacity = sema->values.capacity;
+	if (capacity > sema->runtime_storage_capacity) {
+		uint32_t old = sema->runtime_storage_capacity;
+		sema->runtime_storage_states = arena_grow_array(sema->arena, sema->runtime_storage_states,
+			old, capacity, sizeof(RuntimeStorageState), alignof(RuntimeStorageState));
+		memset(sema->runtime_storage_states + old, 0, (capacity - old) * sizeof(RuntimeStorageState));
+		sema->runtime_storage_queue = arena_grow_array(sema->arena, sema->runtime_storage_queue,
+			0, capacity, sizeof(ValueId), alignof(ValueId));
+		sema->runtime_storage_capacity = capacity;
+	}
+	RuntimeStorageState *states = sema->runtime_storage_states;
+	if (states[root] == RUNTIME_STORAGE_ALLOWED)
+		return true;
+	uint32_t count = 1;
+	sema->runtime_storage_queue[0] = root;
+	bool allowed = states[root] != RUNTIME_STORAGE_FORBIDDEN;
+	bool exhausted = false;
+	states[root] = RUNTIME_STORAGE_PENDING;
+	for (uint32_t cursor = 0; cursor < count && allowed; cursor++) {
+		if (sema->runtime_storage_work >= 1048576) {
+			exhausted = true;
+			allowed = false;
+			break;
+		}
+		sema->runtime_storage_work++;
+		ValueId id = sema->runtime_storage_queue[cursor];
+		const Value *value = value_get(&sema->values, id);
+		ValueId one[2];
+		const ValueId *children = one;
+		uint32_t child_count = 0;
+		switch (value->kind) {
+		case VALUE_STRUCT:
+			allowed = false;
+			break;
+		case VALUE_REF: {
+			one[0] = sema->values.objects[value->as.object].value;
+			TypeId type = value_get(&sema->values, one[0])->type;
+			while (sema->types[type].kind == TYPE_ARRAY)
+				type = sema->types[type].as.array.child;
+			if (sema->types[type].kind == TYPE_STRUCT)
+				allowed = false;
+			child_count = 1;
+			break;
+		}
+		case VALUE_ELEMENT_PTR:
+			one[0] = value->as.element.base;
+			child_count = 1;
+			break;
+		case VALUE_SLICE_FIELD_PTR:
+			one[0] = value->as.field.base;
+			child_count = 1;
+			break;
+		case VALUE_PTR_CAST:
+		case VALUE_REINTERPRET_PTR:
+			one[0] = value->as.pointer;
+			child_count = 1;
+			break;
+		case VALUE_SLICE:
+			one[0] = value->as.slice.pointer;
+			one[1] = value->as.slice.length;
+			child_count = 2;
+			break;
+		case VALUE_ARRAY:
+			children = value->as.array.items;
+			child_count = value->as.array.count;
+			break;
+		default:
+			break;
+		}
+		for (uint32_t i = 0; i < child_count && allowed; i++) {
+			if (sema->runtime_storage_work >= 1048576) {
+				exhausted = true;
+				allowed = false;
+				break;
+			}
+			sema->runtime_storage_work++;
+			ValueId child = children[i];
+			if (states[child] == RUNTIME_STORAGE_FORBIDDEN)
+				allowed = false;
+			else if (states[child] == RUNTIME_STORAGE_UNKNOWN) {
+				states[child] = RUNTIME_STORAGE_PENDING;
+				sema->runtime_storage_queue[count++] = child;
+			}
+		}
+	}
+	for (uint32_t i = 0; i < count; i++)
+		states[sema->runtime_storage_queue[i]] = allowed ? RUNTIME_STORAGE_ALLOWED : RUNTIME_STORAGE_UNKNOWN;
+	if (!allowed) {
+		if (!exhausted)
+			states[root] = RUNTIME_STORAGE_FORBIDDEN;
+		sema_error(block, src, exhausted
+			? "not supported by szc yet: constant runtime-backing work budget exceeded (1048576)"
+			: "not supported by szc yet: runtime storage of immutable struct backing");
+	}
+	return allowed;
+}
+
 /* Turns an operand into a typed-IR instruction (materializing constants). */
 static TirRef
 materialize(Block *block, Operand operand, uint32_t src)
@@ -1022,6 +1144,8 @@ materialize(Block *block, Operand operand, uint32_t src)
 	}
 	if (operand.kind == OPERAND_RUNTIME)
 		return operand.inst;
+	if (!runtime_constant_allowed(block, operand.value, src))
+		return TIR_REF_NONE;
 	queue_value_functions(block, operand.value, src);
 	TirRef ref = emit_tir(block, TIR_CONST, operand.type, src);
 	block->tir->insts[ref].data.value = operand.value;
@@ -1292,6 +1416,8 @@ constant_decl_address(Block *user, SemaNamespace *ns, SemaDecl *decl)
 		create_global(sema, ns, decl, decl->declared_type, decl->alignment);
 	SemaGlobal *global = &sema->globals[decl->global]->result;
 	if (decl->state == DECL_RESOLVED) {
+		if (!runtime_constant_allowed(user, decl->value.value, decl->ir.src))
+			return operand_none;
 		global->initializer = decl->value.value;
 		queue_value_functions(user, decl->value.value, decl->ir.src);
 	}
@@ -1395,6 +1521,10 @@ resolve_decl(Block *user, uint32_t src, SemaNamespace *ns, SemaDecl *decl, bool 
 	if (result.end != BODY_BREAK_RESULT || result.result.kind != OPERAND_COMPTIME) {
 		if (result.result.kind == OPERAND_RUNTIME)
 			sema_error(&block, decl->ir.src, "unable to resolve comptime value");
+		decl->state = DECL_FAILED;
+		return operand_none;
+	}
+	if ((mutable || decl->global != 0) && !runtime_constant_allowed(&block, result.result.value, decl->ir.src)) {
 		decl->state = DECL_FAILED;
 		return operand_none;
 	}
@@ -4855,6 +4985,7 @@ pointer_operand(Block *block, Operand operand, uint32_t src)
 static bool type_has_one_value(const Sema *sema, TypeId type);
 static Operand one_value_operand(Block *block, TypeId type, uint32_t src);
 static Operand constant_array_element(Block *block, Operand base, TypeArray array, uint64_t index, uint32_t src);
+static Operand runtime_array_element(Block *block, Operand base, Operand index, TypeArray array, uint32_t src, bool address_only);
 static Operand load_offset_pointer(Block *block, Operand pointer, uint32_t src);
 static TypeId indexable_array_type(Sema *sema, TypeId type);
 static TypeId array_type_id(Sema *sema, TypeId child, uint64_t length, ValueId sentinel);
@@ -4868,6 +4999,13 @@ load_pointer(Block *block, Operand pointer, uint32_t src)
 		return operand_none;
 	TypePointer pointer_type = sema->types[pointer.type].as.pointer;
 	TypeId child = pointer_type.child;
+	TypeId leaf = child;
+	while (sema->types[leaf].kind == TYPE_ARRAY)
+		leaf = sema->types[leaf].as.array.child;
+	if (pointer_type.is_volatile && sema->types[leaf].kind == TYPE_STRUCT) {
+		sema_error(block, src, "not supported by szc yet: volatile struct loads");
+		return operand_none;
+	}
 	if (child == T_VOID)
 		return void_operand(sema);
 	if (is_int(sema, child) && sema->types[child].as.integer.bits == 0)
@@ -5341,6 +5479,14 @@ analyze_field_pointer(Block *block, Operand base, StringId name, uint32_t src)
 	if (!pointer_type_operand(block, base, src))
 		return operand_none;
 	TypeId child = sema->types[base.type].as.pointer.child;
+	TypeId object_type = child;
+	if (sema->types[object_type].kind == TYPE_POINTER
+		&& sema->types[object_type].as.pointer.size == POINTER_ONE)
+		object_type = sema->types[object_type].as.pointer.child;
+	if (sema->types[object_type].kind == TYPE_STRUCT) {
+		sema_error(block, src, "not supported by szc yet: struct field addresses");
+		return operand_none;
+	}
 	bool length = builtin_field_name(sema, name, "len");
 	TypeId array = indexable_array_type(sema, child);
 	if (array != 0 && length) {
@@ -5873,6 +6019,188 @@ analyze_array_init(Block *block, const IrInst *inst)
 	return result;
 }
 
+/* Shared destination checks and sentinel finalization keep ambiguous empty
+ * initialization identical to the established nonempty array result-location path. */
+static Operand
+array_init_destination(Block *block, Operand pointer, uint64_t length, uint32_t src)
+{
+	Sema *sema = block->sema;
+	if (!pointer_type_operand(block, pointer, src))
+		return operand_none;
+	TypePointer shape = sema->types[pointer.type].as.pointer;
+	if (sema->types[shape.child].kind != TYPE_ARRAY) {
+		if (sema->types[shape.child].kind == TYPE_STRUCT)
+			sema_error(block, src, "not supported by szc yet: in-place struct initialization");
+		else
+			sema_error(block, src, "expected array type, found '%s'", sema_type_name(sema, shape.child));
+		return operand_none;
+	}
+	TypeArray array = sema->types[shape.child].as.array;
+	if (length != array.length)
+		sema_error(block, src, "expected %" PRIu64 " array elements; found %" PRIu64, array.length, length);
+	else if (shape.is_const)
+		sema_error(block, src, "cannot assign to constant");
+	else if (shape.is_volatile)
+		sema_error(block, src, "not supported by szc yet: volatile in-place array initialization");
+	else
+		return pointer;
+	return operand_none;
+}
+
+static Operand
+finish_array_init(Block *block, Operand pointer, uint32_t src)
+{
+	Sema *sema = block->sema;
+	if (!pointer_type_operand(block, pointer, src))
+		return operand_none;
+	TypeArray array = sema->types[sema->types[pointer.type].as.pointer.child].as.array;
+	if (array.sentinel != VALUE_NONE) {
+		Operand item_index = comptime_operand(T_USIZE, value_int_u64(&sema->values, T_USIZE, array.length));
+		Operand address = runtime_array_element(block, pointer, item_index, array, src, true);
+		if (address.kind == OPERAND_NONE)
+			return operand_none;
+		Operand value = comptime_operand(array.child, array.sentinel);
+		emit_tir_bin(block, TIR_STORE, T_VOID, src, materialize(block, address, src), materialize(block, value, src));
+	}
+	return void_operand(sema);
+}
+
+/* Named initializer bodies preserve source-order type/expression evaluation.
+ * Typed-result paths defer only final field coercions until all bodies succeed;
+ * virtual result locations coerce each body before proceeding to the next field. */
+static SemaField *
+require_struct_field(Block *block, SemaNamespace *ns, StringId name, uint32_t src)
+{
+	SemaField *field = struct_find_field(ns, name);
+	if (field == NULL) {
+		const char *suffix = arena_sprintf(block->sema->arena, "' in struct '%s'", namespace_name(block->sema, ns));
+		sema_name_error(block, src, "no field named '", name, suffix);
+	}
+	return field;
+}
+
+static Operand
+analyze_struct_init(Block *block, const IrInst *inst, bool *noreturn)
+{
+	Sema *sema = block->sema;
+	IrStructInit header;
+	IR_READ(block->ir, inst->data.payload, &header);
+	TypeId type;
+	if (!operand_to_type(block, resolve_ref(block, header.type), inst->src, &type)
+		|| !ensure_type_layout(block, type, inst->src))
+		return operand_none;
+	if (header.field_count == 0 && sema->types[type].kind == TYPE_ARRAY)
+		return analyze_array_init(block, inst);
+	if (sema->types[type].kind != TYPE_STRUCT) {
+		sema_error(block, inst->src, "type '%s' does not support struct initialization syntax", sema_type_name(sema, type));
+		return operand_none;
+	}
+	SemaNamespace *ns = sema->types[type].as.structure;
+	const IrStructInitField *fields = (const IrStructInitField *)(block->ir->extra
+		+ inst->data.payload + IR_WORDS(IrStructInit));
+	if (!reserve_array_elements(block, ns->field_count, inst->src))
+		return operand_none;
+	ValueId *values = ARENA_ARRAY(sema->arena, ValueId, ns->field_count);
+	Operand *pending = ARENA_ARRAY(sema->arena, Operand, header.field_count);
+	bool *seen = arena_zalloc(sema->arena, ns->field_count * sizeof(bool), alignof(bool));
+	for (uint32_t i = 0; i < header.field_count; i++) {
+		SemaField *field = require_struct_field(block, ns, fields[i].name, fields[i].src);
+		if (field == NULL)
+			return operand_none;
+		BodyResult body = analyze_body(block, fields[i].body);
+		if (body.end == BODY_NORETURN)
+			*noreturn = true;
+		if (body.end != BODY_BREAK_RESULT || body.result.kind == OPERAND_NONE)
+			return operand_none;
+		pending[i] = body.result;
+		if ((header.flags & IR_STRUCT_INIT_TYPED) != 0)
+			continue;
+		Operand value = coerce(block, body.result, field->type, fields[i].src);
+		if (value.kind == OPERAND_NONE)
+			return operand_none;
+		if (value.kind != OPERAND_COMPTIME) {
+			sema_error(block, fields[i].src, "not supported by szc yet: runtime struct initialization");
+			return operand_none;
+		}
+		uint32_t index = (uint32_t)(field - ns->fields);
+		values[index] = value.value;
+		seen[index] = true;
+	}
+	if ((header.flags & IR_STRUCT_INIT_TYPED) != 0) {
+		for (uint32_t i = 0; i < header.field_count; i++) {
+			SemaField *field = struct_find_field(ns, fields[i].name);
+			Operand value = coerce(block, pending[i], field->type, fields[i].src);
+			if (value.kind == OPERAND_NONE)
+				return operand_none;
+			if (value.kind != OPERAND_COMPTIME) {
+				sema_error(block, fields[i].src, "not supported by szc yet: runtime struct initialization");
+				return operand_none;
+			}
+			uint32_t index = (uint32_t)(field - ns->fields);
+			values[index] = value.value;
+			seen[index] = true;
+		}
+	}
+	for (uint32_t i = 0; i < ns->field_count; i++) {
+		if (!seen[i]) {
+			sema_name_error(block, inst->src, "missing struct field: ", ns->fields[i].ir.name, "");
+			return operand_none;
+		}
+	}
+	return comptime_operand(type, value_struct(&sema->values, type, values, ns->field_count));
+}
+
+/* Instance reads are logical projections, not field addresses or runtime loads.
+ * Expression addresses used by @field and borrowed .len are unwrapped first. */
+static bool
+struct_value_field(Block *block, Operand base, StringId name, uint32_t src,
+	bool expression_address, Operand *out)
+{
+	Sema *sema = block->sema;
+	TypeId type = base.type;
+	if (expression_address) {
+		if (sema->types[type].kind != TYPE_POINTER)
+			return false;
+		type = sema->types[type].as.pointer.child;
+	}
+	bool indirect = sema->types[type].kind == TYPE_POINTER
+		&& sema->types[type].as.pointer.size == POINTER_ONE
+		&& sema->types[sema->types[type].as.pointer.child].kind == TYPE_STRUCT;
+	if (!indirect && sema->types[type].kind != TYPE_STRUCT)
+		return false;
+	*out = operand_none;
+	if (expression_address)
+		base = load_pointer(block, base, src);
+	if (base.kind == OPERAND_NONE)
+		return true;
+	if (indirect) {
+		if (!check_defined(block, base, src))
+			return true;
+		base = load_pointer(block, base, src);
+	}
+	if (base.kind == OPERAND_NONE)
+		return true;
+	if (!ensure_type_layout(block, base.type, src))
+		return true;
+	SemaNamespace *ns = sema->types[base.type].as.structure;
+	SemaField *field = require_struct_field(block, ns, name, src);
+	if (field == NULL)
+		return true;
+	if (base.kind != OPERAND_COMPTIME) {
+		sema_error(block, src, "not supported by szc yet: runtime struct field access");
+		return true;
+	}
+	const Value *value = operand_value(block, base);
+	ValueId selected = value->kind == VALUE_UNDEFINED
+		? value_undefined(&sema->values, field->type)
+		: value->as.structure.fields[(uint32_t)(field - ns->fields)];
+	Operand result = comptime_operand(field->type, selected);
+	if (operand_is_undefined(block, result) && type_has_one_value(sema, field->type))
+		result = one_value_operand(block, field->type, src);
+	*out = result;
+	return true;
+}
+
 /* Indexing constant backing never materializes an aggregate in the scalar backend. */
 static Operand
 constant_array_element(Block *block, Operand base, TypeArray array, uint64_t index, uint32_t src)
@@ -5883,6 +6211,13 @@ constant_array_element(Block *block, Operand base, TypeArray array, uint64_t ind
 		return operand_none;
 	}
 	if (sema->types[base.type].kind == TYPE_POINTER) {
+		TypeId leaf = array.child;
+		while (sema->types[leaf].kind == TYPE_ARRAY)
+			leaf = sema->types[leaf].as.array.child;
+		if (sema->types[base.type].as.pointer.is_volatile && sema->types[leaf].kind == TYPE_STRUCT) {
+			sema_error(block, src, "not supported by szc yet: volatile struct loads");
+			return operand_none;
+		}
 		if (!check_defined(block, base, src))
 			return operand_none;
 		PointerAddress address = value_pointer_address(&sema->values, base.value);
@@ -6733,7 +7068,9 @@ analyze_inst(Block *block, IrInstIndex index, Operand *break_value)
 		TypeId type;
 		if (!operand_to_type(block, resolve_ref(block, inst->data.un.operand), src, &type))
 			break;
-		if (sema->types[type].kind != TYPE_ARRAY)
+		if (sema->types[type].kind == TYPE_STRUCT)
+			sema_error(block, src, "not supported by szc yet: positional struct initialization");
+		else if (sema->types[type].kind != TYPE_ARRAY)
 			sema_error(block, src, "type '%s' does not support array initialization syntax", sema_type_name(sema, type));
 		else
 			result = type_operand(sema, sema->types[type].as.array.child);
@@ -6742,6 +7079,33 @@ analyze_inst(Block *block, IrInstIndex index, Operand *break_value)
 	case IR_ARRAY_INIT:
 		result = analyze_array_init(block, inst);
 		break;
+	case IR_STRUCT_INIT: {
+		bool noreturn = false;
+		result = analyze_struct_init(block, inst, &noreturn);
+		if (noreturn)
+			return INST_NORETURN;
+		break;
+	}
+	case IR_STRUCT_FIELD_TYPE: {
+		TypeId type;
+		if (!operand_to_type(block, resolve_ref(block, inst->data.name.operand), src, &type)
+			|| !ensure_type_layout(block, type, src))
+			break;
+		if (sema->types[type].kind != TYPE_STRUCT) {
+			sema_error(block, src, "expected struct type, found '%s'", sema_type_name(sema, type));
+			break;
+		}
+		SemaField *field = require_struct_field(block, sema->types[type].as.structure, inst->data.name.name, src);
+		if (field != NULL)
+			result = type_operand(sema, field->type);
+		break;
+	}
+	case IR_INIT_EMPTY_PTR: {
+		Operand pointer = array_init_destination(block, resolve_ref(block, inst->data.un.operand), 0, src);
+		if (pointer.kind != OPERAND_NONE && finish_array_init(block, pointer, src).kind != OPERAND_NONE)
+			result = load_pointer(block, pointer, src);
+		break;
+	}
 	case IR_ARRAY_BASE_PTR: {
 		Operand pointer = resolve_ref(block, inst->data.un.operand);
 		if (!pointer_type_operand(block, pointer, src))
@@ -6760,41 +7124,15 @@ analyze_inst(Block *block, IrInstIndex index, Operand *break_value)
 	case IR_ARRAY_INIT_PTR: {
 		Operand pointer = resolve_ref(block, inst->data.bin.lhs);
 		Operand count = resolve_ref(block, inst->data.bin.rhs);
-		if (!pointer_type_operand(block, pointer, src) || count.kind == OPERAND_NONE)
-			break;
-		TypePointer shape = sema->types[pointer.type].as.pointer;
-		if (sema->types[shape.child].kind != TYPE_ARRAY) {
-			sema_error(block, src, "expected array type, found '%s'", sema_type_name(sema, shape.child));
-			break;
+		if (count.kind != OPERAND_NONE) {
+			uint64_t length = bigint_to_u64_bits(&operand_value(block, count)->as.integer);
+			result = array_init_destination(block, pointer, length, src);
 		}
-		TypeArray array = sema->types[shape.child].as.array;
-		uint64_t length = bigint_to_u64_bits(&operand_value(block, count)->as.integer);
-		if (length != array.length)
-			sema_error(block, src, "expected %" PRIu64 " array elements; found %" PRIu64, array.length, length);
-		else if (shape.is_const)
-			sema_error(block, src, "cannot assign to constant");
-		else if (shape.is_volatile)
-			sema_error(block, src, "not supported by szc yet: volatile in-place array initialization");
-		else
-			result = pointer;
 		break;
 	}
-	case IR_ARRAY_INIT_SENTINEL: {
-		Operand pointer = resolve_ref(block, inst->data.un.operand);
-		if (!pointer_type_operand(block, pointer, src))
-			break;
-		TypeArray array = sema->types[sema->types[pointer.type].as.pointer.child].as.array;
-		if (array.sentinel != VALUE_NONE) {
-			Operand item_index = comptime_operand(T_USIZE, value_int_u64(&sema->values, T_USIZE, array.length));
-			Operand address = runtime_array_element(block, pointer, item_index, array, src, true);
-			if (address.kind == OPERAND_NONE)
-				break;
-			Operand value = comptime_operand(array.child, array.sentinel);
-			emit_tir_bin(block, TIR_STORE, T_VOID, src, materialize(block, address, src), materialize(block, value, src));
-		}
-		result = void_operand(sema);
+	case IR_ARRAY_INIT_SENTINEL:
+		result = finish_array_init(block, resolve_ref(block, inst->data.un.operand), src);
 		break;
-	}
 	case IR_SLICE:
 		result = analyze_slice(block, inst);
 		break;
@@ -6811,6 +7149,7 @@ analyze_inst(Block *block, IrInstIndex index, Operand *break_value)
 		result = analyze_array_cat(block, inst);
 		break;
 	case IR_FIELD_NAMED_PTR:
+	case IR_FIELD_NAMED_READ_REF:
 	case IR_FIELD_NAMED_VAL: {
 		IrNamedField payload;
 		IR_READ(block->ir, inst->data.payload, &payload);
@@ -6818,9 +7157,24 @@ analyze_inst(Block *block, IrInstIndex index, Operand *break_value)
 		StringId name;
 		if (base.kind == OPERAND_NONE || !resolve_name_body(block, payload.name_body, payload.name_src, &name))
 			break;
+		if (inst->op != IR_FIELD_NAMED_PTR && struct_value_field(block, base, name, src, true, &result)) {
+			if (inst->op == IR_FIELD_NAMED_READ_REF)
+				result = analyze_ref(block, result, src, 0, 0);
+			break;
+		}
 		Operand address = analyze_field_pointer(block, base, name, src);
-		result = address.kind == OPERAND_NONE || inst->op == IR_FIELD_NAMED_PTR
+		result = address.kind == OPERAND_NONE || inst->op != IR_FIELD_NAMED_VAL
 			? address : load_pointer(block, address, src);
+		break;
+	}
+	case IR_FIELD_READ_REF: {
+		Operand base = resolve_ref(block, inst->data.name.operand);
+		if (base.kind == OPERAND_NONE)
+			break;
+		if (struct_value_field(block, base, inst->data.name.name, src, true, &result))
+			result = analyze_ref(block, result, src, 0, 0);
+		else
+			result = analyze_field_pointer(block, base, inst->data.name.name, src);
 		break;
 	}
 	case IR_FIELD_PTR:
@@ -6832,6 +7186,8 @@ analyze_inst(Block *block, IrInstIndex index, Operand *break_value)
 		if (base.kind == OPERAND_NONE)
 			break;
 		if (namespace_member(block, base, inst->data.name.name, false, src, &result))
+			break;
+		if (struct_value_field(block, base, inst->data.name.name, src, inst->op == IR_FIELD_REF, &result))
 			break;
 		TypeId base_type = base.type;
 		if (inst->op == IR_FIELD_REF) {
@@ -7386,7 +7742,8 @@ analyze_inst(Block *block, IrInstIndex index, Operand *break_value)
 		break;
 	}
 	if (inst->op == IR_REF || inst->op == IR_DECL_REF || inst->op == IR_FIELD_PTR
-		|| inst->op == IR_FIELD_NAMED_PTR || inst->op == IR_AS)
+		|| inst->op == IR_FIELD_NAMED_PTR || inst->op == IR_FIELD_READ_REF
+		|| inst->op == IR_FIELD_NAMED_READ_REF || inst->op == IR_AS)
 		queue_function_address(block, result);
 	inst_map_put(block->map, sema->arena, index, result);
 	return INST_CONTINUE;
@@ -7658,6 +8015,8 @@ value_text(Sema *sema, ValueId id)
 			(unsigned)value->as.field.base, value->as.field.length ? "len" : "ptr", value->as.field.offset);
 	case VALUE_SLICE:
 		return arena_sprintf(sema->arena, "slice(ptr.%u, len.%s)", (unsigned)value->as.slice.pointer, value_text(sema, value->as.slice.length));
+	case VALUE_STRUCT:
+		return arena_sprintf(sema->arena, "struct.%u", (unsigned)id);
 	case VALUE_ARRAY:
 		return arena_sprintf(sema->arena, "array(%u elements)", (unsigned)value->as.array.count);
 	case VALUE_BYTES: {
