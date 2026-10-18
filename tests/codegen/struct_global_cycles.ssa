@@ -1,0 +1,38 @@
+function w $szc.main.1() {
+@start
+	%t9 =l alloc8 16
+	%t1 =l loadl $szc.g.1
+	%t2 =l add %t1, 8
+	storeb 7, %t2
+	%t6 =l loadl $szc.g.2
+	%t7 =l add %t6, 8
+	%t8 =w loadub %t7
+	call $memmove(l %t9, l $szc.g.2, l 16)
+	%t12 =l add %t9, 8
+	%t13 =w loadub %t12
+	%t14 =w add %t8, %t13
+	%t14 =w and %t14, 255
+	%g14_overflow =w cultw %t14, %t8
+	jnz %g14_overflow, @g14_overflow_panic, @g14_overflow_ok
+@g14_overflow_panic
+	call $szc.panic.0()
+	hlt
+@g14_overflow_ok
+	ret %t14
+}
+
+data $szc.g.1 = align 8 { l $szc.g.2, b 1, z 7 }
+data $szc.g.2 = align 8 { l $szc.g.1, b 2, z 7 }
+data $szc.panic.msg.0 = { b "integer overflow\n", b 0 }
+function $szc.panic.0() {
+@start
+	call $write(w 2, l $szc.panic.msg.0, l 17)
+	call $abort()
+	hlt
+}
+
+export function w $main() {
+@start
+	%status =w call $szc.main.1()
+	ret %status
+}

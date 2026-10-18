@@ -62,6 +62,8 @@ CONTROLS = {
     'runtime-join', 'array-storage', 'runtime-struct-load',
     # M6.1h internal direct/indirect value transport; keep exact old sources.
     'direct-argument', 'return', 'indirect-argument',
+    # M6.1i mutable internal struct storage; preserve the old source.
+    'global-storage',
 }
 
 def main():

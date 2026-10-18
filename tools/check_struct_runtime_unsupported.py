@@ -23,6 +23,8 @@ CASES=(
 CONTROLS = {
  'byvalue-parameter', 'byvalue-return',
  'recursive-array-parameter', 'recursive-array-return',
+ # M6.1i mutable internal struct and recursive array storage.
+ 'mutable-global', 'mutable-global-array',
 }
 
 def main():

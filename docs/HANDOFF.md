@@ -24,6 +24,72 @@ Read this first when resuming work (the sandbox resets often).
 
 ## Latest follow-up checkpoint
 
+- M6.1i internal mutable ordinary-struct/recursively struct-array globals is
+  implemented from3251935. Supported source-known initializers use stable typed
+  mutable symbols and the existing exact serializer; no backend opcode, ABI,
+  frontend or driver change is needed. Typed forward/self/mutual SYMBOL ADDRESS
+  references work; value cycles remain errors. Runtime reads are owned snapshots,
+  not initializer constants, including global call/return and alias/defer cases.
+- Publication resolves leaf field layout, validates recursive runtime storage and
+  checks TOTAL enclosing-array size before publishing the symbol. Independent
+  review caught the initially missing extent check; three API tests assert failure
+  publishes no global. Mutable field paths retain declaration index/nominal root,
+  qualifiers/alignment and cumulative offsets. No effectful resolution was added
+  inside cached backing/dependency traversals. Final independent audit found no
+  remaining blocker and matched main/frozen sema bytes.
+- Deliberate boundary: zero-sized runtime globals/addresses work, but comptime reads
+  of zero-sized mutable STRUCT storage report explicit NYI. Pinned Zig accepts some
+  singleton cases; szc does not silently infer OPV from size or reuse the array-only
+  canonical constructor. Scalar/legacy empty-array behavior is unchanged. General
+  struct OPV classification is separate. Dynamic/comptime-call initialization,
+  C/TLS/export/extern, defaults/comptime/tuple/aligned/packed/extern fields, methods
+  and whole volatile aggregate operations remain closed.
+- Added73 semantic/emission cases plus three publication API cases,13 net stage/error
+  goldens, six seeds each irgen/sema and four natives/29 behavioral checks. Exactly
+  six prior NYI sources remain as accepted controls: metadata40+10, values7+38,
+  static10+9, runtime3+6, internal ABI11+1 rejection/control counts. Bit-layout9 and
+  new mutable-global11 NYIs plus two dependency-cycle rejections pass unchanged.
+- External C physical adapter runs alignment8/128 and verifies byte layout/padding,
+  nested/sentinel arrays, slices, callback/field relocations, undefined bytes and
+  zero anchors. C scalar/pointer writes are observed/restored by Zig, then checked
+  externally. Mutable .data/.bss stays outside page-effective RELRO; immutable
+  relocation-bearing control is protected. Explicit PIE/noTEXTREL and outlined
+  LOCAL OBJECT size/alignment checks pass. No C struct ABI assumptions or backend
+  patch. The align128 symbols native deliberately uses existing outlined-data
+  metadata; standalone QBE alignment limits remain tested, not hidden.
+- Actual official Zig comparisons: mutable globals60 cases/15 exact primary errors,
+  runtime89/25, static60/18 and internal ABI62/15 all pass. All four new natives pass
+  Debug and ReleaseFast. Full/generated e2e is szc-only; targeted references are
+  separate and do not establish std/bootstrap coverage.
+- Full frozen independent GCC/Clang C11 Werror ASan/UBSan gates pass:7175 units,
+  1319 goldens,152+4 natives,16 driver,63 compiler-runner,13 compiler-CLI checks,
+  full C/storage/alignment,106 actual volatile sequences and303 safety cases.
+  Each compiler20000 standalone mutations/stage, seeds256/256/147/203. Four fresh
+  60-second libFuzzer runs2179201/84484/92133/87056 pass. Separate GCC-O2 full/native,
+  303 safety and static2/mutable2 physical checks pass. Forced main Werror sanitizer
+  rebuild/test passes too (/data/struct-global-main-forced.log); its first run hit
+  missing sandbox libasan before tests, fixed by restoring libasan/libubsan.
+  6345 candidate paths match
+  main and all three frozen trees before these final HANDOFF/MILESTONES edits.
+  Evidence /data/struct-global-final/{gcc,clang,optimized}, manifest.json,
+  verification.json; /data/struct-global-final-*.log, /data/struct-global-diff-*.log,
+  /data/struct-global-reference.{json,log}, /data/struct-global-releasefast.json.
+- Hosted3251935 run39149467462 was QUEUED at last inspection, NOT confirmed green.
+  Prior4021366 run39144992727 remains72success/2failure: GCC117727129316 recorded
+  real safety timeouts then shutdown; exact original-deadline replay6/6 locally
+  does not establish infrastructure-only cause. Clang117727129270 log404 remains
+  UNCLASSIFIED; completed archive lacks that build-and-test log. No more retrieval,
+  deadline changes, hidden failures or blind hosted reruns.
+- Next dependency M6.1j ordinary field defaults. Plans:
+  /data/struct-defaults-next-plan.md and /data/struct-defaults-contract/PLAN.md.
+  First layout demand QUEUES all ordinary defaults, even overridden ones; omitted
+  fields force synchronous resolution. Preserve both diagnostics when queued and
+  explicit analyses fail, and distinguish discovery from source-sorted rendering.
+  Keep defaults state/captures/budgets separate from layout and OPV classification.
+  Q6 remains mandatory only at M10.2; parent M6.1 remains PARTIAL.
+
+## Previous follow-up checkpoint (M6.1h)
+
 - M6.1h internal ordinary-struct/recursively struct-array by-value ABI is
   implemented from4021366. Fixed Zig-convention parameters/results reuse private
   pointer transport: evaluation-time argument snapshots, byte-aligned incoming

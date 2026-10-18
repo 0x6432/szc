@@ -1,0 +1,132 @@
+%93 = struct_decl (flags=0) {
+  decl const "Inner" value {
+    %2 = struct_decl (flags=0) {
+      field "x" type {
+        %0 = break_inline result, @type_u16
+      }
+      field "tag" type {
+        %1 = break_inline result, @type_u8
+      }
+    }
+    %3 = break_inline result, %2
+  }
+  decl const "State" value {
+    %12 = struct_decl (flags=0) {
+      field "inner" type {
+        %4 = decl_val "Inner"
+        %5 = as @type_type, %4
+        %6 = break_inline result, %5
+      }
+      field "row" type {
+        %7 = int 2
+        %8 = as @type_usize, %7
+        %9 = array_type %8, @type_u8
+        %10 = as @type_type, %9
+        %11 = break_inline result, %10
+      }
+    }
+    %13 = break_inline result, %12
+  }
+  decl var "g" type {
+    %14 = decl_val "State"
+    %15 = as @type_type, %14
+    %16 = break_inline result, %15
+  } value {
+    %17 = decl_type
+    %35 = struct_init %17 typed "inner" value {
+      %18 = struct_field_type "inner", %17
+      %25 = struct_init %18 typed "x" value {
+        %19 = struct_field_type "x", %18
+        %20 = int 513
+        %21 = break_inline result, %20
+      } "tag" value {
+        %22 = struct_field_type "tag", %18
+        %23 = int 3
+        %24 = break_inline result, %23
+      }
+      %26 = break_inline result, %25
+    } "row" value {
+      %27 = struct_field_type "row", %17
+      %28 = array_elem_type %27
+      %29 = int 4
+      %30 = as %28, %29
+      %31 = int 5
+      %32 = as %28, %31
+      %33 = array_init %27, %30, %32
+      %34 = break_inline result, %33
+    }
+    %36 = as %17, %35
+    %37 = break_inline result, %36
+  }
+  decl fn "change" value {
+    %58 = func "change" noinline {
+      %43 = param "p" type {
+        %38 = decl_val "State"
+        %39 = as @type_type, %38
+        %40 = ptr_type %39, @false
+        %41 = as @type_type, %40
+        %42 = break_inline result, %41
+      }
+      ret type {
+        %44 = decl_val "State"
+        %45 = as @type_type, %44
+        %46 = break_inline result, %45
+      }
+      body insts {
+        %48 = ref %43
+        %47 = deref %43
+        %49 = field_ptr "inner", %48
+        %50 = field_ptr "x", %49
+        %51 = int 1027
+        %52 = elem_type %50
+        %53 = as %52, %51
+        %54 = store %50, %53
+        %55 = ret_type
+        %56 = as_return %55, %47
+        %57 = ret %56
+      }
+    }
+    %59 = break_inline result, %58
+  }
+  decl fn "main" pub value {
+    %91 = func "main" {
+      ret type {
+        %60 = break_inline result, @type_u8
+      }
+      body insts {
+        %61 = decl_val "change"
+        %62 = call %61 arg0 {
+          %63 = arg_type %62, 0
+          %64 = decl_ref "g"
+          %65 = as %63, %64
+          %66 = break_inline result, %65
+        }
+        %80 = ref %62
+        %67 = decl_ref "g"
+        %68 = field_ptr "row", %67
+        %69 = array_base_ptr %68
+        %70 = int 1
+        %71 = as @type_usize, %70
+        %72 = array_index_ptr %69, %71
+        %73 = elem_type %72
+        %74 = decl_ref "g"
+        %75 = field_read_ref "inner", %74
+        %76 = field_ref "x", %75
+        %77 = truncate %73, %76
+        %78 = store %72, %77
+        %79 = ret_type
+        %81 = field_read_ref "inner", %80
+        %82 = field_ref "x", %81
+        %83 = decl_val "g"
+        %84 = field_val "row", %83
+        %85 = int 1
+        %86 = as @type_usize, %85
+        %87 = array_index %84, %86
+        %88 = add %82, %87
+        %89 = truncate %79, %88
+        %90 = ret %89
+      }
+    }
+    %92 = break_inline result, %91
+  }
+}

@@ -1375,6 +1375,22 @@ global_type_allowed(Block *block, TypeId type, uint32_t src)
 		sema_error(block, src, "variable of type '%s' must be const or comptime", sema_type_name(sema, type));
 		return false;
 	}
+	/* Stable mutable symbols publish only complete, checked value layouts.
+	 * Pointer-only types stay lazy and legacy array admission stays unchanged. */
+	if (type_has_struct_value(sema, type)) {
+		if (!ensure_type_layout(block, type, src))
+			return false;
+		if (!sema_type_runtime_storage_allowed(sema, type)) {
+			sema_error(block, src, "not supported by szc yet: global struct storage layout");
+			return false;
+		}
+		uint64_t size;
+		if (!sema_type_size(sema, type, &size)) {
+			sema_error(block, src, "not supported by szc yet: array layout size exceeds 64-bit address space");
+			return false;
+		}
+		return true;
+	}
 	TypeKind kind = sema->types[type].kind;
 	if (kind == TYPE_ARRAY) {
 		if (!sema_type_array_storage_allowed(sema, type)) {
@@ -5383,8 +5399,15 @@ load_pointer(Block *block, Operand pointer, uint32_t src)
 		PointerAddress address = value_pointer_address(&sema->values, pointer.value);
 		Global *global = sema->globals[value_get(&sema->values, address.root)->as.global];
 		Operand resolved = resolve_decl(block, src, global->namespace_scope, global->decl, false);
-		if (resolved.kind != OPERAND_NONE)
-			sema_error(block, src, "unable to resolve comptime value");
+		if (resolved.kind != OPERAND_NONE) {
+			/* Canonical singleton struct values remain a separate comptime feature.
+			 * Zero size selects an explicit boundary diagnostic, never a value fold. */
+			uint64_t extent;
+			if (type_has_struct_value(sema, child) && sema_type_size(sema, child, &extent) && extent == 0)
+				sema_error(block, src, "not supported by szc yet: comptime reads of zero-sized mutable struct storage");
+			else
+				sema_error(block, src, "unable to resolve comptime value");
+		}
 		return operand_none;
 	}
 	bool volatile_field = false;
@@ -5893,9 +5916,12 @@ struct_field_address(Block *block, Operand storage, TypeId object, StringId name
 	}
 	PointerAddress address = value_pointer_address(&sema->values, storage.value);
 	const Value *root = value_get(&sema->values, address.root);
-	if (root->kind != VALUE_INT_PTR && (root->kind != VALUE_REF
+	bool mutable_global = root->kind == VALUE_GLOBAL
+		&& !sema->globals[root->as.global]->result.is_const
+		&& sema_type_runtime_storage_allowed(sema, sema->globals[root->as.global]->result.type);
+	if (!mutable_global && root->kind != VALUE_INT_PTR && (root->kind != VALUE_REF
 		|| !sema_type_static_storage_allowed(sema, value_get(&sema->values, sema->values.objects[root->as.object].value)->type))) {
-		sema_error(block, src, "not supported by szc yet: struct field addresses require completed immutable static backing");
+		sema_error(block, src, "not supported by szc yet: struct field addresses require completed static backing");
 		return operand_none;
 	}
 	if (root->kind == VALUE_INT_PTR)

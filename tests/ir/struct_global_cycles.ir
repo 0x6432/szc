@@ -1,0 +1,79 @@
+%53 = struct_decl (flags=0) {
+  decl const "Link" value {
+    %6 = struct_decl (flags=0) {
+      field "next" type {
+        %0 = decl_val "Link"
+        %1 = as @type_type, %0
+        %2 = ptr_type %1, @false
+        %3 = as @type_type, %2
+        %4 = break_inline result, %3
+      }
+      field "value" type {
+        %5 = break_inline result, @type_u8
+      }
+    }
+    %7 = break_inline result, %6
+  }
+  decl var "first" type {
+    %8 = decl_val "Link"
+    %9 = as @type_type, %8
+    %10 = break_inline result, %9
+  } value {
+    %11 = decl_type
+    %18 = struct_init %11 typed "next" value {
+      %12 = struct_field_type "next", %11
+      %13 = decl_ref "second"
+      %14 = break_inline result, %13
+    } "value" value {
+      %15 = struct_field_type "value", %11
+      %16 = int 1
+      %17 = break_inline result, %16
+    }
+    %19 = as %11, %18
+    %20 = break_inline result, %19
+  }
+  decl var "second" type {
+    %21 = decl_val "Link"
+    %22 = as @type_type, %21
+    %23 = break_inline result, %22
+  } value {
+    %24 = decl_type
+    %31 = struct_init %24 typed "next" value {
+      %25 = struct_field_type "next", %24
+      %26 = decl_ref "first"
+      %27 = break_inline result, %26
+    } "value" value {
+      %28 = struct_field_type "value", %24
+      %29 = int 2
+      %30 = break_inline result, %29
+    }
+    %32 = as %24, %31
+    %33 = break_inline result, %32
+  }
+  decl fn "main" pub value {
+    %51 = func "main" {
+      ret type {
+        %34 = break_inline result, @type_u8
+      }
+      body insts {
+        %35 = decl_ref "first"
+        %36 = field_ptr "next", %35
+        %37 = field_ptr "value", %36
+        %38 = int 7
+        %39 = elem_type %37
+        %40 = as %39, %38
+        %41 = store %37, %40
+        %42 = ret_type
+        %43 = decl_ref "second"
+        %44 = field_read_ref "next", %43
+        %45 = field_ref "value", %44
+        %46 = decl_val "second"
+        %47 = field_val "value", %46
+        %48 = add %45, %47
+        %49 = as_return %42, %48
+        %50 = ret %49
+      }
+    }
+    %52 = break_inline result, %51
+  }
+}

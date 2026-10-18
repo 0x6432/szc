@@ -1,0 +1,3 @@
+tests/tir/errors/struct_global_extern_nyi.zig:2:1: error: not supported by szc yet: extern variables
+extern var g: S;
+^

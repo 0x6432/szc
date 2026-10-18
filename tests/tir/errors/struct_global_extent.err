@@ -1,0 +1,3 @@
+tests/tir/errors/struct_global_extent.zig:2:5: error: not supported by szc yet: array layout size exceeds 64-bit address space
+var g: [18446744073709551615]S = undefined;
+    ^

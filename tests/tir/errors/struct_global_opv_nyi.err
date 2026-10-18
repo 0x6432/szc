@@ -1,0 +1,3 @@
+tests/tir/errors/struct_global_opv_nyi.zig:3:12: error: not supported by szc yet: comptime reads of zero-sized mutable struct storage
+var b: Z = a;
+           ^

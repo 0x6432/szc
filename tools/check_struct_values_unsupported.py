@@ -79,6 +79,8 @@ STATIC_CONTROLS = {
     'backing/volatile_named',
     # M6.1h internal ordinary-struct value signatures.
     'struct-parameter', 'struct-return',
+    # M6.1i mutable internal struct storage.
+    'global-struct-storage',
 }
 
 

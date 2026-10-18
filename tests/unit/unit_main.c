@@ -2446,9 +2446,9 @@ test_runtime_struct_values(void)
 		/* recursive-array-return */
 		{"const S=struct{a:u8,}; fn f()[1]S{return .{.{.a=1}};}pub fn main()void{_=f();}", NULL},
 		/* mutable-global */
-		{"const S=struct{a:u8,}; var s:S=.{.a=1};pub fn main()void{s.a=2;}", "not supported by szc yet:"},
+		{"const S=struct{a:u8,}; var s:S=.{.a=1};pub fn main()void{s.a=2;}", NULL},
 		/* mutable-global-array */
-		{"const S=struct{a:u8,}; var a:[1]S=.{.{.a=1}};pub fn main()void{a[0].a=2;}", "not supported by szc yet:"},
+		{"const S=struct{a:u8,}; var a:[1]S=.{.{.a=1}};pub fn main()void{a[0].a=2;}", NULL},
 		/* volatile-whole-load */
 		{"const S=struct{a:u8,}; pub fn main()void{var s:S=.{.a=1};const p:*volatile S=&s;const copy=p.*;_=copy;}", "not supported by szc yet:"},
 		/* volatile-whole-store */
@@ -2655,13 +2655,234 @@ test_struct_internal_abi(void)
 		/* nyi/export-struct-return */
 		{"const S=struct{a:u8,}; export fn f()S{return .{.a=1};}pub fn main()void{}", "not supported by szc yet:"},
 		/* nyi/mutable-global */
-		{"const S=struct{a:u8,}; var s:S=.{.a=1};pub fn main()void{s.a=2;}", "not supported by szc yet:"},
+		{"const S=struct{a:u8,}; var s:S=.{.a=1};pub fn main()void{s.a=2;}", NULL},
 		/* nyi/volatile-whole-return-source */
 		{"const S=struct{a:u8,}; fn f(p:*const volatile S)S{return p.*;}pub fn main()void{var s:S=.{.a=1};_=f(&s);}", "not supported by szc yet:"},
 		/* nyi/default-field-signature */
 		{"const S=struct{a:u8=7,};fn f(s:S)S{return s;}pub fn main()void{_=f(.{.a=1});}", "not supported by szc yet:"},
 		/* nyi/generic-call */
 		{"const S=struct{a:u8,}; fn f(comptime T:type,s:T)T{return s;}pub fn main()void{_=f(S,.{.a=1});}", "not supported by szc yet:"},
+	};
+	for (uint32_t i = 0; i < sizeof(cases) / sizeof(cases[0]); i++) {
+		Arena arena;
+		arena_init(&arena);
+		SourceTable sources;
+		source_table_init(&sources, &arena);
+		Diag diag;
+		diag_init(&diag, &arena, &sources);
+		Interner interner;
+		intern_init(&interner, &arena);
+		const char *source = cases[i].source;
+		FileId file = source_add_memory(&sources, "test.zig", source, (uint32_t)strlen(source));
+		AstContainerDecl *root = parse_file(&arena, &diag, &sources, file);
+		IrFile *ir = irgen_file(&arena, &diag, &interner, source_get(&sources, file), file, root);
+		bool success = false;
+		Sema *sema = sema_create(&arena, &diag, &interner, &sources);
+		if (!diag_has_errors(&diag))
+			success = sema_analyze_executable(sema, file, ir);
+		CHECK(success == (cases[i].error == NULL));
+		if (cases[i].error != NULL) {
+			CHECK(diag.count != 0 && strstr(diag.items[0].message, cases[i].error) != NULL);
+		} else if (success) {
+			FILE *output = tmpfile();
+			FILE *assembly = tmpfile();
+			CHECK(output != NULL && assembly != NULL);
+			if (output != NULL && assembly != NULL)
+				CHECK(codegen_qbe(output, assembly, sema, &diag));
+			if (output != NULL)
+				fclose(output);
+			if (assembly != NULL)
+				fclose(assembly);
+		}
+		arena_free(&arena);
+	}
+}
+
+/* Failed total layouts must not publish even an address-only mutable symbol. */
+static void
+test_struct_global_publication(void)
+{
+	const char *cases[] = {
+		"const S=struct{x:u16,};var huge:[18446744073709551615]S=undefined;pub fn main()void{_=&huge;}",
+		"const S=struct{x:u16,};var huge:[18446744073709551615]S=undefined;pub fn main()void{_=&huge[0].x;}",
+		"const S=struct{x:[18446744073709551615]u64,};var huge:S=undefined;pub fn main()void{_=&huge;}",
+	};
+	for (uint32_t i = 0; i < sizeof(cases) / sizeof(cases[0]); i++) {
+		Arena arena;
+		arena_init(&arena);
+		SourceTable sources;
+		source_table_init(&sources, &arena);
+		Diag diag;
+		diag_init(&diag, &arena, &sources);
+		Interner interner;
+		intern_init(&interner, &arena);
+		FileId file = source_add_memory(&sources, "test.zig", cases[i], (uint32_t)strlen(cases[i]));
+		AstContainerDecl *root = parse_file(&arena, &diag, &sources, file);
+		IrFile *ir = irgen_file(&arena, &diag, &interner, source_get(&sources, file), file, root);
+		Sema *sema = sema_create(&arena, &diag, &interner, &sources);
+		CHECK(!diag_has_errors(&diag));
+		CHECK(!sema_analyze_executable(sema, file, ir));
+		CHECK(diag.count != 0 && strstr(diag.items[0].message, "exceeds 64-bit address space") != NULL);
+		CHECK(sema_global_count(sema) == 1);
+		arena_free(&arena);
+	}
+}
+
+/* Mutable globals retain runtime reads and must serialize complete writable data.
+ * Paired sema/emission checks keep publication and backend admission consistent. */
+static void
+test_struct_mutable_globals(void)
+{
+	const struct {
+		const char *source;
+		const char *error;
+	} cases[] = {
+		/* literal */
+		{"const S=struct{a:u8,b:u16,}; var g:S=.{.a=1,.b=2}; pub fn main()void{g.a=7;_=g.b;}", NULL},
+		/* inferred */
+		{"const S=struct{a:u8,b:u16,}; var g=S{.a=1,.b=2};pub fn main()void{g.b=513;}", NULL},
+		/* explicit-init */
+		{"const S=struct{a:u8,b:u16,}; var g:S=S{.a=1,.b=2};pub fn main()void{_=g.a;}", NULL},
+		/* as-init */
+		{"const S=struct{a:u8,b:u16,}; var g:S=@as(S,.{.a=1,.b=2});pub fn main()void{_=g.a;}", NULL},
+		/* const-source */
+		{"const S=struct{a:u8,b:u16,}; const initial:S=.{.a=7,.b=513};var g:S=initial;pub fn main()void{g.a=2;}", NULL},
+		/* undefined */
+		{"const S=struct{a:u8,b:u16,}; var g:S=undefined;pub fn main()void{g.a=7;g.b=513;_=g.a;}", NULL},
+		/* partial-undefined */
+		{"const S=struct{a:u8,b:u16,}; var g:S=.{.a=undefined,.b=513};pub fn main()void{g.a=7;}", NULL},
+		/* root-overalign */
+		{"const S=struct{a:u8,b:u16,}; var g:S align(64)=.{.a=1,.b=2};pub fn main()void{g.a=7;_= &g;}", NULL},
+		/* dot-alias */
+		{"const S=struct{a:u8,b:u16,}; var g:S=.{.a=1,.b=2}; const alias:*S=&g;pub fn main()void{alias.a=7;_=g.a;}", NULL},
+		/* builtin-alias */
+		{"const S=struct{a:u8,b:u16,}; var g:S=.{.a=1,.b=2}; pub fn main()void{@field(&g,\"b\")=513;}", NULL},
+		/* whole-snapshot */
+		{"const S=struct{a:u8,b:u16,}; var g:S=.{.a=1,.b=2}; pub fn main()void{const old=g;g.a=7;_=old.b;}", NULL},
+		/* contextual-overwrite */
+		{"const S=struct{a:u8,b:u16,}; var g:S=.{.a=1,.b=2}; pub fn main()void{g=.{.a=@intCast(g.b),.b=g.a};}", NULL},
+		/* explicit-overwrite */
+		{"const S=struct{a:u8,b:u16,}; var g:S=.{.a=1,.b=2}; pub fn main()void{g=S{.a=@intCast(g.b),.b=g.a};}", NULL},
+		/* as-overwrite */
+		{"const S=struct{a:u8,b:u16,}; var g:S=.{.a=1,.b=2}; pub fn main()void{g=@as(S,.{.a=@intCast(g.b),.b=g.a});}", NULL},
+		/* named-distinct */
+		{"const S=struct{a:u8,b:u16,}; var g:S=.{.a=1,.b=2}; var h:S=.{.a=1,.b=2};pub fn main()void{const n:u8=if(&g!=&h)0 else 256;_=n;}", NULL},
+		/* field-qualifiers */
+		{"const S=struct{a:u8,b:u16,}; var g:S=.{.a=1,.b=2}; pub fn main()void{const p:*align(1)volatile allowzero S=&g;const q:*align(1)volatile allowzero u16=&p.b;q.*=513;}", NULL},
+		/* volatile-scalar */
+		{"const S=struct{a:u8,b:u16,}; var g:S=.{.a=1,.b=2}; pub fn main()void{const p:*volatile S=&g;p.a=7;_=p.b;}", NULL},
+		/* internal-value */
+		{"const S=struct{a:u8,b:u16,}; var g:S=.{.a=1,.b=2}; fn identity(s:S)S{return s;}pub fn main()void{const old=identity(g);g.a=9;_=old.a;}", NULL},
+		/* internal-alias */
+		{"const S=struct{a:u8,b:u16,}; var g:S=.{.a=1,.b=2}; fn f(s:S,p:*S)S{p.a=9;return s;}pub fn main()void{g=f(g,&g);}", NULL},
+		/* first-arg-before-mutate */
+		{"const S=struct{a:u8,b:u16,}; var g:S=.{.a=1,.b=2}; fn change()u8{g.a=9;return 1;}fn f(s:S,n:u8)u8{_=n;return s.a;}pub fn main()void{_=f(g,change());}", NULL},
+		/* defer-return */
+		{"const S=struct{a:u8,b:u16,}; var g:S=.{.a=1,.b=2}; fn f()S{defer g.a=9;return g;}pub fn main()void{g=f();}", NULL},
+		/* dynamic-root */
+		{"const S=struct{a:u8,b:u16,}; var g:S=.{.a=1,.b=2}; fn root()*S{return &g;}pub fn main()void{root().a=7;_=root().b;}", NULL},
+		/* nested */
+		{"const S=struct{a:u8,b:u16,}; const O=struct{i:S,tag:u8,};var g:O=.{.i=.{.a=1,.b=2},.tag=3};pub fn main()void{const old=g.i;g.i.a=7;_=old.b;}", NULL},
+		/* nested-volatile */
+		{"const S=struct{a:u8,b:u16,}; const O=struct{i:S,};var g:O=.{.i=.{.a=1,.b=2}};pub fn main()void{const p:*volatile O=&g;p.i.b=513;_=p.i.a;}", NULL},
+		/* array-of-struct */
+		{"const S=struct{a:u8,b:u16,}; var a:[2]S=.{.{.a=1,.b=2},.{.a=3,.b=4}};fn index()usize{return 1;}pub fn main()void{a[index()].a=7;}", NULL},
+		/* recursive-array */
+		{"const S=struct{a:u8,b:u16,}; var a:[2][1]S=.{.{.{.a=1,.b=2}},.{.{.a=3,.b=4}}};pub fn main()void{const old=a;a[1][0].b=513;_=old[0][0].a;}", NULL},
+		/* array-abi */
+		{"const S=struct{a:u8,b:u16,}; var a:[1]S=.{.{.a=1,.b=2}};fn identity(x:[1]S)[1]S{return x;}pub fn main()void{a=identity(a);}", NULL},
+		/* nested-array */
+		{"const S=struct{a:u8,b:u16,}; const O=struct{rows:[2]S,};var g:O=.{.rows=.{.{.a=1,.b=2},.{.a=3,.b=4}}};pub fn main()void{g.rows[1].b=513;}", NULL},
+		/* slice-view-of-global-array */
+		{"const S=struct{a:u8,b:u16,}; var a:[2]S=.{.{.a=1,.b=2},.{.a=3,.b=4}};pub fn main()void{const s:[]S=&a;s[1].a=7;}", NULL},
+		/* sentinel-field */
+		{"const T=struct{bytes:[2:9]u8,};var g:T=.{.bytes=.{1,2}};pub fn main()void{g.bytes[1]=7;_=g.bytes[2];}", NULL},
+		/* zero-sentinel-field */
+		{"const T=struct{bytes:[0:9]u8,x:u8,};var g:T=.{.bytes=.{},.x=7};pub fn main()void{g.x=8;_=g.bytes[0];}", NULL},
+		/* empty-struct */
+		{"const E=struct{};var g:E=.{};pub fn main()void{g=E{};_= &g;}", NULL},
+		/* zero-array */
+		{"const S=struct{a:u8,b:u16,}; var a:[0]S=.{};pub fn main()void{_= &a;}", NULL},
+		/* zero-nested-array */
+		{"const S=struct{a:u8,b:u16,}; var a:[2][0]S=.{.{},.{}};pub fn main()void{const old=a;_=old.len;}", NULL},
+		/* zero-align-field */
+		{"const T=struct{z:[0]u64,v:void,n:u0,x:u8,};var g:T=.{.z=.{},.v={},.n=0,.x=7};pub fn main()void{g.x=8;g.n=0;}", NULL},
+		/* pointer-field */
+		{"const T=struct{p:*u8,};var byte:u8=7;var g:T=.{.p=&byte};pub fn main()void{g.p.*=8;}", NULL},
+		/* slice-field */
+		{"const T=struct{s:[]u8,};var bytes=[_]u8{1,2,3};var g:T=.{.s=&bytes};pub fn main()void{const old=g;g.s=g.s[0..1];old.s[1]=7;}", NULL},
+		/* slice-volatile-descriptor */
+		{"const T=struct{s:[]u8,};var bytes=[_]u8{1,2,3};var g:T=.{.s=&bytes};pub fn main()void{const p:*volatile T=&g;const n=p.s.len;_=n;}", NULL},
+		/* forward-address */
+		{"const S=struct{a:u8,b:u16,}; const H=struct{p:*S,};var h:H=.{.p=&later};var later:S=.{.a=7,.b=2};pub fn main()void{h.p.a=8;}", NULL},
+		/* self-address */
+		{"const N=struct{p:*N,x:u8,};var g:N=.{.p=&g,.x=7};pub fn main()void{g.p.x=8;}", NULL},
+		/* mutual-address */
+		{"const N=struct{p:*N,x:u8,};var a:N=.{.p=&b,.x=7};var b:N=.{.p=&a,.x=8};pub fn main()void{a.p.p.x=9;}", NULL},
+		/* callback */
+		{"const S=struct{a:u8,b:u16,}; fn f(s:S)S{return s;}const H=struct{cb:*const fn(S)S,};var h:H=.{.cb=&f};pub fn main()void{_=h.cb(.{.a=7,.b=2});}", NULL},
+		/* callback-array */
+		{"const S=struct{a:u8,b:u16,}; fn f(s:S)S{return s;}const H=struct{a:[1]*const fn(S)S,};var h:H=.{.a=.{&f}};pub fn main()void{_=h.a[0](.{.a=7,.b=2});}", NULL},
+		/* unused-bad-init */
+		{"const S=struct{a:u8,b:u16,}; var g:S=.{.a=256,.b=2};pub fn main()void{}", NULL},
+		/* unused-bad-callback */
+		{"const S=struct{a:u8,b:u16,}; fn bad(s:S)S{_=s;return .{.a=\"bad\",.b=2};}const H=struct{cb:*const fn(S)S,};var h:H=.{.cb=&bad};pub fn main()void{}", NULL},
+		/* error/overflow */
+		{"const S=struct{a:u8,b:u16,}; var g:S=.{.a=256,.b=2};pub fn main()void{_=g.a;}", "type 'u8' cannot represent integer value '256'"},
+		/* error/typeof-live-init */
+		{"const S=struct{a:u8,b:u16,}; var g:S=.{.a=256,.b=2};pub fn main()void{_=@TypeOf(&g);}", "type 'u8' cannot represent integer value '256'"},
+		/* error/missing */
+		{"const S=struct{a:u8,b:u16,}; var g:S=.{.a=1};pub fn main()void{_=g.a;}", "missing struct field: b"},
+		/* error/unknown */
+		{"const S=struct{a:u8,b:u16,}; var g:S=.{.a=1,.b=2,.extra=3};pub fn main()void{_=g.a;}", "no field named 'extra' in struct 'test.S'"},
+		/* error/duplicate */
+		{"const S=struct{a:u8,b:u16,}; var g:S=.{.a=1,.a=2,.b=3};pub fn main()void{_=g.a;}", "duplicate struct field name"},
+		/* error/mutable-read-init */
+		{"const S=struct{a:u8,b:u16,}; var g:S=.{.a=1,.b=2}; var h:S=g;pub fn main()void{_=h.a;}", "unable to resolve comptime value"},
+		/* error/const-read-init */
+		{"const S=struct{a:u8,b:u16,}; var g:S=.{.a=1,.b=2}; const h:S=g;pub fn main()void{_=h.a;}", "unable to resolve comptime value"},
+		/* error/const-alias-write */
+		{"const S=struct{a:u8,b:u16,}; var g:S=.{.a=1,.b=2}; pub fn main()void{const p:*const S=&g;p.a=7;}", "cannot assign to constant"},
+		/* error/bad-field */
+		{"const S=struct{a:u8,b:u16,}; var g:S=.{.a=1,.b=2}; pub fn main()void{g.missing=7;}", "no field named 'missing' in struct 'test.S'"},
+		/* error/nominal-global-assign */
+		{"const S=struct{a:u8,b:u16,}; var g:S=.{.a=1,.b=2}; const T=struct{a:u8,b:u16,};const t:T=.{.a=1,.b=2};pub fn main()void{g=t;}", "expected type 'test.S', found 'test.T'"},
+		/* error/array-len-live-init */
+		{"const S=struct{a:u8,b:u16,}; var a:[1]S=.{.{.a=256,.b=2}};pub fn main()void{_=a.len;}", "type 'u8' cannot represent integer value '256'"},
+		/* error/array-oob */
+		{"const S=struct{a:u8,b:u16,}; var a:[1]S=.{.{.a=1,.b=2}};pub fn main()void{a[1].a=7;}", "index 1 outside array of length 1"},
+		/* error/discard-volatile */
+		{"const S=struct{a:u8,b:u16,}; var g:S=.{.a=1,.b=2}; pub fn main()void{const p:*volatile S=&g;const q:*u8=&p.a;_=q;}", "expected type '*u8', found '*volatile u8'"},
+		/* error/promote-alignment */
+		{"const S=struct{a:u8,b:u16,}; var g:S=.{.a=1,.b=2}; pub fn main()void{const p:*align(1)S=&g;const q:*u16=&p.b;_=q;}", "expected type '*u16', found '*align(1) u16'"},
+		/* error/callback-live-bad-body */
+		{"const S=struct{a:u8,b:u16,}; fn bad(s:S)S{_=s;return .{.a=\"bad\",.b=2};}const H=struct{cb:*const fn(S)S,};var h:H=.{.cb=&bad};extern fn consume(p:*H)void;pub fn main()void{consume(&h);}", "expected type 'u8', found '*const [3:0]u8'"},
+		/* scope/tls */
+		{"const S=struct{a:u8,}; threadlocal var g:S=.{.a=1};pub fn main()void{g.a=2;}", "not supported by szc yet:"},
+		/* scope/export-global */
+		{"const S=struct{a:u8,}; export var g:S=.{.a=1};pub fn main()void{g.a=2;}", "not supported by szc yet:"},
+		/* scope/extern-global */
+		{"const S=struct{a:u8,}; extern var g:S;pub fn main()void{g.a=2;}", "not supported by szc yet:"},
+		/* scope/packed */
+		{"const S=packed struct{a:u8,};var g:S=.{.a=1};pub fn main()void{_= &g;}", "not supported by szc yet:"},
+		/* scope/default */
+		{"const S=struct{a:u8=7,};var g:S=.{};pub fn main()void{_= &g;}", "not supported by szc yet:"},
+		/* scope/field-align */
+		{"const S=struct{a:u8 align(16),};var g:S=.{.a=1};pub fn main()void{_= &g;}", "not supported by szc yet:"},
+		/* scope/whole-volatile-load */
+		{"const S=struct{a:u8,}; var g:S=.{.a=1};pub fn main()void{const p:*volatile S=&g;const old=p.*;_=old;}", "not supported by szc yet:"},
+		/* scope/whole-volatile-store */
+		{"const S=struct{a:u8,}; var g:S=.{.a=1};pub fn main()void{const p:*volatile S=&g;p.*=S{.a=2};}", "not supported by szc yet:"},
+		/* scope/initializer-function-call */
+		{"const S=struct{a:u8,}; fn make()S{return .{.a=7};}var g:S=make();pub fn main()void{_=g.a;}", "not supported by szc yet:"},
+		/* scope/opv-global-comptime-read */
+		{"const Z=struct{a:u0,v:void,};var a:Z=.{.a=0,.v={}};var b:Z=a;pub fn main()void{_= &b;}", "not supported by szc yet:"},
+		/* scope/huge-array-before-publication */
+		{"const S=struct{a:u16,};var a:[9223372036854775808]S=undefined;pub fn main()void{_= &a;}", "not supported by szc yet:"},
+		/* scope/self-value-cycle */
+		{"const S=struct{a:u8,}; var g:S=g;pub fn main()void{_=g.a;}", "depends on itself"},
+		/* scope/mutual-value-cycle */
+		{"const S=struct{a:u8,}; var a:S=b;var b:S=a;pub fn main()void{_=a.a;}", "depends on itself"},
 	};
 	for (uint32_t i = 0; i < sizeof(cases) / sizeof(cases[0]); i++) {
 		Arena arena;
@@ -4063,7 +4284,9 @@ main(void)
 	test_struct_field_pointers();
 	test_known_struct_values();
 	test_runtime_struct_values();
+	test_struct_mutable_globals();
 	test_struct_internal_abi();
+	test_struct_global_publication();
 	test_runtime_struct_initializer_ir();
 	test_struct_initializer_ir();
 	test_struct_offsets();

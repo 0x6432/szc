@@ -21,6 +21,9 @@ CASES=(
  ('default-field-signature','const S=struct{a:u8=7,};fn f(s:S)S{return s;}pub fn main()void{_=f(.{.a=1});}',('not supported by szc yet:',)),
  ('generic-call',BASE+'fn f(comptime T:type,s:T)T{return s;}pub fn main()void{_=f(S,.{.a=1});}',('not supported by szc yet:',)),
 )
+# M6.1i: retain the former mutable-global rejection as an emission control.
+CONTROLS = {'mutable-global'}
+
 def main():
  p=argparse.ArgumentParser(description=__doc__);p.add_argument('szc');args=p.parse_args();bad=[]
  with tempfile.TemporaryDirectory(prefix='szc-struct-internal-abi-nyi-') as directory:
@@ -29,7 +32,9 @@ def main():
    path.write_text(source)
    r=run_compiler([args.szc,'emit-qbe',str(path)],source,f'struct internal ABI NYI case {i} szc',timeout=120)
    text=r.stderr.decode(errors='replace')
-   if r.returncode!=1 or not any(s in text for s in allowed):bad.append(label+': '+str(primary_error(r.stderr)))
- print(f'struct internal ABI NYI: {len(CASES)} cases; {len(bad)} failures')
+   if label in CONTROLS:
+    if r.returncode!=0:bad.append('expected supported control '+label+': '+str(primary_error(r.stderr)))
+   elif r.returncode!=1 or not any(s in text for s in allowed):bad.append(label+': '+str(primary_error(r.stderr)))
+ print(f'struct internal ABI NYI: {len(CASES)-len(CONTROLS)} NYI cases; {len(CONTROLS)} supported controls; {len(bad)} failures')
  if bad:raise SystemExit('\n'.join(bad))
 if __name__=='__main__':main()

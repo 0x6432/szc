@@ -144,7 +144,9 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
   - [x] **M6.1f Immutable static struct backing**: completed-object field pointers, typed provenance, exact physical serialization and relocations.
   - [x] **M6.1g Runtime local struct storage**: owned snapshots, typed lvalues, sequential contextual result locations, nested aggregates and dynamic/absolute field pointers.
   - [x] **M6.1h Internal struct-bearing by-value ABI**: direct/typed indirect private aggregate transport, argument-time snapshots, private callee copies and fresh result slots.
-  - Mutable struct globals, defaults and instance methods remain unimplemented.
+  - [x] **M6.1i Internal mutable struct globals**: checked stable symbols, source-known initialization, writable relocations, runtime snapshots and typed self/mutual address references.
+  - [ ] **M6.1j Ordinary field defaults**: definition-context constants, demanded validation and omitted-field completion.
+  - Instance methods and remaining field forms stay deferred; struct singleton comptime classification remains separate.
 - [ ] **M6.2 Enums**: tag values, `@intFromEnum`, `@enumFromInt`, enum literals.
 - [ ] **M6.3 switch** on ints/enums with ranges.
 - [ ] **M6.4 Optionals**: `?T`, `orelse`, `.?`, if-payloads, optional pointers.
@@ -205,6 +207,38 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
 ## Completed milestone log
 
 (newest first; each entry: what, limitations, interactions)
+
+### M6.1i Internal mutable ordinary-struct globals
+
+- **What**: internal mutable ordinary structs and recursively struct-bearing arrays
+  use checked stable global symbols, source-known initializers and writable static
+  storage. Typed forward/self/mutual address relocations preserve symbol and field
+  provenance; value cycles and comptime reads of mutable storage still reject.
+  Runtime reads, assignment, contextual field stores and private by-value calls
+  reuse owned snapshots rather than folding the initializer after mutation.
+- **Publication**: resolve field layout and validate supported storage plus the
+  checked total array extent before publishing a symbol. Three API regressions
+  assert failed layout/extent admission publishes no global. No new serializer,
+  aggregate ABI or cached graph-walk resolution is introduced.
+- **Boundaries**: dynamic/comptime-call initialization, C/TLS/export/extern globals,
+  defaults/unsupported fields and whole volatile aggregate operations remain gated.
+  Zero-sized runtime storage works; comptime reads of zero-sized mutable struct
+  storage explicitly report NYI, without inferring singleton values from byte size.
+- **Coverage**:73 semantic/emission cases, three publication API regressions,
+  13 net stage/error goldens, six seeds each irgen/sema and four native fixtures
+  (29 checks). Six old mutable-global NYIs remain as supported controls. A separate
+  checker retains11 NYIs and two dependency-cycle rejections. The new physical
+  adapter checks external writes/readback, restore visibility, padding/relocations,
+  alignment8/128, PIE/noTEXTREL and writable roots outside effective RELRO.
+- **Validation**: frozen independent GCC/Clang Werror ASan/UBSan7175 units/1319
+  goldens,152+4 natives, full driver/storage/alignment,106 volatile and303 safety
+  cases. Each compiler20000 mutations per stage, seeds256/256/147/203. Four fresh
+  60-second fuzz campaigns2179201/84484/92133/87056 pass. Independent GCC-O2 native,
+  safety and both static/mutable physical adapters pass; forced main rebuild/test
+  passes after restoring missing sandbox sanitizer libraries. Official comparisons:
+  mutable globals60/15, runtime89/25, static60/18, internal ABI62/15; four new natives
+  pass Debug and ReleaseFast. Hosted3251935 was queued at the last check, not green;
+  older4021366 failures remain classified/unresolved as recorded in HANDOFF.
 
 ### M6.1h Internal struct-bearing parameters and returns
 

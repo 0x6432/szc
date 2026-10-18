@@ -1246,3 +1246,30 @@ calls without a FuncId. Known C declarations retain declaration-site diagnostics
 indirect signatures reject at the call. Variadic aggregate arguments, mutable
 struct globals, whole volatile aggregate copies, unsupported field layouts and
 occupied struct-element memory builtins remain gated independently.
+
+
+## Mutable ordinary-struct global storage (M6.1i)
+
+Internal mutable globals may have ordinary supported struct or recursively
+struct-bearing array storage with known initializers. Layout, runtime storage
+shape and total array extent are checked before publishing a stable symbol.
+Explicitly typed symbols retain the existing address-first protocol: forward,
+self and mutual address-only relocations work, while initializer value cycles
+still reject. Inferred declarations publish only after type/value analysis.
+
+Typed field paths retain the mutable global symbol, declaration indices,
+physical offsets and qualifiers. Known addresses do not make mutable initializer
+bytes comptime-known: projection/loads use real runtime memory and aggregate
+snapshots. Contextual destination initialization remains sequential. Call argument
+and return snapshots use the same private ABI as locals.
+
+The existing structured serializer emits writable data/BSS, padding, nested and
+sentinel arrays, pointer/slice/function relocations, zero anchors and outlined
+over-aligned objects. Mutable roots stay outside RELRO; immutable relocation
+controls stay protected. Static and runtime work/storage bounds are unchanged.
+
+TLS/export/extern globals, dynamic/comptime-call initialization, whole volatile
+aggregate copies, C aggregate ABI and deferred field forms remain closed. Canonical
+singleton structs are still deferred: comptime reads of zero-sized mutable
+struct-bearing storage diagnose explicit NYI, not a size-based value fold. Scalar
+zero-bit fields and established empty-array behavior are unchanged.

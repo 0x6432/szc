@@ -1,0 +1,43 @@
+global szc.g.1: struct_global_storage.State = struct.31
+fn szc.main.1: fn () u8 {
+  %0: *struct_global_storage.State = const szc.g.1
+  %1: *struct_global_storage.State = alloc
+  %2: void = call szc.change.2(%0, %1)
+  %3: *const struct_global_storage.State = ptr_cast %1
+  %4: *u16 = const struct_field(base.18, index.0, offset.0)
+  %5: u16 = load %4
+  %6: u8 = truncate %5
+  %7: *u8 = const elem(base.14, index.1, offset.5)
+  %8: void = store %7, %6
+  %9: *const struct_global_storage.Inner = struct_field_ptr %3, 0
+  %10: *const u16 = struct_field_ptr %9, 0
+  %11: u16 = load %10
+  %12: *const struct_global_storage.State = alloc
+  %13: *struct_global_storage.State = const szc.g.1
+  %14: void = array_copy %12, %13
+  %15: *const [2]u8 = struct_field_ptr %12, 4
+  %16: *const [2]u8 = alloc
+  %17: void = array_copy %16, %15
+  %18: usize = const 1
+  %19: *const u8 = array_elem_ptr %16, %18
+  %20: u8 = load %19
+  %21: u16 = int_cast %20
+  %22: u16 = add %11, %21
+  %23: u8 = truncate %22
+  %24: noreturn = ret %23
+}
+fn szc.change.2: fn (*struct_global_storage.State) struct_global_storage.State {
+  %0: *struct_global_storage.State = arg 0
+  %1: *struct_global_storage.State = arg 1
+  %2: *const *struct_global_storage.State = alloc
+  %3: void = store %2, %0
+  %4: *const struct_global_storage.State = alloc
+  %5: void = array_copy %4, %0
+  %6: *struct_global_storage.State = load %2
+  %7: *struct_global_storage.Inner = struct_field_ptr %6, 0
+  %8: *u16 = struct_field_ptr %7, 0
+  %9: u16 = const 1027
+  %10: void = store %8, %9
+  %11: void = array_copy %1, %4
+  %12: noreturn = ret
+}

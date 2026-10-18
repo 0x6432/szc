@@ -1,0 +1,33 @@
+global szc.g.1: [2][1]struct_global_arrays.Cell = array(2 elements)
+global szc.g.2: [0]struct_global_arrays.Cell = array(0 elements)
+fn szc.main.1: fn () u8 {
+  %0: *const [2][1]struct_global_arrays.Cell = alloc
+  %1: *[2][1]struct_global_arrays.Cell = const szc.g.1
+  %2: void = array_copy %0, %1
+  %3: usize = call szc.index.2()
+  %4: *[2][1]struct_global_arrays.Cell = const szc.g.1
+  %5: *[1]struct_global_arrays.Cell = array_elem_ptr %4, %3
+  %6: usize = const 0
+  %7: *struct_global_arrays.Cell = array_elem_ptr %5, %6
+  %8: *u16 = struct_field_ptr %7, 0
+  %9: u16 = const 7
+  %10: void = store %8, %9
+  %11: usize = const 1
+  %12: *const [1]struct_global_arrays.Cell = array_elem_ptr %0, %11
+  %13: usize = const 0
+  %14: *const struct_global_arrays.Cell = array_elem_ptr %12, %13
+  %15: *const u16 = struct_field_ptr %14, 0
+  %16: u16 = load %15
+  %17: *u16 = const struct_field(base.37, index.0, offset.4)
+  %18: u16 = load %17
+  %19: u16 = add %16, %18
+  %20: usize = int_cast %19
+  %21: usize = const 0
+  %22: usize = add %20, %21
+  %23: u8 = truncate %22
+  %24: noreturn = ret %23
+}
+fn szc.index.2: fn () usize {
+  %0: usize = const 1
+  %1: noreturn = ret %0
+}
