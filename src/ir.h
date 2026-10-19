@@ -269,6 +269,9 @@ typedef enum IrDataKind {
 	X(BREAK_INLINE, "break_inline", IR_DATA_BREAK)	/* comptime-only break */ \
 	X(CONDBR, "condbr", IR_DATA_PAYLOAD)	/* condition ref, then body, else body */ \
 	X(IF, "if", IR_DATA_PAYLOAD)	/* IrCondbr; branches yield via break_inline BODY_RESULT */ \
+	X(SWITCH, "switch", IR_DATA_PAYLOAD) /* IrSwitch + prongs/items; deferred bodies */ \
+	X(SWITCH_TYPE, "switch_type", IR_DATA_UN) /* operand = owner switch ref */ \
+	X(SWITCH_CAPTURE, "switch_capture", IR_DATA_UN) /* operand = owner switch ref */ \
 	X(LOOP, "loop", IR_DATA_PAYLOAD)	/* body (ends with repeat) */ \
 	X(REPEAT, "repeat", IR_DATA_UN)	/* loop instruction ref */ \
 	X(FIELD_CALL, "field_call", IR_DATA_PAYLOAD) /* object ref, member name, modifier, arg bodies */ \
@@ -444,6 +447,27 @@ typedef struct IrCondbr {
 	IrBody then_body;
 	IrBody else_body;
 } IrCondbr;
+
+/* SWITCH extra: header, then each prong followed by its items. */
+typedef struct IrSwitch {
+	IrRef operand;
+	uint32_t prong_count;
+} IrSwitch;
+
+enum { IR_SWITCH_ELSE = 1u };
+typedef struct IrSwitchProng {
+	uint32_t src;
+	uint32_t flags;       /* only IR_SWITCH_ELSE */
+	uint32_t item_count;  /* zero iff else */
+	IrBody body;
+} IrSwitchProng;
+
+typedef struct IrSwitchItem {
+	uint32_t src;
+	uint32_t end_src;     /* src for a discrete item */
+	IrBody low_body;      /* forced comptime, break_inline BODY_RESULT */
+	IrBody high_body;     /* zero = discrete; otherwise inclusive range end */
+} IrSwitchItem;
 
 typedef struct IrBoolBr {
 	IrRef  lhs;

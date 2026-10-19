@@ -152,7 +152,13 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
   - [x] **M6.2a Nominal enum foundation**: lazy tags, literals, namespace/metadata, exact constant conversions.
   - [x] **M6.2b Bounded runtime enums**: unsigned backing 1..64, sparse membership safety, scalar storage/private ABI.
   - Remaining signed/wide, non-exhaustive, enum methods, C ABI and runtime singleton domains stay deferred.
-- [ ] **M6.3 switch** on ints/enums with ranges.
+- [~] **M6.3 switch** on ints/enums with ranges.
+  - [~] **M6.3a Bounded integer/exhaustive-enum candidate**: inclusive ranges,
+    all-case validation, deferred arms, scalar captures and N-way value joins
+    implemented; strict contract failures remain. Not accepted as complete.
+  - Remaining scope and validation evidence are tracked in `SWITCH_STATUS.md`;
+    labeled redispatch, inline prongs, pointer captures and empty-enum operand
+    admission remain deferred. Global comptime execution is still separate.
 - [ ] **M6.4 Optionals**: `?T`, `orelse`, `.?`, if-payloads, optional pointers.
 - [ ] **M6.5 Error sets + error unions**: `try`, `catch`, `errdefer`, error set merging, inferred error sets.
 - [ ] **M6.6 Unions**: bare and tagged, switch payload capture.

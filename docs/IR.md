@@ -1387,3 +1387,67 @@ Read-only `sema_enum_tag_type`/`sema_enum_tags` never resolve a type; failed que
 leave outputs unchanged. Actual pointer loads/index operations demand enum layout
 before using these predicates. Existing aggregate ownership, relocation and
 runtime safety gates otherwise remain unchanged.
+
+## Deferred bounded switch frontend protocol
+
+`switch` is emitted as one owner instruction, not a nest of `if` instructions.
+The operand is generated once with no result-type context, before reserving the
+owner. The owner is appended to the enclosing execution body only after all
+payloads are filled. Its `extra` layout is exactly:
+
+- `IrSwitch { IrRef operand; uint32_t prong_count; }`;
+- for each source prong, `IrSwitchProng { uint32_t src, flags, item_count;
+  IrBody body; }`, immediately followed by `item_count` items;
+- `IrSwitchItem { uint32_t src, end_src; IrBody low_body, high_body; }`.
+
+All fields are uint32 words. `IR_SWITCH_ELSE` is `1u`, the only flag; else
+prongs have no items. A discrete item has `high_body == 0` and `end_src == src`.
+Ranges preserve both endpoint sources and have a nonzero `high_body` (inclusive
+upper endpoint). Neither integer nor enum classification occurs in irgen.
+
+Every endpoint is a separate forced-comptime generation body. It starts with
+`switch_type owner_ref`, uses that instruction as the endpoint's result type,
+and yields via `break_inline BODY_RESULT`. The enclosing lexical scope is
+inherited, but the prong capture is not in scope. This supplies nominal context
+to `.tag` and contextual casts without eagerly deciding the operand type.
+Sema must demand a known, defined endpoint result, reject non-result exits, and
+validate **all** labels before selecting a known operand's arm.
+
+Each arm inherits the caller's unchanged `ResultInfo`, including initializer
+and assignment result contexts. A named scalar capture is a `LOCAL_CONST`
+bound to `switch_capture owner_ref` at the start of that arm. Bare `|_|` rejects with `discard of capture; omit it instead`; quoted
+`|@"_"|` is an ordinary binding. Named captures require a lexical value/address
+use (`unused capture` otherwise), even in unselected known arms. Shadowing and
+assignment checks reuse normal local rules. Bodies terminate with `break_inline BODY_RESULT` unless already
+syntactically terminated. Irgen still visits all arm syntax: lexical errors
+and explicit NYI constructs are not hidden by deferred semantic selection.
+
+Both pseudo-ops are unary, with `data.un.operand` equal to the owning switch
+**ref**, never its result or a bare instruction index. Sema must look up that
+owner in its active switch-context chain. `switch_type` returns the frozen
+operand's nominal type; `switch_capture` requires an active arm and returns
+its immutable capture. This permits nested switches and references to an outer
+capture without aliasing an unresolved switch result. No additional arm result
+type operation is introduced.
+
+No switch `ControlScope` is installed. Break/continue still target enclosing
+loops; local labeled blocks and existing defer registration/unwinding retain
+their ordinary paths. Labeled switches, inline prongs, and pointer captures
+have source-specific `not supported by szc yet:` gates. Index captures are
+rejected for this bounded integer/enum frontend. A bare `_` case has an explicit
+non-exhaustive-enum-prong NYI gate, never default-arm semantics; quoted `@"_"`
+is not gated. Operand-type NYI gates,
+endpoint validity, overlap/exhaustiveness, capture value refinement, and
+selected/runtime joins remain the semantic consumer's responsibility.
+
+The dumper is implemented in `src/irgen.c` (there is no `src/ir.c`); it prints
+the operand, prong/item counts and provenance, every endpoint body and every arm.
+The frontend-only protocol checks can be run independently of switch sema:
+
+```sh
+tests/frontend/switch_frontend_check.sh
+EXTRA_CFLAGS='-fsanitize=address,undefined -fno-omit-frame-pointer -fno-sanitize-recover=all' tests/frontend/switch_frontend_check.sh
+```
+
+This describes the frontend interchange, not a claim of executable switch
+support without the semantic consumer and its integration validation.

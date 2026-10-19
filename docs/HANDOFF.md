@@ -22,7 +22,32 @@ Read this first when resuming work (the sandbox resets often).
    candidate. Never mutate frozen validation sources or mix flag configurations.
    The GitHub token is **never** committed. Restore authenticated Git access if needed.
 
-## Latest follow-up checkpoint
+## In-progress local switch candidate (not accepted or pushed)
+
+- Candidate is based on e44e6fe. Frontend, sema and independent reference-test
+  work were integrated with disjoint ownership and a separate static review.
+- Read `SWITCH_STATUS.md` before extending the switch work. M6.3 remains partial;
+  no bootstrap, complete comptime, exact diagnostic parity or hosted-green claim.
+- The strict 84-case contract currently has 63 passes, one expected empty-enum
+  NYI and 20 explicit failures. Do not filter these failures or count an earlier
+  unsupported-type gate as switch-language validation.
+- Initial full GCC/Clang regression attempts exposed an adapter API mismatch in
+  the new `diff_switch.py`; the tool was corrected without changing the existing
+  compiler-process tests. Corrected GCC/Clang debug/release, ASan/UBSan unit/golden,
+  frontend, full native/storage/alignment/safety and standalone fuzz stages pass.
+  Each compiler reports 12,577 unit checks, 1,370 goldens and 308 safety cases.
+- Four normal 60-second libFuzzer runs pass with 11 new switch corpus seeds in
+  each of irgen/sema. The harness-only correction reused that proof after exact
+  compiler/fuzzer input comparison.
+- The validation runner copied GCC and Clang trees at different times; a Clang
+  integrity check flags three updated status documents. Original failed audit
+  remains recorded. An independent reconciliation verifies all executable inputs
+  against the manifest in both trees and the final integration candidate.
+- Preserve frozen validation sources. Source-level validation and strict
+  contract acceptance are separate gates; neither is a substitute for hosted CI.
+- No remote changes were made in this batch.
+
+## Previous follow-up checkpoint (M6.2a/b, e44e6fe)
 
 - M6.2a/b ordinary exhaustive unsigned enums implemented from aa6513c as one
   nominal foundation + bounded runtime integration batch. TYPE_ENUM/VALUE_ENUM

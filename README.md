@@ -64,7 +64,11 @@ Ordinary exhaustive nominal enums support inferred/explicit unsigned tags throug
 sparse membership before runtime narrowing. Backing widths 1..64 support scalar
 storage, nested aggregates and private calls; known singleton u0 values/metadata
 are supported without opening zero-width runtime storage. Signed/wide and
-non-exhaustive enums, enum methods, enum C ABI and switch remain pending.
+non-exhaustive enums, enum methods and enum C ABI remain pending.
+A bounded integer/exhaustive-enum switch candidate is implemented locally, with
+inclusive ranges, scalar captures and value joins. It is not accepted as complete:
+strict contract failures and unsupported forms remain; see
+[docs/SWITCH_STATUS.md](docs/SWITCH_STATUS.md).
 Packed/extern structs, C aggregate ABI, non-scalar sentinels, modules/imports,
 generic functions and the full comptime interpreter remain pending; szc does not yet
 bootstrap Zig.

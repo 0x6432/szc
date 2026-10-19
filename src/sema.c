@@ -136,6 +136,8 @@ struct Sema {
 	uint32_t array_elements;	/* work/storage charged by dense constant construction */
 	uint32_t layout_depth;
 	uint32_t enum_work;
+	uint32_t switch_work; /* cumulative, including comparisons and dispatch construction */
+	uint32_t switch_depth;
 	SemaNamespace **defaults_queue; /* stable namespaces, never borrowed Type entries */
 	uint32_t defaults_queue_count;
 	uint32_t defaults_queue_capacity;
@@ -185,6 +187,14 @@ typedef struct ControlTarget {
 	uint32_t capacity;
 } ControlTarget;
 
+typedef struct SwitchContext {
+	struct SwitchContext *parent;
+	IrInstIndex owner;
+	Operand operand;
+	Operand capture;
+	bool capture_active;
+} SwitchContext;
+
 typedef struct Block {
 	Sema          *sema;
 	SemaNamespace *namespace_scope;
@@ -200,6 +210,8 @@ typedef struct Block {
 	uint32_t      count;
 	uint32_t      capacity;
 	ControlTarget *control;
+	SwitchContext *switch_context;
+	uint32_t switch_dispatch_depth; /* conservative switch-induced backend nesting */
 	TypeId declaration_type;	/* explicit mutable global initializer context */
 	TypeId enum_tag_type;	/* resolved backing type, never the enum under construction */
 	TypeId field_default_type;	/* already resolved definition-context field type */
@@ -4885,6 +4897,479 @@ analyze_if(Block *block, const IrInst *inst)
 	return runtime_operand(type, merge);
 }
 
+
+/* Switch labels are normalized mathematical intervals. IDs, not borrowed Value
+ * or Type pointers, survive recursive endpoint/arm analysis and interning. */
+typedef struct SwitchCase {
+	ValueId low;
+	ValueId high;
+	Operand capture;
+	uint32_t prong;
+	uint32_t src;
+	bool range;
+} SwitchCase;
+
+typedef struct SwitchArm {
+	IrSwitchProng ir;
+	uint32_t first;
+	Block block;
+	BodyResult exit;
+	TirBody body;
+} SwitchArm;
+
+static bool
+switch_charge(Block *block, uint32_t src, uint64_t work)
+{
+	if (work > 1048576u - block->sema->switch_work) {
+		sema_error(block, src, "not supported by szc yet: cumulative switch work limit exceeded");
+		return false;
+	}
+	block->sema->switch_work += (uint32_t)work;
+	return true;
+}
+
+static BigInt
+switch_integer(Sema *sema, ValueId value)
+{
+	return value_get(&sema->values, value)->as.integer;
+}
+
+static bool
+switch_compare(Block *block, ValueId a, ValueId b, uint32_t src, int *order)
+{
+	BigInt x = switch_integer(block->sema, a);
+	BigInt y = switch_integer(block->sema, b);
+	if (!switch_charge(block, src, 1ull + x.limb_count + y.limb_count))
+		return false;
+	*order = bigint_compare(&x, &y);
+	return true;
+}
+
+/* Bottom-up stable merge sort: no input-sized C recursion or global comparator
+ * state. The source table remains untouched for capture/prong provenance. */
+static bool
+switch_sort(Block *block, SwitchCase *cases, uint32_t count, uint32_t src)
+{
+	SwitchCase *scratch = ARENA_ARRAY(block->sema->arena, SwitchCase, count);
+	for (uint32_t width = 1; width < count; width *= 2) {
+		for (uint32_t first = 0; first < count; first += width * 2) {
+			uint32_t middle = first + width < count ? first + width : count;
+			uint32_t last = middle + width < count ? middle + width : count;
+			uint32_t a = first, b = middle;
+			for (uint32_t out = first; out < last; out++) {
+				int order = 0;
+				if (!switch_charge(block, src, 1))
+					return false;
+				if (a < middle && b < last && !switch_compare(block, cases[a].low, cases[b].low, src, &order))
+					return false;
+				scratch[out] = a < middle && (b == last || order <= 0) ? cases[a++] : cases[b++];
+			}
+		}
+		memcpy(cases, scratch, (size_t)count * sizeof(*cases));
+	}
+	return true;
+}
+
+static bool
+switch_read(Block *block, uint32_t *cursor, void *out, uint32_t words, uint32_t src)
+{
+	if (*cursor > block->ir->extra_count || words > block->ir->extra_count - *cursor) {
+		sema_error(block, src, "invalid switch payload");
+		return false;
+	}
+	memcpy(out, &block->ir->extra[*cursor], (size_t)words * sizeof(uint32_t));
+	*cursor += words;
+	return true;
+}
+
+static Operand
+switch_endpoint(Block *block, IrBody body, TypeId type, uint32_t src)
+{
+	Block endpoint;
+	block_init_child(&endpoint, block);
+	endpoint.is_comptime = true;
+	endpoint.comptime_value_required = true;
+	endpoint.tir = NULL; /* Runtime label instructions cannot escape validation. */
+	BodyResult result = analyze_body(&endpoint, body);
+	if (result.end != BODY_BREAK_RESULT) {
+		sema_error(block, src, "switch case must produce a comptime value");
+		return operand_none;
+	}
+	Operand value = coerce(&endpoint, result.result, type, src);
+	if (value.kind == OPERAND_NONE || !check_defined(&endpoint, value, src))
+		return operand_none;
+	if (value.kind != OPERAND_COMPTIME) {
+		sema_error(block, src, "unable to resolve comptime value");
+		return operand_none;
+	}
+	return value;
+}
+
+static ValueId
+switch_tag(Block *block, Operand value, bool enumeration)
+{
+	return enumeration ? operand_value(block, value)->as.enum_tag : value.value;
+}
+
+static Operand
+switch_capture(SwitchContext *context, SwitchArm *arm, SwitchCase *cases)
+{
+	if (context->operand.kind == OPERAND_COMPTIME)
+		return context->operand;
+	if (arm->ir.item_count == 1 && !cases[arm->first].range)
+		return cases[arm->first].capture;
+	return context->operand;
+}
+
+static Operand
+analyze_switch_inner(Block *block, const IrInst *inst, IrSwitch payload, SwitchContext *context)
+{
+	Sema *sema = block->sema;
+	uint32_t src = inst->src;
+	Operand operand = context->operand;
+	TypeId domain = operand.type;
+	TypeKind kind = sema->types[domain].kind;
+	bool enumeration = kind == TYPE_ENUM;
+	if (kind == TYPE_FLOAT || kind == TYPE_COMPTIME_FLOAT) {
+		sema_error(block, src, "switch on type '%s' is not allowed", sema_type_name(sema, domain));
+		return operand_none;
+	}
+	if (kind != TYPE_INT && kind != TYPE_COMPTIME_INT && !enumeration) {
+		sema_error(block, src, "not supported by szc yet: switch operand type '%s'", sema_type_name(sema, domain));
+		return operand_none;
+	}
+	if (!check_defined(block, operand, src))
+		return operand_none;
+	if (enumeration && !ensure_enum_layout(block, domain, src, "switch"))
+		return operand_none;
+	TypeId integer_type = enumeration ? sema_enum_tag_type(sema, domain) : domain;
+	uint32_t enum_count = enumeration ? sema->types[domain].as.structure->field_count : 0;
+	/* An empty exhaustive enum has no valid input and no continuation. */
+	bool empty_enum = enumeration && enum_count == 0;
+	if (operand.kind != OPERAND_COMPTIME && !empty_enum
+		&& (integer_type == T_COMPTIME_INT || sema->types[integer_type].as.integer.bits == 0
+			|| sema->types[integer_type].as.integer.bits > 64)) {
+		sema_error(block, src, "not supported by szc yet: zero-width or wide runtime switch operand");
+		return operand_none;
+	}
+	/* Each multi-item predicate is straight-line BIT_OR/BIT_AND, not nested
+	 * branches. Charge conservative ancestor + current prong nesting before
+	 * allocating arm state. Known switches add no runtime dispatch depth. */
+	if (operand.kind != OPERAND_COMPTIME
+		&& payload.prong_count > 256u - block->switch_dispatch_depth) {
+		sema_error(block, src, "not supported by szc yet: runtime switch dispatch depth limit exceeded");
+		return operand_none;
+	}
+	if (!switch_charge(block, src, 1ull + payload.prong_count * 16ull))
+		return operand_none;
+	SwitchArm *arms = ARENA_ARRAY(sema->arena, SwitchArm, payload.prong_count);
+	uint32_t cursor = inst->data.payload + IR_WORDS(IrSwitch);
+	uint32_t case_count = 0;
+	uint32_t otherwise = UINT32_MAX;
+	/* First walk checks word arithmetic and allocates a bounded flat table. */
+	for (uint32_t i = 0; i < payload.prong_count; i++) {
+		if (!switch_read(block, &cursor, &arms[i].ir, IR_WORDS(IrSwitchProng), src))
+			return operand_none;
+		IrSwitchProng prong = arms[i].ir;
+		if ((prong.flags & ~IR_SWITCH_ELSE) != 0 || ((prong.flags & IR_SWITCH_ELSE) != 0 ? prong.item_count != 0 : prong.item_count == 0)) {
+			sema_error(block, prong.src, "invalid switch prong");
+			return operand_none;
+		}
+		if ((prong.flags & IR_SWITCH_ELSE) != 0) {
+			if (otherwise != UINT32_MAX) {
+				sema_error(block, prong.src, "multiple else prongs in switch expression");
+				return operand_none;
+			}
+			otherwise = i;
+		}
+		if (!switch_charge(block, prong.src, (uint64_t)prong.item_count * 16))
+			return operand_none;
+		arms[i].first = case_count;
+		case_count += prong.item_count; /* bounded by the charge above */
+		uint64_t words = (uint64_t)prong.item_count * IR_WORDS(IrSwitchItem);
+		if (cursor > block->ir->extra_count || words > block->ir->extra_count - cursor) {
+			sema_error(block, prong.src, "invalid switch payload");
+			return operand_none;
+		}
+		cursor += (uint32_t)words;
+	}
+	SwitchCase *cases = ARENA_ARRAY(sema->arena, SwitchCase, case_count);
+	cursor = inst->data.payload + IR_WORDS(IrSwitch);
+	for (uint32_t i = 0; i < payload.prong_count; i++) {
+		cursor += IR_WORDS(IrSwitchProng);
+		for (uint32_t j = 0; j < arms[i].ir.item_count; j++) {
+			IrSwitchItem item;
+			if (!switch_read(block, &cursor, &item, IR_WORDS(IrSwitchItem), src))
+				return operand_none;
+			if (enumeration && item.high_body != 0) {
+				sema_error(block, item.src, "ranges not allowed when switching on type '%s'", sema_type_name(sema, domain));
+				return operand_none;
+			}
+			Operand low = switch_endpoint(block, item.low_body, domain, item.src);
+			if (low.kind == OPERAND_NONE)
+				return operand_none;
+			Operand high = item.high_body == 0 ? low : switch_endpoint(block, item.high_body, domain, item.end_src);
+			if (high.kind == OPERAND_NONE)
+				return operand_none;
+			SwitchCase *entry = &cases[arms[i].first + j];
+			*entry = (SwitchCase){switch_tag(block, low, enumeration), switch_tag(block, high, enumeration), low, i, item.src, item.high_body != 0};
+			int order;
+			if (!switch_compare(block, entry->low, entry->high, item.src, &order))
+				return operand_none;
+			if (order > 0) {
+				sema_error(block, item.src, "range start value is greater than the end value");
+				return operand_none;
+			}
+		}
+	}
+	SwitchCase *sorted = ARENA_ARRAY(sema->arena, SwitchCase, case_count);
+	memcpy(sorted, cases, (size_t)case_count * sizeof(*cases));
+	if (!switch_sort(block, sorted, case_count, src))
+		return operand_none;
+	bool contiguous = case_count != 0;
+	BigInt one = bigint_from_u64(sema->arena, 1);
+	for (uint32_t i = 1; i < case_count; i++) {
+		int order;
+		if (!switch_compare(block, sorted[i].low, sorted[i - 1].high, sorted[i].src, &order))
+			return operand_none;
+		if (order <= 0) {
+			BigInt duplicate = switch_integer(sema, sorted[i].low);
+			sema_error(block, sorted[i].src, "duplicate switch value '%s'", bigint_to_string(sema->arena, &duplicate));
+			diag_report(sema->diag, DIAG_NOTE, block->ir->file, sorted[i - 1].src,
+				"previous value%s here", sorted[i - 1].range ? " inside range" : "");
+			return operand_none;
+		}
+		if (!enumeration) {
+			BigInt previous = switch_integer(sema, sorted[i - 1].high);
+			BigInt next = switch_integer(sema, sorted[i].low);
+			if (!switch_charge(block, src, 2ull + previous.limb_count + next.limb_count))
+				return operand_none;
+			BigInt successor = bigint_add(sema->arena, &previous, &one);
+			if (bigint_compare(&successor, &next) != 0)
+				contiguous = false;
+		}
+	}
+	bool exhaustive = enumeration ? case_count == enum_count : false;
+	if (kind == TYPE_INT && contiguous) {
+		if (!switch_charge(block, src, 8ull + sema->types[domain].as.integer.bits / 8))
+			return operand_none;
+		BigInt min, max;
+		int_type_bounds(sema, domain, &min, &max);
+		BigInt low = switch_integer(sema, sorted[0].low);
+		BigInt high = switch_integer(sema, sorted[case_count - 1].high);
+		exhaustive = bigint_compare(&low, &min) == 0 && bigint_compare(&high, &max) == 0;
+	}
+	/* Every enum label was nominally coerced to a validated member. Distinct
+	 * member count therefore proves coverage without prongs x tags scans. */
+	if (exhaustive && otherwise != UINT32_MAX) {
+		sema_error(block, arms[otherwise].ir.src, "unreachable else prong; all cases already handled");
+		return operand_none;
+	}
+	if (!exhaustive && otherwise == UINT32_MAX) {
+		sema_error(block, src, kind == TYPE_COMPTIME_INT ? "else prong required when switching on type 'comptime_int'" : "switch must handle all possibilities");
+		return operand_none;
+	}
+	if (operand.kind == OPERAND_COMPTIME) {
+		ValueId value = switch_tag(block, operand, enumeration);
+		uint32_t selected = otherwise;
+		for (uint32_t i = 0; i < case_count; i++) {
+			int low, high;
+			if (!switch_compare(block, value, sorted[i].low, src, &low)
+				|| !switch_compare(block, value, sorted[i].high, src, &high))
+				return operand_none;
+			if (low >= 0 && high <= 0) {
+				selected = sorted[i].prong;
+				break;
+			}
+		}
+		if (selected == UINT32_MAX) {
+			sema_error(block, src, "switch operand has no matching case");
+			return operand_none;
+		}
+		context->capture = operand;
+		context->capture_active = true;
+		uint32_t errors = sema->diag->error_count;
+		BodyResult arm = analyze_body(block, arms[selected].ir.body);
+		if (sema->diag->error_count != errors)
+			return operand_none;
+		if (arm.end == BODY_NORETURN)
+			return runtime_operand(T_NORETURN, TIR_REF_NONE);
+		if (arm.end != BODY_BREAK_RESULT) {
+			sema_error(block, arms[selected].ir.src, "switch arm did not produce a result");
+			return operand_none;
+		}
+		return arm.result;
+	}
+	if (!require_runtime(block, src))
+		return operand_none;
+	if (!switch_charge(block, src, 8ull * case_count + 8ull * payload.prong_count))
+		return operand_none;
+	uint32_t exit_count = 0;
+	Operand value = operand_none;
+	TypeId type = T_NORETURN;
+	Operand peer = operand_none;
+	for (uint32_t i = 0; i < payload.prong_count; i++) {
+		block_init_child(&arms[i].block, block);
+		arms[i].block.switch_dispatch_depth += payload.prong_count;
+		context->capture = switch_capture(context, &arms[i], cases);
+		context->capture_active = true;
+		uint32_t errors = sema->diag->error_count;
+		arms[i].exit = analyze_body(&arms[i].block, arms[i].ir.body);
+		context->capture_active = false;
+		if (sema->diag->error_count != errors)
+			return operand_none;
+		if (arms[i].exit.end == BODY_NORETURN)
+			continue;
+		if (arms[i].exit.end != BODY_BREAK_RESULT) {
+			sema_error(block, arms[i].ir.src, "switch arm did not produce a result");
+			return operand_none;
+		}
+		Operand result = arms[i].exit.result;
+		if (result.kind == OPERAND_NONE)
+			return operand_none;
+		if (exit_count == 0) {
+			type = result.type;
+			value = result;
+			peer = result;
+		} else {
+			if (!peer_type(block, peer, result, src, &type))
+				return operand_none;
+			/* Keep a genuine operand whenever the common type is one of
+			 * the inputs. Newly synthesized pointer peers need only their
+			 * type: never relabel a constant ValueId or a runtime TirRef. */
+			if (type == result.type)
+				peer = result;
+			else if (type != peer.type)
+				peer = runtime_operand(type, TIR_REF_NONE);
+		}
+		exit_count++;
+	}
+	if (exit_count > 1 && is_comptime_only_type(sema, type)) {
+		sema_error(block, src, "value with comptime-only type '%s' depends on runtime control flow", sema_type_name(sema, type));
+		return operand_none;
+	}
+	bool known = exit_count == 1 && value.kind == OPERAND_COMPTIME;
+	bool aggregate = !known && sema_type_is_aggregate(sema, type);
+	TirRef slot = TIR_REF_NONE;
+	if (aggregate) {
+		TypeId pointer = type_pointer(sema, type, POINTER_ONE, true, false, 0);
+		slot = aggregate_slot(block, pointer, src);
+		if (slot == TIR_REF_NONE)
+			return operand_none;
+	}
+	TypeId merge_type = known || aggregate ? T_VOID : type;
+	TirRef merge = emit_tir(block, TIR_BLOCK, merge_type, src);
+	for (uint32_t i = 0; i < payload.prong_count; i++) {
+		if (arms[i].exit.end == BODY_BREAK_RESULT) {
+			Operand result = coerce(&arms[i].block, arms[i].exit.result, type, arms[i].ir.src);
+			if (result.kind == OPERAND_NONE)
+				return operand_none;
+			if (aggregate && !store_aggregate(&arms[i].block, runtime_operand(block->tir->insts[slot].type, slot), result, src))
+				return operand_none;
+			TirRef ref = merge_type == T_VOID ? TIR_REF_NONE : materialize(&arms[i].block, result, src);
+			emit_tir_bin(&arms[i].block, TIR_BR, T_NORETURN, src, merge, ref);
+		}
+		arms[i].body = block_finish(&arms[i].block);
+	}
+	Block dispatch;
+	block_init_child(&dispatch, block);
+	TirRef test_operand = TIR_REF_NONE;
+	if (!empty_enum) {
+		test_operand = materialize(&dispatch, operand, src);
+		if (enumeration)
+			test_operand = emit_tir_un(&dispatch, TIR_INT_CAST, integer_type, src, test_operand);
+	}
+	Block fallback;
+	block_init_child(&fallback, block);
+	TirBody tail;
+	if (otherwise != UINT32_MAX)
+		tail = arms[otherwise].body;
+	else {
+		emit_tir(&fallback, TIR_TRAP, T_NORETURN, src);
+		tail = block_finish(&fallback);
+	}
+	/* Build from the end without semantic recursion. Each source arm is
+	 * serialized once, even when many distinct intervals select it. */
+	for (uint32_t i = payload.prong_count; i-- > 0;) {
+		if (i == otherwise)
+			continue;
+		Block test;
+		block_init_child(&test, block);
+		TirRef predicate = TIR_REF_NONE;
+		for (uint32_t j = 0; j < arms[i].ir.item_count; j++) {
+			SwitchCase entry = cases[arms[i].first + j];
+			TirRef low = materialize(&test, comptime_operand(integer_type, entry.low), entry.src);
+			TirRef match = emit_tir_bin(&test, entry.range ? TIR_CMP_GTE : TIR_CMP_EQ, T_BOOL, entry.src, test_operand, low);
+			if (entry.range) {
+				TirRef high = materialize(&test, comptime_operand(integer_type, entry.high), entry.src);
+				TirRef upper = emit_tir_bin(&test, TIR_CMP_LTE, T_BOOL, entry.src, test_operand, high);
+				match = emit_tir_bin(&test, TIR_BIT_AND, T_BOOL, entry.src, match, upper);
+			}
+			predicate = predicate == TIR_REF_NONE ? match : emit_tir_bin(&test, TIR_BIT_OR, T_BOOL, entry.src, predicate, match);
+		}
+		TirCondbr branch = {predicate, arms[i].body, tail};
+		TirRef ref = emit_tir(&test, TIR_CONDBR, T_NORETURN, arms[i].ir.src);
+		block->tir->insts[ref].data.payload = tir_extra(block->tir, sema->arena, &branch, TIR_WORDS(TirCondbr));
+		tail = block_finish(&test);
+	}
+	/* Flatten the dispatch preamble plus the outermost body into the merge. */
+	uint32_t tail_count = block->tir->extra[tail];
+	for (uint32_t i = 0; i < tail_count; i++)
+		block_push(&dispatch, block->tir->extra[tail + 1 + i]);
+	block->tir->insts[merge].data.payload = block_finish(&dispatch);
+	if (known)
+		return value;
+	if (aggregate) {
+		Operand result = runtime_operand(type, slot);
+		result.kind = OPERAND_AGGREGATE;
+		return result;
+	}
+	return type == T_VOID ? void_operand(sema) : runtime_operand(type, merge);
+}
+
+static Operand
+analyze_switch(Block *block, IrInstIndex index)
+{
+	const IrInst *inst = &block->ir->insts[index];
+	uint32_t cursor = inst->data.payload;
+	IrSwitch payload;
+	if (!switch_read(block, &cursor, &payload, IR_WORDS(IrSwitch), inst->src))
+		return operand_none;
+	Operand operand = resolve_ref(block, payload.operand);
+	if (operand.kind == OPERAND_NONE)
+		return operand_none;
+	if (block->sema->switch_depth >= 128) {
+		sema_error(block, inst->src, "not supported by szc yet: nested switch analysis depth limit exceeded");
+		return operand_none;
+	}
+	SwitchContext context = {block->switch_context, index, operand, operand_none, false};
+	block->switch_context = &context;
+	block->sema->switch_depth++;
+	Operand result = analyze_switch_inner(block, inst, payload, &context);
+	block->sema->switch_depth--;
+	block->switch_context = context.parent;
+	return result;
+}
+
+static Operand
+analyze_switch_context(Block *block, const IrInst *inst)
+{
+	if (ir_ref_is_inst(inst->data.un.operand)) {
+		IrInstIndex owner = ir_ref_inst(inst->data.un.operand);
+		for (SwitchContext *context = block->switch_context; context != NULL; context = context->parent) {
+			if (context->owner != owner)
+				continue;
+			if (inst->op == IR_SWITCH_TYPE)
+				return type_operand(block->sema, context->operand.type);
+			if (context->capture_active)
+				return context->capture;
+			break;
+		}
+	}
+	sema_error(block, inst->src, "invalid switch owner context");
+	return operand_none;
+}
+
 static ControlTarget *
 find_control(Block *block, IrInstIndex index)
 {
@@ -8919,6 +9404,15 @@ analyze_inst(Block *block, IrInstIndex index, Operand *break_value)
 		break;
 	case IR_CALL:
 		if (analyze_call(block, index, &result) == INST_NORETURN)
+			return INST_NORETURN;
+		break;
+	case IR_SWITCH_TYPE:
+	case IR_SWITCH_CAPTURE:
+		result = analyze_switch_context(block, inst);
+		break;
+	case IR_SWITCH:
+		result = analyze_switch(block, index);
+		if (result.type == T_NORETURN)
 			return INST_NORETURN;
 		break;
 	case IR_IF:

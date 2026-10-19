@@ -64,6 +64,7 @@ typedef struct LocalScope {
 	LocalKind local_kind;
 	IrRef     ref;
 	uint32_t  src;
+	bool      used; /* lexical value/address use; switch captures require one */
 } LocalScope;
 
 typedef struct DeferScope {
@@ -563,6 +564,7 @@ local_init(LocalScope *local, Scope *parent, StringId name, LocalKind kind, IrRe
 	local->local_kind = kind;
 	local->ref = ref;
 	local->src = src;
+	local->used = false;
 }
 
 /* ---------- Expressions ---------- */
@@ -959,12 +961,15 @@ identifier(GenBody *body, Scope *scope, ResultInfo info, AstNode *node)
 		return rvalue(body, info, ref, node->offset);
 	StringId name = intern_span(gen, identifier_node->name);
 	Lookup found = lookup_name(scope, name);
-	if (field_capture_allowed(body, found))
+	if (field_capture_allowed(body, found)) {
+		found.local->used = true;
 		return rvalue(body, info, emit_un(body, IR_FIELD_CAPTURE, node->offset, found.local->ref), node->offset);
+	}
 	if (check_capture(gen, found, node->offset))
 		return IR_REF_VOID_VALUE;
 	if (found.kind == LOOKUP_LOCAL) {
 		LocalScope *local = found.local;
+		local->used = true;
 		if (local->local_kind == LOCAL_VAR)
 			return rvalue(body, info, emit_un(body, IR_LOAD, node->offset, local->ref), node->offset);
 		return rvalue(body, info, local->ref, node->offset);
@@ -1051,13 +1056,16 @@ address_of(GenBody *body, Scope *scope, ResultInfo info, AstNode *node)
 		StringId name = intern_span(body->gen, AST_CAST(AstIdentifier, node, AST_IDENTIFIER)->name);
 		Lookup found = lookup_name(scope, name);
 		if (field_capture_allowed(body, found)) {
+			found.local->used = true;
 			IrRef captured = emit_un(body, IR_FIELD_CAPTURE, node->offset, found.local->ref);
 			return reference_value(body, captured, node->offset);
 		}
 		if (check_capture(body->gen, found, node->offset))
 			return IR_REF_VOID_VALUE;
-		if (found.kind == LOOKUP_LOCAL)
+		if (found.kind == LOOKUP_LOCAL) {
+			found.local->used = true;
 			return found.local->local_kind == LOCAL_VAR ? found.local->ref : reference_value(body, found.local->ref, node->offset);
+		}
 		if (found.kind == LOOKUP_DECL)
 			return emit_name(body, IR_DECL_REF, node->offset, name, IR_REF_NONE);
 	}
@@ -2044,6 +2052,127 @@ if_expr(GenBody *body, Scope *scope, ResultInfo info, AstNode *node)
 	return emit_payload(body, IR_IF, node->offset, APPEND_EXTRA(body->gen, payload));
 }
 
+/* Endpoints inherit only the surrounding lexical scope, never the arm capture.
+ * Sema supplies the nominal operand type and demands a known, defined result. */
+static IrBody
+switch_endpoint(GenBody *body, Scope *scope, IrRef owner, AstNode *node)
+{
+	GenBody endpoint;
+	body_init(&endpoint, body->gen, scope, true);
+	IrRef type = emit_un(&endpoint, IR_SWITCH_TYPE, node->offset, owner);
+	IrRef value = expr(&endpoint, &endpoint.base, result_type(type), node);
+	if (!body_is_terminated(&endpoint))
+		emit_break(&endpoint, IR_BREAK_INLINE, node->offset, IR_BODY_RESULT, value);
+	return body_finish(&endpoint);
+}
+
+static IrBody
+switch_arm(GenBody *body, Scope *scope, ResultInfo info, IrRef owner, AstSwitchProng *prong)
+{
+	IrGen *gen = body->gen;
+	GenBody arm;
+	body_init(&arm, gen, scope, body->is_comptime);
+	Scope *arm_scope = &arm.base;
+	LocalScope capture;
+	if (prong->has_capture) {
+		StringId name = intern_span(gen, prong->capture.name);
+		check_shadowing(gen, arm_scope, name, prong->capture.name.start, "capture");
+		IrRef value = emit_un(&arm, IR_SWITCH_CAPTURE, prong->capture.name.start, owner);
+		local_init(&capture, arm_scope, name, LOCAL_CONST, value, prong->capture.name.start);
+		arm_scope = &capture.base;
+	}
+	IrRef value = expr(&arm, arm_scope, info, prong->body);
+	if (prong->has_capture && !capture.used)
+		error_at(gen, prong->capture.name.start, "%s", "unused capture");
+	if (!body_is_terminated(&arm))
+		emit_break(&arm, IR_BREAK_INLINE, prong->body->offset, IR_BODY_RESULT, value);
+	return body_finish(&arm);
+}
+
+static IrRef
+switch_expr(GenBody *body, Scope *scope, ResultInfo info, AstNode *node)
+{
+	IrGen *gen = body->gen;
+	AstSwitch *sw = AST_CAST(AstSwitch, node, AST_SWITCH);
+	if (sw->label.has_label) {
+		error_at(gen, sw->label.name.start, "not supported by szc yet: %s", "labeled switch");
+		return IR_REF_VOID_VALUE;
+	}
+	/* Reject syntactically gated forms even in semantically unselected arms.
+	 * Operand-type restrictions and all-case validation belong to sema. */
+	uint64_t words = IR_WORDS(IrSwitch);
+	for (uint32_t i = 0; i < sw->prong_count; i++) {
+		AstSwitchProng *prong = &sw->prongs[i];
+		if (prong->is_inline) {
+			error_at(gen, prong->offset, "not supported by szc yet: %s", "inline switch prong");
+			return IR_REF_VOID_VALUE;
+		}
+		if (prong->has_capture && prong->capture.by_pointer) {
+			/* The parser retains the capture name, not a separate '*' span. */
+			error_at(gen, prong->capture.name.start, "not supported by szc yet: %s", "switch pointer capture");
+			return IR_REF_VOID_VALUE;
+		}
+		if (prong->has_capture && capture_is_discard(gen, prong->capture)) {
+			error_at(gen, prong->capture.name.start, "%s", "discard of capture; omit it instead");
+			return IR_REF_VOID_VALUE;
+		}
+		if (prong->has_index_capture) {
+			error_at(gen, prong->index_capture.start, "%s", "index capture is not allowed in integer or enum switch");
+			return IR_REF_VOID_VALUE;
+		}
+		for (uint32_t j = 0; j < prong->item_count; j++) {
+			AstNode *value = prong->items[j].value;
+			if (value->kind == AST_IDENTIFIER) {
+				Span name = AST_CAST(AstIdentifier, value, AST_IDENTIFIER)->name;
+				if (name.end - name.start == 1 && gen->source[name.start] == '_') {
+					error_at(gen, name.start, "not supported by szc yet: %s", "non-exhaustive enum switch prong");
+					return IR_REF_VOID_VALUE;
+				}
+			}
+		}
+		words += IR_WORDS(IrSwitchProng) + (uint64_t)prong->item_count * IR_WORDS(IrSwitchItem);
+	}
+	IrSwitch header;
+	header.operand = expr(body, scope, result_none, sw->operand);
+	if (words > UINT32_MAX - gen->ir->extra_count) {
+		error_at(gen, node->offset, "not supported by szc yet: %s", "switch IR payload too large");
+		return IR_REF_VOID_VALUE;
+	}
+	header.prong_count = sw->prong_count;
+	IrData data;
+	memset(&data, 0, sizeof(data));
+	IrInstIndex owner_index = new_inst(gen, IR_SWITCH, node->offset, data);
+	IrRef owner = ir_ref_of_inst(owner_index);
+	uint32_t payload = reserve_extra(gen, (uint32_t)words);
+	write_extra(gen, payload, &header, sizeof(header));
+	uint32_t cursor = payload + IR_WORDS(IrSwitch);
+	for (uint32_t i = 0; i < sw->prong_count; i++) {
+		AstSwitchProng *source = &sw->prongs[i];
+		IrSwitchProng prong;
+		prong.src = source->offset;
+		prong.flags = source->is_else ? IR_SWITCH_ELSE : 0;
+		prong.item_count = source->item_count;
+		uint32_t prong_cursor = cursor;
+		cursor += IR_WORDS(IrSwitchProng);
+		for (uint32_t j = 0; j < source->item_count; j++) {
+			AstSwitchItem *source_item = &source->items[j];
+			IrSwitchItem item;
+			item.src = source_item->value->offset;
+			item.end_src = source_item->range_end == NULL ? item.src : source_item->range_end->offset;
+			item.low_body = switch_endpoint(body, scope, owner, source_item->value);
+			item.high_body = source_item->range_end == NULL ? 0 : switch_endpoint(body, scope, owner, source_item->range_end);
+			write_extra(gen, cursor, &item, sizeof(item));
+			cursor += IR_WORDS(IrSwitchItem);
+		}
+		prong.body = switch_arm(body, scope, info, owner, source);
+		write_extra(gen, prong_cursor, &prong, sizeof(prong));
+	}
+	/* No control scope: bare break/continue still target an enclosing loop. */
+	gen->ir->insts[owner_index].data.payload = payload;
+	body_push(body, owner_index);
+	return owner;
+}
+
 /* A literal supplies the length for `[_]T`; it is not a standalone type. */
 static IrRef
 array_type(GenBody *body, Scope *scope, AstArrayType *node, bool infer, uint32_t count)
@@ -2327,6 +2456,8 @@ expr(GenBody *body, Scope *scope, ResultInfo info, AstNode *node)
 		return block_expr(body, scope, info, node);
 	case AST_IF:
 		return if_expr(body, scope, info, node);
+	case AST_SWITCH:
+		return switch_expr(body, scope, info, node);
 	case AST_WHILE:
 		return while_expr(body, scope, info, node);
 	case AST_FOR:
@@ -3450,6 +3581,36 @@ dump_inst(const IrDumper *dumper, IrInstIndex index, uint32_t depth)
 		dump_ref(dumper, payload.condition);
 		dump_labeled_body(dumper, "then", payload.then_body, depth);
 		dump_labeled_body(dumper, "else", payload.else_body, depth);
+		break;
+	}
+	case IR_SWITCH: {
+		IrSwitch header;
+		IR_READ(ir, inst->data.payload, &header);
+		fputc(' ', out);
+		dump_ref(dumper, header.operand);
+		fprintf(out, " prongs=%" PRIu32, header.prong_count);
+		uint32_t cursor = inst->data.payload + IR_WORDS(IrSwitch);
+		for (uint32_t i = 0; i < header.prong_count; i++) {
+			IrSwitchProng prong;
+			IR_READ(ir, cursor, &prong);
+			cursor += IR_WORDS(IrSwitchProng);
+			fprintf(out, "\n");
+			dump_indent(dumper, depth + 1);
+			fprintf(out, "prong %" PRIu32 " src=%" PRIu32 " items=%" PRIu32 "%s", i, prong.src, prong.item_count,
+				(prong.flags & IR_SWITCH_ELSE) ? " else" : "");
+			for (uint32_t j = 0; j < prong.item_count; j++) {
+				IrSwitchItem item;
+				IR_READ(ir, cursor, &item);
+				cursor += IR_WORDS(IrSwitchItem);
+				fprintf(out, "\n");
+				dump_indent(dumper, depth + 2);
+				fprintf(out, "item %" PRIu32 " src=%" PRIu32 " end_src=%" PRIu32, j, item.src, item.end_src);
+				dump_labeled_body(dumper, "low", item.low_body, depth + 2);
+				if (item.high_body != 0)
+					dump_labeled_body(dumper, "high", item.high_body, depth + 2);
+			}
+			dump_labeled_body(dumper, "arm", prong.body, depth + 1);
+		}
 		break;
 	}
 	case IR_ALIGN:
