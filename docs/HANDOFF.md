@@ -22,14 +22,14 @@ Read this first when resuming work (the sandbox resets often).
    candidate. Never mutate frozen validation sources or mix flag configurations.
    The GitHub token is **never** committed. Restore authenticated Git access if needed.
 
-## In-progress local switch candidate (not accepted or pushed)
+## In-progress switch candidate (review branch, not accepted)
 
 - Candidate is based on e44e6fe. Frontend, sema and independent reference-test
   work were integrated with disjoint ownership and a separate static review.
 - Read `SWITCH_STATUS.md` before extending the switch work. M6.3 remains partial;
   no bootstrap, complete comptime, exact diagnostic parity or hosted-green claim.
-- The strict 84-case contract currently has 63 passes, one expected empty-enum
-  NYI and 20 explicit failures. Do not filter these failures or count an earlier
+- The follow-up strict 84-case contract currently has 67 passes, one expected
+  empty-enum NYI and 16 explicit failures. Do not filter these failures or count an earlier
   unsupported-type gate as switch-language validation.
 - Initial full GCC/Clang regression attempts exposed an adapter API mismatch in
   the new `diff_switch.py`; the tool was corrected without changing the existing
@@ -45,7 +45,25 @@ Read this first when resuming work (the sandbox resets often).
   against the manifest in both trees and the final integration candidate.
 - Preserve frozen validation sources. Source-level validation and strict
   contract acceptance are separate gates; neither is a substitute for hosted CI.
-- No remote changes were made in this batch.
+- The initial candidate was published via GitHub API as cf7cbb3 on review branch
+  `ai/switch-m6-3-wip-20261019`, not main. Follow-up diagnostic and safety-logging
+  changes passed a fresh parent GCC/Clang debug/release, ASan/UBSan unit/golden,
+  native/safety and standalone-fuzz gate. Four fresh 60-second libFuzzer runs pass;
+  both upfront-frozen compiler snapshots pass complete source-integrity checks.
+  Follow-up corpus counts are 256/256/180/236; original/extended frontend protocol
+  counts are 29,288/29,974 and ten observability checks pass. Evidence lives under
+  /data/validation/switch-next; strict failures remain explicit.
+- Four switch-local diagnostic cases now match the reference. Known-unselected
+  index-capture arms remain accepted while eager lexical checks are preserved.
+  The added 25-case diagnostic matrix still exposes two inherited nested-local
+  wording mismatches; it does not filter them.
+- Safety timeout failures now report bounded byte-safe captured output, phase,
+  argv and monotonic elapsed time. Default deadlines, CORE limits, exact panic
+  bytes and SIGABRT checks are unchanged. This is observability, not a timeout fix.
+- Authenticated original CI logs identify scheduled-GCC native timeouts in
+  negate_i64/cast_signed_high (306 pass, 2 fail), and explicit runner shutdown in
+  both push jobs. Ubuntu 24.04 was used and CORE=0 was already set. Root cause
+  remains unproven; the two original cases pass the new harness locally.
 
 ## Previous follow-up checkpoint (M6.2a/b, e44e6fe)
 

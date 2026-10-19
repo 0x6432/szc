@@ -7,6 +7,7 @@ import signal
 import subprocess
 import sys
 import tempfile
+import time
 from pathlib import Path
 
 
@@ -455,10 +456,47 @@ def cases():
             yield f"{label}_size_{bits}", source, "shift amount is greater than the type size"
 
 
-def selected_cases(shard_index, shard_count):
+def selected_cases(shard_index, shard_count, names=None):
     if shard_count < 1 or shard_index < 0 or shard_index >= shard_count:
         raise ValueError('invalid safety shard')
-    return (case for index, case in enumerate(cases()) if index % shard_count == shard_index)
+    available = list(cases())
+    requested = set(names) if names is not None else None
+    if requested is not None:
+        unknown = requested - {case[0] for case in available}
+        if unknown:
+            raise ValueError('unknown safety case: ' + ', '.join(sorted(unknown)))
+    selected = [case for index, case in enumerate(available)
+                if index % shard_count == shard_index
+                and (requested is None or case[0] in requested)]
+    if requested is not None and not selected:
+        raise ValueError('no requested safety cases belong to this shard')
+    return iter(selected)
+
+
+# Bound bytes before repr: escaping may expand output, but never without a bound.
+# repr preserves binary/terminal-control evidence without emitting it literally.
+def diagnostic_bytes(data, limit=2048):
+    data = data or b''
+    shown = repr(data[:limit])
+    if len(data) > limit:
+        shown += f' [truncated: {len(data) - limit} of {len(data)} bytes omitted]'
+    return shown
+
+
+def report_failure(name, compiler, phase, command, elapsed, error, result):
+    if isinstance(error, subprocess.TimeoutExpired):
+        stdout, stderr = error.output, error.stderr
+    else:
+        stdout, stderr = result.stdout, result.stderr
+    reason = str(error).encode('utf-8', errors='backslashreplace')
+    argv = repr(command).encode('utf-8', errors='backslashreplace')
+    print(f'FAIL {name}: {type(error).__name__}: {diagnostic_bytes(reason)}', flush=True)
+    print(f'  phase={phase} elapsed={elapsed:.6f}s '
+          f'returncode={result.returncode if result is not None else "unavailable"} '
+          f'compiler={diagnostic_bytes(os.fsencode(compiler))} '
+          f'argv={diagnostic_bytes(argv)}', flush=True)
+    print(f'  stdout={diagnostic_bytes(stdout)}', flush=True)
+    print(f'  stderr={diagnostic_bytes(stderr)}', flush=True)
 
 
 def arguments(argv=None):
@@ -466,9 +504,15 @@ def arguments(argv=None):
     parser.add_argument('szc', nargs='?', default='build/asan/szc')
     parser.add_argument('--shard-index', type=int, default=0)
     parser.add_argument('--shard-count', type=int, default=1)
+    parser.add_argument('--case', dest='case_names', action='append',
+                        help='select a named case (repeatable); shard membership stays unchanged')
     args = parser.parse_args(argv)
     if args.shard_count < 1 or not 0 <= args.shard_index < args.shard_count:
         parser.error('shard count must be positive and 0 <= shard index < shard count')
+    try:
+        args.selected = list(selected_cases(args.shard_index, args.shard_count, args.case_names))
+    except ValueError as error:
+        parser.error(str(error))
     return args
 
 
@@ -480,7 +524,7 @@ def main():
     passed = failed = 0
     with tempfile.TemporaryDirectory(prefix="szc-safety-") as directory:
         root = Path(directory)
-        for case in selected_cases(args.shard_index, args.shard_count):
+        for case in args.selected:
             name, source, message = case[:3]
             reference_message = case[3] if len(case) == 4 else message
             src = root / f"{name}.zig"
@@ -494,10 +538,20 @@ def main():
                     command = ([compiler, "build-exe", "-j2", str(src), f"-femit-bin={exe}"]
                                if compiler == zig else
                                [compiler, "build-exe", str(src), "-o", str(exe)])
+                    phase = 'compile'
+                    result = None
+                    started = time.monotonic()
                     compiled = run(command, timeout=120)
+                    result = compiled
+                    elapsed = time.monotonic() - started
                     if compiled.returncode != 0:
                         raise AssertionError("compilation failed: " + compiled.stderr.decode(errors="replace"))
-                    result = run([str(exe)])
+                    phase = 'native'
+                    command = [str(exe)]
+                    result = None
+                    started = time.monotonic()
+                    result = run(command)
+                    elapsed = time.monotonic() - started
                     if result.returncode != -signal.SIGABRT:
                         raise AssertionError(f"{compiler} exit {result.returncode}; expected SIGABRT")
                     if result.stdout:
@@ -510,7 +564,9 @@ def main():
                         raise AssertionError("panic message mismatch: " + result.stderr.decode(errors="replace"))
                 passed += 1
             except (AssertionError, subprocess.TimeoutExpired) as error:
-                print(f"FAIL {name}: {error}", flush=True)
+                if isinstance(error, subprocess.TimeoutExpired):
+                    elapsed = time.monotonic() - started
+                report_failure(name, compiler, phase, command, elapsed, error, result)
                 failed += 1
     print(f"safety: {passed} passed, {failed} failed", flush=True)
     return int(failed != 0)

@@ -272,6 +272,8 @@ typedef enum IrDataKind {
 	X(SWITCH, "switch", IR_DATA_PAYLOAD) /* IrSwitch + prongs/items; deferred bodies */ \
 	X(SWITCH_TYPE, "switch_type", IR_DATA_UN) /* operand = owner switch ref */ \
 	X(SWITCH_CAPTURE, "switch_capture", IR_DATA_UN) /* operand = owner switch ref */ \
+	X(SWITCH_UNDERSCORE, "switch_underscore", IR_DATA_UN) /* operand = owner switch ref; invalid-domain endpoint */ \
+	X(SWITCH_INDEX_VALUE, "switch_index_value", IR_DATA_UN) /* operand = owner switch ref; invalid-domain tag binding */ \
 	X(LOOP, "loop", IR_DATA_PAYLOAD)	/* body (ends with repeat) */ \
 	X(REPEAT, "repeat", IR_DATA_UN)	/* loop instruction ref */ \
 	X(FIELD_CALL, "field_call", IR_DATA_PAYLOAD) /* object ref, member name, modifier, arg bodies */ \
@@ -454,12 +456,12 @@ typedef struct IrSwitch {
 	uint32_t prong_count;
 } IrSwitch;
 
-enum { IR_SWITCH_ELSE = 1u };
+enum { IR_SWITCH_ELSE = 1u, IR_SWITCH_INDEX_CAPTURE = 2u };
 typedef struct IrSwitchProng {
-	uint32_t src;
-	uint32_t flags;       /* only IR_SWITCH_ELSE */
+	uint32_t src;         /* index capture token if flagged; otherwise prong source */
+	uint32_t flags;       /* IR_SWITCH_ELSE | IR_SWITCH_INDEX_CAPTURE */
 	uint32_t item_count;  /* zero iff else */
-	IrBody body;
+	IrBody body;          /* always generated, including invalid-domain captures */
 } IrSwitchProng;
 
 typedef struct IrSwitchItem {

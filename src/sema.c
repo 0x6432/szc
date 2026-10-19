@@ -5031,7 +5031,7 @@ analyze_switch_inner(Block *block, const IrInst *inst, IrSwitch payload, SwitchC
 	TypeKind kind = sema->types[domain].kind;
 	bool enumeration = kind == TYPE_ENUM;
 	if (kind == TYPE_FLOAT || kind == TYPE_COMPTIME_FLOAT) {
-		sema_error(block, src, "switch on type '%s' is not allowed", sema_type_name(sema, domain));
+		sema_error(block, src, "switch on type '%s'", sema_type_name(sema, domain));
 		return operand_none;
 	}
 	if (kind != TYPE_INT && kind != TYPE_COMPTIME_INT && !enumeration) {
@@ -5071,7 +5071,7 @@ analyze_switch_inner(Block *block, const IrInst *inst, IrSwitch payload, SwitchC
 		if (!switch_read(block, &cursor, &arms[i].ir, IR_WORDS(IrSwitchProng), src))
 			return operand_none;
 		IrSwitchProng prong = arms[i].ir;
-		if ((prong.flags & ~IR_SWITCH_ELSE) != 0 || ((prong.flags & IR_SWITCH_ELSE) != 0 ? prong.item_count != 0 : prong.item_count == 0)) {
+		if ((prong.flags & ~(IR_SWITCH_ELSE | IR_SWITCH_INDEX_CAPTURE)) != 0 || ((prong.flags & IR_SWITCH_ELSE) != 0 ? prong.item_count != 0 : prong.item_count == 0)) {
 			sema_error(block, prong.src, "invalid switch prong");
 			return operand_none;
 		}
@@ -5186,6 +5186,12 @@ analyze_switch_inner(Block *block, const IrInst *inst, IrSwitch payload, SwitchC
 			sema_error(block, src, "switch operand has no matching case");
 			return operand_none;
 		}
+		/* Arm-local type checks follow known selection; lexical generation
+		 * still visits every body, including known-unselected captures. */
+		if ((arms[selected].ir.flags & IR_SWITCH_INDEX_CAPTURE) != 0) {
+			sema_error(block, arms[selected].ir.src, "cannot capture tag of non-union type '%s'", sema_type_name(sema, domain));
+			return operand_none;
+		}
 		context->capture = operand;
 		context->capture_active = true;
 		uint32_t errors = sema->diag->error_count;
@@ -5209,6 +5215,10 @@ analyze_switch_inner(Block *block, const IrInst *inst, IrSwitch payload, SwitchC
 	TypeId type = T_NORETURN;
 	Operand peer = operand_none;
 	for (uint32_t i = 0; i < payload.prong_count; i++) {
+		if ((arms[i].ir.flags & IR_SWITCH_INDEX_CAPTURE) != 0) {
+			sema_error(block, arms[i].ir.src, "cannot capture tag of non-union type '%s'", sema_type_name(sema, domain));
+			return operand_none;
+		}
 		block_init_child(&arms[i].block, block);
 		arms[i].block.switch_dispatch_depth += payload.prong_count;
 		context->capture = switch_capture(context, &arms[i], cases);
@@ -5361,6 +5371,18 @@ analyze_switch_context(Block *block, const IrInst *inst)
 				continue;
 			if (inst->op == IR_SWITCH_TYPE)
 				return type_operand(block->sema, context->operand.type);
+			if (inst->op == IR_SWITCH_INDEX_VALUE) {
+				/* No supported domain supplies a tag capture. This marker must
+				 * fail closed even if a malformed IR prong omitted its flag. */
+				sema_error(block, inst->src, "cannot capture tag of non-union type '%s'", sema_type_name(block->sema, context->operand.type));
+				return operand_none;
+			}
+			if (inst->op == IR_SWITCH_UNDERSCORE) {
+				/* Non-exhaustive enum types still have their explicit producer
+				 * gate; none of the supported domains admits a bare '_' arm. */
+				sema_error(block, inst->src, "'_' prong only allowed when switching on non-exhaustive enums");
+				return operand_none;
+			}
 			if (context->capture_active)
 				return context->capture;
 			break;
@@ -9407,6 +9429,8 @@ analyze_inst(Block *block, IrInstIndex index, Operand *break_value)
 			return INST_NORETURN;
 		break;
 	case IR_SWITCH_TYPE:
+	case IR_SWITCH_UNDERSCORE:
+	case IR_SWITCH_INDEX_VALUE:
 	case IR_SWITCH_CAPTURE:
 		result = analyze_switch_context(block, inst);
 		break;

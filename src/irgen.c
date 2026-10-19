@@ -2059,11 +2059,35 @@ switch_endpoint(GenBody *body, Scope *scope, IrRef owner, AstNode *node)
 {
 	GenBody endpoint;
 	body_init(&endpoint, body->gen, scope, true);
-	IrRef type = emit_un(&endpoint, IR_SWITCH_TYPE, node->offset, owner);
-	IrRef value = expr(&endpoint, &endpoint.base, result_type(type), node);
+	IrRef value;
+	/* Bare '_' is a domain-sensitive sentinel, not an identifier lookup or else.
+	 * Quoted @"_" remains an ordinary endpoint expression. */
+	bool underscore = false;
+	if (node->kind == AST_IDENTIFIER) {
+		Span name = AST_CAST(AstIdentifier, node, AST_IDENTIFIER)->name;
+		underscore = name.end - name.start == 1 && body->gen->source[name.start] == '_';
+	}
+	if (underscore) {
+		value = emit_un(&endpoint, IR_SWITCH_UNDERSCORE, node->offset, owner);
+	} else {
+		IrRef type = emit_un(&endpoint, IR_SWITCH_TYPE, node->offset, owner);
+		value = expr(&endpoint, &endpoint.base, result_type(type), node);
+	}
 	if (!body_is_terminated(&endpoint))
 		emit_break(&endpoint, IR_BREAK_INLINE, node->offset, IR_BODY_RESULT, value);
 	return body_finish(&endpoint);
+}
+
+/* This wording is switch-local; unrelated local/loop diagnostics stay intact. */
+static void
+switch_capture_shadowing(IrGen *gen, Scope *scope, StringId name, uint32_t src, const char *category)
+{
+	Lookup found = lookup_name(scope, name);
+	if ((found.kind == LOOKUP_LOCAL || found.kind == LOOKUP_CAPTURED_LOCAL)
+		&& found.local->local_kind == LOCAL_PARAM)
+		diag_report(gen->diag, DIAG_ERROR, gen->file, src, "%s '%s' shadows function parameter from outer scope", category, intern_text(gen->interner, name));
+	else
+		check_shadowing(gen, scope, name, src, category);
 }
 
 static IrBody
@@ -2073,15 +2097,27 @@ switch_arm(GenBody *body, Scope *scope, ResultInfo info, IrRef owner, AstSwitchP
 	GenBody arm;
 	body_init(&arm, gen, scope, body->is_comptime);
 	Scope *arm_scope = &arm.base;
-	LocalScope capture;
+	LocalScope capture, index_capture;
 	if (prong->has_capture) {
 		StringId name = intern_span(gen, prong->capture.name);
-		check_shadowing(gen, arm_scope, name, prong->capture.name.start, "capture");
+		switch_capture_shadowing(gen, arm_scope, name, prong->capture.name.start, "capture");
 		IrRef value = emit_un(&arm, IR_SWITCH_CAPTURE, prong->capture.name.start, owner);
 		local_init(&capture, arm_scope, name, LOCAL_CONST, value, prong->capture.name.start);
 		arm_scope = &capture.base;
 	}
+	if (prong->has_index_capture) {
+		StringId name = intern_span(gen, prong->index_capture);
+		if (prong->has_capture && name == capture.name)
+			error_at(gen, prong->index_capture.start, "redeclaration of capture '%s'", intern_text(gen->interner, name));
+		else
+			switch_capture_shadowing(gen, arm_scope, name, prong->index_capture.start, "switch tag capture");
+		IrRef value = emit_un(&arm, IR_SWITCH_INDEX_VALUE, prong->index_capture.start, owner);
+		local_init(&index_capture, arm_scope, name, LOCAL_CONST, value, prong->index_capture.start);
+		arm_scope = &index_capture.base;
+	}
 	IrRef value = expr(&arm, arm_scope, info, prong->body);
+	if (prong->has_index_capture && !index_capture.used)
+		error_at(gen, prong->index_capture.start, "%s", "unused switch tag capture");
 	if (prong->has_capture && !capture.used)
 		error_at(gen, prong->capture.name.start, "%s", "unused capture");
 	if (!body_is_terminated(&arm))
@@ -2116,19 +2152,10 @@ switch_expr(GenBody *body, Scope *scope, ResultInfo info, AstNode *node)
 			error_at(gen, prong->capture.name.start, "%s", "discard of capture; omit it instead");
 			return IR_REF_VOID_VALUE;
 		}
-		if (prong->has_index_capture) {
-			error_at(gen, prong->index_capture.start, "%s", "index capture is not allowed in integer or enum switch");
+		if (prong->has_index_capture && prong->index_capture.end - prong->index_capture.start == 1
+			&& gen->source[prong->index_capture.start] == '_') {
+			error_at(gen, prong->index_capture.start, "%s", "discard of tag capture; omit it instead");
 			return IR_REF_VOID_VALUE;
-		}
-		for (uint32_t j = 0; j < prong->item_count; j++) {
-			AstNode *value = prong->items[j].value;
-			if (value->kind == AST_IDENTIFIER) {
-				Span name = AST_CAST(AstIdentifier, value, AST_IDENTIFIER)->name;
-				if (name.end - name.start == 1 && gen->source[name.start] == '_') {
-					error_at(gen, name.start, "not supported by szc yet: %s", "non-exhaustive enum switch prong");
-					return IR_REF_VOID_VALUE;
-				}
-			}
 		}
 		words += IR_WORDS(IrSwitchProng) + (uint64_t)prong->item_count * IR_WORDS(IrSwitchItem);
 	}
@@ -2149,8 +2176,9 @@ switch_expr(GenBody *body, Scope *scope, ResultInfo info, AstNode *node)
 	for (uint32_t i = 0; i < sw->prong_count; i++) {
 		AstSwitchProng *source = &sw->prongs[i];
 		IrSwitchProng prong;
-		prong.src = source->offset;
-		prong.flags = source->is_else ? IR_SWITCH_ELSE : 0;
+		prong.src = source->has_index_capture ? source->index_capture.start : source->offset;
+		prong.flags = (source->is_else ? IR_SWITCH_ELSE : 0)
+			| (source->has_index_capture ? IR_SWITCH_INDEX_CAPTURE : 0);
 		prong.item_count = source->item_count;
 		uint32_t prong_cursor = cursor;
 		cursor += IR_WORDS(IrSwitchProng);
@@ -2164,6 +2192,8 @@ switch_expr(GenBody *body, Scope *scope, ResultInfo info, AstNode *node)
 			write_extra(gen, cursor, &item, sizeof(item));
 			cursor += IR_WORDS(IrSwitchItem);
 		}
+		/* Visit even invalid-domain capture bodies for eager lexical diagnostics.
+		 * Sema rejects the index flag only for selected known / runtime arms. */
 		prong.body = switch_arm(body, scope, info, owner, source);
 		write_extra(gen, prong_cursor, &prong, sizeof(prong));
 	}
@@ -3598,6 +3628,8 @@ dump_inst(const IrDumper *dumper, IrInstIndex index, uint32_t depth)
 			dump_indent(dumper, depth + 1);
 			fprintf(out, "prong %" PRIu32 " src=%" PRIu32 " items=%" PRIu32 "%s", i, prong.src, prong.item_count,
 				(prong.flags & IR_SWITCH_ELSE) ? " else" : "");
+			if (prong.flags & IR_SWITCH_INDEX_CAPTURE)
+				fputs(" index_capture", out);
 			for (uint32_t j = 0; j < prong.item_count; j++) {
 				IrSwitchItem item;
 				IR_READ(ir, cursor, &item);

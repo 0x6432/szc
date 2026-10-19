@@ -9,6 +9,7 @@ _Static_assert(sizeof(IrSwitch) == 8, "frozen switch header");
 _Static_assert(sizeof(IrSwitchProng) == 16, "frozen switch prong");
 _Static_assert(sizeof(IrSwitchItem) == 16, "frozen switch item");
 _Static_assert(IR_SWITCH_ELSE == 1, "frozen else flag");
+_Static_assert(IR_SWITCH_INDEX_CAPTURE == 2, "index capture flag");
 
 static unsigned checks;
 #define CHECK(x) do { checks++; if (!(x)) { \
@@ -57,7 +58,11 @@ static void endpoint(const IrFile *ir, IrBody body, IrRef owner, uint32_t src)
  const IrInst *end = last(ir, body);
  CHECK(end->op == IR_BREAK_INLINE && end->data.brk.block == IR_BODY_RESULT);
  const IrInst *first = &ir->insts[ir_body_insts(ir, body)[0]];
- CHECK(first->op == IR_SWITCH_TYPE);
+ CHECK(first->op == IR_SWITCH_TYPE || first->op == IR_SWITCH_UNDERSCORE);
+ if (first->op == IR_SWITCH_UNDERSCORE) {
+  CHECK(ir_body_count(ir, body) == 2);
+  CHECK(end->data.brk.operand == ir_ref_of_inst(ir_body_insts(ir, body)[0]));
+ }
  CHECK(first->data.un.operand == owner && first->src == src);
  for (uint32_t i = 0; i < ir_body_count(ir, body); i++)
   CHECK(ir->insts[ir_body_insts(ir, body)[i]].op != IR_SWITCH_CAPTURE);
@@ -80,8 +85,8 @@ static void protocol(const Fixture *f)
    IrSwitchProng prong;
    IR_READ(ir, cursor, &prong);
    cursor += IR_WORDS(IrSwitchProng);
-   CHECK(prong.flags == 0 || prong.flags == IR_SWITCH_ELSE);
-   CHECK((prong.item_count == 0) == (prong.flags == IR_SWITCH_ELSE));
+   CHECK((prong.flags & ~(IR_SWITCH_ELSE | IR_SWITCH_INDEX_CAPTURE)) == 0);
+   CHECK((prong.item_count == 0) == ((prong.flags & IR_SWITCH_ELSE) != 0));
    for (uint32_t j = 0; j < prong.item_count; j++) {
     CHECK(cursor + IR_WORDS(IrSwitchItem) <= ir->extra_count);
     IrSwitchItem item;
@@ -97,6 +102,11 @@ static void protocol(const Fixture *f)
    for (uint32_t j = 0; j < ir_body_count(ir, prong.body); j++) {
     IrInstIndex idx = ir_body_insts(ir, prong.body)[j];
     CHECK(idx > i);
+    if (ir->insts[idx].op == IR_SWITCH_INDEX_VALUE) {
+     CHECK(prong.flags & IR_SWITCH_INDEX_CAPTURE);
+     CHECK(j > 0 && ir->insts[idx].src == prong.src);
+     CHECK(ir->insts[idx].data.un.operand == owner);
+    }
     if (ir->insts[idx].op == IR_SWITCH_CAPTURE) {
      CHECK(j == 0);
      CHECK(ir->insts[idx].data.un.operand == owner);
@@ -117,7 +127,7 @@ static void protocol(const Fixture *f)
    IrOp context = ir->insts[ir_ref_inst(inst->data.bin.lhs)].op;
    CHECK(context == IR_RET_TYPE || context == IR_ELEM_TYPE);
   }
-  if (inst->op != IR_SWITCH_TYPE && inst->op != IR_SWITCH_CAPTURE) continue;
+  if (inst->op != IR_SWITCH_TYPE && inst->op != IR_SWITCH_CAPTURE && inst->op != IR_SWITCH_UNDERSCORE && inst->op != IR_SWITCH_INDEX_VALUE) continue;
   CHECK(ir_ref_is_inst(inst->data.un.operand));
   IrInstIndex owner = ir_ref_inst(inst->data.un.operand);
   CHECK(owner < i && ir->insts[owner].op == IR_SWITCH);
@@ -206,8 +216,8 @@ int main(void)
   {"fn f(x: u8) u8 { return label: switch (x) { else => 1 }; }", "not supported by szc yet: labeled switch", "label"},
   {"fn f(x: u8) u8 { return switch (x) { inline 1 => 2, else => 1 }; }", "not supported by szc yet: inline switch prong", "inline"},
   {"fn f(x: u8) u8 { return switch (x) { 1 => |*ptr| ptr.*, else => 0 }; }", "not supported by szc yet: switch pointer capture", "ptr"},
-  {"fn f(x: u8) u8 { return switch (x) { 1 => |v, idx| v, else => 0 }; }", "index capture is not allowed in integer or enum switch", "idx"},
-  {"fn f(x: u8) u8 { return switch (x) { 1 => |x| x, else => 0 }; }", "local 'x' shadows an earlier local", "|x"},
+  {"fn f(x: u8) u8 { return switch (x) { 1 => |v, idx| v, else => 0 }; }", "unused switch tag capture", "idx"},
+  {"fn f(x: u8) u8 { return switch (x) { 1 => |x| x, else => 0 }; }", "capture 'x' shadows function parameter from outer scope", "|x"},
   {"fn f(x: u8) u8 { return switch (x) { 1 => |v| { v = 2; }, else => 0 }; }", "cannot assign to constant", "v ="},
   {"fn f(x: u8) u8 { return switch (x) { v => |v| v, else => 0 }; }", "use of undeclared identifier 'v'", "v =>"},
   {"fn f(x: u8) u8 { return switch (x) { 1 => |v| v, else => v }; }", "use of undeclared identifier 'v'", "v };"},
@@ -215,25 +225,43 @@ int main(void)
   {"fn f(x: u8) void { switch (x) { else => continue } }", "continue expression outside loop", "continue"},
   {"fn f(x: u8) u8 { return switch (x) { @inComptime() => 1, else => 0 }; }", "redundant", "@inComptime"},
   {"fn f(x: u8) u8 { return switch (x) { 1...@inComptime() => 1, else => 0 }; }", "redundant", "@inComptime"},
-  {"fn f(x: u8) u8 { return switch (x) { _ => 1, else => 0 }; }", "not supported by szc yet: non-exhaustive enum switch prong", "_ =>"},
+  {"fn f(x: u8) u8 { return switch (x) { _ => 1, else => 0 }; }", "'_' prong only allowed when switching on non-exhaustive enums", "_ =>"},
   {"fn f(x: u8) u8 { return switch (x) { 1 => 1, else => missing }; }", "use of undeclared identifier 'missing'", "missing"},
  };
  for (size_t i = 0; i < sizeof(invalid) / sizeof(invalid[0]); i++) {
   Fixture f; init(&f, invalid[i].source);
-  CHECK(diag_has_errors(&f.diag));
-  if (strstr(f.diag.items[0].message, invalid[i].message) == NULL) {
-   fprintf(stderr, "diagnostic fixture %zu: expected %s\n", i, invalid[i].message);
-   diag_print(&f.diag, stderr);
-  }
-  CHECK(strstr(f.diag.items[0].message, invalid[i].message) != NULL);
   const char *at = strstr(invalid[i].source, invalid[i].at);
   CHECK(at != NULL);
   uint32_t offset = (uint32_t)(at - invalid[i].source);
   if (strcmp(invalid[i].at, "|x") == 0) offset++;
-  CHECK(f.diag.items[0].offset == offset);
+  bool underscore = strcmp(invalid[i].at, "_ =>") == 0;
+  if (underscore) {
+   /* These remain language-invalid: sema now owns the exact primary above.
+    * Preserve each original source and assert its complete deferred protocol. */
+   CHECK(!diag_has_errors(&f.diag));
+   CHECK(count_op(f.ir, IR_SWITCH) == 1);
+   CHECK(count_op(f.ir, IR_SWITCH_UNDERSCORE) == (unsigned)underscore);
+   for (uint32_t k = 0; k < f.ir->inst_count; k++) {
+    const IrInst *inst = &f.ir->insts[k];
+    if (inst->op == IR_SWITCH_UNDERSCORE) CHECK(inst->src == offset);
+    if (inst->op != IR_SWITCH) continue;
+    IrSwitchProng first;
+    IR_READ(f.ir, inst->data.payload + IR_WORDS(IrSwitch), &first);
+    CHECK(first.flags == 0);
+   }
+   protocol(&f);
+  } else {
+   CHECK(diag_has_errors(&f.diag));
+   if (strstr(f.diag.items[0].message, invalid[i].message) == NULL) {
+    fprintf(stderr, "diagnostic fixture %zu: expected %s\n", i, invalid[i].message);
+    diag_print(&f.diag, stderr);
+   }
+   CHECK(strstr(f.diag.items[0].message, invalid[i].message) != NULL);
+   CHECK(f.diag.items[0].offset == offset);
+  }
   arena_free(&f.arena);
  }
- printf("switch frontend: %u checks, %zu valid and %zu diagnostic fixtures + 512-prong stress passed (no sema linked)\n", checks,
+ printf("switch frontend: %u checks, %zu valid and %zu negative fixtures (19 lexical, 1 deferred semantic) + 512-prong stress passed (no sema linked)\n", checks,
   sizeof(valid) / sizeof(valid[0]), sizeof(invalid) / sizeof(invalid[0]));
  return 0;
 }

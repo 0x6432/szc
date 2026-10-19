@@ -1400,12 +1400,26 @@ payloads are filled. Its `extra` layout is exactly:
   IrBody body; }`, immediately followed by `item_count` items;
 - `IrSwitchItem { uint32_t src, end_src; IrBody low_body, high_body; }`.
 
-All fields are uint32 words. `IR_SWITCH_ELSE` is `1u`, the only flag; else
-prongs have no items. A discrete item has `high_body == 0` and `end_src == src`.
+All fields are uint32 words; record layouts are unchanged. `IR_SWITCH_ELSE`
+is `1u`; else prongs have no items. `IR_SWITCH_INDEX_CAPTURE` is `2u`.
+For an index-capture prong only, `src` is the index capture name's token source
+and its arm is fully generated, preserving eager lexical diagnostics.
+The arm binds an immutable index local to `switch_index_value owner_ref`, a
+new `IR_DATA_UN` marker at the index token. It provides lexical name resolution,
+not a fabricated tag value; if sema ever executes it, it must fail closed with
+the same owner-type-aware non-union diagnostic. Sema must check this flag before executing any selected arm, and check all
+prongs for a runtime operand, reporting the operand-type-aware non-union
+tag-capture diagnostic. For a known operand, an unselected flagged prong is
+not rejected (pinned Zig 0.17.0 accepts this); else-only and selected flagged
+prongs must still reject. Unused index bindings use `unused switch tag capture`;
+bare `|value, _|` uses `discard of tag capture; omit it instead`, while quoted
+`@"_"` is an ordinary binding. Duplicate payload/index names and parameter
+shadowing remain eager lexical errors in unselected arms.
+Unflagged prongs retain their ordinary source and body. A discrete item has `high_body == 0` and `end_src == src`.
 Ranges preserve both endpoint sources and have a nonzero `high_body` (inclusive
 upper endpoint). Neither integer nor enum classification occurs in irgen.
 
-Every endpoint is a separate forced-comptime generation body. It starts with
+Every ordinary endpoint is a separate forced-comptime generation body. It starts with
 `switch_type owner_ref`, uses that instruction as the endpoint's result type,
 and yields via `break_inline BODY_RESULT`. The enclosing lexical scope is
 inherited, but the prong capture is not in scope. This supplies nominal context
@@ -1413,16 +1427,27 @@ to `.tag` and contextual casts without eagerly deciding the operand type.
 Sema must demand a known, defined endpoint result, reject non-result exits, and
 validate **all** labels before selecting a known operand's arm.
 
+A bare `_` endpoint instead yields `switch_underscore owner_ref`, followed by
+`break_inline BODY_RESULT`, with the marker source at the bare `_` token.
+This marker uses `IR_DATA_UN`, with `data.un.operand` equal to the owner ref.
+It is neither an identifier lookup nor an else prong. Sema resolves the owner
+and rejects integer/exhaustive-enum operands with the exact language diagnostic;
+non-exhaustive enum declarations still hit their existing producer NYI gate.
+Quoted `@"_"` is an ordinary identifier, and `.@"_"` an
+ordinary enum-tag endpoint; neither becomes this marker.
+
 Each arm inherits the caller's unchanged `ResultInfo`, including initializer
 and assignment result contexts. A named scalar capture is a `LOCAL_CONST`
 bound to `switch_capture owner_ref` at the start of that arm. Bare `|_|` rejects with `discard of capture; omit it instead`; quoted
 `|@"_"|` is an ordinary binding. Named captures require a lexical value/address
 use (`unused capture` otherwise), even in unselected known arms. Shadowing and
-assignment checks reuse normal local rules. Bodies terminate with `break_inline BODY_RESULT` unless already
+assignment checks reuse normal local rules, except that switch captures
+shadowing a `LOCAL_PARAM` use `capture 'name' shadows function parameter from
+outer scope`. This switch-local wording does not change unrelated diagnostics. Bodies terminate with `break_inline BODY_RESULT` unless already
 syntactically terminated. Irgen still visits all arm syntax: lexical errors
 and explicit NYI constructs are not hidden by deferred semantic selection.
 
-Both pseudo-ops are unary, with `data.un.operand` equal to the owning switch
+The type and capture pseudo-ops are unary, with `data.un.operand` equal to the owning switch
 **ref**, never its result or a bare instruction index. Sema must look up that
 owner in its active switch-context chain. `switch_type` returns the frozen
 operand's nominal type; `switch_capture` requires an active arm and returns
@@ -1433,15 +1458,13 @@ type operation is introduced.
 No switch `ControlScope` is installed. Break/continue still target enclosing
 loops; local labeled blocks and existing defer registration/unwinding retain
 their ordinary paths. Labeled switches, inline prongs, and pointer captures
-have source-specific `not supported by szc yet:` gates. Index captures are
-rejected for this bounded integer/enum frontend. A bare `_` case has an explicit
-non-exhaustive-enum-prong NYI gate, never default-arm semantics; quoted `@"_"`
-is not gated. Operand-type NYI gates,
+have source-specific `not supported by szc yet:` gates. Index captures and bare `_` cases use the domain-sensitive protocol above,
+never default-arm semantics. Operand-type NYI gates,
 endpoint validity, overlap/exhaustiveness, capture value refinement, and
 selected/runtime joins remain the semantic consumer's responsibility.
 
 The dumper is implemented in `src/irgen.c` (there is no `src/ir.c`); it prints
-the operand, prong/item counts and provenance, every endpoint body and every arm.
+the operand, prong/item counts and provenance, every endpoint body and every arm, explicitly marking index-capture prongs.
 The frontend-only protocol checks can be run independently of switch sema:
 
 ```sh
