@@ -115,8 +115,11 @@ observability tests and the two original real safety cases pass locally. Repeata
 explicit selections. The 120/15-second budgets, CORE policy, exact panic bytes,
 empty stdout and SIGABRT assertions are unchanged.
 
-This is not a cleanup or timeout fix: the shared runner's post-kill communicate
-remains unbounded, and a stall there can still prevent failure logging.
+The original observability batch did not fix cleanup. A separate bounded-cleanup
+follow-up now limits post-kill drainage/reaping to 0.5 seconds, retains partial raw
+bytes and reports incomplete capture. Execution deadlines are unchanged; escaped
+descendants are not claimed terminated. See `COMPILER_CLEANUP.md`. This does not
+establish the cause of historical CI timeouts.
 
 ## Regression status
 

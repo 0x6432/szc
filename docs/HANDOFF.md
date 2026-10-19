@@ -22,6 +22,27 @@ Read this first when resuming work (the sandbox resets often).
    candidate. Never mutate frozen validation sources or mix flag configurations.
    The GitHub token is **never** committed. Restore authenticated Git access if needed.
 
+## Cleanup-only follow-up (local full gate passed)
+
+- Based on published a4c4dcf. Compiler src files remain byte-identical.
+- `tools/compiler_process.py` now bounds timeout/error cleanup to one separate
+  0.5-second allowance, preserving original execution budgets, captured raw bytes
+  and exception identity; incomplete capture/reaping is explicit. Escaped process
+  containment is not claimed. See `COMPILER_CLEANUP.md`.
+- New 25-case regression runs automatically in `make test`; existing 67 adapter
+  and ten observability tests remain unchanged and pass parent focused checks.
+- Forced-comptime experiment b97db763 was REJECTED: it fixed six diagnostic cases
+  but broke valid nonlocal break/continue. Do not merge its three source changes
+  or the experimental structural assertion. Frozen evidence remains local under
+  /data/analysis/forced-context-implementation-rejected-bundle.zip. All source
+  changes were rolled back in the parent experimental tree. Published strict
+  checkpoint remains 79 pass / four failures / one expected NYI, not 80 passes.
+- Fresh unchanged GCC/Clang debug/release, ASan/UBSan unit/golden, frontend,
+  native/safety, standalone fuzz and four 60-second libFuzzer runs pass. Both
+  frozen-source integrity checks pass. Records: /data/validation/cleanup-v2.
+  Fresh strict switch audit still reports 79 pass / four failures / one NYI.
+  No historical CI root cause or hosted-green claim.
+
 ## Bounded namespace-comptime follow-up (local full gate passed)
 
 - Diagnostic/observability follow-up uploaded as 9432ea7 on the existing WIP branch;
