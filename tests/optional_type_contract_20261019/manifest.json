@@ -1,0 +1,333 @@
+{
+  "reference_version": "0.17.0",
+  "baseline_commit": "5e13779f823d6794489f3cff967753a3eaa1416b",
+  "scope": "Compile-only optional type identity foundation,30 cases; outside-foundation value/layout/ABI/use gates remain visible, no native execution.",
+  "cases": [
+    {
+      "file": "core_control.zig",
+      "lane": "parity",
+      "category": "control",
+      "reference": {
+        "status": 0,
+        "primaries": []
+      },
+      "source_sha256": "ba35d17e82a47c8c699f7e73e3bf6e4110d6bce581a50630f5b1ddeb72155533"
+    },
+    {
+      "file": "alias_canonical.zig",
+      "lane": "parity",
+      "category": "type-identity",
+      "reference": {
+        "status": 0,
+        "primaries": []
+      },
+      "source_sha256": "e542a575e610da90da55730f26364cc9932885e96251239395a661f69e3486be"
+    },
+    {
+      "file": "nested_distinct.zig",
+      "lane": "parity",
+      "category": "type-identity",
+      "reference": {
+        "status": 0,
+        "primaries": []
+      },
+      "source_sha256": "e09128f155a13739bfeaaa7a3dc0aca321ff757fcb66cf93fc8d5df7ada72b00"
+    },
+    {
+      "file": "name_simple.zig",
+      "lane": "parity",
+      "category": "type-identity",
+      "reference": {
+        "status": 0,
+        "primaries": []
+      },
+      "source_sha256": "b70b6890c7c2897b1f9d81e9705f9024b828ed5a252bb3879c131fa6b03dd697"
+    },
+    {
+      "file": "name_nested.zig",
+      "lane": "parity",
+      "category": "type-identity",
+      "reference": {
+        "status": 0,
+        "primaries": []
+      },
+      "source_sha256": "1188ef7b5af3b18d6c98ecf4d7b7249f5e08c9d73b21f359c1f92de6bdbd24ed"
+    },
+    {
+      "file": "name_pointer.zig",
+      "lane": "parity",
+      "category": "type-identity",
+      "reference": {
+        "status": 0,
+        "primaries": []
+      },
+      "source_sha256": "68397944cfc2ea0396c4579c63bf5dba1e2d61feacd44f90defc58e9948a5fe8"
+    },
+    {
+      "file": "pointer_topology_qualifiers.zig",
+      "lane": "parity",
+      "category": "type-identity",
+      "reference": {
+        "status": 0,
+        "primaries": []
+      },
+      "source_sha256": "523c890c279638a8229d3fa646182fd8f2a398206b544f065468d3a398bd3f74"
+    },
+    {
+      "file": "nominal_children.zig",
+      "lane": "parity",
+      "category": "type-identity",
+      "reference": {
+        "status": 0,
+        "primaries": []
+      },
+      "source_sha256": "02c2b9299510fa42533388451c73d3c2c9e3439e29ee84f47eb7f905923b860e"
+    },
+    {
+      "file": "child_noreturn.zig",
+      "lane": "parity",
+      "category": "type-identity",
+      "reference": {
+        "status": 0,
+        "primaries": []
+      },
+      "source_sha256": "1cab327134bad2e653242c4387c2cc9f2856551f2786f6592ad22481553aa81b"
+    },
+    {
+      "file": "child_type.zig",
+      "lane": "parity",
+      "category": "type-identity",
+      "reference": {
+        "status": 0,
+        "primaries": []
+      },
+      "source_sha256": "fc917f0575c3662e8e8965c3c4ed0f26621a0255d89c5401927ed29d6d12ac78"
+    },
+    {
+      "file": "child_comptime_int.zig",
+      "lane": "parity",
+      "category": "type-identity",
+      "reference": {
+        "status": 0,
+        "primaries": []
+      },
+      "source_sha256": "259d78041bc56005530b286b5e90db49314c27b5d0cda9021ca40a7c88d87e64"
+    },
+    {
+      "file": "child_comptime_float.zig",
+      "lane": "parity",
+      "category": "type-identity",
+      "reference": {
+        "status": 0,
+        "primaries": []
+      },
+      "source_sha256": "aa619bfd59fa2e5ea1eb542835ea8d5d13a55954fb3592f40dd02d99247a2873"
+    },
+    {
+      "file": "child_void.zig",
+      "lane": "parity",
+      "category": "type-identity",
+      "reference": {
+        "status": 0,
+        "primaries": []
+      },
+      "source_sha256": "54beccc4551e3c315c2c26777b2da692e86766d99f45a8890e46549e3a4b875f"
+    },
+    {
+      "file": "child_opaque.zig",
+      "lane": "parity",
+      "category": "type-identity",
+      "reference": {
+        "status": 1,
+        "primaries": [
+          "opaque type 'child_opaque.O' cannot be optional"
+        ]
+      },
+      "source_sha256": "7c0acd2baf9df9ebf6c911dd6427627af0814e98a42a1efc78d9dea1b2d5d6ab"
+    },
+    {
+      "file": "invalid_undefined_child.zig",
+      "lane": "parity",
+      "category": "type-identity",
+      "reference": {
+        "status": 1,
+        "primaries": [
+          "use of undefined value here causes illegal behavior"
+        ]
+      },
+      "source_sha256": "21f622f7e021a43fd6f6ef82b4a81f7ee98c84f259fb0118d5b024e629c61178"
+    },
+    {
+      "file": "invalid_null_child.zig",
+      "lane": "parity",
+      "category": "type-identity",
+      "reference": {
+        "status": 1,
+        "primaries": [
+          "expected type 'type', found '@TypeOf(null)'"
+        ]
+      },
+      "source_sha256": "c93d5c26b9a7a78cc199ecd825438cb4d5fd4f95e8403dabc4dbc877a827ba58"
+    },
+    {
+      "file": "invalid_integer_child.zig",
+      "lane": "parity",
+      "category": "type-identity",
+      "reference": {
+        "status": 1,
+        "primaries": [
+          "expected type 'type', found 'comptime_int'"
+        ]
+      },
+      "source_sha256": "78846665863d69c65e8004df6c67da93a49e5721207f0fada88d91e8d5d6cb7d"
+    },
+    {
+      "file": "invalid_error_value_child.zig",
+      "lane": "parity",
+      "category": "type-identity",
+      "reference": {
+        "status": 1,
+        "primaries": [
+          "expected type 'type', found 'error{Bad}'"
+        ]
+      },
+      "source_sha256": "3e5db03e7721a91bb75accdac8ed3115d82210818c57b67e19b2920cbc179e61"
+    },
+    {
+      "file": "lazy_unused_invalid_child.zig",
+      "lane": "parity",
+      "category": "control",
+      "reference": {
+        "status": 0,
+        "primaries": []
+      },
+      "source_sha256": "6a65551624652312b7ef126ad67454c400c08960bee4ae7fbd3e251968372eb8"
+    },
+    {
+      "file": "namespace_dependency.zig",
+      "lane": "parity",
+      "category": "type-identity",
+      "reference": {
+        "status": 0,
+        "primaries": []
+      },
+      "source_sha256": "7e32c5baf1788ab31f9d59ef5f16fecce4b59b809d83cf220b035afc179ac601"
+    },
+    {
+      "file": "dependency_cycle.zig",
+      "lane": "parity",
+      "category": "type-identity",
+      "reference": {
+        "status": 1,
+        "primaries": [
+          "dependency loop with length 2"
+        ]
+      },
+      "source_sha256": "49497e2360047ed31a17cd467b9dc515aec85499ff4b109245629d7d8c088f2c"
+    },
+    {
+      "file": "pointer_struct_optional.zig",
+      "lane": "parity",
+      "category": "type-identity",
+      "reference": {
+        "status": 0,
+        "primaries": []
+      },
+      "source_sha256": "b38c8ee9db41d39da50552e4faab402e6c8248849fc9dc64b690f697407d923f"
+    },
+    {
+      "file": "runtime_value_storage.zig",
+      "lane": "parity",
+      "category": "outside-foundation",
+      "reference": {
+        "status": 0,
+        "primaries": []
+      },
+      "source_sha256": "b13c44ea82ff9cd4db11f8c6b771d23bb27860cfa3e475aa9b9ba738a6ac936b",
+      "observation": "Legal reference feature or language ABI error outside type-only admission; NYI is never parity credit."
+    },
+    {
+      "file": "optional_param_abi.zig",
+      "lane": "parity",
+      "category": "outside-foundation",
+      "reference": {
+        "status": 1,
+        "primaries": [
+          "parameter of type '?u8' not allowed in function with calling convention 'x86_64_sysv'"
+        ]
+      },
+      "source_sha256": "cbe15fa7a47f42507dd7cc335271dc5f4d7f5289471e052ea7c32658a74de25c",
+      "observation": "Legal reference feature or language ABI error outside type-only admission; NYI is never parity credit."
+    },
+    {
+      "file": "optional_return_abi.zig",
+      "lane": "parity",
+      "category": "outside-foundation",
+      "reference": {
+        "status": 1,
+        "primaries": [
+          "return type '?u8' not allowed in function with calling convention 'x86_64_sysv'"
+        ]
+      },
+      "source_sha256": "12fbde55a8e7aeafa5e1c9935b0628f3a649648d4917f765cd5456d670b26174",
+      "observation": "Legal reference feature or language ABI error outside type-only admission; NYI is never parity credit."
+    },
+    {
+      "file": "size_optional.zig",
+      "lane": "parity",
+      "category": "outside-foundation",
+      "reference": {
+        "status": 0,
+        "primaries": []
+      },
+      "source_sha256": "0083afdef86889f9b7a009a60892ae05e960789fd73bc1109c4872f623285e4d",
+      "observation": "Legal reference feature or language ABI error outside type-only admission; NYI is never parity credit."
+    },
+    {
+      "file": "null_coercion.zig",
+      "lane": "parity",
+      "category": "outside-foundation",
+      "reference": {
+        "status": 0,
+        "primaries": []
+      },
+      "source_sha256": "adc54ca1f1250b994b67e6c9ecbee15812a08d2d9009465472ef2fbcdd9b15a7",
+      "observation": "Legal reference feature or language ABI error outside type-only admission; NYI is never parity credit."
+    },
+    {
+      "file": "optional_unwrap.zig",
+      "lane": "parity",
+      "category": "outside-foundation",
+      "reference": {
+        "status": 0,
+        "primaries": []
+      },
+      "source_sha256": "5174e6f6be0296292c2526f7d700f0888ae3da2defc9ddb0e2d1df1a2493a7f3",
+      "observation": "Legal reference feature or language ABI error outside type-only admission; NYI is never parity credit."
+    },
+    {
+      "file": "original_optional_switch.zig",
+      "lane": "parity",
+      "category": "outside-foundation",
+      "reference": {
+        "status": 1,
+        "primaries": [
+          "switch on optional type '?u8'"
+        ]
+      },
+      "source_sha256": "2444108c7964a384f2d65ddbfd8c6e7ae997f045a34a6ab4e6618cc88cf94647",
+      "original": "tests/switch_contract/errors/switch_operand_optional.zig",
+      "observation": "Original language error remains byteexact. Type-only foundation cannot claim value/coercion/switch support."
+    },
+    {
+      "file": "pointer_optional_size.zig",
+      "lane": "parity",
+      "category": "type-identity",
+      "reference": {
+        "status": 0,
+        "primaries": []
+      },
+      "source_sha256": "4315067e3979ae0e59f5c0858caa77e6f18d80d50b427e28626d76214f5a491d"
+    }
+  ]
+}

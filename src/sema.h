@@ -39,6 +39,7 @@ typedef enum TypeKind {
 	TYPE_NULL,
 	TYPE_UNDEFINED,
 	TYPE_ENUM_LITERAL,
+	TYPE_OPTIONAL,
 } TypeKind;
 
 typedef enum PointerSize {
@@ -94,6 +95,7 @@ typedef struct Type {
 		} floating;
 		TypePointer   pointer;
 		TypeArray     array;
+		TypeId        optional_child;
 		TypeFn        fn;
 		SemaNamespace *structure;	/* nominal struct or enum namespace */
 	} as;

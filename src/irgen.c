@@ -2481,6 +2481,9 @@ expr(GenBody *body, Scope *scope, ResultInfo info, AstNode *node)
 		return identifier(body, scope, info, node);
 	case AST_FN_PROTO:
 		return rvalue(body, info, function_proto(body, scope, AST_CAST(AstFnProto, node, AST_FN_PROTO), STRING_NONE, 0, STRING_NONE, NULL, IR_FN_TYPE), node->offset);
+	case AST_OPTIONAL_TYPE:
+		return rvalue(body, info, emit_un(body, IR_OPTIONAL_TYPE, node->offset,
+			type_expr(body, scope, AST_CAST(AstWrap, node, AST_OPTIONAL_TYPE)->operand)), node->offset);
 	case AST_POINTER_TYPE:
 		return rvalue(body, info, pointer_type(body, scope, AST_CAST(AstPointerType, node, AST_POINTER_TYPE)), node->offset);
 	case AST_DEREF:

@@ -1,0 +1,145 @@
+{
+  "contract": "optional_type_boundaries_20261019",
+  "base_commit": "5e13779f823d6794489f3cff967753a3eaa1416b",
+  "candidate_stage": "emit-qbe",
+  "reference_version": "0.17.0",
+  "scope": "Eight unchanged sources. Seven intended explicit refusals + one ordinary accept; policy fence observations, not optional language parity. NEVER execute fixtures.",
+  "cases": [
+    {
+      "file": "zero_array_value.zig",
+      "source_sha256": "12f495779abbfd58b04087a508221044fde88b04616d66173a2353ef63cd5ac1",
+      "label": "VALID-UNSUPPORTED-FENCE",
+      "candidate": {
+        "status": 1,
+        "primaries": [
+          "not supported by szc yet: optional value or layout demand"
+        ],
+        "generated_stdout": "empty"
+      },
+      "reference": {
+        "status": 0,
+        "primaries": []
+      },
+      "provenance": "Exact final parent-authorized supplemental source; no new program or rewrite."
+    },
+    {
+      "file": "zero_array_size.zig",
+      "source_sha256": "027eed9e8d7641d8624a10b4a612337a1aab27c6a69ca27a2133b22031236540",
+      "label": "VALID-UNSUPPORTED-FENCE",
+      "candidate": {
+        "status": 1,
+        "primaries": [
+          "not supported by szc yet: optional value or layout demand"
+        ],
+        "generated_stdout": "empty"
+      },
+      "reference": {
+        "status": 0,
+        "primaries": []
+      },
+      "provenance": "Exact final parent-authorized supplemental source; no new program or rewrite."
+    },
+    {
+      "file": "indirect_zero_arg_optional_return.zig",
+      "source_sha256": "64fe30cc49877d4408037b6f0d89c1751f910de272cd7e6d6c38aaa98917f80d",
+      "label": "VALID-UNSUPPORTED-FENCE",
+      "candidate": {
+        "status": 1,
+        "primaries": [
+          "not supported by szc yet: optional values in runtime function signatures"
+        ],
+        "generated_stdout": "empty"
+      },
+      "reference": {
+        "status": 0,
+        "primaries": []
+      },
+      "provenance": "Exact final parent-authorized supplemental source; no new program or rewrite."
+    },
+    {
+      "file": "optional_pointer_alignment.zig",
+      "source_sha256": "79345ef9b368b0b83a001142a78540cf6389b7a13f30de39cdfab60772b14046",
+      "label": "VALID-UNSUPPORTED-FENCE",
+      "candidate": {
+        "status": 1,
+        "primaries": [
+          "not supported by szc yet: optional value or layout demand"
+        ],
+        "generated_stdout": "empty"
+      },
+      "reference": {
+        "status": 0,
+        "primaries": []
+      },
+      "provenance": "Exact final parent-authorized supplemental source; no new program or rewrite."
+    },
+    {
+      "file": "optional_many_pointer_index_address.zig",
+      "source_sha256": "3e7f7e2da1ccf2951c97fbc5fde2477381e56247cdc1e5403e56a921f4f78b78",
+      "label": "VALID-UNSUPPORTED-FENCE",
+      "candidate": {
+        "status": 1,
+        "primaries": [
+          "not supported by szc yet: optional value or layout demand"
+        ],
+        "generated_stdout": "empty"
+      },
+      "reference": {
+        "status": 0,
+        "primaries": []
+      },
+      "provenance": "Exact final parent-authorized supplemental source; no new program or rewrite."
+    },
+    {
+      "file": "optional_struct_layout.zig",
+      "source_sha256": "6022b8e5683fd768a7efcd66736dab46ecd38bda46972f909dba9fbdf32c90c1",
+      "label": "VALID-UNSUPPORTED-FENCE",
+      "candidate": {
+        "status": 1,
+        "primaries": [
+          "not supported by szc yet: optional value or layout demand"
+        ],
+        "generated_stdout": "empty"
+      },
+      "reference": {
+        "status": 0,
+        "primaries": []
+      },
+      "provenance": "Exact final parent-authorized supplemental source; no new program or rewrite."
+    },
+    {
+      "file": "optional_zero_pointer_concat.zig",
+      "source_sha256": "cb6c32a174083c85f29851af96767c5bb53eca8b2b32da397744906a310d65f2",
+      "label": "REF-INVALID-NYI-REFUSAL",
+      "candidate": {
+        "status": 1,
+        "primaries": [
+          "not supported by szc yet: optional value or layout demand"
+        ],
+        "generated_stdout": "empty"
+      },
+      "reference": {
+        "status": 1,
+        "primaries": [
+          "use of undefined value here causes illegal behavior"
+        ]
+      },
+      "provenance": "Exact final parent-authorized supplemental source; no new program or rewrite."
+    },
+    {
+      "file": "ordinary_zero_pointer_concat.zig",
+      "source_sha256": "a31bab57bec2f81909fdb17d129163c8c627b0dfec3279fce8344e5cfea38234",
+      "label": "ACCEPT",
+      "candidate": {
+        "status": 0,
+        "primaries": [],
+        "generated_stdout": "nonempty"
+      },
+      "reference": {
+        "status": 0,
+        "primaries": []
+      },
+      "provenance": "Exact final parent-authorized supplemental source; no new program or rewrite."
+    }
+  ]
+}

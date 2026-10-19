@@ -1,0 +1,3 @@
+const T=?*const u8;
+export fn probe()u8{if(@typeName(T).len!=10){const bad:u8=false;_=bad;}if(@typeName(T)[0]!=63){const bad:u8=false;_=bad;}if(@typeName(T)[1]!=42){const bad:u8=false;_=bad;}if(@typeName(T)[2]!=99){const bad:u8=false;_=bad;}if(@typeName(T)[3]!=111){const bad:u8=false;_=bad;}if(@typeName(T)[4]!=110){const bad:u8=false;_=bad;}if(@typeName(T)[5]!=115){const bad:u8=false;_=bad;}if(@typeName(T)[6]!=116){const bad:u8=false;_=bad;}if(@typeName(T)[7]!=32){const bad:u8=false;_=bad;}if(@typeName(T)[8]!=117){const bad:u8=false;_=bad;}if(@typeName(T)[9]!=56){const bad:u8=false;_=bad;}return 1;}
+pub fn main()void{}

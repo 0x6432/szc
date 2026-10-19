@@ -318,6 +318,9 @@ type_hash(const Type *type)
 	case TYPE_FLOAT:
 		hash = hash_word(hash, type->as.floating.bits);
 		break;
+	case TYPE_OPTIONAL:
+		hash = hash_word(hash, type->as.optional_child);
+		break;
 	case TYPE_ARRAY:
 		hash = hash_word(hash, type->as.array.child);
 		hash = hash_word(hash, (uint32_t)type->as.array.length);
@@ -359,6 +362,8 @@ type_equal(const Type *a, const Type *b)
 		return a->as.integer.is_signed == b->as.integer.is_signed && a->as.integer.bits == b->as.integer.bits;
 	case TYPE_FLOAT:
 		return a->as.floating.bits == b->as.floating.bits;
+	case TYPE_OPTIONAL:
+		return a->as.optional_child == b->as.optional_child;
 	case TYPE_ARRAY:
 		return a->as.array.child == b->as.array.child && a->as.array.length == b->as.array.length && a->as.array.sentinel == b->as.array.sentinel;
 	case TYPE_POINTER:
@@ -608,9 +613,36 @@ is_int(const Sema *sema, TypeId type)
 	return sema->types[type].kind == TYPE_INT;
 }
 
+/* By-value syntactic frontier only. Immutable structural children precede their
+ * parents, so this single-edge walk terminates without new user-visible fuel.
+ * Nominal fields remain demand-driven; pointer/function identities stop here. */
+static bool
+optional_value_frontier(const Sema *sema, TypeId type)
+{
+	for (;;) {
+		TypeKind kind = sema->types[type].kind;
+		if (kind == TYPE_OPTIONAL)
+			return true;
+		if (kind != TYPE_ARRAY)
+			return false;
+		type = sema->types[type].as.array.child;
+	}
+}
+
+static bool
+optional_value_allowed(Block *block, TypeId type, uint32_t src)
+{
+	if (!optional_value_frontier(block->sema, type))
+		return true;
+	sema_error(block, src, "not supported by szc yet: optional value or layout demand");
+	return false;
+}
+
 static bool
 is_comptime_only_type(const Sema *sema, TypeId type)
 {
+	while (sema->types[type].kind == TYPE_OPTIONAL)
+		type = sema->types[type].as.optional_child;
 	switch (sema->types[type].kind) {
 	case TYPE_TYPE:
 	case TYPE_FN:
@@ -655,6 +687,8 @@ sema_type_name(Sema *sema, TypeId type_id)
 		return arena_sprintf(sema->arena, "%c%u", type->as.integer.is_signed ? 'i' : 'u', (unsigned)type->as.integer.bits);
 	case TYPE_FLOAT:
 		return arena_sprintf(sema->arena, "f%u", (unsigned)type->as.floating.bits);
+	case TYPE_OPTIONAL:
+		return arena_sprintf(sema->arena, "?%s", sema_type_name(sema, type->as.optional_child));
 	case TYPE_ARRAY:
 		return arena_sprintf(sema->arena, "[%" PRIu64 "%s]%s", type->as.array.length, type->as.array.sentinel == VALUE_NONE ? "" : arena_sprintf(sema->arena, ":%s", value_text(sema, type->as.array.sentinel)), sema_type_name(sema, type->as.array.child));
 	case TYPE_POINTER: {
@@ -699,6 +733,8 @@ sema_type_size(const Sema *sema, TypeId type_id, uint64_t *out)
 	const Type *type = &sema->types[type_id];
 	uint64_t size = 0;
 	switch (type->kind) {
+	case TYPE_OPTIONAL:
+		return false;
 	case TYPE_BOOL:
 		size = 1;
 		break;
@@ -1160,6 +1196,8 @@ static bool
 runtime_constant_allowed(Block *block, ValueId root, uint32_t src)
 {
 	Sema *sema = block->sema;
+	if (!optional_value_allowed(block, value_get(&sema->values, root)->type, src))
+		return false;
 	uint32_t capacity = sema->values.capacity;
 	if (capacity > sema->runtime_storage_capacity) {
 		uint32_t old = sema->runtime_storage_capacity;
@@ -1187,6 +1225,10 @@ runtime_constant_allowed(Block *block, ValueId root, uint32_t src)
 		sema->runtime_storage_work++;
 		ValueId id = sema->runtime_storage_queue[cursor];
 		const Value *value = value_get(&sema->values, id);
+		if (optional_value_frontier(sema, value->type)) {
+			allowed = false;
+			break;
+		}
 		ValueId one[2];
 		const ValueId *children = one;
 		uint32_t child_count = 0;
@@ -1275,6 +1317,8 @@ static bool enum_runtime_allowed(const Sema *sema, TypeId type);
 static TirRef
 materialize(Block *block, Operand operand, uint32_t src)
 {
+	if (!optional_value_allowed(block, operand.type, src))
+		return TIR_REF_NONE;
 	if (operand.kind == OPERAND_AGGREGATE || operand.kind == OPERAND_NONE
 		|| sema_type_is_aggregate(block->sema, operand.type)) {
 		sema_error(block, src, "not supported by szc yet: array value in scalar runtime context");
@@ -1353,6 +1397,17 @@ enum_runtime_allowed(const Sema *sema, TypeId type)
 		&& sema->types[tag].as.integer.bits > 0 && sema->types[tag].as.integer.bits <= 64;
 }
 
+static bool
+optional_signature_frontier(const Sema *sema, TypeFn fn)
+{
+	if (optional_value_frontier(sema, fn.ret))
+		return true;
+	for (uint32_t i = 0; i < fn.param_count; i++)
+		if (optional_value_frontier(sema, fn.params[i]))
+			return true;
+	return false;
+}
+
 static bool func_validate_internal_signature(Sema *sema, FuncId id);
 
 /* Marks a function as referenced at runtime: its body will be analysed. */
@@ -1366,6 +1421,12 @@ func_queue(Sema *sema, FuncId id)
 	/* Like Zig, only validate the machine ABI when a declaration is exported or
 	 * used at runtime. A discarded known address need not make an extern live. */
 	TypeFn fn = sema->types[func->type].as.fn;
+	if (optional_signature_frontier(sema, fn)) {
+		diag_report(sema->diag, DIAG_ERROR, func->ir->file, func->ir->insts[func->func_inst].src,
+			"not supported by szc yet: optional values in runtime function signatures");
+		func->state = FUNC_FAILED;
+		return;
+	}
 	bool struct_value = type_has_struct_value(sema, fn.ret);
 	for (uint32_t i = 0; i < fn.param_count; i++)
 		struct_value |= type_has_struct_value(sema, fn.params[i]);
@@ -1557,6 +1618,8 @@ static bool
 global_type_allowed(Block *block, TypeId type, uint32_t src)
 {
 	Sema *sema = block->sema;
+	if (!optional_value_allowed(block, type, src))
+		return false;
 	if (is_comptime_only_type(sema, type)) {
 		sema_error(block, src, "variable of type '%s' must be const or comptime", sema_type_name(sema, type));
 		return false;
@@ -1848,6 +1911,8 @@ type_tag_name(const Sema *sema, TypeId type)
 		return "struct";
 	case TYPE_ENUM:
 		return "enum";
+	case TYPE_OPTIONAL:
+		return "optional";
 	case TYPE_ANYOPAQUE:
 		return "opaque";
 	case TYPE_ANYERROR:
@@ -1907,6 +1972,14 @@ operand_to_type(Block *block, Operand operand, uint32_t src, TypeId *out)
 	}
 	*out = operand_value(block, operand)->as.type_value;
 	return true;
+}
+
+static bool
+pointer_layout_demand_ready(Block *block, TypePointer pointer, uint32_t src)
+{
+	if (!optional_value_allowed(block, pointer.child, src))
+		return false;
+	return pointer.alignment != 0 || ensure_type_layout(block, pointer.child, src);
 }
 
 static uint32_t
@@ -1984,12 +2057,19 @@ memory_coercion_allowed(Block *block, TypeId dest, TypeId source, bool dest_is_m
 	 * their ABI here would turn recursive pointer qualifier coercions into
 	 * false by-value layout cycles while a field type is being analyzed. */
 	if (to.child != from.child || to.alignment != from.alignment) {
+		if (!pointer_layout_demand_ready(block, to, src)
+			|| !pointer_layout_demand_ready(block, from, src))
+			return false;
 		uint32_t to_align = pointer_alignment(block, to, src);
 		uint32_t from_align = pointer_alignment(block, from, src);
 		if (dest_is_mut ? to_align != from_align : to_align > from_align)
 			return false;
 	}
-	if (memory_coercion_allowed(block, to.child, from.child, dest_is_mut || !to.is_const, src))
+	uint32_t errors = sema->diag->error_count;
+	bool child_allowed = memory_coercion_allowed(block, to.child, from.child, dest_is_mut || !to.is_const, src);
+	if (sema->diag->error_count != errors)
+		return false;
+	if (child_allowed)
 		return true;
 	/* Zig's pointer-value exception drops a trailing array sentinel, but not
 	 * through a writable pointer slot. Nested array layouts still must match. */
@@ -2150,6 +2230,8 @@ array_slice_allowed(Block *block, TypeId dest, TypeId source, uint32_t src)
 		|| (array.length == 0 && to.sentinel == VALUE_NONE);
 	if (empty) {
 		adjusted.as.pointer.is_const = to.is_const;
+		if (!pointer_layout_demand_ready(block, to, src))
+			return false;
 		adjusted.as.pointer.alignment = pointer_alignment(block, to, src);
 	}
 	TypeId source_type = type_intern(sema, &adjusted);
@@ -2164,6 +2246,9 @@ coerce(Block *block, Operand operand, TypeId dest, uint32_t src)
 	Sema *sema = block->sema;
 	if (operand.kind == OPERAND_NONE)
 		return operand;
+	if (!optional_value_allowed(block, dest, src)
+		|| !optional_value_allowed(block, operand.type, src))
+		return operand_none;
 	TypeId leaf = dest;
 	while (sema->types[leaf].kind == TYPE_ARRAY)
 		leaf = sema->types[leaf].as.array.child;
@@ -2175,6 +2260,7 @@ coerce(Block *block, Operand operand, TypeId dest, uint32_t src)
 	if (operand.type == dest || operand.type == T_NORETURN)
 		return operand;
 	TypeKind dest_kind = sema->types[dest].kind;
+	uint32_t compatibility_errors = sema->diag->error_count;
 	if (operand.kind == OPERAND_AGGREGATE && dest_kind == TYPE_ARRAY
 		&& sema->types[operand.type].kind == TYPE_ARRAY) {
 		TypeArray target = sema->types[dest].as.array;
@@ -2200,7 +2286,10 @@ coerce(Block *block, Operand operand, TypeId dest, uint32_t src)
 		&& sema->types[operand.type].kind == TYPE_POINTER) {
 		TypePointer source = sema->types[operand.type].as.pointer;
 		TypeId data_type = slice_pointer_type(sema, dest);
-		if (array_slice_allowed(block, dest, operand.type, src)) {
+		bool array_slice = array_slice_allowed(block, dest, operand.type, src);
+		if (sema->diag->error_count != compatibility_errors)
+			return operand_none;
+		if (array_slice) {
 			uint64_t count = sema->types[source.child].as.array.length;
 			Operand data;
 			if (operand_is_undefined(block, operand))
@@ -2215,7 +2304,10 @@ coerce(Block *block, Operand operand, TypeId dest, uint32_t src)
 			Operand length = comptime_operand(T_USIZE, value_int_u64(&sema->values, T_USIZE, count));
 			return make_slice(block, dest, data, length, src);
 		}
-		if (source.size == POINTER_SLICE && memory_coercion_allowed(block, dest, operand.type, false, src)) {
+		bool slice_copy = source.size == POINTER_SLICE && memory_coercion_allowed(block, dest, operand.type, false, src);
+		if (sema->diag->error_count != compatibility_errors)
+			return operand_none;
+		if (slice_copy) {
 			if (operand_is_undefined(block, operand))
 				return comptime_operand(dest, value_undefined(&sema->values, dest));
 			if (operand.kind == OPERAND_COMPTIME) {
@@ -2254,7 +2346,11 @@ coerce(Block *block, Operand operand, TypeId dest, uint32_t src)
 		if (value.kind == VALUE_UNDEFINED && (operand.type == T_UNDEFINED
 			|| (dest_kind != TYPE_ARRAY && sema->types[operand.type].kind != TYPE_ARRAY))) {
 			bool pointer_conversion = dest_kind == TYPE_POINTER || sema->types[operand.type].kind == TYPE_POINTER;
-			if (!pointer_conversion || operand.type == type_id_of_well_known(IR_REF_TYPE_UNDEFINED) || memory_coercion_allowed(block, dest, operand.type, false, src))
+			bool undefined_allowed = !pointer_conversion || operand.type == type_id_of_well_known(IR_REF_TYPE_UNDEFINED)
+				|| memory_coercion_allowed(block, dest, operand.type, false, src);
+			if (sema->diag->error_count != compatibility_errors)
+				return operand_none;
+			if (undefined_allowed)
 				return comptime_operand(dest, value_undefined(&sema->values, dest));
 		}
 		if (value.kind == VALUE_INT && (dest_kind == TYPE_INT || dest_kind == TYPE_COMPTIME_INT)) {
@@ -2266,12 +2362,19 @@ coerce(Block *block, Operand operand, TypeId dest, uint32_t src)
 			return comptime_operand(dest, value_int(&sema->values, dest, &integer));
 		}
 	}
-	if (operand.kind == OPERAND_COMPTIME && dest_kind == TYPE_FN && sema->types[operand.type].kind == TYPE_FN && memory_coercion_allowed(block, dest, operand.type, false, src)) {
+	bool function_copy = operand.kind == OPERAND_COMPTIME && dest_kind == TYPE_FN
+		&& sema->types[operand.type].kind == TYPE_FN && memory_coercion_allowed(block, dest, operand.type, false, src);
+	if (sema->diag->error_count != compatibility_errors)
+		return operand_none;
+	if (function_copy) {
 		Value value = *operand_value(block, operand);
 		value.type = dest;
 		return comptime_operand(dest, value_intern(&sema->values, &value));
 	}
-	if (dest_kind == TYPE_POINTER && memory_coercion_allowed(block, dest, operand.type, false, src)) {
+	bool pointer_copy = dest_kind == TYPE_POINTER && memory_coercion_allowed(block, dest, operand.type, false, src);
+	if (sema->diag->error_count != compatibility_errors)
+		return operand_none;
+	if (pointer_copy) {
 		if (operand.kind == OPERAND_RUNTIME) {
 			if (!require_runtime(block, src))
 				return operand_none;
@@ -2314,6 +2417,8 @@ static bool
 bit_cast_width(Block *block, TypeId type, bool destination, uint32_t src, uint32_t *out)
 {
 	Sema *sema = block->sema;
+	if (!optional_value_allowed(block, type, src))
+		return false;
 	TypeId leaf = type;
 	bool empty = false;
 	while (sema->types[leaf].kind == TYPE_ARRAY) {
@@ -2772,6 +2877,8 @@ analyze_ptr_from_int(Block *block, const IrInst *inst)
 	}
 	if (!check_defined(block, operand, inst->src))
 		return operand_none;
+	if (!pointer_layout_demand_ready(block, shape, inst->src))
+		return operand_none;
 	uint32_t alignment = pointer_alignment(block, shape, inst->src);
 	if (operand.kind == OPERAND_COMPTIME) {
 		uint64_t address = bigint_to_u64_bits(&operand_value(block, operand)->as.integer);
@@ -2910,6 +3017,13 @@ restore_pointer_view(Block *block, Operand pointer, TypeId type, uint32_t src)
 		Value value = *value_get(&sema->values, candidate);
 		if (sema->types[value.type].kind == TYPE_POINTER) {
 			TypePointer original = sema->types[value.type].as.pointer;
+			bool compares_alignment = (original.child == target.child && original.size == target.size)
+				|| (original.size == POINTER_ONE && target.size == POINTER_MANY
+					&& sema->types[original.child].kind == TYPE_ARRAY
+					&& sema->types[original.child].as.array.child == target.child);
+			if (compares_alignment && (!pointer_layout_demand_ready(block, original, src)
+				|| !pointer_layout_demand_ready(block, target, src)))
+				return operand_none;
 			if (original.child == target.child && original.size == target.size
 				&& pointer_alignment(block, original, src) >= pointer_alignment(block, target, src))
 				restored = candidate;
@@ -2958,6 +3072,9 @@ analyze_ptr_cast(Block *block, const IrInst *inst)
 	}
 	TypePointer from = sema->types[operand.type].as.pointer;
 	TypePointer to = sema->types[type].as.pointer;
+	if (!pointer_layout_demand_ready(block, from, inst->src)
+		|| !pointer_layout_demand_ready(block, to, inst->src))
+		return operand_none;
 	SliceCastLength length = {operand_none, 1, 1};
 	TypeId pointer_type = type;
 	if (to.size == POINTER_SLICE) {
@@ -3062,6 +3179,9 @@ analyze_align_cast(Block *block, const IrInst *inst)
 	}
 	TypePointer from = sema->types[operand.type].as.pointer;
 	TypePointer to = sema->types[type].as.pointer;
+	if (!pointer_layout_demand_ready(block, from, inst->src)
+		|| !pointer_layout_demand_ready(block, to, inst->src))
+		return operand_none;
 	bool array_to_slice = from.size == POINTER_ONE && to.size == POINTER_SLICE
 		&& sema->types[from.child].kind == TYPE_ARRAY;
 	if (from.size != to.size && !array_to_slice) {
@@ -3096,8 +3216,12 @@ analyze_align_cast(Block *block, const IrInst *inst)
 	if ((cast.flags & IR_CAST_VOLATILE) != 0)
 		adjusted.as.pointer.is_volatile = false;
 	TypeId adjusted_type = type_intern(sema, &adjusted);
-	if (!array_slice_allowed(block, type, adjusted_type, inst->src)
-		&& !memory_coercion_allowed(block, type, adjusted_type, false, inst->src)) {
+	uint32_t compatibility_errors = sema->diag->error_count;
+	bool adjusted_allowed = array_slice_allowed(block, type, adjusted_type, inst->src)
+		|| memory_coercion_allowed(block, type, adjusted_type, false, inst->src);
+	if (sema->diag->error_count != compatibility_errors)
+		return operand_none;
+	if (!adjusted_allowed) {
 		sema_error(block, inst->src, "expected type '%s', found '%s'", sema_type_name(sema, type), sema_type_name(sema, operand.type));
 		return operand_none;
 	}
@@ -3355,6 +3479,8 @@ ensure_type_layout(Block *block, TypeId type, uint32_t src)
 	Sema *sema = block->sema;
 	while (sema->types[type].kind == TYPE_ARRAY)
 		type = sema->types[type].as.array.child;
+	if (!optional_value_allowed(block, type, src))
+		return false;
 	if (sema->types[type].kind == TYPE_ENUM)
 		return ensure_enum_layout(block, type, src, "size query");
 	if (sema->types[type].kind != TYPE_STRUCT)
@@ -3475,6 +3601,8 @@ analyze_type_layout(Block *block, const IrInst *inst)
 	TypeId type;
 	if (!operand_to_type(block, resolve_ref(block, inst->data.un.operand), inst->src, &type))
 		return operand_none;
+	if (!optional_value_allowed(block, type, inst->src))
+		return operand_none;
 	bool size_of = inst->op == IR_SIZE_OF;
 	const char *name = size_of ? "size" : "align";
 	TypeId leaf = type;
@@ -3515,6 +3643,8 @@ analyze_bit_size(Block *block, const IrInst *inst)
 	Sema *sema = block->sema;
 	TypeId type;
 	if (!operand_to_type(block, resolve_ref(block, inst->data.un.operand), inst->src, &type))
+		return operand_none;
+	if (!optional_value_allowed(block, type, inst->src))
 		return operand_none;
 	TypeId leaf = type;
 	bool empty = false;
@@ -3589,6 +3719,7 @@ static bool
 peer_type(Block *block, Operand lhs, Operand rhs, uint32_t src, TypeId *out)
 {
 	Sema *sema = block->sema;
+	uint32_t compatibility_errors = sema->diag->error_count;
 	TypeId a = lhs.type;
 	TypeId b = rhs.type;
 	if (a == b) {
@@ -3636,11 +3767,17 @@ peer_type(Block *block, Operand lhs, Operand rhs, uint32_t src, TypeId *out)
 		return address.kind != OPERAND_NONE && peer_type(block, lhs, address, src, out);
 	}
 	if (ak == TYPE_FN && bk == TYPE_FN) {
-		if (memory_coercion_allowed(block, a, b, false, src)) {
+		bool allow_a = memory_coercion_allowed(block, a, b, false, src);
+		if (sema->diag->error_count != compatibility_errors)
+			return false;
+		if (allow_a) {
 			*out = a;
 			return true;
 		}
-		if (memory_coercion_allowed(block, b, a, false, src)) {
+		bool allow_b = memory_coercion_allowed(block, b, a, false, src);
+		if (sema->diag->error_count != compatibility_errors)
+			return false;
+		if (allow_b) {
 			*out = b;
 			return true;
 		}
@@ -3688,21 +3825,30 @@ peer_type(Block *block, Operand lhs, Operand rhs, uint32_t src, TypeId *out)
 			candidate.as.pointer.is_volatile = ap.is_volatile || bp.is_volatile;
 			candidate.as.pointer.is_allowzero = ap.is_allowzero || bp.is_allowzero;
 			if (ap.alignment != 0 || bp.alignment != 0) {
+				if (!pointer_layout_demand_ready(block, ap, src)
+					|| !pointer_layout_demand_ready(block, bp, src))
+					return false;
 				uint32_t a_align = pointer_alignment(block, ap, src);
 				uint32_t b_align = pointer_alignment(block, bp, src);
 				candidate.as.pointer.alignment = a_align < b_align ? a_align : b_align;
 			}
 			TypeId merged = type_intern(sema, &candidate);
-			if ((memory_coercion_allowed(block, merged, a, false, src) || array_slice_allowed(block, merged, a, src))
-				&& (memory_coercion_allowed(block, merged, b, false, src) || array_slice_allowed(block, merged, b, src))) {
+			bool first_allowed = (memory_coercion_allowed(block, merged, a, false, src) || array_slice_allowed(block, merged, a, src))
+				&& (memory_coercion_allowed(block, merged, b, false, src) || array_slice_allowed(block, merged, b, src));
+			if (sema->diag->error_count != compatibility_errors)
+				return false;
+			if (first_allowed) {
 				*out = merged;
 				return true;
 			}
 			candidate.as.pointer.child = array_slice ? sema->types[bp.child].as.array.child
 				: (many_array || slice_array) ? candidate.as.pointer.child : bp.child;
 			merged = type_intern(sema, &candidate);
-			if ((memory_coercion_allowed(block, merged, a, false, src) || array_slice_allowed(block, merged, a, src))
-				&& (memory_coercion_allowed(block, merged, b, false, src) || array_slice_allowed(block, merged, b, src))) {
+			bool second_allowed = (memory_coercion_allowed(block, merged, a, false, src) || array_slice_allowed(block, merged, a, src))
+				&& (memory_coercion_allowed(block, merged, b, false, src) || array_slice_allowed(block, merged, b, src));
+			if (sema->diag->error_count != compatibility_errors)
+				return false;
+			if (second_allowed) {
 				*out = merged;
 				return true;
 			}
@@ -3865,6 +4011,8 @@ analyze_pointer_difference(Block *block, Operand lhs, Operand rhs, uint32_t src)
 		return operand_none;
 	}
 	uint64_t stride;
+	if (!optional_value_allowed(block, child, src))
+		return operand_none;
 	if (!ensure_type_layout(block, child, src))
 		return operand_none;
 	if (!sema_type_size(sema, child, &stride)) {
@@ -3930,13 +4078,17 @@ analyze_pointer_offset(Block *block, IrOp op, Operand base, Operand offset, uint
 	TypePointer shape = sema->types[base.type].as.pointer;
 	uint64_t stride;
 	bool logical;
+	uint32_t stride_errors = sema->diag->error_count;
 	if (!array_element_stride(block, shape.child, &stride, &logical, src)) {
-		sema_error(block, src, "not supported by szc yet: pointer element offset exceeds 64-bit address space");
+		if (sema->diag->error_count == stride_errors)
+			sema_error(block, src, "not supported by szc yet: pointer element offset exceeds 64-bit address space");
 		return operand_none;
 	}
 	if (stride == 0)
 		return base;
 	TypeArray element = {shape.child, 0, VALUE_NONE};
+	if (!pointer_layout_demand_ready(block, shape, src))
+		return operand_none;
 	TypeId single = array_element_pointer_type(block, shape, element, offset, stride, logical, src);
 	Type result_type = sema->types[single];
 	result_type.as.pointer.size = POINTER_MANY;
@@ -5778,6 +5930,10 @@ analyze_call_core(Block *block, IrInstIndex index, Operand callee,
 		return INST_CONTINUE;
 	}
 	TypeFn fn = sema->types[type].as.fn;
+	if (optional_signature_frontier(sema, fn)) {
+		sema_error(block, src, "not supported by szc yet: optional values in runtime function signatures");
+		return INST_CONTINUE;
+	}
 	if (fn.is_generic) {
 		sema_error(block, src, "not supported by szc yet: calls of generic functions");
 		return INST_CONTINUE;
@@ -5930,6 +6086,8 @@ analyze_call(Block *block, IrInstIndex index, Operand *out)
 bool
 sema_type_array_storage_allowed(const Sema *sema, TypeId type)
 {
+	if (optional_value_frontier(sema, type))
+		return false;
 	bool empty = false;
 	while (sema->types[type].kind == TYPE_ARRAY) {
 		TypeArray array = sema->types[type].as.array;
@@ -6031,6 +6189,9 @@ aggregate_slot(Block *block, TypeId pointer, uint32_t src)
 	Sema *sema = block->sema;
 	TypePointer shape = sema->types[pointer].as.pointer;
 	uint64_t size;
+	if (!optional_value_allowed(block, shape.child, src)
+		|| !pointer_layout_demand_ready(block, shape, src))
+		return TIR_REF_NONE;
 	uint32_t alignment = pointer_alignment(block, shape, src);
 	if (!sema_type_runtime_storage_allowed(sema, shape.child) || !sema_type_size(sema, shape.child, &size)) {
 		sema_error(block, src, "not supported by szc yet: runtime array storage layout");
@@ -6113,6 +6274,8 @@ analyze_ref(Block *block, Operand value, uint32_t src, uint32_t identity, uint32
 	Sema *sema = block->sema;
 	if (value.kind == OPERAND_NONE)
 		return operand_none;
+	if (!optional_value_allowed(block, value.type, src))
+		return operand_none;
 	TypeKind kind = sema->types[value.type].kind;
 	if (kind == TYPE_FN && alignment != 0) {
 		sema_error(block, src, "not supported by szc yet: aligned function body address");
@@ -6125,6 +6288,8 @@ analyze_ref(Block *block, Operand value, uint32_t src, uint32_t identity, uint32
 		if (!require_runtime(block, src))
 			return operand_none;
 		TypePointer backing = sema->types[block->tir->insts[value.inst].type].as.pointer;
+		if (alignment != 0 && !pointer_layout_demand_ready(block, backing, src))
+			return operand_none;
 		if (alignment != 0 && alignment > pointer_alignment(block, backing, src)) {
 			Operand copy = aggregate_snapshot(block, runtime_operand(block->tir->insts[value.inst].type, value.inst), alignment, src);
 			if (copy.kind == OPERAND_NONE)
@@ -6174,6 +6339,8 @@ analyze_alloc(Block *block, const IrInst *inst)
 	if (init.kind == OPERAND_NONE)
 		return operand_none;
 	TypeId type = init.type;
+	if (!optional_value_allowed(block, type, src))
+		return operand_none;
 	if (payload.type != IR_REF_NONE) {
 		if (!operand_to_type(block, resolve_ref(block, payload.type), src, &type))
 			return operand_none;
@@ -6330,6 +6497,8 @@ load_pointer(Block *block, Operand pointer, uint32_t src)
 		return operand_none;
 	TypePointer pointer_type = sema->types[pointer.type].as.pointer;
 	TypeId child = pointer_type.child;
+	if (!optional_value_allowed(block, child, src))
+		return operand_none;
 	TypeId leaf = child;
 	while (sema->types[leaf].kind == TYPE_ARRAY)
 		leaf = sema->types[leaf].as.array.child;
@@ -6900,6 +7069,8 @@ slice_field_address(Block *block, Operand storage, bool length, uint32_t src)
 	Sema *sema = block->sema;
 	TypePointer shape = sema->types[storage.type].as.pointer;
 	TypeId child = length ? T_USIZE : slice_pointer_type(sema, shape.child);
+	if (!pointer_layout_demand_ready(block, shape, src))
+		return operand_none;
 	uint32_t alignment = pointer_alignment(block, shape, src);
 	uint32_t field_alignment = sema_type_align(sema, child);
 	if (alignment > field_alignment)
@@ -6946,6 +7117,8 @@ struct_field_address(Block *block, Operand storage, TypeId object, StringId name
 	if (field == NULL)
 		return operand_none;
 	TypePointer pointer = sema->types[storage.type].as.pointer;
+	if (!pointer_layout_demand_ready(block, pointer, src))
+		return operand_none;
 	uint32_t alignment = pointer_alignment(block, pointer, src);
 	uint32_t natural = sema_type_align(sema, field->type);
 	/* Ordinary structs cap field alignment at the field's natural alignment,
@@ -7062,6 +7235,8 @@ static Operand
 one_value_operand(Block *block, TypeId type, uint32_t src)
 {
 	Sema *sema = block->sema;
+	if (!optional_value_allowed(block, type, src))
+		return operand_none;
 	if (type == T_VOID)
 		return void_operand(sema);
 	if (is_int(sema, type))
@@ -7364,6 +7539,9 @@ analyze_memcpy(Block *block, const IrInst *inst)
 	TypeId source_child = memory_element_type(block, source, inst->src);
 	if (child == 0 || source_child == 0)
 		return operand_none;
+	if (!optional_value_allowed(block, child, inst->src)
+		|| !optional_value_allowed(block, source_child, inst->src))
+		return operand_none;
 	Operand dest_len = memory_length(block, destination, inst->src);
 	Operand source_len = memory_length(block, source, inst->src);
 	if (sema->types[destination.type].as.pointer.is_const) {
@@ -7457,6 +7635,8 @@ analyze_memset(Block *block, const IrInst *inst)
 	TypeId child = memory_element_type(block, destination, inst->src);
 	if (child == 0)
 		return operand_none;
+	if (!optional_value_allowed(block, child, inst->src))
+		return operand_none;
 	TypePointer shape = sema->types[destination.type].as.pointer;
 	if (shape.is_const) {
 		sema_error(block, inst->src, "cannot memset constant pointer");
@@ -7538,6 +7718,8 @@ analyze_array_init(Block *block, const IrInst *inst)
 		sema_error(block, inst->src, "expected array type, found '%s'", sema_type_name(sema, type));
 		return operand_none;
 	}
+	if (!optional_value_allowed(block, type, inst->src))
+		return operand_none;
 	TypeArray array = sema->types[type].as.array;
 	uint32_t count = block->ir->extra[payload + 1];
 	if (array.length != count) {
@@ -7611,6 +7793,8 @@ array_init_destination(Block *block, Operand pointer, uint64_t length, uint32_t 
 			sema_error(block, src, "expected array type, found '%s'", sema_type_name(sema, shape.child));
 		return operand_none;
 	}
+	if (!optional_value_allowed(block, shape.child, src))
+		return operand_none;
 	TypeArray array = sema->types[shape.child].as.array;
 	if (length != array.length)
 		sema_error(block, src, "expected %" PRIu64 " array elements; found %" PRIu64, array.length, length);
@@ -8111,6 +8295,8 @@ static bool
 array_element_stride(Block *block, TypeId child, uint64_t *stride, bool *logical, uint32_t src)
 {
 	Sema *sema = block->sema;
+	if (!optional_value_allowed(block, child, src))
+		return false;
 	uint64_t count = 1;
 	TypeId leaf = child;
 	while (sema->types[leaf].kind == TYPE_ARRAY)
@@ -8187,8 +8373,12 @@ load_offset_pointer(Block *block, Operand pointer, uint32_t src)
 			TypeArray array = sema->types[stored.type].as.array;
 			uint64_t stride;
 			bool logical;
-			if (!array_element_stride(block, array.child, &stride, &logical, src))
+			uint32_t stride_errors = sema->diag->error_count;
+			if (!array_element_stride(block, array.child, &stride, &logical, src)) {
+				if (sema->diag->error_count != stride_errors)
+					return operand_none;
 				break;
+			}
 			uint64_t index = stride == 0 ? 0 : offset / stride;
 			if (index > array.length || (index == array.length && array.sentinel == VALUE_NONE))
 				break;
@@ -8218,10 +8408,14 @@ constant_array_pointer(Block *block, Operand base, Operand index, TypeArray arra
 		return operand_none;
 	uint64_t stride;
 	bool logical;
+	uint32_t stride_errors = sema->diag->error_count;
 	if (!array_element_stride(block, array.child, &stride, &logical, src)) {
-		sema_error(block, src, "not supported by szc yet: array element offset exceeds 64-bit address space");
+		if (sema->diag->error_count == stride_errors)
+			sema_error(block, src, "not supported by szc yet: array element offset exceeds 64-bit address space");
 		return operand_none;
 	}
+	if (!pointer_layout_demand_ready(block, sema->types[base.type].as.pointer, src))
+		return operand_none;
 	TypeId type = array_element_pointer_type(block, sema->types[base.type].as.pointer, array, index, stride, logical, src);
 	if (operand_is_undefined(block, base))
 		return comptime_operand(type, value_undefined(&sema->values, type));
@@ -8273,10 +8467,14 @@ runtime_array_element(Block *block, Operand base, Operand index, TypeArray array
 	}
 	uint64_t stride;
 	bool logical;
+	uint32_t stride_errors = sema->diag->error_count;
 	if (!array_element_stride(block, array.child, &stride, &logical, src)) {
-		sema_error(block, src, "not supported by szc yet: array element offset exceeds 64-bit address space");
+		if (sema->diag->error_count == stride_errors)
+			sema_error(block, src, "not supported by szc yet: array element offset exceeds 64-bit address space");
 		return operand_none;
 	}
+	if (!pointer_layout_demand_ready(block, pointer, src))
+		return operand_none;
 	TypeId element_pointer = array_element_pointer_type(block, pointer, array, index, stride, logical, src);
 	TirRef base_ref = materialize(block, base, src);
 	TirRef index_ref = materialize(block, index, src);
@@ -8295,10 +8493,14 @@ analyze_many_index(Block *block, Operand base, Operand index, uint32_t src, bool
 	TypeArray element_shape = {shape.child, 0, VALUE_NONE};
 	uint64_t stride;
 	bool logical;
+	uint32_t stride_errors = sema->diag->error_count;
 	if (!array_element_stride(block, shape.child, &stride, &logical, src)) {
-		sema_error(block, src, "not supported by szc yet: pointer element offset exceeds 64-bit address space");
+		if (sema->diag->error_count == stride_errors)
+			sema_error(block, src, "not supported by szc yet: pointer element offset exceeds 64-bit address space");
 		return operand_none;
 	}
+	if (!pointer_layout_demand_ready(block, shape, src))
+		return operand_none;
 	TypeId pointer_type = array_element_pointer_type(block, shape, element_shape, index, stride, logical, src);
 	Operand pointer;
 	if (base.kind == OPERAND_COMPTIME && index.kind == OPERAND_COMPTIME) {
@@ -8649,6 +8851,9 @@ analyze_array_cat(Block *block, const IrInst *inst)
 		sema_error(block, inst->src, "expected indexable; found '%s'", sema_type_name(sema, a == 0 ? lhs.type : rhs.type));
 		return operand_none;
 	}
+	if (!optional_value_allowed(block, a, inst->src)
+		|| !optional_value_allowed(block, b, inst->src))
+		return operand_none;
 	TypeArray left = sema->types[a].as.array;
 	TypeArray right = sema->types[b].as.array;
 	if (lhs.kind != OPERAND_COMPTIME || rhs.kind != OPERAND_COMPTIME) {
@@ -8905,6 +9110,21 @@ analyze_inst(Block *block, IrInstIndex index, Operand *break_value)
 	uint32_t src = inst->src;
 	Operand result = operand_none;
 	switch (inst->op) {
+	case IR_OPTIONAL_TYPE: {
+		Operand child = resolve_ref(block, inst->data.un.operand);
+		TypeId type;
+		if (child.kind == OPERAND_NONE || !check_defined(block, child, src)
+			|| !operand_to_type(block, child, src, &type))
+			break;
+		if (sema->types[type].kind == TYPE_ANYOPAQUE) {
+			sema_error(block, src, "opaque type '%s' cannot be optional", sema_type_name(sema, type));
+			break;
+		}
+		Type optional = make_type(TYPE_OPTIONAL);
+		optional.as.optional_child = type;
+		result = type_operand(sema, type_intern(sema, &optional));
+		break;
+	}
 	case IR_ARRAY_TYPE:
 	case IR_ARRAY_TYPE_SENTINEL:
 		result = analyze_array_type(block, inst);

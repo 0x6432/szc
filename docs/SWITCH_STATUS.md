@@ -181,3 +181,11 @@ The original 84 sources remain intact: the empty-enum stage now requires actual
 acceptance in both harness CLIs, advancing the checkpoint to 80 passes and four
 existing failures. Earlier 79/4/1 figures above describe historical snapshots.
 No native empty-enum execution, full switch acceptance or hosted-green claim.
+
+## Separate optional type-identity groundwork
+
+`OPTIONAL_TYPE_STATUS.md` describes a bounded type-only candidate. It does not
+implement payload/null coercion or runtime optional arguments, so the original
+optional switch fixture still fails at an earlier producer gate. The original
+84-case checkpoint stays 80 passes / four failures; type-identity tests must not
+be added to that count or used to claim M6.3/M6.4 completion.

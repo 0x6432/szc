@@ -178,6 +178,7 @@ typedef enum IrDataKind {
 	X(FIELD_READ_REF, "field_read_ref", IR_DATA_NAME) /* named logical read reference or borrowed address */ \
 	X(FIELD_REF, "field_ref", IR_DATA_NAME)	/* type-only array .len through an expression address */ \
 	X(FIELD_VAL, "field_val", IR_DATA_NAME)	/* field name, base operand (array .len initially) */ \
+	X(OPTIONAL_TYPE, "optional_type", IR_DATA_UN) /* child type -> optional type identity only */ \
 	X(PTR_TYPE, "ptr_type", IR_DATA_PAYLOAD)	/* IrPointerType */ \
 	/* Result types and coercion */ \
 	X(AS_RETURN, "as_return", IR_DATA_BIN)	/* direct return-value coercion */ \

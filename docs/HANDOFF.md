@@ -22,6 +22,30 @@ Read this first when resuming work (the sandbox resets often).
    candidate. Never mutate frozen validation sources or mix flag configurations.
    The GitHub token is **never** committed. Restore authenticated Git access if needed.
 
+## Optional type-only candidate (V2; not optional value support)
+
+- Based on published 5e13779. Read `OPTIONAL_TYPE_STATUS.md` before extending it.
+- New unary optional type constructor and canonical child identity; no optional
+  ValueKind, runtime representation, nullable-pointer optimization or ABI support.
+  Type names are diagnostic C rendering only: no new @typeName builtin.
+- Frozen 30-case focused contract has 17 exact primary/status matches and 13
+  explicit failures: 12 earlier/outside gates plus inherited cycle wording.
+  Original switch checkpoint remains 80/84; no sources or expectations filtered.
+- V1 was blocked: zero-array pointer concat could create forbidden optional
+  backing and incorrectly accept an undefined-pointer program. V2 adds only two
+  early frontier checks before concat peer/count/values. Preserve rejected V1
+  evidence. New eight-case boundary refusal/control checks run in `make test`;
+  they are not eight ordinary language-parity cases and execute no optional code.
+- Preserve same-child opaque pointer handles and deep nonoptional arrays. No new
+  frontier fuel/depth cap or zero-alignment sentinel. Existing implicit nominal
+  layout demands must succeed before alignment recovery values could be consumed.
+- Independent immutable source/delta audit cleared the narrow V2 correction;
+  focused proof is separate from full gates under /data/validation/optional-v2-final.
+- Latest observed hosted run for base5e13779 failed in both end-to-end jobs with
+  runner lost-communication annotations; 77 other jobs passed. Raw log requests
+  returned401. Root cause, actual failing case/phase and runner image remain
+  unproven. Do not call hosted CI green or retry stale credentials automatically.
+
 ## Empty-enum terminal follow-up
 
 - Based on published cleanup commit 0472f8b. Only sema direct-dereference admission

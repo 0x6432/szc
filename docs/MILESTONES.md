@@ -162,7 +162,13 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
     admission (compile-only evidence, no value/storage/ABI expansion); broader
     origins remain deferred. See `EMPTY_ENUM_TERMINAL_STATUS.md`. Bounded anonymous
     namespace execution is a separate partial M7.2 subset.
-- [ ] **M6.4 Optionals**: `?T`, `orelse`, `.?`, if-payloads, optional pointers.
+- [~] **M6.4 Optionals**: type-only foundation candidate; optional values remain unsupported.
+  - [~] **M6.4a Optional type identity**: canonical `?T`, child validation, aliases,
+    nested/qualified/nominal identity and explicit representation fences. See
+    `OPTIONAL_TYPE_STATUS.md`; this is not optional storage, ABI or value support.
+  - Deferred: null/payload injection, optional layouts/values, `orelse`, `.?`,
+    if-payloads and runtime optional-pointer optimization. The original switch
+    optional case remains an earlier producer gate.
 - [ ] **M6.5 Error sets + error unions**: `try`, `catch`, `errdefer`, error set merging, inferred error sets.
 - [ ] **M6.6 Unions**: bare and tagged, switch payload capture.
 - [ ] **M6.7 extern/packed struct layout.**
