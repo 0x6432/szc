@@ -44,9 +44,17 @@ typedef struct Operand {
 	TirRef      inst;
 } Operand;
 
+typedef enum NamespaceComptimeState {
+	NAMESPACE_COMPTIME_QUEUED,
+	NAMESPACE_COMPTIME_RUNNING,
+	NAMESPACE_COMPTIME_DONE,
+	NAMESPACE_COMPTIME_FAILED,
+} NamespaceComptimeState;
+
 typedef struct SemaDecl {
 	IrDecl    ir;
 	DeclState state;
+	DeclState comptime_state; /* anonymous work, keyed by namespace + index */
 	Operand   value;
 	TypeId declared_type;	/* published only after both type and alignment resolve */
 	uint32_t address_identity;
@@ -88,6 +96,7 @@ struct SemaNamespace {
 	ValueId *enum_tags;	/* atomically published backing integer values */
 	SemaDecl      *decls;
 	uint32_t      decl_count;
+	NamespaceComptimeState comptime_state;
 	bool					exports_resolved;
 	const struct InstMap *captures;
 	SemaField *fields;
@@ -144,6 +153,17 @@ struct Sema {
 	uint32_t defaults_depth;
 	uint32_t defaults_work;
 	uint32_t bit_cast_words;	/* bounded packed constant work/storage */
+
+	/* Deferred namespace activation is independent of exports/layout/defaults.
+	 * The FIFO is drained only after the creating analysis has published values. */
+	SemaNamespace **namespace_comptime_queue;
+	uint32_t namespace_comptime_count;
+	uint32_t namespace_comptime_capacity;
+	uint32_t namespace_comptime_work;
+	uint32_t namespace_comptime_depth;
+	bool namespace_comptime_active;
+	bool namespace_comptime_poisoned;
+	bool namespace_comptime_limit_failed;
 
 	SemaFunc   **funcs;	/* funcs[0] is unused; each SemaFunc stays at its address */
 	uint32_t   func_count;
@@ -242,6 +262,39 @@ sema_error(Block *block, uint32_t src, const char *format, ...)
 	vsnprintf(message, sizeof(message), format, args);
 	va_end(args);
 	diag_report(block->sema->diag, DIAG_ERROR, block->ir->file, src, "%s", message);
+}
+
+/* The new namespace work has its own cumulative budget. Existing scalar,
+ * array, layout, enum and switch budgets still apply; this is not a general
+ * interpreter or a bound on all compiler work. Report exhaustion only once. */
+static bool
+namespace_comptime_charge(Sema *sema, const IrFile *ir, uint32_t src, uint64_t work)
+{
+	if (sema->namespace_comptime_limit_failed)
+		return false;
+	if (work > 1048576u - sema->namespace_comptime_work) {
+		sema->namespace_comptime_limit_failed = true;
+		diag_report(sema->diag, DIAG_ERROR, ir->file, src,
+			"not supported by szc yet: namespace comptime work limit exceeded");
+		return false;
+	}
+	sema->namespace_comptime_work += (uint32_t)work;
+	return true;
+}
+
+static bool
+namespace_comptime_enter(Block *block, uint32_t src)
+{
+	Sema *sema = block->sema;
+	if (!namespace_comptime_charge(sema, block->ir, src, 1))
+		return false;
+	if (sema->namespace_comptime_depth >= 128) {
+		sema->namespace_comptime_limit_failed = true;
+		sema_error(block, src, "not supported by szc yet: namespace comptime execution depth limit exceeded");
+		return false;
+	}
+	sema->namespace_comptime_depth++;
+	return true;
 }
 
 /* ---------- Types ---------- */
@@ -926,9 +979,14 @@ resolve_ref(Block *block, IrRef ref)
 		}
 	}
 	Operand operand;
-	if (inst_map_get(block->map, ir_ref_inst(ref), &operand))
+	if (inst_map_get(block->map, ir_ref_inst(ref), &operand)) {
+		if (sema->namespace_comptime_active && operand.kind == OPERAND_NONE)
+			sema->namespace_comptime_poisoned = true;
 		return operand;
+	}
 	/* Not analysed: an earlier error, or an instruction from a body that is not in scope. */
+	if (sema->namespace_comptime_active)
+		sema->namespace_comptime_poisoned = true;
 	return operand_none;
 }
 
@@ -1388,14 +1446,16 @@ inst_map_capture(Sema *sema, const InstMap *map)
 static SemaNamespace *
 namespace_create(Sema *sema, SemaNamespace *parent, const IrFile *ir, IrInstIndex inst, StringId name, const InstMap *captures)
 {
+	uint32_t payload = ir->insts[inst].data.payload;
+	IrContainerHeader header;
+	IR_READ(ir, payload, &header);
+	if (!namespace_comptime_charge(sema, ir, ir->insts[inst].src, 1ull + header.decl_count))
+		return NULL;
 	SemaNamespace *ns = ARENA_NEW(sema->arena, SemaNamespace);
 	ns->parent = parent;
 	ns->ir = ir;
 	ns->file = ir->file;
 	ns->inst = inst;
-	uint32_t payload = ir->insts[inst].data.payload;
-	IrContainerHeader header;
-	IR_READ(ir, payload, &header);
 	uint32_t decls = payload + IR_WORDS(IrContainerHeader) + header.field_count * IR_WORDS(IrField);
 	bool is_enum = ir->insts[inst].op == IR_ENUM_DECL;
 	ns->captures = header.field_count == 0 && !is_enum ? NULL : inst_map_capture(sema, captures);
@@ -1420,6 +1480,14 @@ namespace_create(Sema *sema, SemaNamespace *parent, const IrFile *ir, IrInstInde
 	type.as.structure = ns;
 	type.name = name;
 	ns->type = type_append(sema, &type, type_hash(&type));
+	ns->comptime_state = NAMESPACE_COMPTIME_QUEUED;
+	if (sema->namespace_comptime_count == sema->namespace_comptime_capacity) {
+		uint32_t capacity = sema->namespace_comptime_capacity == 0 ? 16 : sema->namespace_comptime_capacity * 2;
+		sema->namespace_comptime_queue = arena_grow_array(sema->arena, sema->namespace_comptime_queue,
+			sema->namespace_comptime_count, capacity, sizeof(*sema->namespace_comptime_queue), alignof(SemaNamespace *));
+		sema->namespace_comptime_capacity = capacity;
+	}
+	sema->namespace_comptime_queue[sema->namespace_comptime_count++] = ns;
 	return ns;
 }
 
@@ -1587,7 +1655,7 @@ constant_decl_address(Block *user, SemaNamespace *ns, SemaDecl *decl)
 
 /* Analyses the value of a container-level declaration (once). */
 static Operand
-resolve_decl(Block *user, uint32_t src, SemaNamespace *ns, SemaDecl *decl, bool as_reference)
+resolve_decl_inner(Block *user, uint32_t src, SemaNamespace *ns, SemaDecl *decl, bool as_reference)
 {
 	Sema *sema = user->sema;
 	if (as_reference && decl->state != DECL_FAILED && decl->ir.kind == IR_DECL_CONST
@@ -1726,6 +1794,25 @@ resolve_decl(Block *user, uint32_t src, SemaNamespace *ns, SemaDecl *decl, bool 
 		&& constant_storage_type(sema, decl->declared_type))
 		return constant_decl_address(user, ns, decl);
 	return decl->value;
+}
+
+/* Fresh declaration blocks must not reset the anonymous execution guard.
+ * Keep it on Sema, and balance the wrapper even on cached/error/cycle returns. */
+static Operand
+resolve_decl(Block *user, uint32_t src, SemaNamespace *ns, SemaDecl *decl, bool as_reference)
+{
+	Sema *sema = user->sema;
+	if (!sema->namespace_comptime_active)
+		return resolve_decl_inner(user, src, ns, decl, as_reference);
+	if (!namespace_comptime_enter(user, src)) {
+		sema->namespace_comptime_poisoned = true;
+		return operand_none;
+	}
+	Operand result = resolve_decl_inner(user, src, ns, decl, as_reference);
+	sema->namespace_comptime_depth--;
+	if (result.kind == OPERAND_NONE)
+		sema->namespace_comptime_poisoned = true;
+	return result;
 }
 
 /* ---------- Analysis: types and coercion ---------- */
@@ -5502,6 +5589,10 @@ static void
 analyze_loop(Block *block, IrInstIndex index)
 {
 	const IrInst *inst = &block->ir->insts[index];
+	if (block->sema->namespace_comptime_active && block->tir == NULL) {
+		sema_error(block, inst->src, "not supported by szc yet: namespace comptime loops");
+		return;
+	}
 	if (!require_runtime(block, inst->src))
 		return;
 	ControlTarget target;
@@ -6196,6 +6287,10 @@ store_value(Block *block, Operand pointer, Operand value, uint32_t src)
 	value = coerce(block, value, child, src);
 	if (value.kind == OPERAND_NONE)
 		return operand_none;
+	if (sema->namespace_comptime_active && block->tir == NULL) {
+		sema_error(block, src, "not supported by szc yet: namespace comptime mutation");
+		return operand_none;
+	}
 	if (sema_type_is_aggregate(sema, child)) {
 		if (pointer_operand(block, pointer, src) && store_aggregate(block, pointer, value, src))
 			return void_operand(sema);
@@ -8996,7 +9091,8 @@ analyze_inst(Block *block, IrInstIndex index, Operand *break_value)
 			break;
 		}
 		SemaNamespace *ns = namespace_create(sema, block->namespace_scope, block->ir, index, block->decl_name, block->map);
-		result = type_operand(sema, ns->type);
+		if (ns != NULL)
+			result = type_operand(sema, ns->type);
 		break;
 	}
 	case IR_FUNC:
@@ -9536,7 +9632,7 @@ analyze_inst(Block *block, IrInstIndex index, Operand *break_value)
 }
 
 static BodyResult
-analyze_body(Block *block, IrBody body)
+analyze_body_inner(Block *block, IrBody body)
 {
 	BodyResult result;
 	result.end = BODY_FALLTHROUGH;
@@ -9544,6 +9640,9 @@ analyze_body(Block *block, IrBody body)
 	uint32_t count = ir_body_count(block->ir, body);
 	const IrInstIndex *insts = ir_body_insts(block->ir, body);
 	for (uint32_t i = 0; i < count; i++) {
+		if (block->sema->namespace_comptime_active && !namespace_comptime_charge(block->sema,
+			block->ir, block->ir->insts[insts[i]].src, 1))
+			return result;
 		Operand value = operand_none;
 		InstOutcome outcome = analyze_inst(block, insts[i], &value);
 		if (outcome == INST_BREAK) {
@@ -9557,6 +9656,69 @@ analyze_body(Block *block, IrBody body)
 		}
 	}
 	return result;
+}
+
+static BodyResult
+analyze_body(Block *block, IrBody body)
+{
+	Sema *sema = block->sema;
+	if (!sema->namespace_comptime_active)
+		return analyze_body_inner(block, body);
+	uint32_t count = ir_body_count(block->ir, body);
+	uint32_t src = count == 0 ? block->ir->insts[block->namespace_scope->inst].src
+		: block->ir->insts[ir_body_insts(block->ir, body)[0]].src;
+	if (!namespace_comptime_enter(block, src))
+		return (BodyResult){BODY_FALLTHROUGH, operand_none};
+	BodyResult result = analyze_body_inner(block, body);
+	sema->namespace_comptime_depth--;
+	return result;
+}
+
+/* Namespace state and anonymous declaration state are separate from exports,
+ * layout/defaults and named value resolution. No lookup by anonymous name. */
+static void
+analyze_namespace_comptime(Sema *sema, SemaNamespace *ns)
+{
+	if (ns->comptime_state != NAMESPACE_COMPTIME_QUEUED)
+		return;
+	ns->comptime_state = NAMESPACE_COMPTIME_RUNNING;
+	bool failed = false;
+	for (uint32_t i = 0; i < ns->decl_count; i++) {
+		SemaDecl *decl = &ns->decls[i];
+		if (decl->ir.kind != IR_DECL_COMPTIME)
+			continue;
+		if (decl->comptime_state == DECL_FAILED) {
+			failed = true;
+			continue;
+		}
+		if (decl->comptime_state != DECL_UNRESOLVED)
+			continue;
+		decl->comptime_state = DECL_IN_PROGRESS;
+		if (!namespace_comptime_charge(sema, ns->ir, decl->ir.src, 1)) {
+			decl->comptime_state = DECL_FAILED;
+			failed = true;
+			continue;
+		}
+		InstMap map;
+		inst_map_init(&map, sema->arena);
+		Block block;
+		block_init_comptime(&block, sema, ns, &map, STRING_NONE);
+		uint32_t errors = sema->diag->error_count;
+		sema->namespace_comptime_active = true;
+		sema->namespace_comptime_poisoned = false;
+		BodyResult result = analyze_body(&block, decl->ir.value_body);
+		bool ok = sema->diag->error_count == errors && !sema->namespace_comptime_poisoned
+			&& result.end == BODY_BREAK_RESULT && result.result.kind == OPERAND_COMPTIME
+			&& result.result.type == T_VOID && check_defined(&block, result.result, decl->ir.src);
+		sema->namespace_comptime_active = false;
+		/* Prior failed dependencies can supply poison without repeating their
+		 * diagnostic. Never mark the declaration done or duplicate that error. */
+		if (!ok && sema->diag->error_count == 0)
+			sema_error(&block, decl->ir.src, "namespace comptime block must produce a defined void result");
+		decl->comptime_state = ok ? DECL_RESOLVED : DECL_FAILED;
+		failed = failed || !ok;
+	}
+	ns->comptime_state = failed ? NAMESPACE_COMPTIME_FAILED : NAMESPACE_COMPTIME_DONE;
 }
 
 /* Analyses the body of a queued function into its typed IR. */
@@ -9690,6 +9852,8 @@ sema_analyze_executable(Sema *sema, FileId file, const IrFile *ir)
 	uint32_t diagnostics_before = sema->diag->count;
 	StringId root_name = file_struct_name(sema, file);
 	SemaNamespace *root = namespace_create(sema, NULL, ir, ir->root, root_name, NULL);
+	if (root == NULL)
+		return false;
 	InstMap map;
 	inst_map_init(&map, sema->arena);
 	Block block;
@@ -9728,8 +9892,16 @@ sema_analyze_executable(Sema *sema, FileId file, const IrFile *ir)
 	GlobalId global_index = 1;
 	TypeId namespace_index = 1;
 	uint32_t defaults_index = 0;
+	uint32_t namespace_comptime_index = 0;
 	while (function_index < sema->queue_count || global_index < sema->global_count
-		|| namespace_index < sema->type_count || defaults_index < sema->defaults_queue_count) {
+		|| namespace_index < sema->type_count || defaults_index < sema->defaults_queue_count
+		|| namespace_comptime_index < sema->namespace_comptime_count) {
+		/* All callers of namespace_create have now returned, publishing named
+		 * values. Never drain recursively from namespace creation/resolution. */
+		while (namespace_comptime_index < sema->namespace_comptime_count) {
+			SemaNamespace *ns = sema->namespace_comptime_queue[namespace_comptime_index++];
+			analyze_namespace_comptime(sema, ns);
+		}
 		while (namespace_index < sema->type_count) {
 			Type type = sema->types[namespace_index++];
 			if (type.kind == TYPE_STRUCT)

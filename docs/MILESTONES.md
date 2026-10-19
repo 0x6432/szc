@@ -158,7 +158,7 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
     implemented; strict contract failures remain. Not accepted as complete.
   - Remaining scope and validation evidence are tracked in `SWITCH_STATUS.md`;
     labeled redispatch, inline prongs, pointer captures and empty-enum operand
-    admission remain deferred. Global comptime execution is still separate.
+    admission remain deferred. Bounded anonymous namespace execution is a separate partial M7.2 subset.
 - [ ] **M6.4 Optionals**: `?T`, `orelse`, `.?`, if-payloads, optional pointers.
 - [ ] **M6.5 Error sets + error unions**: `try`, `catch`, `errdefer`, error set merging, inferred error sets.
 - [ ] **M6.6 Unions**: bare and tagged, switch payload capture.
@@ -167,7 +167,11 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
 ## Phase 7: Comptime (`src/comptime.c`)
 
 - [ ] **M7.1 Big integers for comptime_int.**
-- [ ] **M7.2 Comptime interpreter over IR**: const decls, arithmetic, control flow.
+- [~] **M7.2 Comptime interpreter over IR**: const decls, arithmetic, control flow.
+  - [~] Anonymous namespace scheduling now uses the existing known-value evaluator,
+    with lazy activation, isolated definition context, ignored-result checks and
+    shared execution limits. Loops, mutation, general calls and full interpretation
+    remain deferred; see `NAMESPACE_COMPTIME_STATUS.md`.
 - [~] **M7.3 Types as values**: `type`, `@TypeOf`, returning types from functions.
   - [x] **M7.3a Unevaluated type queries**: single/multiple `@TypeOf` operands on existing values/types, isolated runtime analysis and bounded peer rules.
 - [ ] **M7.4 Generic functions**: comptime params, `anytype`, monomorphization + memoization.

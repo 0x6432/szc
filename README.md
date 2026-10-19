@@ -69,6 +69,9 @@ A bounded integer/exhaustive-enum switch implementation is in progress, with
 inclusive ranges, scalar captures and value joins. It is not accepted as complete:
 strict contract failures and unsupported forms remain; see
 [docs/SWITCH_STATUS.md](docs/SWITCH_STATUS.md).
+Bounded anonymous namespace `comptime` scheduling is implemented for existing
+known-value evaluator operations, with explicit loop/mutation/call limits; see
+[docs/NAMESPACE_COMPTIME_STATUS.md](docs/NAMESPACE_COMPTIME_STATUS.md).
 Packed/extern structs, C aggregate ABI, non-scalar sentinels, modules/imports,
 generic functions and the full comptime interpreter remain pending; szc does not yet
 bootstrap Zig.

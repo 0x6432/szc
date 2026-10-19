@@ -3,8 +3,9 @@
 This is an in-progress implementation based on `e44e6fe`, not a completed M6.3
 milestone or a Zig bootstrap claim. The initial candidate was published as
 `cf7cbb3` on [the WIP review branch](https://github.com/0x6432/szc/tree/ai/switch-m6-3-wip-20261019);
-main was not changed. The diagnostic/observability follow-up passed a fresh local regression gate;
-strict contract acceptance and hosted CI remain separate.
+main was not changed. The diagnostic/observability follow-up was published as `9432ea7` after a fresh
+local gate. A separate bounded namespace-comptime batch passes focused integration
+checks and its fresh full regression/fuzz gate; hosted CI remains separate.
 
 ## Implemented scope
 
@@ -53,9 +54,9 @@ auto-discovered golden directories. Supported native fixtures remain under
 
 | Outcome | Cases |
 |---|---:|
-| Pass | 67 |
+| Pass | 79 |
 | Expected empty-enum NYI | 1 |
-| Silently skipped global-comptime invalid programs | 12 |
+| Silently skipped global-comptime invalid programs | 0 |
 | Earlier unsupported-feature gates | 3 |
 | Strict primary-diagnostic mismatches | 1 |
 | Total | 84 |
@@ -67,11 +68,11 @@ pass their explicit refusal/limit contracts, not ordinary language acceptance.
 
 ### Open failures
 
-1. **Global comptime:** existing frontend/sema does not execute global comptime
-   blocks, so twelve original invalid programs are accepted without reaching
-   switch semantic analysis. Fourteen reached-body counterparts are retained
-   separately and reject with reference-matching primary diagnostics. They do
-   not erase the original failures.
+1. **Global comptime scheduling resolved for the original twelve cases:** bounded
+   anonymous namespace execution now reaches all twelve original unwrapped bodies
+   and matches their exact reference primary-error lists. The strict suite advances
+   from 67 to 79 passes without filtering any cases. This does not implement a
+   general comptime interpreter; see `NAMESPACE_COMPTIME_STATUS.md`.
 2. **Earlier gates:** optional/error-union types and float literals reject before
    switch validation. Those operand forms are language-invalid in the reference;
    earlier NYI is not diagnostic parity.
@@ -151,7 +152,7 @@ The diagnostic/observability follow-up independently passes all regression stage
 above and four fresh 60-second libFuzzer runs. Both compiler snapshots were frozen
 before testing; both complete source-integrity checks pass with no changed files.
 Records are under `/data/validation/switch-next/`; strict parent records are under
-`/data/analysis/switch-next-parent/`. The 16 strict failures remain explicit;
+`/data/analysis/switch-next-parent/`. At that diagnostic checkpoint, 16 strict failures remained explicit;
 passing regression tests is not full switch acceptance.
 
 Do not infer hosted CI success from local results. Authenticated original logs
@@ -160,3 +161,8 @@ both push logs show runner shutdown after broader compiler/native timeouts.
 The actual image is Ubuntu 24.04; CORE=0 was already enforced. No compiler defect,
 host-resource cause or core-collector cause is proven. Preserve existing deadlines
 and assertions while collecting better evidence.
+The namespace batch independently passes its 58-case focused contract and 30
+frontend semantic controls. Fresh GCC/Clang regression/fuzz and both frozen-source integrity checks pass
+under `/data/validation/namespace/`. The switch command still exits nonzero for
+three earlier gates and one enum forced-comptime primary mismatch, plus one
+separately expected empty-enum NYI. No full switch acceptance is claimed.

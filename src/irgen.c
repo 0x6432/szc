@@ -82,6 +82,7 @@ typedef struct GenBody {
 	bool        is_comptime;
 	bool        in_function;	/* inside a function body: `return` is allowed */
 	bool        field_capture;	/* immutable captures only within field type/default expressions */
+	bool        ensure_statement_result; /* anonymous namespace comptime statements only */
 } GenBody;
 
 /* What the value of an expression is used for. */
@@ -298,6 +299,7 @@ body_init(GenBody *body, IrGen *gen, Scope *parent, bool is_comptime)
 			if (scope->kind == SCOPE_BODY) {
 				body->in_function = ((GenBody *)scope)->in_function;
 				body->field_capture = ((GenBody *)scope)->field_capture;
+				body->ensure_statement_result = ((GenBody *)scope)->ensure_statement_result;
 				break;
 			}
 			if (scope->kind == SCOPE_NAMESPACE)
@@ -2699,14 +2701,15 @@ block_statements(GenBody *body, Scope *scope, AstBlock *block)
 			break;
 		default: {
 			IrRef value = expr(body, inner, result_none, statement);
-			/* Cleanup blocks obey the same discarded-result rule as the defer operand. */
-			for (Scope *current = inner; current != NULL && current->kind != SCOPE_NAMESPACE; current = current->parent) {
-				if (current->kind == SCOPE_DEFER_BODY) {
-					if (!body_is_terminated(body) && value != IR_REF_VOID_VALUE)
-						emit_un(body, IR_ENSURE_RESULT, statement->offset, value);
-					break;
-				}
+			/* Anonymous namespace comptime work checks ordinary ignored values.
+			 * Keep the existing cleanup-only rule outside that execution scope. */
+			bool ensure_result = body->ensure_statement_result;
+			for (Scope *current = inner; !ensure_result && current != NULL && current->kind != SCOPE_NAMESPACE; current = current->parent) {
+				if (current->kind == SCOPE_DEFER_BODY)
+					ensure_result = true;
 			}
+			if (ensure_result && !body_is_terminated(body) && value != IR_REF_VOID_VALUE)
+				emit_un(body, IR_ENSURE_RESULT, statement->offset, value);
 			break;
 		}
 		}
@@ -2801,6 +2804,7 @@ function_proto(GenBody *body, Scope *scope, AstFnProto *proto, StringId name, ui
 		GenBody fn_body;
 		body_init(&fn_body, gen, param_scope, false);
 		fn_body.in_function = true;
+		fn_body.ensure_statement_result = false; /* fresh user-function boundary */
 		block_statements(&fn_body, &fn_body.base, AST_CAST(AstBlock, definition, AST_BLOCK));
 		if (!body_is_terminated(&fn_body))
 			emit_none(&fn_body, IR_RET_IMPLICIT, definition->end > 0 ? definition->end - 1 : definition->offset);
@@ -3105,6 +3109,7 @@ container_decl(GenBody *body, Scope *scope, AstContainerDecl *decl, StringId nam
 			GenBody test_body;
 			body_init(&test_body, gen, member_scope, false);
 			test_body.in_function = true;
+			test_body.ensure_statement_result = false;
 			block_statements(&test_body, &test_body.base, AST_CAST(AstBlock, test->body, AST_BLOCK));
 			if (!body_is_terminated(&test_body))
 				emit_none(&test_body, IR_RET_IMPLICIT, test->body->offset);
@@ -3116,6 +3121,7 @@ container_decl(GenBody *body, Scope *scope, AstContainerDecl *decl, StringId nam
 			out->kind = IR_DECL_COMPTIME;
 			GenBody comptime_body;
 			body_init(&comptime_body, gen, member_scope, true);
+			comptime_body.ensure_statement_result = true;
 			block_statements(&comptime_body, &comptime_body.base, AST_CAST(AstBlock, comptime_decl->body, AST_BLOCK));
 			if (!body_is_terminated(&comptime_body))
 				emit_break(&comptime_body, IR_BREAK_INLINE, member->offset, IR_BODY_RESULT, IR_REF_VOID_VALUE);

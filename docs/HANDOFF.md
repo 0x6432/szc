@@ -22,6 +22,24 @@ Read this first when resuming work (the sandbox resets often).
    candidate. Never mutate frozen validation sources or mix flag configurations.
    The GitHub token is **never** committed. Restore authenticated Git access if needed.
 
+## Bounded namespace-comptime follow-up (local full gate passed)
+
+- Diagnostic/observability follow-up uploaded as 9432ea7 on the existing WIP branch;
+  main remains unchanged. See `NAMESPACE_COMPTIME_STATUS.md` for the new batch.
+- Frozen sema c1815a42 and irgen e7c3e910 implement lazy exactly-once anonymous
+  namespace execution using existing evaluator operations. New namespace FIFO,
+  sticky states, fresh definition maps, shared 1,048,576 work and 128 depth limits.
+  Namespace-only ignored-result policy preserves unrelated runtime contexts.
+- Parent focused integration passes all 58 namespace cases and all 30 frontend
+  semantic controls. Strict switch contract is now 79 pass, one expected NYI and
+  four explicit failures. Original twelve unwrapped failures now match reference
+  primary-error lists; no fixtures were removed or wrapped.
+- Static independent review reports no concrete new blocker. Full GCC/Clang
+  debug/release, sanitizer/unit/golden, frontend, namespace, native/safety and
+  standalone fuzz stages pass under /data/validation/namespace. Four fresh
+  60-second libFuzzer runs and both frozen-source integrity checks pass.
+  Not full M7/bootstrap or hosted-green; strict failures remain visible.
+
 ## In-progress switch candidate (review branch, not accepted)
 
 - Candidate is based on e44e6fe. Frontend, sema and independent reference-test
