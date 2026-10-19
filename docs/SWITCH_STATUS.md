@@ -54,8 +54,8 @@ auto-discovered golden directories. Supported native fixtures remain under
 
 | Outcome | Cases |
 |---|---:|
-| Pass | 79 |
-| Expected empty-enum NYI | 1 |
+| Pass | 80 |
+| Expected empty-enum NYI | 0 |
 | Silently skipped global-comptime invalid programs | 0 |
 | Earlier unsupported-feature gates | 3 |
 | Strict primary-diagnostic mismatches | 1 |
@@ -82,10 +82,12 @@ pass their explicit refusal/limit contracts, not ordinary language acceptance.
    substitution. The alias form produces a different reference diagnostic and
    already matches. Two additional nested-local shadow/redeclaration wording
    mismatches remain explicit in the expanded 25-case matrix.
-4. **Empty enums:** the reference accepts a compile-only zero-prong switch, but
-   existing enum dereference/signature admission prevents producing its operand.
-   Uninhabited operand propagation is not broadened in this batch. Do not execute
-   the deliberately invalid-address compile-only specification.
+4. **Empty enums, narrow producer resolved:** a direct runtime single-pointer
+   dereference of a resolved exhaustive empty enum now terminates with the existing
+   TIR trap, without constructing an enum value or scalar load. The original
+   zero-prong switch specification is required to accept, not classified as NYI.
+   Known pointer origins, TypeOf/comptime, storage and by-value ABI remain unchanged.
+   See `EMPTY_ENUM_TERMINAL_STATUS.md`. Never execute these compile-only fixtures.
 
 ## Other deferred forms
 
@@ -169,3 +171,13 @@ frontend semantic controls. Fresh GCC/Clang regression/fuzz and both frozen-sour
 under `/data/validation/namespace/`. The switch command still exits nonzero for
 three earlier gates and one enum forced-comptime primary mismatch, plus one
 separately expected empty-enum NYI. No full switch acceptance is claimed.
+
+## Empty-enum terminal follow-up
+
+The new compile-only 30-case contract has 25 exact primary/status matches and five
+visible earlier/outside-gate failures. All 11 baseline passes are preserved and
+14 scoped failures improve. Six separate supplementary controls match reference.
+The original 84 sources remain intact: the empty-enum stage now requires actual
+acceptance in both harness CLIs, advancing the checkpoint to 80 passes and four
+existing failures. Earlier 79/4/1 figures above describe historical snapshots.
+No native empty-enum execution, full switch acceptance or hosted-green claim.

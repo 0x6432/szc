@@ -78,3 +78,9 @@ The original 84-case switch contract now has 79 passes, one expected empty-enum
 NYI and four explicit failures (three earlier type gates and one direct enum
 forced-comptime primary mismatch). These remain visible; no full switch, complete
 comptime, exact diagnostic-stream parity or hosted-green claim is made.
+
+A later, separate empty-enum terminal-producer follow-up advances the original
+84-case switch checkpoint to 80 passes and four existing failures (no expected
+empty-enum NYI). Namespace scheduling itself is unchanged. See
+`EMPTY_ENUM_TERMINAL_STATUS.md`; this does not fix the forced-comptime diagnostic
+or implement general comptime control propagation.

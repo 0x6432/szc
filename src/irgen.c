@@ -2132,6 +2132,19 @@ switch_expr(GenBody *body, Scope *scope, ResultInfo info, AstNode *node)
 {
 	IrGen *gen = body->gen;
 	AstSwitch *sw = AST_CAST(AstSwitch, node, AST_SWITCH);
+	/* Duplicate else is a structural error even when the operand terminates.
+	 * Do this before gated captures/prongs; leave semantic labels lazy. */
+	bool seen_else = false;
+	for (uint32_t i = 0; i < sw->prong_count; i++) {
+		AstSwitchProng *prong = &sw->prongs[i];
+		if (!prong->is_else)
+			continue;
+		if (seen_else) {
+			error_at(gen, prong->offset, "%s", "multiple else prongs in switch expression");
+			return IR_REF_VOID_VALUE;
+		}
+		seen_else = true;
+	}
 	if (sw->label.has_label) {
 		error_at(gen, sw->label.name.start, "not supported by szc yet: %s", "labeled switch");
 		return IR_REF_VOID_VALUE;

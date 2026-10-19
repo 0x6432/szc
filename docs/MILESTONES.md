@@ -157,8 +157,11 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
     all-case validation, deferred arms, scalar captures and N-way value joins
     implemented; strict contract failures remain. Not accepted as complete.
   - Remaining scope and validation evidence are tracked in `SWITCH_STATUS.md`;
-    labeled redispatch, inline prongs, pointer captures and empty-enum operand
-    admission remain deferred. Bounded anonymous namespace execution is a separate partial M7.2 subset.
+    labeled redispatch, inline prongs and pointer captures remain deferred.
+    Direct runtime single-pointer empty-enum dereference now has bounded terminal
+    admission (compile-only evidence, no value/storage/ABI expansion); broader
+    origins remain deferred. See `EMPTY_ENUM_TERMINAL_STATUS.md`. Bounded anonymous
+    namespace execution is a separate partial M7.2 subset.
 - [ ] **M6.4 Optionals**: `?T`, `orelse`, `.?`, if-payloads, optional pointers.
 - [ ] **M6.5 Error sets + error unions**: `try`, `catch`, `errdefer`, error set merging, inferred error sets.
 - [ ] **M6.6 Unions**: bare and tagged, switch payload capture.

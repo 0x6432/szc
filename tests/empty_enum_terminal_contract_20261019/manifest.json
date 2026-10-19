@@ -1,0 +1,333 @@
+{
+  "reference_version": "0.17.0",
+  "cases": [
+    {
+      "file": "original_switch_empty_enum.zig",
+      "lane": "parity",
+      "category": "terminal",
+      "original": "tests/switch_contract/tir/switch_empty_enum.zig",
+      "reference": {
+        "status": 0,
+        "primaries": []
+      },
+      "source_sha256": "1ad61ea023440673469639eba9c17571b4962dad8fa43a717cfb335f37d59bee"
+    },
+    {
+      "file": "deref_statement.zig",
+      "lane": "parity",
+      "category": "terminal",
+      "reference": {
+        "status": 0,
+        "primaries": []
+      },
+      "source_sha256": "925aa186f8d4bf0e1c4b17f8c1d603d81d012caaa5345aaa4671f045427469f7"
+    },
+    {
+      "file": "volatile_switch.zig",
+      "lane": "parity",
+      "category": "terminal",
+      "reference": {
+        "status": 0,
+        "primaries": []
+      },
+      "source_sha256": "add3b08093aca90de85bd60b0f509bea5e159aa5204e5ea9b2dd9881fe104603"
+    },
+    {
+      "file": "else_unreachable.zig",
+      "lane": "parity",
+      "category": "terminal",
+      "reference": {
+        "status": 0,
+        "primaries": []
+      },
+      "source_sha256": "284e28c0ff2c1847df43cad3bb4e666d40817cc315a85324435e057d10712940"
+    },
+    {
+      "file": "else_compileerror.zig",
+      "lane": "parity",
+      "category": "earlier-gate",
+      "observation": "Reference semantic laziness; baseline lacks compileError builtin in lexical generation. NYI remains strict unresolved failure, not parity credit.",
+      "reference": {
+        "status": 0,
+        "primaries": []
+      },
+      "source_sha256": "67fd6f3dc60dec7d1302f49d69901188ccb07ecb9684e32db6b0daa88bc1d32e"
+    },
+    {
+      "file": "else_semantic_badtype.zig",
+      "lane": "parity",
+      "category": "terminal",
+      "reference": {
+        "status": 0,
+        "primaries": []
+      },
+      "source_sha256": "bd9c83e225a7eca854ace737ab306582cd676f132c0a10e468f99ebfea60be0f"
+    },
+    {
+      "file": "invalid_enum_label.zig",
+      "lane": "parity",
+      "category": "terminal",
+      "reference": {
+        "status": 0,
+        "primaries": []
+      },
+      "source_sha256": "d3b3d5b254af16c406d37c6828853bf931ae9b890cfab50ca1f25be75104e2ad"
+    },
+    {
+      "file": "duplicate_else.zig",
+      "lane": "parity",
+      "category": "terminal",
+      "reference": {
+        "status": 1,
+        "primaries": [
+          "multiple else prongs in switch expression"
+        ]
+      },
+      "source_sha256": "c93c967d17efcbea84fcbf7f8bb4fc412ddc76e4d69cbd2721357f127315f664"
+    },
+    {
+      "file": "lexical_after_terminal.zig",
+      "lane": "parity",
+      "category": "lexical",
+      "reference": {
+        "status": 1,
+        "primaries": [
+          "use of undeclared identifier 'missing'"
+        ]
+      },
+      "source_sha256": "a40c687609cd3138d23ef22a41a26b0d9e03cea35c7d484df31cc0ddacbd9824"
+    },
+    {
+      "file": "lexical_in_else.zig",
+      "lane": "parity",
+      "category": "lexical",
+      "reference": {
+        "status": 1,
+        "primaries": [
+          "use of undeclared identifier 'missing'"
+        ]
+      },
+      "source_sha256": "c69330a01162146d65a48104cff4adc8163d748257fc347bbb433d9472ea626e"
+    },
+    {
+      "file": "semantic_after_terminal.zig",
+      "lane": "parity",
+      "category": "terminal",
+      "reference": {
+        "status": 0,
+        "primaries": []
+      },
+      "source_sha256": "efa184574739e12d446370637ddfc12fb26320ea07297aa6fc151d7b4e71896e"
+    },
+    {
+      "file": "semantic_before_terminal.zig",
+      "lane": "parity",
+      "category": "marker",
+      "reference": {
+        "status": 1,
+        "primaries": [
+          "expected type 'u8', found 'bool'"
+        ]
+      },
+      "source_sha256": "c7511b1c89351755920a43437cfa17f830cfa3028852cad78d54115ecb36ac9a"
+    },
+    {
+      "file": "defer_terminal_does_not_exit.zig",
+      "lane": "parity",
+      "category": "cleanup",
+      "reference": {
+        "status": 0,
+        "primaries": []
+      },
+      "source_sha256": "0582e67ba4855b28f6fa86b0f2c2e7485fd45850c03777b39300e2f874940418"
+    },
+    {
+      "file": "defer_surviving_sibling.zig",
+      "lane": "parity",
+      "category": "cleanup",
+      "reference": {
+        "status": 1,
+        "primaries": [
+          "expected type 'u8', found 'bool'"
+        ]
+      },
+      "source_sha256": "b8c5b5e833aab8bd9eb9769bf4d91a39cfd274e4dc5cbfd7d6d3873781630d53"
+    },
+    {
+      "file": "one_terminal_join.zig",
+      "lane": "parity",
+      "category": "join",
+      "reference": {
+        "status": 0,
+        "primaries": []
+      },
+      "source_sha256": "109abfe0552e41b6355de6119ee8f5c281843e9eea3008cf63a22de3e83556d1"
+    },
+    {
+      "file": "both_terminal_join.zig",
+      "lane": "parity",
+      "category": "join",
+      "reference": {
+        "status": 0,
+        "primaries": []
+      },
+      "source_sha256": "a14cb639d462e03be0538dd4ed7a21f005f509cd20a69149dac1987d0f4e03b6"
+    },
+    {
+      "file": "known_pruned_terminal.zig",
+      "lane": "parity",
+      "category": "lazy",
+      "reference": {
+        "status": 0,
+        "primaries": []
+      },
+      "source_sha256": "2cb0f0a1a1dfe9811eca75bc927d9263958f17bb659062c5510741174ebc9a4f"
+    },
+    {
+      "file": "typeof_deref_boundary.zig",
+      "lane": "parity",
+      "category": "boundary-observation",
+      "observation": "TypeOf suppresses ordinary value evaluation; keep current query gate visible rather than broadening terminal implementation.",
+      "reference": {
+        "status": 1,
+        "primaries": [
+          "pointer to noreturn not allowed"
+        ]
+      },
+      "source_sha256": "c6c5a43e024b1ff79634584646f12dd54aa6163ab862849a2d55471914e935c9"
+    },
+    {
+      "file": "pruned_semantic_marker.zig",
+      "lane": "parity",
+      "category": "marker",
+      "reference": {
+        "status": 0,
+        "primaries": []
+      },
+      "source_sha256": "4e3a8bd7ddb46385176f9bd7866e93a96fea395698fad7f0b7c0816ab7b0e47e"
+    },
+    {
+      "file": "selected_semantic_marker.zig",
+      "lane": "parity",
+      "category": "marker",
+      "reference": {
+        "status": 1,
+        "primaries": [
+          "expected type 'u8', found 'bool'"
+        ]
+      },
+      "source_sha256": "1dae7f0b17f763e46017ad5269aba089b6d7e42f57a9da4bd07b9e8f1472029d"
+    },
+    {
+      "file": "nonlocal_break_defer.zig",
+      "lane": "parity",
+      "category": "nonlocal",
+      "reference": {
+        "status": 0,
+        "primaries": []
+      },
+      "source_sha256": "0f61e6a4f9ca7182a0792b86f574c49a3dac92465af37b5974312deaa05f1ffa"
+    },
+    {
+      "file": "nonlocal_continue_defer.zig",
+      "lane": "parity",
+      "category": "nonlocal",
+      "reference": {
+        "status": 0,
+        "primaries": []
+      },
+      "source_sha256": "39295934f97237edb6e878fc86b3a94051f70be4acbdbb5204b98dabcb6ab326"
+    },
+    {
+      "file": "nonempty_enum_control.zig",
+      "lane": "parity",
+      "category": "ordinary",
+      "reference": {
+        "status": 0,
+        "primaries": []
+      },
+      "source_sha256": "ef5392bdcf6ad11a7eb9e9ed68e5d73b219da218ef3471ce457fda562ee5e98b"
+    },
+    {
+      "file": "u0_single_value_control.zig",
+      "lane": "parity",
+      "category": "ordinary",
+      "reference": {
+        "status": 0,
+        "primaries": []
+      },
+      "source_sha256": "b845ac25f4b590df691f23576fc52c16b7d7cb11dd2867e6d0071703e6892e0d"
+    },
+    {
+      "file": "type_pointer_only.zig",
+      "lane": "parity",
+      "category": "ordinary",
+      "reference": {
+        "status": 0,
+        "primaries": []
+      },
+      "source_sha256": "4c4bcd096b5023303c0400c03c334d7a08c710ae5afb04e596e02b5358e06818"
+    },
+    {
+      "file": "internal_value_signature.zig",
+      "lane": "parity",
+      "category": "boundary-observation",
+      "observation": "Broader by-value ABI support is not authorized; keep any earlier gate or lazy unreachable-call behavior visible.",
+      "reference": {
+        "status": 0,
+        "primaries": []
+      },
+      "source_sha256": "63b86e9feeb34a22ea3abd516c8922e4344d2e2fb5dc79cb5829534dbd007534"
+    },
+    {
+      "file": "export_value_signature.zig",
+      "lane": "parity",
+      "category": "boundary-observation",
+      "observation": "Foreign ABI/value admission remains fenced; reference primary pinned independently, NYI is not parity.",
+      "reference": {
+        "status": 1,
+        "primaries": [
+          "parameter of type 'export_value_signature.E' not allowed in function with calling convention 'x86_64_sysv'"
+        ]
+      },
+      "source_sha256": "2aeb0c364430b98f0efac5857840799495c16cc12f640c5fbfb1d77d7d3b2683"
+    },
+    {
+      "file": "empty_value_storage.zig",
+      "lane": "parity",
+      "category": "boundary-observation",
+      "observation": "No zero-width singleton or fabricated enum ValueId is authorized; storage gates remain visible.",
+      "reference": {
+        "status": 1,
+        "primaries": [
+          "expected type 'empty_value_storage.E', found '@TypeOf(undefined)'"
+        ]
+      },
+      "source_sha256": "a25610f9f3a68805634fc91e670d7f1d6c6f24d2bace99e6a96208e443cf753a"
+    },
+    {
+      "file": "pointer_expression_marker.zig",
+      "lane": "parity",
+      "category": "marker",
+      "reference": {
+        "status": 1,
+        "primaries": [
+          "expected type 'u8', found 'bool'"
+        ]
+      },
+      "source_sha256": "00cd3a7f2266a92438729a15f671cdca456ca374622fd6f8f7bd3cab1aadcdfb"
+    },
+    {
+      "file": "address_only_deref.zig",
+      "lane": "parity",
+      "category": "ordinary",
+      "observation": "Address-only &p.* must not be mistaken for value dereference or terminal execution.",
+      "reference": {
+        "status": 0,
+        "primaries": []
+      },
+      "source_sha256": "8f10084e8c0b39fceca0457b1e4369dbfb2ec22d844b835d14a46fe6bf35e384"
+    }
+  ],
+  "baseline_commit": "0472f8badfd723ac2de60374d60b45d22e68ae36"
+}

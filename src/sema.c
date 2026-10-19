@@ -7088,8 +7088,9 @@ one_value_operand(Block *block, TypeId type, uint32_t src)
 
 /* Validate even &p.*: cancelling the address must not hide an invalid dereference. */
 static Operand
-analyze_deref(Block *block, const IrInst *inst)
+analyze_deref(Block *block, const IrInst *inst, bool *terminal_empty_enum)
 {
+	*terminal_empty_enum = false;
 	Sema *sema = block->sema;
 	Operand pointer = resolve_ref(block, inst->data.un.operand);
 	if (pointer.kind == OPERAND_NONE)
@@ -7154,7 +7155,47 @@ analyze_deref(Block *block, const IrInst *inst)
 	}
 	if (inst->op == IR_REF_DEREF)
 		return pointer;
+	/* Only an actual runtime load of an exhaustive empty enum terminates.
+	 * Known origins retain load_pointer's contents/provenance validation;
+	 * reference formation and scratch TypeOf/comptime analysis are unchanged. */
+	if (pointer.kind == OPERAND_RUNTIME && block->tir != NULL
+		&& !block->is_comptime && !block->is_typeof
+		&& sema->types[type.child].kind == TYPE_ENUM
+		&& sema->types[type.child].as.structure->field_count == 0) {
+		if (!ensure_enum_layout(block, type.child, inst->src, "dereference"))
+			return operand_none;
+		if (sema_enum_tag_type(sema, type.child) == T_NORETURN) {
+			if (!pointer_operand(block, pointer, inst->src))
+				return operand_none;
+			emit_tir(block, TIR_TRAP, T_NORETURN, inst->src);
+			*terminal_empty_enum = true;
+			return operand_none;
+		}
+	}
 	return load_pointer(block, pointer, inst->src);
+}
+
+typedef enum {
+	DEREF_VALUE,
+	DEREF_ERROR,
+	DEREF_TERMINAL_EMPTY_ENUM,
+} DerefKind;
+
+typedef struct {
+	DerefKind kind;
+	Operand value;
+} DerefResult;
+
+/* Do not encode a terminal producer as a fabricated Operand. In particular,
+ * INST_NORETURN is also used by nonlocal control transfers elsewhere. */
+static DerefResult
+analyze_deref_result(Block *block, const IrInst *inst)
+{
+	bool terminal_empty_enum;
+	Operand value = analyze_deref(block, inst, &terminal_empty_enum);
+	DerefKind kind = terminal_empty_enum ? DEREF_TERMINAL_EMPTY_ENUM
+		: value.kind == OPERAND_NONE ? DEREF_ERROR : DEREF_VALUE;
+	return (DerefResult){kind, value};
 }
 
 static bool
@@ -9294,9 +9335,13 @@ analyze_inst(Block *block, IrInstIndex index, Operand *break_value)
 		break;
 	}
 	case IR_DEREF:
-	case IR_REF_DEREF:
-		result = analyze_deref(block, inst);
+	case IR_REF_DEREF: {
+		DerefResult deref = analyze_deref_result(block, inst);
+		if (deref.kind == DEREF_TERMINAL_EMPTY_ENUM)
+			return INST_NORETURN;
+		result = deref.value;
 		break;
+	}
 	case IR_AS:
 	case IR_AS_RETURN: {
 		Operand dest = resolve_ref(block, inst->data.bin.lhs);

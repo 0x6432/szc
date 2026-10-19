@@ -60,7 +60,7 @@ def cases(stages=False):
         for stage in ('ir', 'tir', 'codegen'):
             for path in sorted((ROOT / 'tests' / 'switch_contract' / stage).glob('switch*.zig')):
                 yield Case(str(path.relative_to(ROOT)), path.read_text(),
-                           'nyi' if path.stem == 'switch_empty_enum' else 'stage', [], path,
+                           'stage', [], path,
                            {'ir': 'ir', 'tir': 'tir', 'codegen': 'emit-qbe'}[stage])
 
 def output_case():

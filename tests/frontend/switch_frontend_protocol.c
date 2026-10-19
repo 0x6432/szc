@@ -155,7 +155,8 @@ int main(void)
   {"fn f(x: u8) u8 { return switch (x) { 1 => |v| blk: { defer _ = v; break :blk 1; }, else => 0 }; }", 1, 1, 1},
   {"const E = enum { @\"_\", a }; fn f(x: E) u8 { return switch (x) { .@\"_\" => 1, .a => 2 }; }", 1, 0, 2},
   {"fn f(x: u128) u8 { return switch (x) { 0...0xffffffffffffffffffffffffffffffff => 1 }; }", 1, 0, 2},
-  /* Semantic errors are deliberately not consumed by the frontend. */
+  /* Preserve this compound source: duplicate else is structural; the other
+   * errors remain semantic, as the separate control below verifies. */
   {"fn f(x: u8) u8 { return switch (x) { 9...1 => @as(u8, false), 9 => 1, 9 => 2, else => 3, else => 4 }; }", 1, 0, 4},
   {"fn f(x: bool) u8 { return switch (x) { true => 1, else => 2 }; }", 1, 0, 1},
   {"fn get() u8 { return 1; } fn f() u8 { return switch (get()) { 1 => 2, else => 3 }; }", 1, 0, 1},
@@ -164,6 +165,16 @@ int main(void)
  };
  for (size_t i = 0; i < sizeof(valid) / sizeof(valid[0]); i++) {
   Fixture f; init(&f, valid[i].source);
+  if (i == 12) {
+   /* Exact original source pinned independently against Zig 0.17.0. */
+   const char *second_else = strstr(valid[i].source, "else => 4");
+   CHECK(second_else != NULL);
+   CHECK(f.diag.error_count == 1);
+   CHECK(strcmp(f.diag.items[0].message, "multiple else prongs in switch expression") == 0);
+   CHECK(f.diag.items[0].offset == (uint32_t)(second_else - valid[i].source));
+   arena_free(&f.arena);
+   continue;
+  }
   if (diag_has_errors(&f.diag)) diag_print(&f.diag, stderr);
   CHECK(!diag_has_errors(&f.diag));
   CHECK(count_op(f.ir, IR_SWITCH) == valid[i].switches);
@@ -188,6 +199,14 @@ int main(void)
   protocol(&f);
   arena_free(&f.arena);
  }
+ /* Removing only the duplicate else leaves range/type/label errors deferred. */
+ Fixture semantic;
+ init(&semantic, "fn f(x: u8) u8 { return switch (x) { 9...1 => @as(u8, false), 9 => 1, 9 => 2, else => 3 }; }");
+ CHECK(!diag_has_errors(&semantic.diag));
+ CHECK(count_op(semantic.ir, IR_SWITCH) == 1);
+ CHECK(count_op(semantic.ir, IR_SWITCH_TYPE) == 4);
+ protocol(&semantic);
+ arena_free(&semantic.arena);
  /* Force repeated instruction/extra reallocation; preserve record offsets and owners. */
  char *many = malloc(65536);
  CHECK(many != NULL);
@@ -261,7 +280,7 @@ int main(void)
   }
   arena_free(&f.arena);
  }
- printf("switch frontend: %u checks, %zu valid and %zu negative fixtures (19 lexical, 1 deferred semantic) + 512-prong stress passed (no sema linked)\n", checks,
-  sizeof(valid) / sizeof(valid[0]), sizeof(invalid) / sizeof(invalid[0]));
+ printf("switch frontend: %u checks, %zu successful fixtures, 1 reclassified duplicate-else fixture and %zu negative fixtures (19 lexical, 1 deferred semantic) + deferred-semantics control + 512-prong stress passed (no sema linked)\n", checks,
+  sizeof(valid) / sizeof(valid[0]) - 1, sizeof(invalid) / sizeof(invalid[0]));
  return 0;
 }

@@ -22,6 +22,25 @@ Read this first when resuming work (the sandbox resets often).
    candidate. Never mutate frozen validation sources or mix flag configurations.
    The GitHub token is **never** committed. Restore authenticated Git access if needed.
 
+## Empty-enum terminal follow-up
+
+- Based on published cleanup commit 0472f8b. Only sema direct-dereference admission
+  and irgen duplicate-else structural preflight change compiler behavior.
+- Read `EMPTY_ENUM_TERMINAL_STATUS.md`. Runtime POINTER_ONE, direct exhaustive
+  empty enum, validated noreturn backing, real TIR builder only. Known origins,
+  TypeOf/comptime, load_pointer, representation, ABI and control-target logic stay
+  unchanged. No fabricated E value; emit trap and stop before map insertion.
+- Independent and parent focused 30-case results: 25 exact / five outside failures;
+  all 11 prior passes preserved, 14 target improvements. Six supplementary controls
+  pass compile-only. Never execute the uninhabited/invalid-address programs.
+- Original 84 sources unchanged; the empty-enum case is now a required accepted
+  stage in both CLI modes, not expected NYI. Current checkpoint is 80 pass / four
+  existing failures. Historical figures below refer to earlier snapshots.
+- Preserve the rejected forced-comptime experiment as rejected. This batch does
+  not introduce its control barriers, AS_EXPLICIT opcode or changed IR goldens.
+- Full regression/fuzz publication gate is recorded separately under
+  /data/validation/empty-enum; focused evidence alone is not full/hosted acceptance.
+
 ## Cleanup-only follow-up (local full gate passed)
 
 - Based on published a4c4dcf. Compiler src files remain byte-identical.
