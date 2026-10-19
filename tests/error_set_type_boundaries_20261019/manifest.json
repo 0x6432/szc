@@ -1,0 +1,270 @@
+{
+  "contract": "error_set_type_boundaries_20261019",
+  "base_commit": "ea86b15887c33c6850123e82f6590ad5059b0f74",
+  "candidate_stage": "emit-qbe",
+  "reference_version": "0.17.0",
+  "scope": "12 exact source copies,9 fail-closed representation policies + eager duplicate parity rejection +2 accepts. NYI policy is NOT language parity. No native execution.",
+  "expectation_basis": "Approved guard strings plus source-operation attribution; independently recorded immutable emit-qbe output validated separately. No dedup/suppression/any-NYI match or expected-list generation from raw output.",
+  "cases": [
+    {
+      "file": "canonical_order_alias.zig",
+      "source_sha256": "292f764a73685e2f4566bf0579ae0fd00031b8b7d1e007307abc70c471548e9f",
+      "label": "ACCEPT",
+      "candidate": {
+        "status": 0,
+        "primaries": [],
+        "generated_stdout": "nonempty"
+      },
+      "reference": {
+        "status": 0,
+        "primaries": []
+      },
+      "diagnostic_operation_attribution": [
+        "probe compile-time type-identity assertions; ordinary return code generation"
+      ],
+      "provenance": "Exact unchanged source copy from frozen strict30; same unique program, no source rewrite."
+    },
+    {
+      "file": "duplicate_unused_lazy.zig",
+      "source_sha256": "5ccfbfc4278f80032840ceadbdc53ff5119157094954f089801107ed3dec2d4c",
+      "label": "PARITY-REJECT",
+      "candidate": {
+        "status": 1,
+        "primaries": [
+          "duplicate error set field 'A'"
+        ],
+        "generated_stdout": "empty"
+      },
+      "reference": {
+        "status": 1,
+        "primaries": [
+          "duplicate error set field 'A'"
+        ]
+      },
+      "diagnostic_operation_attribution": [
+        "unused declaration second decoded A member, frontend eager duplicate"
+      ],
+      "provenance": "Exact unchanged source copy from frozen strict30; same unique program, no source rewrite."
+    },
+    {
+      "file": "pointer_alignment_demand.zig",
+      "source_sha256": "a5a44b3c463a1201f02b5c2d9a26891ebea93d00cd6336dac232017d68b4b749",
+      "label": "VALID-UNSUPPORTED-FENCE",
+      "candidate": {
+        "status": 1,
+        "primaries": [
+          "not supported by szc yet: finite error-set value or layout demand",
+          "not supported by szc yet: finite error-set value or layout demand"
+        ],
+        "generated_stdout": "empty"
+      },
+      "reference": {
+        "status": 0,
+        "primaries": []
+      },
+      "diagnostic_operation_attribution": [
+        "probe pointer cast/alignment demand (1:65)",
+        "empty pointer cast/alignment demand (2:57)"
+      ],
+      "provenance": "Exact unchanged source copy from frozen strict30; same unique program, no source rewrite."
+    },
+    {
+      "file": "runtime_load_boundary.zig",
+      "source_sha256": "c4ad17384acd412d657e616ab9367ae928a287ad2111e74f11b50a0a9fd68707",
+      "label": "VALID-UNSUPPORTED-FENCE",
+      "candidate": {
+        "status": 1,
+        "primaries": [
+          "not supported by szc yet: finite error-set value or layout demand",
+          "not supported by szc yet: finite error-set value or layout demand",
+          "not supported by szc yet: finite error-set value or layout demand",
+          "not supported by szc yet: finite error-set value or layout demand"
+        ],
+        "generated_stdout": "empty"
+      },
+      "reference": {
+        "status": 0,
+        "primaries": []
+      },
+      "diagnostic_operation_attribution": [
+        "probe lhs p.* load (1:60)",
+        "probe rhs p.* load (1:65)",
+        "empty lhs p.* load (2:47)",
+        "empty rhs p.* load (2:52)"
+      ],
+      "provenance": "Exact unchanged source copy from frozen strict30; same unique program, no source rewrite."
+    },
+    {
+      "file": "internal_signature_boundary.zig",
+      "source_sha256": "b4f4e0d75ef046b8f7beb0eae63252bb292fad6467d225bd06a6482687fa4a78",
+      "label": "VALID-UNSUPPORTED-FENCE",
+      "candidate": {
+        "status": 1,
+        "primaries": [
+          "not supported by szc yet: finite error-set values in runtime function signatures",
+          "not supported by szc yet: finite error-set value or layout demand"
+        ],
+        "generated_stdout": "empty"
+      },
+      "reference": {
+        "status": 0,
+        "primaries": []
+      },
+      "diagnostic_operation_attribution": [
+        "probe lhs pass(p.*) live call signature (1:87)",
+        "probe independent rhs p.* load (1:95)"
+      ],
+      "provenance": "Exact unchanged source copy from frozen strict30; same unique program, no source rewrite."
+    },
+    {
+      "file": "export_param_boundary.zig",
+      "source_sha256": "14d94c345e6ddfa5476eea6f0ccccde6f23f80885d43e47e59f1d6d6117485c6",
+      "label": "REF-INVALID-NYI-REFUSAL",
+      "candidate": {
+        "status": 1,
+        "primaries": [
+          "not supported by szc yet: finite error-set values in runtime function signatures"
+        ],
+        "generated_stdout": "empty"
+      },
+      "reference": {
+        "status": 1,
+        "primaries": [
+          "parameter of type 'error{A,B}' not allowed in function with calling convention 'x86_64_sysv'"
+        ]
+      },
+      "diagnostic_operation_attribution": [
+        "probe exported runtime parameter signature"
+      ],
+      "provenance": "Exact unchanged source copy from frozen strict30; same unique program, no source rewrite."
+    },
+    {
+      "file": "export_return_boundary.zig",
+      "source_sha256": "385085bb961dcbf8dc2b4b876bfe16472b00ff780524416431d5ee45c7ffcc69",
+      "label": "REF-INVALID-NYI-REFUSAL",
+      "candidate": {
+        "status": 1,
+        "primaries": [
+          "not supported by szc yet: finite error-set values in runtime function signatures"
+        ],
+        "generated_stdout": "empty"
+      },
+      "reference": {
+        "status": 1,
+        "primaries": [
+          "return type 'error{A,B}' not allowed in function with calling convention 'x86_64_sysv'"
+        ]
+      },
+      "diagnostic_operation_attribution": [
+        "probe exported runtime return signature"
+      ],
+      "provenance": "Exact unchanged source copy from frozen strict30; same unique program, no source rewrite."
+    },
+    {
+      "file": "size_layout_boundary.zig",
+      "source_sha256": "fd264c34a7f76785b44edcf34aefb177c404565587993d6344313b76e7298c76",
+      "label": "VALID-UNSUPPORTED-FENCE",
+      "candidate": {
+        "status": 1,
+        "primaries": [
+          "not supported by szc yet: finite error-set value or layout demand",
+          "not supported by szc yet: finite error-set value or layout demand",
+          "not supported by szc yet: finite error-set value or layout demand"
+        ],
+        "generated_stdout": "empty"
+      },
+      "reference": {
+        "status": 0,
+        "primaries": []
+      },
+      "diagnostic_operation_attribution": [
+        "empty size query (1:31)",
+        "singleton size query (2:35)",
+        "probe two-member size query (3:31)"
+      ],
+      "provenance": "Exact unchanged source copy from frozen strict30; same unique program, no source rewrite."
+    },
+    {
+      "file": "zero_array_value_boundary.zig",
+      "source_sha256": "d1f1b27e550d3b8a1872467f7727f5e29bcdc9954057414de31011ebc6e57fbe",
+      "label": "VALID-UNSUPPORTED-FENCE",
+      "candidate": {
+        "status": 1,
+        "primaries": [
+          "not supported by szc yet: finite error-set value or layout demand"
+        ],
+        "generated_stdout": "empty"
+      },
+      "reference": {
+        "status": 0,
+        "primaries": []
+      },
+      "diagnostic_operation_attribution": [
+        "probe zero-length array construction demand"
+      ],
+      "provenance": "Exact unchanged source copy from frozen strict30; same unique program, no source rewrite."
+    },
+    {
+      "file": "zero_array_size_boundary.zig",
+      "source_sha256": "06abf73257676827e4b59ce5d405dda6bf4d2396f27b570477efcb42402fb121",
+      "label": "VALID-UNSUPPORTED-FENCE",
+      "candidate": {
+        "status": 1,
+        "primaries": [
+          "not supported by szc yet: finite error-set value or layout demand",
+          "not supported by szc yet: finite error-set value or layout demand"
+        ],
+        "generated_stdout": "empty"
+      },
+      "reference": {
+        "status": 0,
+        "primaries": []
+      },
+      "diagnostic_operation_attribution": [
+        "empty zero-length array size query",
+        "probe singleton-child zero-length array size query"
+      ],
+      "provenance": "Exact unchanged source copy from frozen strict30; same unique program, no source rewrite."
+    },
+    {
+      "file": "zero_pointer_concat_boundary.zig",
+      "source_sha256": "dea86d00edc5d3cf338626c61ddf2cb3e67f7ed29cbc181368ed19ed4be95880",
+      "label": "REF-INVALID-NYI-REFUSAL",
+      "candidate": {
+        "status": 1,
+        "primaries": [
+          "not supported by szc yet: finite error-set value or layout demand"
+        ],
+        "generated_stdout": "empty"
+      },
+      "reference": {
+        "status": 1,
+        "primaries": [
+          "use of undefined value here causes illegal behavior"
+        ]
+      },
+      "diagnostic_operation_attribution": [
+        "probe concat producer child frontier"
+      ],
+      "provenance": "Exact unchanged source copy from frozen strict30; same unique program, no source rewrite."
+    },
+    {
+      "file": "ordinary_zero_concat_control.zig",
+      "source_sha256": "a31bab57bec2f81909fdb17d129163c8c627b0dfec3279fce8344e5cfea38234",
+      "label": "ACCEPT",
+      "candidate": {
+        "status": 0,
+        "primaries": [],
+        "generated_stdout": "nonempty"
+      },
+      "reference": {
+        "status": 0,
+        "primaries": []
+      },
+      "diagnostic_operation_attribution": [
+        "probe defined nonerror zero-length array concat; ordinary return code generation"
+      ],
+      "provenance": "Exact unchanged source copy from frozen strict30; same unique program, no source rewrite."
+    }
+  ]
+}

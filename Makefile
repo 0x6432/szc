@@ -51,6 +51,8 @@ golden-test: build/asan/szc
 test: unit-test golden-test fuzz-driver-test fuzz-partition-test
 	python3 tests/run_compiler_cleanup_20261019.py
 	python3 tools/check_optional_type_boundaries_20261019.py build/asan/szc
+	python3 tools/check_error_set_type_boundaries_20261019.py build/asan/szc
+	CC="$(CC)" sh tests/error_set_type_name_20261019.sh
 
 build/memcpy-widths.zig: tools/generate_memcpy_tests.py
 	python3 $< $@

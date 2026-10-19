@@ -179,6 +179,7 @@ typedef enum IrDataKind {
 	X(FIELD_REF, "field_ref", IR_DATA_NAME)	/* type-only array .len through an expression address */ \
 	X(FIELD_VAL, "field_val", IR_DATA_NAME)	/* field name, base operand (array .len initially) */ \
 	X(OPTIONAL_TYPE, "optional_type", IR_DATA_UN) /* child type -> optional type identity only */ \
+	X(ERROR_SET_TYPE, "error_set_type", IR_DATA_PAYLOAD) /* IrErrorSetHeader then source-ordered IrErrorSetMember; no refs */ \
 	X(PTR_TYPE, "ptr_type", IR_DATA_PAYLOAD)	/* IrPointerType */ \
 	/* Result types and coercion */ \
 	X(AS_RETURN, "as_return", IR_DATA_BIN)	/* direct return-value coercion */ \
@@ -335,6 +336,17 @@ typedef struct IrPointerType {
 	IrRef			sentinel;	/* IR_REF_NONE = no sentinel */
 	uint32_t	sentinel_src;
 } IrPointerType;
+
+/* Finite type identity only: names are decoded identifiers, never error codes.
+ * Header followed by count members in source order; payload contains no IrRefs. */
+typedef struct IrErrorSetHeader {
+	uint32_t count;
+} IrErrorSetHeader;
+
+typedef struct IrErrorSetMember {
+	StringId name;
+	uint32_t src;
+} IrErrorSetMember;
 
 typedef struct IrArrayType {
 	IrRef			length;

@@ -169,7 +169,12 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
   - Deferred: null/payload injection, optional layouts/values, `orelse`, `.?`,
     if-payloads and runtime optional-pointer optimization. The original switch
     optional case remains an earlier producer gate.
-- [ ] **M6.5 Error sets + error unions**: `try`, `catch`, `errdefer`, error set merging, inferred error sets.
+- [~] **M6.5 Error sets + error unions**: finite explicit TYPE foundation candidate only.
+  - [~] **M6.5a Finite explicit error-set type identity**: decoded canonical members,
+    eager duplicates, aliases/type composition and explicit value/layout fences.
+    See `ERROR_SET_TYPE_STATUS.md`; no error values or representation support.
+  - Deferred: error values/numbering, storage/ABI, error unions, anyerror expansion,
+    `try`, `catch`, `errdefer`, error set merging and inferred error sets.
 - [ ] **M6.6 Unions**: bare and tagged, switch payload capture.
 - [ ] **M6.7 extern/packed struct layout.**
 

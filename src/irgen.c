@@ -873,6 +873,86 @@ quoted_identifier(IrGen *gen, Span span)
 	return name;
 }
 
+typedef struct ErrorSetNameOrder {
+	StringId name;
+	uint32_t index;
+} ErrorSetNameOrder;
+
+static int
+error_set_name_order(const void *left, const void *right)
+{
+	const ErrorSetNameOrder *a = left;
+	const ErrorSetNameOrder *b = right;
+	if (a->name != b->name)
+		return a->name < b->name ? -1 : 1;
+	return a->index < b->index ? -1 : a->index != b->index;
+}
+
+static IrRef
+error_set_type(GenBody *body, AstErrorSetDecl *node)
+{
+	IrGen *gen = body->gen;
+	uint32_t count = node->name_count;
+	if (count > (UINT32_MAX - IR_WORDS(IrErrorSetHeader)) / IR_WORDS(IrErrorSetMember)
+		|| (count != 0 && sizeof(ErrorSetNameOrder) > SIZE_MAX / (size_t)count)) {
+		error_at(gen, node->base.offset, "%s", "not supported by szc yet: error-set type payload exceeds IR capacity");
+		return IR_REF_VOID_VALUE;
+	}
+	uint32_t words = IR_WORDS(IrErrorSetHeader) + count * IR_WORDS(IrErrorSetMember);
+	if (words > UINT32_MAX - gen->ir->extra_count) {
+		error_at(gen, node->base.offset, "%s", "not supported by szc yet: error-set type payload exceeds IR capacity");
+		return IR_REF_VOID_VALUE;
+	}
+	/* reserve_extra grows by doubling: reject only unaddressable growth, not
+	 * an arbitrary language-level member/depth budget. */
+	uint32_t needed = gen->ir->extra_count + words;
+	uint32_t capacity = gen->extra_capacity;
+	while (capacity < needed) {
+		if (capacity > UINT32_MAX / 2) {
+			error_at(gen, node->base.offset, "%s", "not supported by szc yet: error-set type payload exceeds IR capacity");
+			return IR_REF_VOID_VALUE;
+		}
+		capacity *= 2;
+	}
+	IrErrorSetMember *members = ARENA_ARRAY(gen->arena, IrErrorSetMember, count);
+	ErrorSetNameOrder *order = ARENA_ARRAY(gen->arena, ErrorSetNameOrder, count);
+	uint32_t *previous = ARENA_ARRAY(gen->arena, uint32_t, count);
+	bool failed = false;
+	for (uint32_t i = 0; i < count; i++) {
+		members[i].name = intern_span(gen, node->names[i]);
+		members[i].src = node->names[i].start;
+		order[i] = (ErrorSetNameOrder){members[i].name, i};
+		previous[i] = UINT32_MAX;
+		failed |= members[i].name == STRING_NONE;
+	}
+	if (failed)
+		return IR_REF_VOID_VALUE;
+	if (count > 1)
+		qsort(order, count, sizeof(*order), error_set_name_order);
+	for (uint32_t i = 0; i < count;) {
+		uint32_t first = i++;
+		while (i < count && order[i].name == order[first].name) {
+			previous[order[i].index] = members[order[first].index].src;
+			i++;
+		}
+	}
+	for (uint32_t i = 0; i < count; i++) {
+		if (previous[i] == UINT32_MAX)
+			continue;
+		error_at(gen, members[i].src, "duplicate error set field '%s'", intern_text(gen->interner, members[i].name));
+		diag_report(gen->diag, DIAG_NOTE, gen->file, previous[i], "previous declaration here");
+		failed = true;
+	}
+	if (failed)
+		return IR_REF_VOID_VALUE;
+	IrErrorSetHeader header = {count};
+	uint32_t payload = reserve_extra(gen, words);
+	write_extra(gen, payload, &header, sizeof(header));
+	if (count != 0)
+		write_extra(gen, payload + IR_WORDS(IrErrorSetHeader), members, count * sizeof(*members));
+	return emit_payload(body, IR_ERROR_SET_TYPE, node->base.offset, payload);
+}
+
 static IrRef
 string_literal(GenBody *body, AstNode *node)
 {
@@ -2481,6 +2561,8 @@ expr(GenBody *body, Scope *scope, ResultInfo info, AstNode *node)
 		return identifier(body, scope, info, node);
 	case AST_FN_PROTO:
 		return rvalue(body, info, function_proto(body, scope, AST_CAST(AstFnProto, node, AST_FN_PROTO), STRING_NONE, 0, STRING_NONE, NULL, IR_FN_TYPE), node->offset);
+	case AST_ERROR_SET_DECL:
+		return rvalue(body, info, error_set_type(body, AST_CAST(AstErrorSetDecl, node, AST_ERROR_SET_DECL)), node->offset);
 	case AST_OPTIONAL_TYPE:
 		return rvalue(body, info, emit_un(body, IR_OPTIONAL_TYPE, node->offset,
 			type_expr(body, scope, AST_CAST(AstWrap, node, AST_OPTIONAL_TYPE)->operand)), node->offset);
@@ -3670,6 +3752,22 @@ dump_inst(const IrDumper *dumper, IrInstIndex index, uint32_t depth)
 	case IR_ALIGN:
 		dump_labeled_body(dumper, "value", inst->data.payload, depth);
 		break;
+	case IR_ERROR_SET_TYPE: {
+		IrErrorSetHeader header;
+		IR_READ(ir, inst->data.payload, &header);
+		uint32_t cursor = inst->data.payload + IR_WORDS(IrErrorSetHeader);
+		fputs(" {", out);
+		for (uint32_t i = 0; i < header.count; i++) {
+			IrErrorSetMember member;
+			IR_READ(ir, cursor, &member);
+			cursor += IR_WORDS(IrErrorSetMember);
+			fputs(i == 0 ? " " : ", ", out);
+			dump_string(dumper, member.name);
+			fprintf(out, " src=%" PRIu32, member.src);
+		}
+		fputs(" }", out);
+		break;
+	}
 	case IR_ARRAY_TYPE_SENTINEL: {
 		IrArrayType payload;
 		IR_READ(ir, inst->data.payload, &payload);

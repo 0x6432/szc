@@ -40,6 +40,7 @@ typedef enum TypeKind {
 	TYPE_UNDEFINED,
 	TYPE_ENUM_LITERAL,
 	TYPE_OPTIONAL,
+	TYPE_ERROR_SET,
 } TypeKind;
 
 typedef enum PointerSize {
@@ -81,6 +82,12 @@ typedef struct TypeFn {
 	bool     is_generic;	/* has comptime or anytype parameters: params/ret are not known */
 } TypeFn;
 
+/* Immutable canonical decoded-name vector; no numeric error representation. */
+typedef struct TypeErrorSet {
+	StringId *names;
+	uint32_t count;
+} TypeErrorSet;
+
 typedef struct SemaNamespace SemaNamespace;
 
 typedef struct Type {
@@ -96,6 +103,7 @@ typedef struct Type {
 		TypePointer   pointer;
 		TypeArray     array;
 		TypeId        optional_child;
+		TypeErrorSet   error_set;
 		TypeFn        fn;
 		SemaNamespace *structure;	/* nominal struct or enum namespace */
 	} as;

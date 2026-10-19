@@ -1,0 +1,357 @@
+{
+  "reference_version": "0.17.0",
+  "base_commit": "ea86b15887c33c6850123e82f6590ad5059b0f74",
+  "scope": "30 finite explicit error-set compile-only observations. No error.Member literals, error unions, anyerror, missing reflection builtin or native execution. Representation/ABI/use cases visible outside type-only foundation.",
+  "cases": [
+    {
+      "file": "core_control.zig",
+      "lane": "parity",
+      "category": "existing-control",
+      "source_sha256": "11c8ba327834a257650c4cdc50672a05810f6e5dc4aba2d4b1ea32c44f7cac2f",
+      "reference": {
+        "status": 0,
+        "primaries": []
+      },
+      "observation": "Exact final reference observation. Matching NYI or rejection status is NOT diagnostic parity."
+    },
+    {
+      "file": "canonical_order_alias.zig",
+      "lane": "parity",
+      "category": "finite-type-foundation",
+      "source_sha256": "292f764a73685e2f4566bf0579ae0fd00031b8b7d1e007307abc70c471548e9f",
+      "reference": {
+        "status": 0,
+        "primaries": []
+      },
+      "observation": "Exact final reference observation. Matching NYI or rejection status is NOT diagnostic parity."
+    },
+    {
+      "file": "optional_finite_identity.zig",
+      "lane": "parity",
+      "category": "finite-type-foundation",
+      "source_sha256": "665c105ea6a652e7f7abb979cfc8c4446faccec9f2f2cb039570d8ddeed74a4c",
+      "reference": {
+        "status": 0,
+        "primaries": []
+      },
+      "observation": "Exact final reference observation. Matching NYI or rejection status is NOT diagnostic parity."
+    },
+    {
+      "file": "distinct_member_sets.zig",
+      "lane": "parity",
+      "category": "finite-type-foundation",
+      "source_sha256": "7347d8c0883f2a5732810256c4d524ccc2df9fadd3be95d0dc198183a858bbbc",
+      "reference": {
+        "status": 0,
+        "primaries": []
+      },
+      "observation": "Exact final reference observation. Matching NYI or rejection status is NOT diagnostic parity."
+    },
+    {
+      "file": "empty_identity.zig",
+      "lane": "parity",
+      "category": "finite-type-foundation",
+      "source_sha256": "c95cdcc4cbcc3c593897837cc40d9921b7e8bb311e37d4bb758bcc7e5fbcb2a2",
+      "reference": {
+        "status": 0,
+        "primaries": []
+      },
+      "observation": "Exact final reference observation. Matching NYI or rejection status is NOT diagnostic parity."
+    },
+    {
+      "file": "quoted_plain_identity.zig",
+      "lane": "parity",
+      "category": "finite-type-foundation",
+      "source_sha256": "4a48aa0e29fce50f8f8113af0d0820c622d740af2d124fe3c4ce643c635a0868",
+      "reference": {
+        "status": 0,
+        "primaries": []
+      },
+      "observation": "Exact final reference observation. Matching NYI or rejection status is NOT diagnostic parity."
+    },
+    {
+      "file": "quoted_unusual_identity.zig",
+      "lane": "parity",
+      "category": "finite-type-foundation",
+      "source_sha256": "8c8ee219acdeb3127ffce1f087fea2c755b8fe768b03702e33c79a1e2bcecf4d",
+      "reference": {
+        "status": 0,
+        "primaries": []
+      },
+      "observation": "Exact final reference observation. Matching NYI or rejection status is NOT diagnostic parity."
+    },
+    {
+      "file": "empty_quoted_name.zig",
+      "lane": "parity",
+      "category": "finite-type-foundation",
+      "source_sha256": "62bff52bdc9ec46e45a517319bf808ead8002e7238ac42143657afdc00c93160",
+      "reference": {
+        "status": 1,
+        "primaries": [
+          "identifier cannot be empty"
+        ]
+      },
+      "observation": "Exact final reference observation. Matching NYI or rejection status is NOT diagnostic parity."
+    },
+    {
+      "file": "duplicate_plain_used.zig",
+      "lane": "parity",
+      "category": "finite-type-foundation",
+      "source_sha256": "93a05833f6fde9d48a73a4c6a9a7bdd17111ded978e0432f21baae7d52fc4daa",
+      "reference": {
+        "status": 1,
+        "primaries": [
+          "duplicate error set field 'A'"
+        ]
+      },
+      "observation": "Exact final reference observation. Matching NYI or rejection status is NOT diagnostic parity."
+    },
+    {
+      "file": "duplicate_quoted_used.zig",
+      "lane": "parity",
+      "category": "finite-type-foundation",
+      "source_sha256": "2b22e3f21f5058ee84b27d93edf4bc2be7c975abd3a07f82798a9a07d4a02d0c",
+      "reference": {
+        "status": 1,
+        "primaries": [
+          "duplicate error set field 'A'"
+        ]
+      },
+      "observation": "Exact final reference observation. Matching NYI or rejection status is NOT diagnostic parity."
+    },
+    {
+      "file": "duplicate_escaped_used.zig",
+      "lane": "parity",
+      "category": "finite-type-foundation",
+      "source_sha256": "db26de9139e3c335272b59e148a5caee421c18dae5d0b774e2a8cb737f839bd9",
+      "reference": {
+        "status": 1,
+        "primaries": [
+          "duplicate error set field 'A'"
+        ]
+      },
+      "observation": "Exact final reference observation. Matching NYI or rejection status is NOT diagnostic parity."
+    },
+    {
+      "file": "metatype_identity.zig",
+      "lane": "parity",
+      "category": "finite-type-foundation",
+      "source_sha256": "d1a187717190eccb67683c74ecbe727527f85124560d948f457ab2ce5047bba6",
+      "reference": {
+        "status": 0,
+        "primaries": []
+      },
+      "observation": "Exact final reference observation. Matching NYI or rejection status is NOT diagnostic parity."
+    },
+    {
+      "file": "pointer_qualifier_identity.zig",
+      "lane": "parity",
+      "category": "finite-type-foundation",
+      "source_sha256": "bc51da710d747dc228cad52c4b9a45be3fd761cb2978b40a3281fcbbcefb0d9c",
+      "reference": {
+        "status": 0,
+        "primaries": []
+      },
+      "observation": "Exact final reference observation. Matching NYI or rejection status is NOT diagnostic parity."
+    },
+    {
+      "file": "pointer_typeof_identity.zig",
+      "lane": "parity",
+      "category": "finite-type-foundation",
+      "source_sha256": "16dbdd957158f04fa677bb06aa042c9ba31fd52c594fdf78a673457f8e437b8a",
+      "reference": {
+        "status": 0,
+        "primaries": []
+      },
+      "observation": "Exact final reference observation. Matching NYI or rejection status is NOT diagnostic parity."
+    },
+    {
+      "file": "zero_array_type_identity.zig",
+      "lane": "parity",
+      "category": "finite-type-foundation",
+      "source_sha256": "7dee365bea0c5e6921f081cc17991940aea941297d19d1f9b63b0938a1e6ef9e",
+      "reference": {
+        "status": 0,
+        "primaries": []
+      },
+      "observation": "Exact final reference observation. Matching NYI or rejection status is NOT diagnostic parity."
+    },
+    {
+      "file": "namespace_forward_dependency.zig",
+      "lane": "parity",
+      "category": "finite-type-foundation",
+      "source_sha256": "1267d7432125f3cfc3eb04de76c71f63e9365d02d8d1125b9b08a45853982328",
+      "reference": {
+        "status": 0,
+        "primaries": []
+      },
+      "observation": "Exact final reference observation. Matching NYI or rejection status is NOT diagnostic parity."
+    },
+    {
+      "file": "duplicate_unused_lazy.zig",
+      "lane": "parity",
+      "category": "finite-type-foundation",
+      "source_sha256": "5ccfbfc4278f80032840ceadbdc53ff5119157094954f089801107ed3dec2d4c",
+      "reference": {
+        "status": 1,
+        "primaries": [
+          "duplicate error set field 'A'"
+        ]
+      },
+      "observation": "Exact final reference observation. Matching NYI or rejection status is NOT diagnostic parity."
+    },
+    {
+      "file": "pointer_alignment_demand.zig",
+      "lane": "parity",
+      "category": "outside-representation",
+      "source_sha256": "a5a44b3c463a1201f02b5c2d9a26891ebea93d00cd6336dac232017d68b4b749",
+      "reference": {
+        "status": 0,
+        "primaries": []
+      },
+      "observation": "Exact final reference observation. Matching NYI or rejection status is NOT diagnostic parity."
+    },
+    {
+      "file": "malformed_string_member.zig",
+      "lane": "parity",
+      "category": "existing-control",
+      "source_sha256": "81f4c9c1b7387f0ab38fd187b729091b339edbe1a0d58cb51650669426ffef9e",
+      "reference": {
+        "status": 1,
+        "primaries": [
+          "expected 'an identifier', found 'a string literal'"
+        ]
+      },
+      "observation": "Exact final reference observation. Matching NYI or rejection status is NOT diagnostic parity."
+    },
+    {
+      "file": "malformed_assigned_member.zig",
+      "lane": "parity",
+      "category": "existing-control",
+      "source_sha256": "0c70adf910c528886771dc50cc1d5bd46cc0bb9963bed55edb6f30de732eafe9",
+      "reference": {
+        "status": 1,
+        "primaries": [
+          "expected ',' after field"
+        ]
+      },
+      "observation": "Exact final reference observation. Matching NYI or rejection status is NOT diagnostic parity."
+    },
+    {
+      "file": "pointer_only_struct.zig",
+      "lane": "parity",
+      "category": "finite-type-foundation",
+      "source_sha256": "7a37e5610fd3efb452c0b2deab398b36017101df2f04c95c0c2d71068d583ba4",
+      "reference": {
+        "status": 0,
+        "primaries": []
+      },
+      "observation": "Exact final reference observation. Matching NYI or rejection status is NOT diagnostic parity."
+    },
+    {
+      "file": "runtime_load_boundary.zig",
+      "lane": "parity",
+      "category": "outside-representation",
+      "source_sha256": "c4ad17384acd412d657e616ab9367ae928a287ad2111e74f11b50a0a9fd68707",
+      "reference": {
+        "status": 0,
+        "primaries": []
+      },
+      "observation": "Exact final reference observation. Matching NYI or rejection status is NOT diagnostic parity."
+    },
+    {
+      "file": "internal_signature_boundary.zig",
+      "lane": "parity",
+      "category": "outside-representation",
+      "source_sha256": "b4f4e0d75ef046b8f7beb0eae63252bb292fad6467d225bd06a6482687fa4a78",
+      "reference": {
+        "status": 0,
+        "primaries": []
+      },
+      "observation": "Exact final reference observation. Matching NYI or rejection status is NOT diagnostic parity."
+    },
+    {
+      "file": "export_param_boundary.zig",
+      "lane": "parity",
+      "category": "outside-representation",
+      "source_sha256": "14d94c345e6ddfa5476eea6f0ccccde6f23f80885d43e47e59f1d6d6117485c6",
+      "reference": {
+        "status": 1,
+        "primaries": [
+          "parameter of type 'error{A,B}' not allowed in function with calling convention 'x86_64_sysv'"
+        ]
+      },
+      "observation": "Exact final reference observation. Matching NYI or rejection status is NOT diagnostic parity."
+    },
+    {
+      "file": "export_return_boundary.zig",
+      "lane": "parity",
+      "category": "outside-representation",
+      "source_sha256": "385085bb961dcbf8dc2b4b876bfe16472b00ff780524416431d5ee45c7ffcc69",
+      "reference": {
+        "status": 1,
+        "primaries": [
+          "return type 'error{A,B}' not allowed in function with calling convention 'x86_64_sysv'"
+        ]
+      },
+      "observation": "Exact final reference observation. Matching NYI or rejection status is NOT diagnostic parity."
+    },
+    {
+      "file": "size_layout_boundary.zig",
+      "lane": "parity",
+      "category": "outside-representation",
+      "source_sha256": "fd264c34a7f76785b44edcf34aefb177c404565587993d6344313b76e7298c76",
+      "reference": {
+        "status": 0,
+        "primaries": []
+      },
+      "observation": "Exact final reference observation. Matching NYI or rejection status is NOT diagnostic parity."
+    },
+    {
+      "file": "zero_array_value_boundary.zig",
+      "lane": "parity",
+      "category": "outside-representation",
+      "source_sha256": "d1f1b27e550d3b8a1872467f7727f5e29bcdc9954057414de31011ebc6e57fbe",
+      "reference": {
+        "status": 0,
+        "primaries": []
+      },
+      "observation": "Exact final reference observation. Matching NYI or rejection status is NOT diagnostic parity."
+    },
+    {
+      "file": "zero_array_size_boundary.zig",
+      "lane": "parity",
+      "category": "outside-representation",
+      "source_sha256": "06abf73257676827e4b59ce5d405dda6bf4d2396f27b570477efcb42402fb121",
+      "reference": {
+        "status": 0,
+        "primaries": []
+      },
+      "observation": "Exact final reference observation. Matching NYI or rejection status is NOT diagnostic parity."
+    },
+    {
+      "file": "zero_pointer_concat_boundary.zig",
+      "lane": "parity",
+      "category": "outside-representation",
+      "source_sha256": "dea86d00edc5d3cf338626c61ddf2cb3e67f7ed29cbc181368ed19ed4be95880",
+      "reference": {
+        "status": 1,
+        "primaries": [
+          "use of undefined value here causes illegal behavior"
+        ]
+      },
+      "observation": "Exact final reference observation. Matching NYI or rejection status is NOT diagnostic parity."
+    },
+    {
+      "file": "ordinary_zero_concat_control.zig",
+      "lane": "parity",
+      "category": "existing-control",
+      "source_sha256": "a31bab57bec2f81909fdb17d129163c8c627b0dfec3279fce8344e5cfea38234",
+      "reference": {
+        "status": 0,
+        "primaries": []
+      },
+      "observation": "Exact final reference observation. Matching NYI or rejection status is NOT diagnostic parity."
+    }
+  ]
+}

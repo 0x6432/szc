@@ -22,6 +22,29 @@ Read this first when resuming work (the sandbox resets often).
    candidate. Never mutate frozen validation sources or mix flag configurations.
    The GitHub token is **never** committed. Restore authenticated Git access if needed.
 
+## Finite error-set type-only candidate (V2; not error value support)
+
+- Based on published ea86b15. Read `ERROR_SET_TYPE_STATUS.md` before extension.
+- New finite type metadata is canonical decoded names, with eager source-anchored
+  duplicate checks. No error numbering, ValueKind, backend, storage or ABI support.
+- Generalized type-only frontier preserves optional diagnostics and all by-value
+  guards, including zero/concat/OPV/stride and checked natural-alignment callers.
+  Empty error set is distinct; never infer OPV, noreturn or representation.
+- Focused strict30 improves from two exact matches to 19: 17 targets improve,
+  two prior controls preserved, nine representation and two parser failures stay
+  visible. Do not filter sources or turn NYI policy refusals into language parity.
+- Static review blocked V1 high-byte naming. V2 only changes two renderer conditions
+  to bytewise hex-escape every byte >=127. No new identifier legality, UTF-8
+  validator, @typeName builtin or exact reference pretty-printer promise.
+- Durable12 reuses exact frozen sources and complete ordered diagnostic lists;
+  several cases contain independently diagnosed operations. Separate C API tests
+  check the internal renderer policy, not reference language legality.
+- Preserve optional8, optional strict17/13, deep nonoptional arrays and switch80/4.
+  All new language fixtures are compile-only. Fresh parent gate records are under
+  /data/validation/error-set-v2-final; focused/static results alone are not acceptance.
+- Hosted run39292020889 for ea86b15: 77 success, two communication-loss failures;
+  no application root cause or hosted-green claim is established.
+
 ## Optional type-only candidate (V2; not optional value support)
 
 - Based on published 5e13779. Read `OPTIONAL_TYPE_STATUS.md` before extending it.

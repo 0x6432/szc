@@ -321,6 +321,11 @@ type_hash(const Type *type)
 	case TYPE_OPTIONAL:
 		hash = hash_word(hash, type->as.optional_child);
 		break;
+	case TYPE_ERROR_SET:
+		hash = hash_word(hash, type->as.error_set.count);
+		for (uint32_t i = 0; i < type->as.error_set.count; i++)
+			hash = hash_word(hash, type->as.error_set.names[i]);
+		break;
 	case TYPE_ARRAY:
 		hash = hash_word(hash, type->as.array.child);
 		hash = hash_word(hash, (uint32_t)type->as.array.length);
@@ -364,6 +369,13 @@ type_equal(const Type *a, const Type *b)
 		return a->as.floating.bits == b->as.floating.bits;
 	case TYPE_OPTIONAL:
 		return a->as.optional_child == b->as.optional_child;
+	case TYPE_ERROR_SET:
+		if (a->as.error_set.count != b->as.error_set.count)
+			return false;
+		for (uint32_t i = 0; i < a->as.error_set.count; i++)
+			if (a->as.error_set.names[i] != b->as.error_set.names[i])
+				return false;
+		return true;
 	case TYPE_ARRAY:
 		return a->as.array.child == b->as.array.child && a->as.array.length == b->as.array.length && a->as.array.sentinel == b->as.array.sentinel;
 	case TYPE_POINTER:
@@ -613,28 +625,38 @@ is_int(const Sema *sema, TypeId type)
 	return sema->types[type].kind == TYPE_INT;
 }
 
-/* By-value syntactic frontier only. Immutable structural children precede their
- * parents, so this single-edge walk terminates without new user-visible fuel.
- * Nominal fields remain demand-driven; pointer/function identities stop here. */
-static bool
-optional_value_frontier(const Sema *sema, TypeId type)
+typedef enum RepresentationBlocker {
+	REPRESENTATION_CLEAR,
+	REPRESENTATION_OPTIONAL,
+	REPRESENTATION_ERROR_SET,
+} RepresentationBlocker;
+
+/* Immutable array child edges are acyclic; no new fuel or eager nominal walk.
+ * An outer optional owns the refusal even when its child is a finite set. */
+static RepresentationBlocker
+value_representation_blocker(const Sema *sema, TypeId type)
 {
 	for (;;) {
 		TypeKind kind = sema->types[type].kind;
 		if (kind == TYPE_OPTIONAL)
-			return true;
+			return REPRESENTATION_OPTIONAL;
+		if (kind == TYPE_ERROR_SET)
+			return REPRESENTATION_ERROR_SET;
 		if (kind != TYPE_ARRAY)
-			return false;
+			return REPRESENTATION_CLEAR;
 		type = sema->types[type].as.array.child;
 	}
 }
 
 static bool
-optional_value_allowed(Block *block, TypeId type, uint32_t src)
+value_representation_allowed(Block *block, TypeId type, uint32_t src)
 {
-	if (!optional_value_frontier(block->sema, type))
+	RepresentationBlocker reason = value_representation_blocker(block->sema, type);
+	if (reason == REPRESENTATION_CLEAR)
 		return true;
-	sema_error(block, src, "not supported by szc yet: optional value or layout demand");
+	sema_error(block, src, reason == REPRESENTATION_OPTIONAL
+		? "not supported by szc yet: optional value or layout demand"
+		: "not supported by szc yet: finite error-set value or layout demand");
 	return false;
 }
 
@@ -659,6 +681,52 @@ is_comptime_only_type(const Sema *sema, TypeId type)
 
 static const char *value_text(Sema *sema, ValueId id);
 static const char *namespace_name(Sema *sema, SemaNamespace *ns);
+
+static const char *
+error_set_type_name(Sema *sema, TypeErrorSet set)
+{
+	size_t size = sizeof("error{}");
+	for (uint32_t i = 0; i < set.count; i++) {
+		const unsigned char *text = (const unsigned char *)intern_text(sema->interner, set.names[i]);
+		uint32_t length = intern_length(sema->interner, set.names[i]);
+		if (size > SIZE_MAX - 4)
+			return "error{<name exceeds size limit>}";
+		size += 3 + (i != 0 ? 1u : 0u); /* @"name" and comma */
+		for (uint32_t j = 0; j < length; j++) {
+			size_t bytes = text[j] < 32 || text[j] >= 127 ? 4u : text[j] == '"' || text[j] == '\\' ? 2u : 1u;
+			if (size > SIZE_MAX - bytes)
+				return "error{<name exceeds size limit>}";
+			size += bytes;
+		}
+	}
+	char *out = arena_alloc(sema->arena, size, 1);
+	char *at = out;
+	memcpy(at, "error{", 6);
+	at += 6;
+	static const char hex[] = "0123456789abcdef";
+	for (uint32_t i = 0; i < set.count; i++) {
+		if (i != 0)
+			*at++ = ',';
+		*at++ = '@';
+		*at++ = '"';
+		const unsigned char *text = (const unsigned char *)intern_text(sema->interner, set.names[i]);
+		uint32_t length = intern_length(sema->interner, set.names[i]);
+		for (uint32_t j = 0; j < length; j++) {
+			unsigned char byte = text[j];
+			if (byte < 32 || byte >= 127) {
+				*at++ = '\\'; *at++ = 'x'; *at++ = hex[byte >> 4]; *at++ = hex[byte & 15];
+			} else {
+				if (byte == '"' || byte == '\\')
+					*at++ = '\\';
+				*at++ = (char)byte;
+			}
+		}
+		*at++ = '"';
+	}
+	*at++ = '}';
+	*at = '\0';
+	return out;
+}
 
 const char *
 sema_type_name(Sema *sema, TypeId type_id)
@@ -689,6 +757,8 @@ sema_type_name(Sema *sema, TypeId type_id)
 		return arena_sprintf(sema->arena, "f%u", (unsigned)type->as.floating.bits);
 	case TYPE_OPTIONAL:
 		return arena_sprintf(sema->arena, "?%s", sema_type_name(sema, type->as.optional_child));
+	case TYPE_ERROR_SET:
+		return error_set_type_name(sema, type->as.error_set);
 	case TYPE_ARRAY:
 		return arena_sprintf(sema->arena, "[%" PRIu64 "%s]%s", type->as.array.length, type->as.array.sentinel == VALUE_NONE ? "" : arena_sprintf(sema->arena, ":%s", value_text(sema, type->as.array.sentinel)), sema_type_name(sema, type->as.array.child));
 	case TYPE_POINTER: {
@@ -734,6 +804,7 @@ sema_type_size(const Sema *sema, TypeId type_id, uint64_t *out)
 	uint64_t size = 0;
 	switch (type->kind) {
 	case TYPE_OPTIONAL:
+	case TYPE_ERROR_SET:
 		return false;
 	case TYPE_BOOL:
 		size = 1;
@@ -1196,7 +1267,7 @@ static bool
 runtime_constant_allowed(Block *block, ValueId root, uint32_t src)
 {
 	Sema *sema = block->sema;
-	if (!optional_value_allowed(block, value_get(&sema->values, root)->type, src))
+	if (!value_representation_allowed(block, value_get(&sema->values, root)->type, src))
 		return false;
 	uint32_t capacity = sema->values.capacity;
 	if (capacity > sema->runtime_storage_capacity) {
@@ -1225,7 +1296,7 @@ runtime_constant_allowed(Block *block, ValueId root, uint32_t src)
 		sema->runtime_storage_work++;
 		ValueId id = sema->runtime_storage_queue[cursor];
 		const Value *value = value_get(&sema->values, id);
-		if (optional_value_frontier(sema, value->type)) {
+		if (value_representation_blocker(sema, value->type) != REPRESENTATION_CLEAR) {
 			allowed = false;
 			break;
 		}
@@ -1317,7 +1388,7 @@ static bool enum_runtime_allowed(const Sema *sema, TypeId type);
 static TirRef
 materialize(Block *block, Operand operand, uint32_t src)
 {
-	if (!optional_value_allowed(block, operand.type, src))
+	if (!value_representation_allowed(block, operand.type, src))
 		return TIR_REF_NONE;
 	if (operand.kind == OPERAND_AGGREGATE || operand.kind == OPERAND_NONE
 		|| sema_type_is_aggregate(block->sema, operand.type)) {
@@ -1397,15 +1468,26 @@ enum_runtime_allowed(const Sema *sema, TypeId type)
 		&& sema->types[tag].as.integer.bits > 0 && sema->types[tag].as.integer.bits <= 64;
 }
 
-static bool
-optional_signature_frontier(const Sema *sema, TypeFn fn)
+static RepresentationBlocker
+signature_representation_blocker(const Sema *sema, TypeFn fn)
 {
-	if (optional_value_frontier(sema, fn.ret))
-		return true;
-	for (uint32_t i = 0; i < fn.param_count; i++)
-		if (optional_value_frontier(sema, fn.params[i]))
-			return true;
-	return false;
+	RepresentationBlocker reason = value_representation_blocker(sema, fn.ret);
+	if (reason != REPRESENTATION_CLEAR)
+		return reason;
+	for (uint32_t i = 0; i < fn.param_count; i++) {
+		reason = value_representation_blocker(sema, fn.params[i]);
+		if (reason != REPRESENTATION_CLEAR)
+			return reason;
+	}
+	return REPRESENTATION_CLEAR;
+}
+
+static const char *
+signature_representation_message(RepresentationBlocker reason)
+{
+	return reason == REPRESENTATION_OPTIONAL
+		? "not supported by szc yet: optional values in runtime function signatures"
+		: "not supported by szc yet: finite error-set values in runtime function signatures";
 }
 
 static bool func_validate_internal_signature(Sema *sema, FuncId id);
@@ -1421,9 +1503,10 @@ func_queue(Sema *sema, FuncId id)
 	/* Like Zig, only validate the machine ABI when a declaration is exported or
 	 * used at runtime. A discarded known address need not make an extern live. */
 	TypeFn fn = sema->types[func->type].as.fn;
-	if (optional_signature_frontier(sema, fn)) {
+	RepresentationBlocker representation = signature_representation_blocker(sema, fn);
+	if (representation != REPRESENTATION_CLEAR) {
 		diag_report(sema->diag, DIAG_ERROR, func->ir->file, func->ir->insts[func->func_inst].src,
-			"not supported by szc yet: optional values in runtime function signatures");
+			"%s", signature_representation_message(representation));
 		func->state = FUNC_FAILED;
 		return;
 	}
@@ -1618,7 +1701,7 @@ static bool
 global_type_allowed(Block *block, TypeId type, uint32_t src)
 {
 	Sema *sema = block->sema;
-	if (!optional_value_allowed(block, type, src))
+	if (!value_representation_allowed(block, type, src))
 		return false;
 	if (is_comptime_only_type(sema, type)) {
 		sema_error(block, src, "variable of type '%s' must be const or comptime", sema_type_name(sema, type));
@@ -1915,6 +1998,7 @@ type_tag_name(const Sema *sema, TypeId type)
 		return "optional";
 	case TYPE_ANYOPAQUE:
 		return "opaque";
+	case TYPE_ERROR_SET:
 	case TYPE_ANYERROR:
 		return "error_set";
 	case TYPE_NULL:
@@ -1977,7 +2061,7 @@ operand_to_type(Block *block, Operand operand, uint32_t src, TypeId *out)
 static bool
 pointer_layout_demand_ready(Block *block, TypePointer pointer, uint32_t src)
 {
-	if (!optional_value_allowed(block, pointer.child, src))
+	if (!value_representation_allowed(block, pointer.child, src))
 		return false;
 	return pointer.alignment != 0 || ensure_type_layout(block, pointer.child, src);
 }
@@ -2246,8 +2330,8 @@ coerce(Block *block, Operand operand, TypeId dest, uint32_t src)
 	Sema *sema = block->sema;
 	if (operand.kind == OPERAND_NONE)
 		return operand;
-	if (!optional_value_allowed(block, dest, src)
-		|| !optional_value_allowed(block, operand.type, src))
+	if (!value_representation_allowed(block, dest, src)
+		|| !value_representation_allowed(block, operand.type, src))
 		return operand_none;
 	TypeId leaf = dest;
 	while (sema->types[leaf].kind == TYPE_ARRAY)
@@ -2417,7 +2501,7 @@ static bool
 bit_cast_width(Block *block, TypeId type, bool destination, uint32_t src, uint32_t *out)
 {
 	Sema *sema = block->sema;
-	if (!optional_value_allowed(block, type, src))
+	if (!value_representation_allowed(block, type, src))
 		return false;
 	TypeId leaf = type;
 	bool empty = false;
@@ -3479,7 +3563,7 @@ ensure_type_layout(Block *block, TypeId type, uint32_t src)
 	Sema *sema = block->sema;
 	while (sema->types[type].kind == TYPE_ARRAY)
 		type = sema->types[type].as.array.child;
-	if (!optional_value_allowed(block, type, src))
+	if (!value_representation_allowed(block, type, src))
 		return false;
 	if (sema->types[type].kind == TYPE_ENUM)
 		return ensure_enum_layout(block, type, src, "size query");
@@ -3601,7 +3685,7 @@ analyze_type_layout(Block *block, const IrInst *inst)
 	TypeId type;
 	if (!operand_to_type(block, resolve_ref(block, inst->data.un.operand), inst->src, &type))
 		return operand_none;
-	if (!optional_value_allowed(block, type, inst->src))
+	if (!value_representation_allowed(block, type, inst->src))
 		return operand_none;
 	bool size_of = inst->op == IR_SIZE_OF;
 	const char *name = size_of ? "size" : "align";
@@ -3644,7 +3728,7 @@ analyze_bit_size(Block *block, const IrInst *inst)
 	TypeId type;
 	if (!operand_to_type(block, resolve_ref(block, inst->data.un.operand), inst->src, &type))
 		return operand_none;
-	if (!optional_value_allowed(block, type, inst->src))
+	if (!value_representation_allowed(block, type, inst->src))
 		return operand_none;
 	TypeId leaf = type;
 	bool empty = false;
@@ -4011,7 +4095,7 @@ analyze_pointer_difference(Block *block, Operand lhs, Operand rhs, uint32_t src)
 		return operand_none;
 	}
 	uint64_t stride;
-	if (!optional_value_allowed(block, child, src))
+	if (!value_representation_allowed(block, child, src))
 		return operand_none;
 	if (!ensure_type_layout(block, child, src))
 		return operand_none;
@@ -5930,8 +6014,9 @@ analyze_call_core(Block *block, IrInstIndex index, Operand callee,
 		return INST_CONTINUE;
 	}
 	TypeFn fn = sema->types[type].as.fn;
-	if (optional_signature_frontier(sema, fn)) {
-		sema_error(block, src, "not supported by szc yet: optional values in runtime function signatures");
+	RepresentationBlocker representation = signature_representation_blocker(sema, fn);
+	if (representation != REPRESENTATION_CLEAR) {
+		sema_error(block, src, "%s", signature_representation_message(representation));
 		return INST_CONTINUE;
 	}
 	if (fn.is_generic) {
@@ -6086,7 +6171,7 @@ analyze_call(Block *block, IrInstIndex index, Operand *out)
 bool
 sema_type_array_storage_allowed(const Sema *sema, TypeId type)
 {
-	if (optional_value_frontier(sema, type))
+	if (value_representation_blocker(sema, type) != REPRESENTATION_CLEAR)
 		return false;
 	bool empty = false;
 	while (sema->types[type].kind == TYPE_ARRAY) {
@@ -6189,7 +6274,7 @@ aggregate_slot(Block *block, TypeId pointer, uint32_t src)
 	Sema *sema = block->sema;
 	TypePointer shape = sema->types[pointer].as.pointer;
 	uint64_t size;
-	if (!optional_value_allowed(block, shape.child, src)
+	if (!value_representation_allowed(block, shape.child, src)
 		|| !pointer_layout_demand_ready(block, shape, src))
 		return TIR_REF_NONE;
 	uint32_t alignment = pointer_alignment(block, shape, src);
@@ -6274,7 +6359,7 @@ analyze_ref(Block *block, Operand value, uint32_t src, uint32_t identity, uint32
 	Sema *sema = block->sema;
 	if (value.kind == OPERAND_NONE)
 		return operand_none;
-	if (!optional_value_allowed(block, value.type, src))
+	if (!value_representation_allowed(block, value.type, src))
 		return operand_none;
 	TypeKind kind = sema->types[value.type].kind;
 	if (kind == TYPE_FN && alignment != 0) {
@@ -6339,7 +6424,7 @@ analyze_alloc(Block *block, const IrInst *inst)
 	if (init.kind == OPERAND_NONE)
 		return operand_none;
 	TypeId type = init.type;
-	if (!optional_value_allowed(block, type, src))
+	if (!value_representation_allowed(block, type, src))
 		return operand_none;
 	if (payload.type != IR_REF_NONE) {
 		if (!operand_to_type(block, resolve_ref(block, payload.type), src, &type))
@@ -6497,7 +6582,7 @@ load_pointer(Block *block, Operand pointer, uint32_t src)
 		return operand_none;
 	TypePointer pointer_type = sema->types[pointer.type].as.pointer;
 	TypeId child = pointer_type.child;
-	if (!optional_value_allowed(block, child, src))
+	if (!value_representation_allowed(block, child, src))
 		return operand_none;
 	TypeId leaf = child;
 	while (sema->types[leaf].kind == TYPE_ARRAY)
@@ -7235,7 +7320,7 @@ static Operand
 one_value_operand(Block *block, TypeId type, uint32_t src)
 {
 	Sema *sema = block->sema;
-	if (!optional_value_allowed(block, type, src))
+	if (!value_representation_allowed(block, type, src))
 		return operand_none;
 	if (type == T_VOID)
 		return void_operand(sema);
@@ -7539,8 +7624,8 @@ analyze_memcpy(Block *block, const IrInst *inst)
 	TypeId source_child = memory_element_type(block, source, inst->src);
 	if (child == 0 || source_child == 0)
 		return operand_none;
-	if (!optional_value_allowed(block, child, inst->src)
-		|| !optional_value_allowed(block, source_child, inst->src))
+	if (!value_representation_allowed(block, child, inst->src)
+		|| !value_representation_allowed(block, source_child, inst->src))
 		return operand_none;
 	Operand dest_len = memory_length(block, destination, inst->src);
 	Operand source_len = memory_length(block, source, inst->src);
@@ -7635,7 +7720,7 @@ analyze_memset(Block *block, const IrInst *inst)
 	TypeId child = memory_element_type(block, destination, inst->src);
 	if (child == 0)
 		return operand_none;
-	if (!optional_value_allowed(block, child, inst->src))
+	if (!value_representation_allowed(block, child, inst->src))
 		return operand_none;
 	TypePointer shape = sema->types[destination.type].as.pointer;
 	if (shape.is_const) {
@@ -7718,7 +7803,7 @@ analyze_array_init(Block *block, const IrInst *inst)
 		sema_error(block, inst->src, "expected array type, found '%s'", sema_type_name(sema, type));
 		return operand_none;
 	}
-	if (!optional_value_allowed(block, type, inst->src))
+	if (!value_representation_allowed(block, type, inst->src))
 		return operand_none;
 	TypeArray array = sema->types[type].as.array;
 	uint32_t count = block->ir->extra[payload + 1];
@@ -7793,7 +7878,7 @@ array_init_destination(Block *block, Operand pointer, uint64_t length, uint32_t 
 			sema_error(block, src, "expected array type, found '%s'", sema_type_name(sema, shape.child));
 		return operand_none;
 	}
-	if (!optional_value_allowed(block, shape.child, src))
+	if (!value_representation_allowed(block, shape.child, src))
 		return operand_none;
 	TypeArray array = sema->types[shape.child].as.array;
 	if (length != array.length)
@@ -8295,7 +8380,7 @@ static bool
 array_element_stride(Block *block, TypeId child, uint64_t *stride, bool *logical, uint32_t src)
 {
 	Sema *sema = block->sema;
-	if (!optional_value_allowed(block, child, src))
+	if (!value_representation_allowed(block, child, src))
 		return false;
 	uint64_t count = 1;
 	TypeId leaf = child;
@@ -8851,8 +8936,8 @@ analyze_array_cat(Block *block, const IrInst *inst)
 		sema_error(block, inst->src, "expected indexable; found '%s'", sema_type_name(sema, a == 0 ? lhs.type : rhs.type));
 		return operand_none;
 	}
-	if (!optional_value_allowed(block, a, inst->src)
-		|| !optional_value_allowed(block, b, inst->src))
+	if (!value_representation_allowed(block, a, inst->src)
+		|| !value_representation_allowed(block, b, inst->src))
 		return operand_none;
 	TypeArray left = sema->types[a].as.array;
 	TypeArray right = sema->types[b].as.array;
@@ -9102,6 +9187,59 @@ analyze_typeof(Block *block, const IrInst *inst)
 	return result;
 }
 
+typedef struct ErrorSetCanonicalName {
+	StringId id;
+	const char *text;
+	uint32_t length;
+} ErrorSetCanonicalName;
+
+static int
+error_set_canonical_compare(const void *left, const void *right)
+{
+	const ErrorSetCanonicalName *a = left;
+	const ErrorSetCanonicalName *b = right;
+	uint32_t length = a->length < b->length ? a->length : b->length;
+	int order = memcmp(a->text, b->text, length);
+	if (order != 0)
+		return order;
+	return a->length < b->length ? -1 : a->length != b->length;
+}
+
+static Operand
+analyze_error_set_type(Block *block, const IrInst *inst)
+{
+	Sema *sema = block->sema;
+	IrErrorSetHeader header;
+	IR_READ(block->ir, inst->data.payload, &header);
+	if (header.count != 0 && sizeof(ErrorSetCanonicalName) > SIZE_MAX / (size_t)header.count) {
+		sema_error(block, inst->src, "not supported by szc yet: error-set type metadata exceeds addressable capacity");
+		return operand_none;
+	}
+	ErrorSetCanonicalName *order = ARENA_ARRAY(sema->arena, ErrorSetCanonicalName, header.count);
+	uint32_t cursor = inst->data.payload + IR_WORDS(IrErrorSetHeader);
+	for (uint32_t i = 0; i < header.count; i++) {
+		IrErrorSetMember member;
+		IR_READ(block->ir, cursor, &member);
+		cursor += IR_WORDS(IrErrorSetMember);
+		if (member.name == STRING_NONE)
+			return operand_none; /* Failed names must not become valid members. */
+		order[i] = (ErrorSetCanonicalName){member.name, intern_text(sema->interner, member.name), intern_length(sema->interner, member.name)};
+	}
+	if (header.count > 1)
+		qsort(order, header.count, sizeof(*order), error_set_canonical_compare);
+	StringId *names = ARENA_ARRAY(sema->arena, StringId, header.count);
+	for (uint32_t i = 0; i < header.count; i++) {
+		if (i != 0 && order[i].id == order[i - 1].id) {
+			sema_error(block, inst->src, "duplicate error set field '%s'", order[i].text);
+			return operand_none; /* Defensive: frontend rejects these eagerly. */
+		}
+		names[i] = order[i].id;
+	}
+	Type type = make_type(TYPE_ERROR_SET);
+	type.as.error_set = (TypeErrorSet){names, header.count};
+	return type_operand(sema, type_intern(sema, &type));
+}
+
 static InstOutcome
 analyze_inst(Block *block, IrInstIndex index, Operand *break_value)
 {
@@ -9110,6 +9248,9 @@ analyze_inst(Block *block, IrInstIndex index, Operand *break_value)
 	uint32_t src = inst->src;
 	Operand result = operand_none;
 	switch (inst->op) {
+	case IR_ERROR_SET_TYPE:
+		result = analyze_error_set_type(block, inst);
+		break;
 	case IR_OPTIONAL_TYPE: {
 		Operand child = resolve_ref(block, inst->data.un.operand);
 		TypeId type;

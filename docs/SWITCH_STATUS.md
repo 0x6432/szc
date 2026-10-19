@@ -189,3 +189,9 @@ implement payload/null coercion or runtime optional arguments, so the original
 optional switch fixture still fails at an earlier producer gate. The original
 84-case checkpoint stays 80 passes / four failures; type-identity tests must not
 be added to that count or used to claim M6.3/M6.4 completion.
+
+## Finite explicit error-set type foundation follow-up
+
+The bounded TYPE-only V2 candidate is documented in ERROR_SET_TYPE_STATUS.md.
+It does not construct error values/unions or close the earlier error-union switch
+producer gate. Original switch sources and the 80/84 checkpoint remain unchanged.
