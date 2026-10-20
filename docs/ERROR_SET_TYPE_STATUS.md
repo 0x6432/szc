@@ -1,3 +1,8 @@
+> Historical scope of the finite TYPE-only batch based on ea86b15. The grouped
+> known-symbolic-error/algebra/explicit-union-TYPE follow-up is documented in
+> `ERROR_FAMILY_STATUS.md`; its known scalar exception does not relax storage,
+> runtime unions, numeric error IDs or ABI fences described below.
+
 # Finite explicit error-set TYPE identity — bounded V2 candidate
 
 Based on published ea86b15. M6.5 remains partial: finite error-set TYPE identity is

@@ -41,6 +41,7 @@ typedef enum TypeKind {
 	TYPE_ENUM_LITERAL,
 	TYPE_OPTIONAL,
 	TYPE_ERROR_SET,
+	TYPE_ERROR_UNION,
 } TypeKind;
 
 typedef enum PointerSize {
@@ -88,6 +89,12 @@ typedef struct TypeErrorSet {
 	uint32_t count;
 } TypeErrorSet;
 
+/* TYPE identity only: no error/success payload Value or ABI representation. */
+typedef struct TypeErrorUnion {
+	TypeId error_set;
+	TypeId payload;
+} TypeErrorUnion;
+
 typedef struct SemaNamespace SemaNamespace;
 
 typedef struct Type {
@@ -104,6 +111,7 @@ typedef struct Type {
 		TypeArray     array;
 		TypeId        optional_child;
 		TypeErrorSet   error_set;
+		TypeErrorUnion error_union;
 		TypeFn        fn;
 		SemaNamespace *structure;	/* nominal struct or enum namespace */
 	} as;

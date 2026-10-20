@@ -1,4 +1,4 @@
-%81 = struct_decl (flags=0) {
+%82 = struct_decl (flags=0) {
   decl fn "copy" value {
     %19 = func "copy" {
       %7 = param "d" type {
@@ -30,7 +30,7 @@
     %20 = break_inline result, %19
   }
   decl fn "main" pub value {
-    %79 = func "main" {
+    %80 = func "main" {
       ret type {
         %21 = break_inline result, @type_u8
       }
@@ -76,28 +76,29 @@
           %59 = as %57, %58
           %60 = break_inline result, %59
         }
-        %61 = ret_type
-        %62 = array_base_ptr %31
-        %63 = int 0
-        %64 = as @type_usize, %63
-        %65 = array_index_base %62, %64
-        %66 = int 2
-        %67 = as @type_usize, %66
-        %68 = array_index %65, %67
-        %69 = int 11
-        %70 = cmp_eq %68, %69
-        %77 = if %70 then {
-          %71 = int 0
-          %72 = as %61, %71
-          %73 = break_inline result, %72
+        %61 = check_unused_error %53
+        %62 = ret_type
+        %63 = array_base_ptr %31
+        %64 = int 0
+        %65 = as @type_usize, %64
+        %66 = array_index_base %63, %65
+        %67 = int 2
+        %68 = as @type_usize, %67
+        %69 = array_index %66, %68
+        %70 = int 11
+        %71 = cmp_eq %69, %70
+        %78 = if %71 then {
+          %72 = int 0
+          %73 = as %62, %72
+          %74 = break_inline result, %73
         } else {
-          %74 = int 1
-          %75 = as %61, %74
-          %76 = break_inline result, %75
+          %75 = int 1
+          %76 = as %62, %75
+          %77 = break_inline result, %76
         }
-        %78 = ret %77
+        %79 = ret %78
       }
     }
-    %80 = break_inline result, %79
+    %81 = break_inline result, %80
   }
 }

@@ -1,4 +1,4 @@
-%146 = struct_decl (flags=0) {
+%151 = struct_decl (flags=0) {
   decl const "Tag" value {
     %7 = enum_decl (flags=1) {
        tag_type {
@@ -57,7 +57,7 @@
     %31 = break_inline result, %30
   }
   decl fn "nested" value {
-    %78 = func "nested" {
+    %79 = func "nested" {
       %33 = param "x" type {
         %32 = break_inline result, @type_u8
       }
@@ -113,134 +113,141 @@
             } arm {
             %65 = switch_capture %36
             %66 = block  {
-              %69 = as %35, %65
-              %70 = defer  {
-                %67 = ensure_result @void_value
-                %68 = break_inline result, @void_value
+              %70 = as %35, %65
+              %71 = defer  {
+                %67 = discard %65
+                %68 = ensure_result @void_value
+                %69 = break_inline result, @void_value
               }
-              %71 = break %66, %69
+              %72 = break %66, %70
             }
-            %72 = break_inline result, %66
+            %73 = break_inline result, %66
           }
           prong 2 src=302 items=0 else arm {
-            %73 = ret_type
-            %74 = int 0
-            %75 = as_return %73, %74
-            %76 = ret %75
+            %74 = ret_type
+            %75 = int 0
+            %76 = as_return %74, %75
+            %77 = ret %76
           }
-        %77 = ret %36
+        %78 = ret %36
       }
     }
-    %79 = break_inline result, %78
+    %80 = break_inline result, %79
   }
   decl fn "effects" value {
-    %121 = func "effects" {
-      %81 = param "x" type {
-        %80 = break_inline result, @type_u8
+    %125 = func "effects" {
+      %82 = param "x" type {
+        %81 = break_inline result, @type_u8
       }
       ret type {
-        %82 = break_inline result, @type_void
+        %83 = break_inline result, @type_void
       }
       body insts {
-        %83 = int 0
-        %84 = as @type_u8, %83
-        %85 = alloc type=@type_u8 init=%84
-        %86 = block  {
-          %87 = loop  {
-            %119 = condbr @true then {
-              %88 = block  {
-                %92 = switch %81 prongs=2
+        %84 = int 0
+        %85 = as @type_u8, %84
+        %86 = alloc type=@type_u8 init=%85
+        %87 = block  {
+          %88 = loop  {
+            %122 = condbr @true then {
+              %89 = block  {
+                %94 = switch %82 prongs=2
                   prong 0 src=460 items=1
                     item 0 src=460 end_src=460 low {
-                      %93 = switch_type %92
-                      %94 = int 0
-                      %95 = as %93, %94
-                      %96 = break_inline result, %95
+                      %95 = switch_type %94
+                      %96 = int 0
+                      %97 = as %95, %96
+                      %98 = break_inline result, %97
                     } arm {
-                    %97 = elem_type %85
-                    %98 = int_cast %97, %81
-                    %99 = break_inline result, %98
+                    %99 = elem_type %86
+                    %100 = int_cast %99, %82
+                    %101 = break_inline result, %100
                   }
                   prong 1 src=478 items=0 else arm {
-                    %100 = int 2
-                    %101 = elem_type %85
-                    %102 = as %101, %100
-                    %103 = break_inline result, %102
+                    %102 = int 2
+                    %103 = elem_type %86
+                    %104 = as %103, %102
+                    %105 = break_inline result, %104
                   }
-                %104 = store %85, %92
-                %105 = switch %81 prongs=2
+                %106 = store %86, %94
+                %107 = switch %82 prongs=2
                   prong 0 src=512 items=1
                     item 0 src=512 end_src=512 low {
-                      %106 = switch_type %105
-                      %107 = int 0
-                      %108 = as %106, %107
-                      %109 = break_inline result, %108
+                      %108 = switch_type %107
+                      %109 = int 0
+                      %110 = as %108, %109
+                      %111 = break_inline result, %110
                     } arm {
-                    %110 = defer  {
-                      %89 = load %85
-                      %90 = ensure_result @void_value
-                      %91 = break_inline result, @void_value
+                    %112 = defer  {
+                      %90 = load %86
+                      %91 = discard %90
+                      %92 = ensure_result @void_value
+                      %93 = break_inline result, @void_value
                     }
-                    %111 = break %88, @void_value
+                    %113 = break %89, @void_value
                   }
                   prong 1 src=534 items=0 else arm {
-                    %112 = defer  {
-                      %89 = load %85
-                      %90 = ensure_result @void_value
-                      %91 = break_inline result, @void_value
+                    %114 = defer  {
+                      %90 = load %86
+                      %91 = discard %90
+                      %92 = ensure_result @void_value
+                      %93 = break_inline result, @void_value
                     }
-                    %113 = break %86, @void_value
+                    %115 = break %87, @void_value
                   }
-                %114 = defer  {
-                  %89 = load %85
-                  %90 = ensure_result @void_value
-                  %91 = break_inline result, @void_value
+                %116 = check_unused_error %107
+                %117 = defer  {
+                  %90 = load %86
+                  %91 = discard %90
+                  %92 = ensure_result @void_value
+                  %93 = break_inline result, @void_value
                 }
-                %115 = as @type_void, @void_value
-                %116 = break %88, @void_value
+                %118 = as @type_void, @void_value
+                %119 = break %89, @void_value
               }
-              %117 = repeat %87
+              %120 = repeat %88
             } else {
-              %118 = break %86, @void_value
+              %121 = break %87, @void_value
             }
           }
         }
-        %120 = ret_implicit
+        %123 = check_unused_error %87
+        %124 = ret_implicit
       }
     }
-    %122 = break_inline result, %121
+    %126 = break_inline result, %125
   }
   decl fn "main" pub value {
-    %144 = func "main" {
+    %149 = func "main" {
       ret type {
-        %123 = break_inline result, @type_u8
+        %127 = break_inline result, @type_u8
       }
       body insts {
-        %124 = decl_val "effects"
-        %125 = call %124 arg0 {
-          %126 = arg_type %125, 0
-          %127 = int 0
-          %128 = as %126, %127
-          %129 = break_inline result, %128
+        %128 = decl_val "effects"
+        %129 = call %128 arg0 {
+          %130 = arg_type %129, 0
+          %131 = int 0
+          %132 = as %130, %131
+          %133 = break_inline result, %132
         }
-        %130 = ret_type
-        %131 = decl_val "nested"
-        %132 = call %131 arg0 {
-          %133 = arg_type %132, 0
-          %134 = decl_val "choose"
-          %135 = call %134 arg0 {
-            %136 = arg_type %135, 0
-            %137 = decl_literal "a", %136
-            %138 = break_inline result, %137
+        %134 = check_unused_error %129
+        %135 = ret_type
+        %136 = decl_val "nested"
+        %137 = call %136 arg0 {
+          %138 = arg_type %137, 0
+          %139 = decl_val "choose"
+          %140 = call %139 arg0 {
+            %141 = arg_type %140, 0
+            %142 = decl_literal "a", %141
+            %143 = break_inline result, %142
           }
-          %139 = int_from_enum %135
-          %140 = as %133, %139
-          %141 = break_inline result, %140
+          %144 = int_from_enum %140
+          %145 = as %138, %144
+          %146 = break_inline result, %145
         }
-        %142 = as_return %130, %132
-        %143 = ret %142
+        %147 = as_return %135, %137
+        %148 = ret %147
       }
     }
-    %145 = break_inline result, %144
+    %150 = break_inline result, %149
   }
 }

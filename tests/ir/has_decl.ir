@@ -1,4 +1,4 @@
-%86 = struct_decl (flags=0) {
+%88 = struct_decl (flags=0) {
   decl const "N" value {
     %17 = struct_decl (flags=0) {
       decl const "\xc3\xa9" pub type {
@@ -47,7 +47,7 @@
     %28 = break_inline result, %27
   }
   decl fn "main" pub value {
-    %84 = func "main" {
+    %86 = func "main" {
       ret type {
         %29 = break_inline result, @type_u8
       }
@@ -83,41 +83,43 @@
         } else {
           %54 = break_inline result, @void_value
         }
-        %56 = decl_val "N"
-        %57 = as @type_type, %56
-        %62 = has_decl %57 name {
-          %58 = ptr_type @type_u8, @true slice
-          %59 = str "hidden"
-          %60 = as %58, %59
-          %61 = break_inline result, %60
+        %56 = check_unused_error %55
+        %57 = decl_val "N"
+        %58 = as @type_type, %57
+        %63 = has_decl %58 name {
+          %59 = ptr_type @type_u8, @true slice
+          %60 = str "hidden"
+          %61 = as %59, %60
+          %62 = break_inline result, %61
         }
-        %63 = as @type_bool, %62
-        %73 = bool_or %63 rhs {
-          %64 = decl_val "N"
-          %65 = as @type_type, %64
-          %70 = has_decl %65 name {
-            %66 = ptr_type @type_u8, @true slice
-            %67 = str ""
-            %68 = as %66, %67
-            %69 = break_inline result, %68
+        %64 = as @type_bool, %63
+        %74 = bool_or %64 rhs {
+          %65 = decl_val "N"
+          %66 = as @type_type, %65
+          %71 = has_decl %66 name {
+            %67 = ptr_type @type_u8, @true slice
+            %68 = str ""
+            %69 = as %67, %68
+            %70 = break_inline result, %69
           }
-          %71 = as @type_bool, %70
-          %72 = break_inline result, %71
+          %72 = as @type_bool, %71
+          %73 = break_inline result, %72
         }
-        %79 = if %73 then {
-          %74 = ret_type
-          %75 = int 2
-          %76 = as_return %74, %75
-          %77 = ret %76
+        %80 = if %74 then {
+          %75 = ret_type
+          %76 = int 2
+          %77 = as_return %75, %76
+          %78 = ret %77
         } else {
-          %78 = break_inline result, @void_value
+          %79 = break_inline result, @void_value
         }
-        %80 = ret_type
-        %81 = int 0
-        %82 = as_return %80, %81
-        %83 = ret %82
+        %81 = check_unused_error %80
+        %82 = ret_type
+        %83 = int 0
+        %84 = as_return %82, %83
+        %85 = ret %84
       }
     }
-    %85 = break_inline result, %84
+    %87 = break_inline result, %86
   }
 }

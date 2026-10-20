@@ -1,4 +1,4 @@
-%70 = struct_decl (flags=0) {
+%72 = struct_decl (flags=0) {
   decl const "S" value {
     %10 = struct_decl (flags=0) {
       field "a" type {
@@ -40,7 +40,7 @@
     %19 = break_inline result, %18
   }
   decl fn "main" pub value {
-    %68 = func "main" {
+    %70 = func "main" {
       ret type {
         %20 = break_inline result, @type_u8
       }
@@ -78,31 +78,33 @@
         } else {
           %46 = break_inline result, @void_value
         }
-        %48 = int 34359738352
-        %49 = cmp_neq %34, %48
-        %55 = if %49 then {
-          %50 = ret_type
-          %51 = int 2
-          %52 = as_return %50, %51
-          %53 = ret %52
+        %48 = check_unused_error %47
+        %49 = int 34359738352
+        %50 = cmp_neq %34, %49
+        %56 = if %50 then {
+          %51 = ret_type
+          %52 = int 2
+          %53 = as_return %51, %52
+          %54 = ret %53
         } else {
-          %54 = break_inline result, @void_value
+          %55 = break_inline result, @void_value
         }
-        %56 = ret_type
-        %57 = decl_val "S"
-        %58 = as @type_type, %57
-        %63 = bit_offset_of %58 name {
-          %59 = ptr_type @type_u8, @true slice
-          %60 = str "a"
-          %61 = as %59, %60
-          %62 = break_inline result, %61
+        %57 = check_unused_error %56
+        %58 = ret_type
+        %59 = decl_val "S"
+        %60 = as @type_type, %59
+        %65 = bit_offset_of %60 name {
+          %61 = ptr_type @type_u8, @true slice
+          %62 = str "a"
+          %63 = as %61, %62
+          %64 = break_inline result, %63
         }
-        %64 = int 8
-        %65 = div %63, %64
-        %66 = int_cast %56, %65
-        %67 = ret %66
+        %66 = int 8
+        %67 = div %65, %66
+        %68 = int_cast %58, %67
+        %69 = ret %68
       }
     }
-    %69 = break_inline result, %68
+    %71 = break_inline result, %70
   }
 }

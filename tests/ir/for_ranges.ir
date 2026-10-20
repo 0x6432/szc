@@ -1,6 +1,6 @@
-%67 = struct_decl (flags=0) {
+%69 = struct_decl (flags=0) {
   decl fn "choose" value {
-    %45 = func "choose" {
+    %47 = func "choose" {
       %1 = param "n" type {
         %0 = break_inline result, @type_usize
       }
@@ -29,7 +29,7 @@
           %19 = loop  {
             %20 = load %7
             %21 = cmp_lt %20, %17
-            %41 = condbr %21 then {
+            %43 = condbr %21 then {
               %22 = block  {
                 %23 = add %9, %20
                 %24 = add %12, %20
@@ -40,59 +40,61 @@
                 } else {
                   %28 = break_inline result, @void_value
                 }
-                %30 = int 7
-                %31 = cmp_eq %24, %30
-                %34 = if %31 then {
-                  %32 = break %18, %3
+                %30 = check_unused_error %29
+                %31 = int 7
+                %32 = cmp_eq %24, %31
+                %35 = if %32 then {
+                  %33 = break %18, %3
                 } else {
-                  %33 = break_inline result, @void_value
+                  %34 = break_inline result, @void_value
                 }
-                %35 = as @type_void, @void_value
-                %36 = break %22, @void_value
+                %36 = check_unused_error %35
+                %37 = as @type_void, @void_value
+                %38 = break %22, @void_value
               }
-              %37 = add %20, @one_usize
-              %38 = store %7, %37
-              %39 = repeat %19
+              %39 = add %20, @one_usize
+              %40 = store %7, %39
+              %41 = repeat %19
             } else {
-              %40 = break %18, %5
+              %42 = break %18, %5
             }
           }
         }
-        %42 = ret_type
-        %43 = as_return %42, %18
-        %44 = ret %43
+        %44 = ret_type
+        %45 = as_return %44, %18
+        %46 = ret %45
       }
     }
-    %46 = break_inline result, %45
+    %48 = break_inline result, %47
   }
   decl fn "main" pub value {
-    %65 = func "main" {
+    %67 = func "main" {
       ret type {
-        %47 = break_inline result, @type_u8
+        %49 = break_inline result, @type_u8
       }
       body insts {
-        %48 = ret_type
-        %49 = decl_val "choose"
-        %50 = call %49 arg0 {
-          %51 = arg_type %50, 0
-          %52 = int 3
-          %53 = as %51, %52
-          %54 = break_inline result, %53
+        %50 = ret_type
+        %51 = decl_val "choose"
+        %52 = call %51 arg0 {
+          %53 = arg_type %52, 0
+          %54 = int 3
+          %55 = as %53, %54
+          %56 = break_inline result, %55
         } arg1 {
-          %55 = arg_type %50, 1
-          %56 = int 7
-          %57 = as %55, %56
-          %58 = break_inline result, %57
+          %57 = arg_type %52, 1
+          %58 = int 7
+          %59 = as %57, %58
+          %60 = break_inline result, %59
         } arg2 {
-          %59 = arg_type %50, 2
-          %60 = int 300
-          %61 = as %59, %60
-          %62 = break_inline result, %61
+          %61 = arg_type %52, 2
+          %62 = int 300
+          %63 = as %61, %62
+          %64 = break_inline result, %63
         }
-        %63 = truncate %48, %50
-        %64 = ret %63
+        %65 = truncate %50, %52
+        %66 = ret %65
       }
     }
-    %66 = break_inline result, %65
+    %68 = break_inline result, %67
   }
 }

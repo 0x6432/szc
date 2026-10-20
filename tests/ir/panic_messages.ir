@@ -1,4 +1,4 @@
-%48 = struct_decl (flags=0) {
+%50 = struct_decl (flags=0) {
   decl const "message" value {
     %0 = str "base"
     %1 = break_inline result, %0
@@ -36,7 +36,7 @@
     %23 = break_inline result, %22
   }
   decl fn "main" pub value {
-    %35 = func "main" {
+    %36 = func "main" {
       ret type {
         %24 = break_inline result, @type_u8
       }
@@ -49,32 +49,34 @@
         } else {
           %29 = break_inline result, @void_value
         }
-        %31 = ret_type
-        %32 = int 0
-        %33 = as_return %31, %32
-        %34 = ret %33
+        %31 = check_unused_error %30
+        %32 = ret_type
+        %33 = int 0
+        %34 = as_return %32, %33
+        %35 = ret %34
       }
     }
-    %36 = break_inline result, %35
+    %37 = break_inline result, %36
   }
   decl fn "abort_message" export value {
-    %46 = func "abort_message" export {
-      %38 = param "c" type {
-        %37 = break_inline result, @type_bool
+    %48 = func "abort_message" export {
+      %39 = param "c" type {
+        %38 = break_inline result, @type_bool
       }
       ret type {
-        %39 = break_inline result, @type_noreturn
+        %40 = break_inline result, @type_noreturn
       }
       body insts {
-        %40 = decl_val "fail"
-        %41 = call %40 arg0 {
-          %42 = arg_type %41, 0
-          %43 = as %42, %38
-          %44 = break_inline result, %43
+        %41 = decl_val "fail"
+        %42 = call %41 arg0 {
+          %43 = arg_type %42, 0
+          %44 = as %43, %39
+          %45 = break_inline result, %44
         }
-        %45 = ret_implicit
+        %46 = check_unused_error %42
+        %47 = ret_implicit
       }
     }
-    %47 = break_inline result, %46
+    %49 = break_inline result, %48
   }
 }

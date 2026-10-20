@@ -1,4 +1,4 @@
-%31 = struct_decl (flags=0) {
+%32 = struct_decl (flags=0) {
   decl fn "crash" value {
     %16 = func "crash" {
       %1 = param "c" type {
@@ -29,7 +29,7 @@
     %17 = break_inline result, %16
   }
   decl fn "main" pub value {
-    %29 = func "main" {
+    %30 = func "main" {
       ret type {
         %18 = break_inline result, @type_void
       }
@@ -45,9 +45,10 @@
           %26 = as %24, %25
           %27 = break_inline result, %26
         }
-        %28 = ret_implicit
+        %28 = check_unused_error %20
+        %29 = ret_implicit
       }
     }
-    %30 = break_inline result, %29
+    %31 = break_inline result, %30
   }
 }

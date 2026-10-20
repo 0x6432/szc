@@ -1,4 +1,4 @@
-%99 = struct_decl (flags=0) {
+%101 = struct_decl (flags=0) {
   decl fn "choose" value {
     %14 = func "choose" {
       %1 = param "c" type {
@@ -54,7 +54,7 @@
     %31 = break_inline result, %30
   }
   decl fn "all" value {
-    %46 = func "all" {
+    %47 = func "all" {
       %33 = param "c" type {
         %32 = break_inline result, @type_bool
       }
@@ -74,76 +74,78 @@
           %42 = as_return %40, %41
           %43 = ret %42
         }
-        %45 = ret_implicit
+        %45 = check_unused_error %44
+        %46 = ret_implicit
       }
     }
-    %47 = break_inline result, %46
+    %48 = break_inline result, %47
   }
   decl fn "main" pub value {
-    %97 = func "main" {
+    %99 = func "main" {
       ret type {
-        %48 = break_inline result, @type_u8
+        %49 = break_inline result, @type_u8
       }
       body insts {
-        %49 = int 0
-        %50 = as @type_u8, %49
-        %51 = alloc type=@type_u8 init=%50
-        %52 = decl_val "choose"
-        %53 = call %52 arg0 {
-          %54 = arg_type %53, 0
-          %55 = as %54, @true
-          %56 = break_inline result, %55
+        %50 = int 0
+        %51 = as @type_u8, %50
+        %52 = alloc type=@type_u8 init=%51
+        %53 = decl_val "choose"
+        %54 = call %53 arg0 {
+          %55 = arg_type %54, 0
+          %56 = as %55, @true
+          %57 = break_inline result, %56
         } arg1 {
-          %57 = arg_type %53, 1
-          %58 = int 3
-          %59 = as %57, %58
-          %60 = break_inline result, %59
+          %58 = arg_type %54, 1
+          %59 = int 3
+          %60 = as %58, %59
+          %61 = break_inline result, %60
         } arg2 {
-          %61 = arg_type %53, 2
-          %62 = int 4
-          %63 = as %61, %62
-          %64 = break_inline result, %63
+          %62 = arg_type %54, 2
+          %63 = int 4
+          %64 = as %62, %63
+          %65 = break_inline result, %64
         }
-        %65 = int 3
-        %66 = cmp_eq %53, %65
-        %85 = if %66 then {
-          %67 = decl_val "early"
-          %68 = call %67 arg0 {
-            %69 = arg_type %68, 0
-            %70 = as %69, @false
-            %71 = break_inline result, %70
+        %66 = int 3
+        %67 = cmp_eq %54, %66
+        %86 = if %67 then {
+          %68 = decl_val "early"
+          %69 = call %68 arg0 {
+            %70 = arg_type %69, 0
+            %71 = as %70, @false
+            %72 = break_inline result, %71
           }
-          %72 = elem_type %51
-          %73 = as %72, %68
-          %74 = store %51, %73
-          %75 = break_inline result, @void_value
+          %73 = elem_type %52
+          %74 = as %73, %69
+          %75 = store %52, %74
+          %76 = break_inline result, @void_value
         } else {
-          %76 = decl_val "all"
-          %77 = call %76 arg0 {
-            %78 = arg_type %77, 0
-            %79 = as %78, @true
-            %80 = break_inline result, %79
+          %77 = decl_val "all"
+          %78 = call %77 arg0 {
+            %79 = arg_type %78, 0
+            %80 = as %79, @true
+            %81 = break_inline result, %80
           }
-          %81 = elem_type %51
-          %82 = as %81, %77
-          %83 = store %51, %82
-          %84 = break_inline result, @void_value
+          %82 = elem_type %52
+          %83 = as %82, %78
+          %84 = store %52, %83
+          %85 = break_inline result, @void_value
         }
-        %86 = ret_type
-        %95 = if @false then {
-          %87 = int 1
-          %88 = int 0
-          %89 = div_trunc %87, %88
-          %90 = as %86, %89
-          %91 = break_inline result, %90
+        %87 = check_unused_error %86
+        %88 = ret_type
+        %97 = if @false then {
+          %89 = int 1
+          %90 = int 0
+          %91 = div_trunc %89, %90
+          %92 = as %88, %91
+          %93 = break_inline result, %92
         } else {
-          %92 = load %51
-          %93 = as %86, %92
-          %94 = break_inline result, %93
+          %94 = load %52
+          %95 = as %88, %94
+          %96 = break_inline result, %95
         }
-        %96 = ret %95
+        %98 = ret %97
       }
     }
-    %98 = break_inline result, %97
+    %100 = break_inline result, %99
   }
 }

@@ -10,7 +10,7 @@ fn szc.f.2: fn (usize) void {
   %3: usize = const 5
   %4: usize = const 6
   %5: void = slice_end_check %3, %4
-  %6: [*]const u8 = const ptr_cast(value.8)
+  %6: [*]const u8 = const ptr_cast(value.9)
   %7: [*]const u8 = ptr_add %6, %0
   %8: usize = const 5
   %9: usize = sub_wrap %8, %0

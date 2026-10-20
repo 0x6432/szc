@@ -1,4 +1,4 @@
-%520 = struct_decl (flags=0) {
+%532 = struct_decl (flags=0) {
   decl const "text" type {
     %0 = int 0
     %1 = as @type_u8, %0
@@ -78,7 +78,7 @@
     %61 = break_inline result, %60
   }
   decl fn "length" value {
-    %98 = func "length" {
+    %99 = func "length" {
       %67 = param "p" type {
         %62 = int 0
         %63 = as @type_u8, %62
@@ -120,546 +120,558 @@
             }
           }
         }
-        %94 = ret_type
-        %95 = load %71
-        %96 = as_return %94, %95
-        %97 = ret %96
+        %94 = check_unused_error %72
+        %95 = ret_type
+        %96 = load %71
+        %97 = as_return %95, %96
+        %98 = ret %97
       }
     }
-    %99 = break_inline result, %98
+    %100 = break_inline result, %99
   }
   decl fn "advance" value {
-    %117 = func "advance" {
-      %105 = param "p" type {
-        %100 = int 0
-        %101 = as @type_u8, %100
-        %102 = ptr_type @type_u8, @true many sentinel %101
-        %103 = as @type_type, %102
-        %104 = break_inline result, %103
+    %118 = func "advance" {
+      %106 = param "p" type {
+        %101 = int 0
+        %102 = as @type_u8, %101
+        %103 = ptr_type @type_u8, @true many sentinel %102
+        %104 = as @type_type, %103
+        %105 = break_inline result, %104
       }
-      %107 = param "n" type {
-        %106 = break_inline result, @type_usize
+      %108 = param "n" type {
+        %107 = break_inline result, @type_usize
       }
       ret type {
-        %108 = int 0
-        %109 = as @type_u8, %108
-        %110 = ptr_type @type_u8, @true many sentinel %109
-        %111 = as @type_type, %110
-        %112 = break_inline result, %111
+        %109 = int 0
+        %110 = as @type_u8, %109
+        %111 = ptr_type @type_u8, @true many sentinel %110
+        %112 = as @type_type, %111
+        %113 = break_inline result, %112
       }
       body insts {
-        %113 = ret_type
-        %114 = add %105, %107
-        %115 = as_return %113, %114
-        %116 = ret %115
+        %114 = ret_type
+        %115 = add %106, %108
+        %116 = as_return %114, %115
+        %117 = ret %116
       }
     }
-    %118 = break_inline result, %117
+    %119 = break_inline result, %118
   }
   decl fn "retreat" value {
-    %136 = func "retreat" {
-      %124 = param "p" type {
-        %119 = int 0
-        %120 = as @type_u8, %119
-        %121 = ptr_type @type_u8, @true many sentinel %120
-        %122 = as @type_type, %121
-        %123 = break_inline result, %122
+    %137 = func "retreat" {
+      %125 = param "p" type {
+        %120 = int 0
+        %121 = as @type_u8, %120
+        %122 = ptr_type @type_u8, @true many sentinel %121
+        %123 = as @type_type, %122
+        %124 = break_inline result, %123
       }
-      %126 = param "n" type {
-        %125 = break_inline result, @type_usize
+      %127 = param "n" type {
+        %126 = break_inline result, @type_usize
       }
       ret type {
-        %127 = int 0
-        %128 = as @type_u8, %127
-        %129 = ptr_type @type_u8, @true many sentinel %128
-        %130 = as @type_type, %129
-        %131 = break_inline result, %130
+        %128 = int 0
+        %129 = as @type_u8, %128
+        %130 = ptr_type @type_u8, @true many sentinel %129
+        %131 = as @type_type, %130
+        %132 = break_inline result, %131
       }
       body insts {
-        %132 = ret_type
-        %133 = sub %124, %126
-        %134 = as_return %132, %133
-        %135 = ret %134
+        %133 = ret_type
+        %134 = sub %125, %127
+        %135 = as_return %133, %134
+        %136 = ret %135
       }
     }
-    %137 = break_inline result, %136
+    %138 = break_inline result, %137
   }
   decl fn "tail" value {
-    %157 = func "tail" {
-      %143 = param "p" type {
-        %138 = int 0
-        %139 = as @type_u8, %138
-        %140 = ptr_type @type_u8, @true many sentinel %139
-        %141 = as @type_type, %140
-        %142 = break_inline result, %141
+    %158 = func "tail" {
+      %144 = param "p" type {
+        %139 = int 0
+        %140 = as @type_u8, %139
+        %141 = ptr_type @type_u8, @true many sentinel %140
+        %142 = as @type_type, %141
+        %143 = break_inline result, %142
       }
-      %145 = param "n" type {
-        %144 = break_inline result, @type_usize
+      %146 = param "n" type {
+        %145 = break_inline result, @type_usize
       }
       ret type {
-        %146 = int 0
-        %147 = as @type_u8, %146
-        %148 = ptr_type @type_u8, @true many sentinel %147
-        %149 = as @type_type, %148
-        %150 = break_inline result, %149
+        %147 = int 0
+        %148 = as @type_u8, %147
+        %149 = ptr_type @type_u8, @true many sentinel %148
+        %150 = as @type_type, %149
+        %151 = break_inline result, %150
       }
       body insts {
-        %152 = ref %143
-        %151 = ret_type
-        %153 = as @type_usize, %145
-        %154 = slice %152, %153
-        %155 = as_return %151, %154
-        %156 = ret %155
+        %153 = ref %144
+        %152 = ret_type
+        %154 = as @type_usize, %146
+        %155 = slice %153, %154
+        %156 = as_return %152, %155
+        %157 = ret %156
       }
     }
-    %158 = break_inline result, %157
+    %159 = break_inline result, %158
   }
   decl fn "choose" value {
-    %182 = func "choose" {
-      %160 = param "c" type {
-        %159 = break_inline result, @type_bool
+    %183 = func "choose" {
+      %161 = param "c" type {
+        %160 = break_inline result, @type_bool
       }
-      %166 = param "a" type {
-        %161 = int 0
-        %162 = as @type_u8, %161
-        %163 = ptr_type @type_u8, @true many sentinel %162
-        %164 = as @type_type, %163
-        %165 = break_inline result, %164
+      %167 = param "a" type {
+        %162 = int 0
+        %163 = as @type_u8, %162
+        %164 = ptr_type @type_u8, @true many sentinel %163
+        %165 = as @type_type, %164
+        %166 = break_inline result, %165
       }
-      %170 = param "b" type {
-        %167 = ptr_type @type_u8, @true many
-        %168 = as @type_type, %167
-        %169 = break_inline result, %168
+      %171 = param "b" type {
+        %168 = ptr_type @type_u8, @true many
+        %169 = as @type_type, %168
+        %170 = break_inline result, %169
       }
       ret type {
-        %171 = ptr_type @type_u8, @true many
-        %172 = as @type_type, %171
-        %173 = break_inline result, %172
+        %172 = ptr_type @type_u8, @true many
+        %173 = as @type_type, %172
+        %174 = break_inline result, %173
       }
       body insts {
-        %174 = ret_type
-        %175 = as @type_bool, %160
-        %180 = if %175 then {
-          %176 = as %174, %166
-          %177 = break_inline result, %176
+        %175 = ret_type
+        %176 = as @type_bool, %161
+        %181 = if %176 then {
+          %177 = as %175, %167
+          %178 = break_inline result, %177
         } else {
-          %178 = as %174, %170
-          %179 = break_inline result, %178
+          %179 = as %175, %171
+          %180 = break_inline result, %179
         }
-        %181 = ret %180
+        %182 = ret %181
       }
     }
-    %183 = break_inline result, %182
+    %184 = break_inline result, %183
   }
   decl fn "window" value {
-    %204 = func "window" {
-      %189 = param "p" type {
-        %184 = int 0
-        %185 = as @type_u8, %184
-        %186 = ptr_type @type_u8, @true many sentinel %185
-        %187 = as @type_type, %186
-        %188 = break_inline result, %187
+    %205 = func "window" {
+      %190 = param "p" type {
+        %185 = int 0
+        %186 = as @type_u8, %185
+        %187 = ptr_type @type_u8, @true many sentinel %186
+        %188 = as @type_type, %187
+        %189 = break_inline result, %188
       }
-      %191 = param "lo" type {
-        %190 = break_inline result, @type_usize
+      %192 = param "lo" type {
+        %191 = break_inline result, @type_usize
       }
-      %193 = param "hi" type {
-        %192 = break_inline result, @type_usize
+      %194 = param "hi" type {
+        %193 = break_inline result, @type_usize
       }
       ret type {
-        %194 = ptr_type @type_u8, @true slice
-        %195 = as @type_type, %194
-        %196 = break_inline result, %195
+        %195 = ptr_type @type_u8, @true slice
+        %196 = as @type_type, %195
+        %197 = break_inline result, %196
       }
       body insts {
-        %198 = ref %189
-        %197 = ret_type
-        %199 = as @type_usize, %191
-        %200 = as @type_usize, %193
-        %201 = slice %198, %199, %200
-        %202 = as_return %197, %201
-        %203 = ret %202
+        %199 = ref %190
+        %198 = ret_type
+        %200 = as @type_usize, %192
+        %201 = as @type_usize, %194
+        %202 = slice %199, %200, %201
+        %203 = as_return %198, %202
+        %204 = ret %203
       }
     }
-    %205 = break_inline result, %204
+    %206 = break_inline result, %205
   }
   decl fn "bool_type" value {
-    %216 = func "bool_type" {
-      %209 = param "p" type {
-        %206 = ptr_type @type_bool, @false many sentinel @true
-        %207 = as @type_type, %206
-        %208 = break_inline result, %207
+    %217 = func "bool_type" {
+      %210 = param "p" type {
+        %207 = ptr_type @type_bool, @false many sentinel @true
+        %208 = as @type_type, %207
+        %209 = break_inline result, %208
       }
       ret type {
-        %210 = ptr_type @type_bool, @false many sentinel @true
-        %211 = as @type_type, %210
-        %212 = break_inline result, %211
+        %211 = ptr_type @type_bool, @false many sentinel @true
+        %212 = as @type_type, %211
+        %213 = break_inline result, %212
       }
       body insts {
-        %213 = ret_type
-        %214 = as_return %213, %209
-        %215 = ret %214
+        %214 = ret_type
+        %215 = as_return %214, %210
+        %216 = ret %215
       }
     }
-    %217 = break_inline result, %216
+    %218 = break_inline result, %217
   }
   decl fn "main" pub value {
-    %518 = func "main" {
+    %530 = func "main" {
       ret type {
-        %218 = break_inline result, @type_u8
+        %219 = break_inline result, @type_u8
       }
       body insts {
-        %219 = decl_val "known"
-        %220 = decl_val "bool_type"
-        %221 = decl_val "length"
-        %222 = call %221 arg0 {
-          %223 = arg_type %222, 0
-          %224 = decl_val "text"
-          %225 = as %223, %224
-          %226 = break_inline result, %225
+        %220 = decl_val "known"
+        %221 = discard %220
+        %222 = decl_val "bool_type"
+        %223 = discard %222
+        %224 = decl_val "length"
+        %225 = call %224 arg0 {
+          %226 = arg_type %225, 0
+          %227 = decl_val "text"
+          %228 = as %226, %227
+          %229 = break_inline result, %228
         }
-        %227 = int 5
-        %228 = cmp_neq %222, %227
-        %238 = bool_or %228 rhs {
-          %229 = decl_val "length"
-          %230 = call %229 arg0 {
-            %231 = arg_type %230, 0
-            %232 = str ""
-            %233 = as %231, %232
-            %234 = break_inline result, %233
+        %230 = int 5
+        %231 = cmp_neq %225, %230
+        %241 = bool_or %231 rhs {
+          %232 = decl_val "length"
+          %233 = call %232 arg0 {
+            %234 = arg_type %233, 0
+            %235 = str ""
+            %236 = as %234, %235
+            %237 = break_inline result, %236
           }
-          %235 = int 0
-          %236 = cmp_neq %230, %235
-          %237 = break_inline result, %236
+          %238 = int 0
+          %239 = cmp_neq %233, %238
+          %240 = break_inline result, %239
         }
-        %248 = bool_or %238 rhs {
-          %239 = decl_val "length"
-          %240 = call %239 arg0 {
-            %241 = arg_type %240, 0
-            %242 = str "a\x00b"
-            %243 = as %241, %242
-            %244 = break_inline result, %243
+        %251 = bool_or %241 rhs {
+          %242 = decl_val "length"
+          %243 = call %242 arg0 {
+            %244 = arg_type %243, 0
+            %245 = str "a\x00b"
+            %246 = as %244, %245
+            %247 = break_inline result, %246
           }
-          %245 = int 1
-          %246 = cmp_neq %240, %245
-          %247 = break_inline result, %246
+          %248 = int 1
+          %249 = cmp_neq %243, %248
+          %250 = break_inline result, %249
         }
-        %254 = if %248 then {
-          %249 = ret_type
-          %250 = int 1
-          %251 = as_return %249, %250
-          %252 = ret %251
+        %257 = if %251 then {
+          %252 = ret_type
+          %253 = int 1
+          %254 = as_return %252, %253
+          %255 = ret %254
         } else {
-          %253 = break_inline result, @void_value
+          %256 = break_inline result, @void_value
         }
-        %255 = decl_val "length"
-        %256 = call %255 arg0 {
-          %257 = arg_type %256, 0
-          %258 = decl_ref "words"
-          %259 = array_base_ptr %258
-          %260 = int 0
-          %261 = as @type_usize, %260
-          %262 = array_index %259, %261
-          %263 = as %257, %262
-          %264 = break_inline result, %263
+        %258 = check_unused_error %257
+        %259 = decl_val "length"
+        %260 = call %259 arg0 {
+          %261 = arg_type %260, 0
+          %262 = decl_ref "words"
+          %263 = array_base_ptr %262
+          %264 = int 0
+          %265 = as @type_usize, %264
+          %266 = array_index %263, %265
+          %267 = as %261, %266
+          %268 = break_inline result, %267
         }
-        %265 = int 3
-        %266 = cmp_neq %256, %265
-        %280 = bool_or %266 rhs {
-          %267 = decl_val "length"
-          %268 = call %267 arg0 {
-            %269 = arg_type %268, 0
-            %270 = decl_ref "words"
-            %271 = array_base_ptr %270
-            %272 = int 1
-            %273 = as @type_usize, %272
-            %274 = array_index %271, %273
-            %275 = as %269, %274
-            %276 = break_inline result, %275
+        %269 = int 3
+        %270 = cmp_neq %260, %269
+        %284 = bool_or %270 rhs {
+          %271 = decl_val "length"
+          %272 = call %271 arg0 {
+            %273 = arg_type %272, 0
+            %274 = decl_ref "words"
+            %275 = array_base_ptr %274
+            %276 = int 1
+            %277 = as @type_usize, %276
+            %278 = array_index %275, %277
+            %279 = as %273, %278
+            %280 = break_inline result, %279
           }
-          %277 = int 2
-          %278 = cmp_neq %268, %277
-          %279 = break_inline result, %278
+          %281 = int 2
+          %282 = cmp_neq %272, %281
+          %283 = break_inline result, %282
         }
-        %286 = if %280 then {
-          %281 = ret_type
-          %282 = int 2
-          %283 = as_return %281, %282
-          %284 = ret %283
+        %290 = if %284 then {
+          %285 = ret_type
+          %286 = int 2
+          %287 = as_return %285, %286
+          %288 = ret %287
         } else {
-          %285 = break_inline result, @void_value
+          %289 = break_inline result, @void_value
         }
-        %287 = decl_ref "cursor"
-        %288 = load %287
-        %289 = add_sub_rhs_type %288
-        %290 = int 2
-        %291 = as %289, %290
-        %292 = add %288, %291
-        %293 = elem_type %287
-        %294 = as %293, %292
-        %295 = store %287, %294
-        %296 = decl_val "length"
-        %297 = call %296 arg0 {
-          %298 = arg_type %297, 0
-          %299 = decl_val "cursor"
-          %300 = as %298, %299
-          %301 = break_inline result, %300
+        %291 = check_unused_error %290
+        %292 = decl_ref "cursor"
+        %293 = load %292
+        %294 = add_sub_rhs_type %293
+        %295 = int 2
+        %296 = as %294, %295
+        %297 = add %293, %296
+        %298 = elem_type %292
+        %299 = as %298, %297
+        %300 = store %292, %299
+        %301 = decl_val "length"
+        %302 = call %301 arg0 {
+          %303 = arg_type %302, 0
+          %304 = decl_val "cursor"
+          %305 = as %303, %304
+          %306 = break_inline result, %305
         }
-        %302 = int 3
-        %303 = cmp_neq %297, %302
-        %312 = bool_or %303 rhs {
-          %304 = decl_ref "cursor"
-          %305 = array_base_ptr %304
-          %306 = int 0
-          %307 = as @type_usize, %306
-          %308 = array_index %305, %307
-          %309 = int 114
-          %310 = cmp_neq %308, %309
-          %311 = break_inline result, %310
+        %307 = int 3
+        %308 = cmp_neq %302, %307
+        %317 = bool_or %308 rhs {
+          %309 = decl_ref "cursor"
+          %310 = array_base_ptr %309
+          %311 = int 0
+          %312 = as @type_usize, %311
+          %313 = array_index %310, %312
+          %314 = int 114
+          %315 = cmp_neq %313, %314
+          %316 = break_inline result, %315
         }
-        %318 = if %312 then {
-          %313 = ret_type
-          %314 = int 3
-          %315 = as_return %313, %314
-          %316 = ret %315
+        %323 = if %317 then {
+          %318 = ret_type
+          %319 = int 3
+          %320 = as_return %318, %319
+          %321 = ret %320
         } else {
-          %317 = break_inline result, @void_value
+          %322 = break_inline result, @void_value
         }
-        %319 = decl_ref "cursor"
-        %320 = load %319
-        %321 = add_sub_rhs_type %320
-        %322 = int 1
-        %323 = as %321, %322
-        %324 = sub %320, %323
-        %325 = elem_type %319
-        %326 = as %325, %324
-        %327 = store %319, %326
-        %328 = decl_val "length"
-        %329 = call %328 arg0 {
-          %330 = arg_type %329, 0
-          %331 = decl_val "cursor"
-          %332 = as %330, %331
-          %333 = break_inline result, %332
+        %324 = check_unused_error %323
+        %325 = decl_ref "cursor"
+        %326 = load %325
+        %327 = add_sub_rhs_type %326
+        %328 = int 1
+        %329 = as %327, %328
+        %330 = sub %326, %329
+        %331 = elem_type %325
+        %332 = as %331, %330
+        %333 = store %325, %332
+        %334 = decl_val "length"
+        %335 = call %334 arg0 {
+          %336 = arg_type %335, 0
+          %337 = decl_val "cursor"
+          %338 = as %336, %337
+          %339 = break_inline result, %338
         }
-        %334 = int 4
-        %335 = cmp_neq %329, %334
-        %344 = bool_or %335 rhs {
-          %336 = decl_ref "cursor"
-          %337 = array_base_ptr %336
-          %338 = int 0
-          %339 = as @type_usize, %338
-          %340 = array_index %337, %339
-          %341 = int 111
-          %342 = cmp_neq %340, %341
-          %343 = break_inline result, %342
+        %340 = int 4
+        %341 = cmp_neq %335, %340
+        %350 = bool_or %341 rhs {
+          %342 = decl_ref "cursor"
+          %343 = array_base_ptr %342
+          %344 = int 0
+          %345 = as @type_usize, %344
+          %346 = array_index %343, %345
+          %347 = int 111
+          %348 = cmp_neq %346, %347
+          %349 = break_inline result, %348
         }
-        %350 = if %344 then {
-          %345 = ret_type
-          %346 = int 4
-          %347 = as_return %345, %346
-          %348 = ret %347
+        %356 = if %350 then {
+          %351 = ret_type
+          %352 = int 4
+          %353 = as_return %351, %352
+          %354 = ret %353
         } else {
-          %349 = break_inline result, @void_value
+          %355 = break_inline result, @void_value
         }
-        %351 = decl_val "advance"
-        %352 = call %351 arg0 {
-          %353 = arg_type %352, 0
-          %354 = decl_val "text"
-          %355 = as %353, %354
-          %356 = break_inline result, %355
+        %357 = check_unused_error %356
+        %358 = decl_val "advance"
+        %359 = call %358 arg0 {
+          %360 = arg_type %359, 0
+          %361 = decl_val "text"
+          %362 = as %360, %361
+          %363 = break_inline result, %362
         } arg1 {
-          %357 = arg_type %352, 1
-          %358 = int 2
-          %359 = as %357, %358
-          %360 = break_inline result, %359
+          %364 = arg_type %359, 1
+          %365 = int 2
+          %366 = as %364, %365
+          %367 = break_inline result, %366
         }
-        %361 = decl_val "length"
-        %362 = call %361 arg0 {
-          %363 = arg_type %362, 0
-          %364 = as %363, %352
-          %365 = break_inline result, %364
+        %368 = decl_val "length"
+        %369 = call %368 arg0 {
+          %370 = arg_type %369, 0
+          %371 = as %370, %359
+          %372 = break_inline result, %371
         }
-        %366 = int 3
-        %367 = cmp_neq %362, %366
-        %383 = bool_or %367 rhs {
-          %368 = decl_val "retreat"
-          %369 = call %368 arg0 {
-            %370 = arg_type %369, 0
-            %371 = as %370, %352
-            %372 = break_inline result, %371
+        %373 = int 3
+        %374 = cmp_neq %369, %373
+        %390 = bool_or %374 rhs {
+          %375 = decl_val "retreat"
+          %376 = call %375 arg0 {
+            %377 = arg_type %376, 0
+            %378 = as %377, %359
+            %379 = break_inline result, %378
           } arg1 {
-            %373 = arg_type %369, 1
-            %374 = int 1
-            %375 = as %373, %374
-            %376 = break_inline result, %375
+            %380 = arg_type %376, 1
+            %381 = int 1
+            %382 = as %380, %381
+            %383 = break_inline result, %382
           }
-          %377 = int 0
-          %378 = as @type_usize, %377
-          %379 = array_index %369, %378
-          %380 = int 101
-          %381 = cmp_neq %379, %380
-          %382 = break_inline result, %381
+          %384 = int 0
+          %385 = as @type_usize, %384
+          %386 = array_index %376, %385
+          %387 = int 101
+          %388 = cmp_neq %386, %387
+          %389 = break_inline result, %388
         }
-        %389 = if %383 then {
-          %384 = ret_type
-          %385 = int 5
-          %386 = as_return %384, %385
-          %387 = ret %386
+        %396 = if %390 then {
+          %391 = ret_type
+          %392 = int 5
+          %393 = as_return %391, %392
+          %394 = ret %393
         } else {
-          %388 = break_inline result, @void_value
+          %395 = break_inline result, @void_value
         }
-        %390 = decl_val "tail"
-        %391 = call %390 arg0 {
-          %392 = arg_type %391, 0
-          %393 = decl_val "text"
-          %394 = as %392, %393
-          %395 = break_inline result, %394
+        %397 = check_unused_error %396
+        %398 = decl_val "tail"
+        %399 = call %398 arg0 {
+          %400 = arg_type %399, 0
+          %401 = decl_val "text"
+          %402 = as %400, %401
+          %403 = break_inline result, %402
         } arg1 {
-          %396 = arg_type %391, 1
-          %397 = int 3
-          %398 = as %396, %397
-          %399 = break_inline result, %398
+          %404 = arg_type %399, 1
+          %405 = int 3
+          %406 = as %404, %405
+          %407 = break_inline result, %406
         }
-        %400 = int 0
-        %401 = as @type_usize, %400
-        %402 = array_index %391, %401
-        %403 = int 108
-        %404 = cmp_neq %402, %403
-        %423 = bool_or %404 rhs {
-          %405 = decl_val "length"
-          %406 = call %405 arg0 {
-            %407 = arg_type %406, 0
-            %408 = decl_val "tail"
-            %409 = call %408 arg0 {
-              %410 = arg_type %409, 0
-              %411 = decl_val "text"
-              %412 = as %410, %411
-              %413 = break_inline result, %412
+        %408 = int 0
+        %409 = as @type_usize, %408
+        %410 = array_index %399, %409
+        %411 = int 108
+        %412 = cmp_neq %410, %411
+        %431 = bool_or %412 rhs {
+          %413 = decl_val "length"
+          %414 = call %413 arg0 {
+            %415 = arg_type %414, 0
+            %416 = decl_val "tail"
+            %417 = call %416 arg0 {
+              %418 = arg_type %417, 0
+              %419 = decl_val "text"
+              %420 = as %418, %419
+              %421 = break_inline result, %420
             } arg1 {
-              %414 = arg_type %409, 1
-              %415 = int 5
-              %416 = as %414, %415
-              %417 = break_inline result, %416
+              %422 = arg_type %417, 1
+              %423 = int 5
+              %424 = as %422, %423
+              %425 = break_inline result, %424
             }
-            %418 = as %407, %409
-            %419 = break_inline result, %418
+            %426 = as %415, %417
+            %427 = break_inline result, %426
           }
-          %420 = int 0
-          %421 = cmp_neq %406, %420
-          %422 = break_inline result, %421
+          %428 = int 0
+          %429 = cmp_neq %414, %428
+          %430 = break_inline result, %429
         }
-        %429 = if %423 then {
-          %424 = ret_type
-          %425 = int 6
-          %426 = as_return %424, %425
-          %427 = ret %426
+        %437 = if %431 then {
+          %432 = ret_type
+          %433 = int 6
+          %434 = as_return %432, %433
+          %435 = ret %434
         } else {
-          %428 = break_inline result, @void_value
+          %436 = break_inline result, @void_value
         }
-        %430 = decl_val "window"
-        %431 = call %430 arg0 {
-          %432 = arg_type %431, 0
-          %433 = decl_val "text"
-          %434 = as %432, %433
-          %435 = break_inline result, %434
+        %438 = check_unused_error %437
+        %439 = decl_val "window"
+        %440 = call %439 arg0 {
+          %441 = arg_type %440, 0
+          %442 = decl_val "text"
+          %443 = as %441, %442
+          %444 = break_inline result, %443
         } arg1 {
-          %436 = arg_type %431, 1
-          %437 = int 1
-          %438 = as %436, %437
-          %439 = break_inline result, %438
+          %445 = arg_type %440, 1
+          %446 = int 1
+          %447 = as %445, %446
+          %448 = break_inline result, %447
         } arg2 {
-          %440 = arg_type %431, 2
-          %441 = int 4
-          %442 = as %440, %441
-          %443 = break_inline result, %442
-        }
-        %444 = field_val "len", %431
-        %445 = int 3
-        %446 = cmp_neq %444, %445
-        %453 = bool_or %446 rhs {
-          %447 = int 2
-          %448 = as @type_usize, %447
-          %449 = array_index %431, %448
-          %450 = int 108
-          %451 = cmp_neq %449, %450
+          %449 = arg_type %440, 2
+          %450 = int 4
+          %451 = as %449, %450
           %452 = break_inline result, %451
         }
-        %459 = if %453 then {
-          %454 = ret_type
-          %455 = int 7
-          %456 = as_return %454, %455
-          %457 = ret %456
+        %453 = field_val "len", %440
+        %454 = int 3
+        %455 = cmp_neq %453, %454
+        %462 = bool_or %455 rhs {
+          %456 = int 2
+          %457 = as @type_usize, %456
+          %458 = array_index %440, %457
+          %459 = int 108
+          %460 = cmp_neq %458, %459
+          %461 = break_inline result, %460
+        }
+        %468 = if %462 then {
+          %463 = ret_type
+          %464 = int 7
+          %465 = as_return %463, %464
+          %466 = ret %465
         } else {
-          %458 = break_inline result, @void_value
+          %467 = break_inline result, @void_value
         }
-        %460 = ptr_type @type_u8, @true
-        %461 = as @type_type, %460
-        %462 = decl_ref "text"
-        %463 = array_base_ptr %462
-        %464 = int 5
-        %465 = as @type_usize, %464
-        %466 = array_index_ptr %463, %465
-        %467 = as %461, %466
-        %468 = deref %467
-        %469 = int 0
-        %470 = cmp_neq %468, %469
-        %483 = bool_or %470 rhs {
-          %471 = decl_ref "text"
-          %472 = int 0
-          %473 = as @type_usize, %472
-          %474 = int 2
-          %475 = as @type_usize, %474
-          %476 = slice %471, %473, %475
-          %477 = int 1
-          %478 = as @type_usize, %477
-          %479 = array_index %476, %478
-          %480 = int 101
-          %481 = cmp_neq %479, %480
-          %482 = break_inline result, %481
+        %469 = check_unused_error %468
+        %470 = ptr_type @type_u8, @true
+        %471 = as @type_type, %470
+        %472 = decl_ref "text"
+        %473 = array_base_ptr %472
+        %474 = int 5
+        %475 = as @type_usize, %474
+        %476 = array_index_ptr %473, %475
+        %477 = as %471, %476
+        %478 = deref %477
+        %479 = int 0
+        %480 = cmp_neq %478, %479
+        %493 = bool_or %480 rhs {
+          %481 = decl_ref "text"
+          %482 = int 0
+          %483 = as @type_usize, %482
+          %484 = int 2
+          %485 = as @type_usize, %484
+          %486 = slice %481, %483, %485
+          %487 = int 1
+          %488 = as @type_usize, %487
+          %489 = array_index %486, %488
+          %490 = int 101
+          %491 = cmp_neq %489, %490
+          %492 = break_inline result, %491
         }
-        %489 = if %483 then {
-          %484 = ret_type
-          %485 = int 8
-          %486 = as_return %484, %485
-          %487 = ret %486
+        %499 = if %493 then {
+          %494 = ret_type
+          %495 = int 8
+          %496 = as_return %494, %495
+          %497 = ret %496
         } else {
-          %488 = break_inline result, @void_value
+          %498 = break_inline result, @void_value
         }
-        %490 = decl_val "choose"
-        %491 = call %490 arg0 {
-          %492 = arg_type %491, 0
-          %493 = as %492, @false
-          %494 = break_inline result, %493
+        %500 = check_unused_error %499
+        %501 = decl_val "choose"
+        %502 = call %501 arg0 {
+          %503 = arg_type %502, 0
+          %504 = as %503, @false
+          %505 = break_inline result, %504
         } arg1 {
-          %495 = arg_type %491, 1
-          %496 = decl_val "text"
-          %497 = as %495, %496
-          %498 = break_inline result, %497
+          %506 = arg_type %502, 1
+          %507 = decl_val "text"
+          %508 = as %506, %507
+          %509 = break_inline result, %508
         } arg2 {
-          %499 = arg_type %491, 2
-          %500 = str "z"
-          %501 = as %499, %500
-          %502 = break_inline result, %501
+          %510 = arg_type %502, 2
+          %511 = str "z"
+          %512 = as %510, %511
+          %513 = break_inline result, %512
         }
-        %503 = int 0
-        %504 = as @type_usize, %503
-        %505 = array_index %491, %504
-        %506 = int 122
-        %507 = cmp_neq %505, %506
-        %513 = if %507 then {
-          %508 = ret_type
-          %509 = int 9
-          %510 = as_return %508, %509
-          %511 = ret %510
+        %514 = int 0
+        %515 = as @type_usize, %514
+        %516 = array_index %502, %515
+        %517 = int 122
+        %518 = cmp_neq %516, %517
+        %524 = if %518 then {
+          %519 = ret_type
+          %520 = int 9
+          %521 = as_return %519, %520
+          %522 = ret %521
         } else {
-          %512 = break_inline result, @void_value
+          %523 = break_inline result, @void_value
         }
-        %514 = ret_type
-        %515 = int 0
-        %516 = as_return %514, %515
-        %517 = ret %516
+        %525 = check_unused_error %524
+        %526 = ret_type
+        %527 = int 0
+        %528 = as_return %526, %527
+        %529 = ret %528
       }
     }
-    %519 = break_inline result, %518
+    %531 = break_inline result, %530
   }
 }

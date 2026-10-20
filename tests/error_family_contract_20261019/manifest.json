@@ -1,0 +1,780 @@
+{
+  "reference_version": "0.17.0",
+  "base_commit": "8fc08706a68d1fa913dcedbb240eca75d38a7ead",
+  "scope": "One shared sixty-case compile-only contract across symbolic error constants, finite membership/coercion/equality/merge and explicit error-union TYPE identity. All representation/consumer/control fences included in same sixty, no native execution, numeric error IDs, try/catch, error-union value construction or reflection expansion. NYI is never parity.",
+  "source_freeze_basis": "Actual final reference records; initial observations and five authorized same-slot revisions retained separately. No candidate-driven expectation generation.",
+  "cases": [
+    {
+      "file": "f01_runtime_error_load.zig",
+      "lane": "parity",
+      "category": "representation-boundary",
+      "source_sha256": "acd07df369e5386c02495e55ff2985b33162528347089863ac622a282ed0d456",
+      "reference": {
+        "status": 0,
+        "primaries": []
+      },
+      "observation": "runtime finite error load fence; no native execution",
+      "reference_classification": "VALID-UNSUPPORTED-BOUNDARY"
+    },
+    {
+      "file": "f02_internal_error_signature.zig",
+      "lane": "parity",
+      "category": "representation-boundary",
+      "source_sha256": "bee7f61e402aa62a7f68fe4f7596af5740a51d464c0577eb14542c8be8d1fd28",
+      "reference": {
+        "status": 0,
+        "primaries": []
+      },
+      "observation": "internal finite error parameter/return negative fence",
+      "reference_classification": "VALID-UNSUPPORTED-BOUNDARY"
+    },
+    {
+      "file": "f03_export_error_signature.zig",
+      "lane": "parity",
+      "category": "representation-boundary",
+      "source_sha256": "51a7f340ced851c77877a703c8e141330399c9f257d38321c45b89bc94895df2",
+      "reference": {
+        "status": 1,
+        "primaries": [
+          "parameter of type 'error{A,B}' not allowed in function with calling convention 'x86_64_sysv'",
+          "return type 'error{A,B}' not allowed in function with calling convention 'x86_64_sysv'"
+        ]
+      },
+      "observation": "exported C ABI reference-invalid finite error signatures",
+      "reference_classification": "REF-INVALID-BOUNDARY"
+    },
+    {
+      "file": "f04_error_layout.zig",
+      "lane": "parity",
+      "category": "representation-boundary",
+      "source_sha256": "aef02f770b41a8e4be5c9670bea8db092f735366900d336defbde1b1735018e3",
+      "reference": {
+        "status": 0,
+        "primaries": []
+      },
+      "observation": "finite layout queries no numeric assumption",
+      "reference_classification": "VALID-UNSUPPORTED-BOUNDARY"
+    },
+    {
+      "file": "f05_known_error_array.zig",
+      "lane": "parity",
+      "category": "representation-boundary",
+      "source_sha256": "55b1e490cc08bc4bed51a369ea24d627bbeb20278a15adc812fe3f7d65eb3ab2",
+      "reference": {
+        "status": 0,
+        "primaries": []
+      },
+      "observation": "known-element error aggregate backing fence",
+      "reference_classification": "VALID-UNSUPPORTED-BOUNDARY"
+    },
+    {
+      "file": "f06_zero_error_array.zig",
+      "lane": "parity",
+      "category": "representation-boundary",
+      "source_sha256": "b6ce28cf563c1fd943f9277ea801173004fffd5fc83f5d676b9da19f40fcc0aa",
+      "reference": {
+        "status": 0,
+        "primaries": []
+      },
+      "observation": "zero-array finite error backing fence",
+      "reference_classification": "VALID-UNSUPPORTED-BOUNDARY"
+    },
+    {
+      "file": "f07_error_zero_concat.zig",
+      "lane": "parity",
+      "category": "representation-boundary",
+      "source_sha256": "3ead67a437f021457f844655b14cbad2b6d5ef3500df63bf06804d7896d59fe7",
+      "reference": {
+        "status": 1,
+        "primaries": [
+          "use of undefined value here causes illegal behavior"
+        ]
+      },
+      "observation": "reference-invalid undefined finite error concat frontier",
+      "reference_classification": "REF-INVALID-BOUNDARY"
+    },
+    {
+      "file": "f08_error_alignment.zig",
+      "lane": "parity",
+      "category": "representation-boundary",
+      "source_sha256": "ffabbc38b2de380ecc68741458e48212d93f176017b050e0cdccb482905d3676",
+      "reference": {
+        "status": 0,
+        "primaries": []
+      },
+      "observation": "natural pointer alignment finite error demand",
+      "reference_classification": "VALID-UNSUPPORTED-BOUNDARY"
+    },
+    {
+      "file": "f09_runtime_error_merge.zig",
+      "lane": "parity",
+      "category": "representation-boundary",
+      "source_sha256": "fae6e7e6910fc1d2ffa248bf7285d9873d1f5e4b6263f9997fe2d500bb7e4383",
+      "reference": {
+        "status": 0,
+        "primaries": []
+      },
+      "observation": "two runtime-selected known symbolic errors vs single surviving known value; no typed runtime error TIR",
+      "reference_classification": "VALID-UNSUPPORTED-BOUNDARY"
+    },
+    {
+      "file": "f10_optional_error_value.zig",
+      "lane": "parity",
+      "category": "representation-boundary",
+      "source_sha256": "21c905c9c84ac56e972d2c40ebb7f76e7bfb5c567788d440f4a9e812df408de9",
+      "reference": {
+        "status": 0,
+        "primaries": []
+      },
+      "observation": "existing optional value negative fence, not optional support",
+      "reference_classification": "VALID-UNSUPPORTED-BOUNDARY"
+    },
+    {
+      "file": "f11_union_layout.zig",
+      "lane": "parity",
+      "category": "representation-boundary",
+      "source_sha256": "1fe4db61e444e343563761b3177ac55ab7a0302d9b7e6654cbcd8f0c3a248d73",
+      "reference": {
+        "status": 0,
+        "primaries": []
+      },
+      "observation": "Union size/alignment/zero-array size representation demands (combined parent-approved existing query slots).",
+      "reference_classification": "VALID-UNSUPPORTED-BOUNDARY"
+    },
+    {
+      "file": "f12_runtime_error_join_forms.zig",
+      "lane": "parity",
+      "category": "representation-boundary",
+      "source_sha256": "68ca7841b3f1a495e023f12cc3a6736dfb5beeceb35693221277feb6ab2d18dc",
+      "reference": {
+        "status": 0,
+        "primaries": []
+      },
+      "observation": "Runtime if/u8-switch/labeled-block joins of known errors must fence before runtime typed error TIR.",
+      "reference_classification": "VALID-UNSUPPORTED-BOUNDARY"
+    },
+    {
+      "file": "f13_indirect_union_signature.zig",
+      "lane": "parity",
+      "category": "representation-boundary",
+      "source_sha256": "cabe184040d1eb6aed07838d7c1cb80e0d3ba5a5a3b5c6a57d80c1bcabe2ad9d",
+      "reference": {
+        "status": 0,
+        "primaries": []
+      },
+      "observation": "compile-only opaque indirect union return admission fence; no value construction",
+      "reference_classification": "VALID-UNSUPPORTED-BOUNDARY"
+    },
+    {
+      "file": "f14_runtime_union_load.zig",
+      "lane": "parity",
+      "category": "representation-boundary",
+      "source_sha256": "8d607d741bb77e327eba489df158f23af1f466c14db09c13b4121f4e27fd599d",
+      "reference": {
+        "status": 0,
+        "primaries": []
+      },
+      "observation": "compile-only opaque union load/address admission fence; no value construction",
+      "reference_classification": "VALID-UNSUPPORTED-BOUNDARY"
+    },
+    {
+      "file": "f15_union_zero_concat.zig",
+      "lane": "parity",
+      "category": "representation-boundary",
+      "source_sha256": "36ade37d005d24f011c3b200ba219d2805ef3456c98d143d7eb29041d089db74",
+      "reference": {
+        "status": 1,
+        "primaries": [
+          "use of undefined value here causes illegal behavior"
+        ]
+      },
+      "observation": "reference-invalid undefined union zero-pointer concat frontier",
+      "reference_classification": "REF-INVALID-BOUNDARY"
+    },
+    {
+      "file": "f16_ordinary_discard_concat.zig",
+      "lane": "parity",
+      "category": "ordinary-discard-control",
+      "source_sha256": "c9343fd637c41b1e333c86d4c68415b888018b3ed0ab229acfeca0c7ab8e50e4",
+      "reference": {
+        "status": 0,
+        "primaries": []
+      },
+      "observation": "ordinary scalar/type underscore and terminating RHS plus concat controls",
+      "reference_classification": "REFERENCE-ACCEPT"
+    },
+    {
+      "file": "m01_known_widening.zig",
+      "lane": "parity",
+      "category": "finite-coercion-equality-merge",
+      "source_sha256": "c2f841ab5cbf50b9695d0124b7f490df62f2eb26508c5fc1fd9eb31f2bc26be0",
+      "reference": {
+        "status": 0,
+        "primaries": []
+      },
+      "observation": "singleton/subset widening with known member",
+      "reference_classification": "REFERENCE-ACCEPT"
+    },
+    {
+      "file": "m02_known_narrowing_member.zig",
+      "lane": "parity",
+      "category": "finite-coercion-equality-merge",
+      "source_sha256": "3def34cef6c9cc1209d2082bec9f8ac156bf77b4f794c1340046799837a2dc45",
+      "reference": {
+        "status": 1,
+        "primaries": [
+          "expected type 'error{A}', found 'error{A,B}'"
+        ]
+      },
+      "observation": "actual known-member narrowing legality",
+      "reference_classification": "REFERENCE-LANGUAGE-REJECT"
+    },
+    {
+      "file": "m03_known_narrowing_nonmember.zig",
+      "lane": "parity",
+      "category": "finite-coercion-equality-merge",
+      "source_sha256": "39416c2826c165b23112c56dff60cfe8a5cc342614048ed0a07b2b6be6d55c45",
+      "reference": {
+        "status": 1,
+        "primaries": [
+          "expected type 'error{A}', found 'error{A,B}'"
+        ]
+      },
+      "observation": "known nonmember narrowing rejection",
+      "reference_classification": "REFERENCE-LANGUAGE-REJECT"
+    },
+    {
+      "file": "m04_different_set_equality.zig",
+      "lane": "parity",
+      "category": "finite-coercion-equality-merge",
+      "source_sha256": "d4f32844b0061cd88c9f40709fbb5d77155126e9d29f9e44b186c21c0c061f8c",
+      "reference": {
+        "status": 0,
+        "primaries": []
+      },
+      "observation": "equality compares symbolic names across differently typed finite sets",
+      "reference_classification": "REFERENCE-ACCEPT"
+    },
+    {
+      "file": "m05_canonical_merge.zig",
+      "lane": "parity",
+      "category": "finite-coercion-equality-merge",
+      "source_sha256": "e2fb203eb2a3e8373311425061bd88c37729d447667f17bcd5bde53c0c9ea273",
+      "reference": {
+        "status": 0,
+        "primaries": []
+      },
+      "observation": "merge canonical order/alias/empty/decoded duplicate identities",
+      "reference_classification": "REFERENCE-ACCEPT"
+    },
+    {
+      "file": "m06_invalid_merge_left.zig",
+      "lane": "parity",
+      "category": "finite-coercion-equality-merge",
+      "source_sha256": "20a1c9a1e812767c7e740cc506f59799f23e3a3690cd95eaa2e7afd29e75e386",
+      "reference": {
+        "status": 1,
+        "primaries": [
+          "expected error set type, found 'u8'"
+        ]
+      },
+      "observation": "merge left scalar type",
+      "reference_classification": "REFERENCE-LANGUAGE-REJECT"
+    },
+    {
+      "file": "m07_invalid_merge_right.zig",
+      "lane": "parity",
+      "category": "finite-coercion-equality-merge",
+      "source_sha256": "af9389b76204203afbfb326ef47f586a43bc144066e5f6ad1873755e64407a40",
+      "reference": {
+        "status": 1,
+        "primaries": [
+          "expected error set type, found 'u8'"
+        ]
+      },
+      "observation": "merge right scalar type",
+      "reference_classification": "REFERENCE-LANGUAGE-REJECT"
+    },
+    {
+      "file": "m08_invalid_merge_value.zig",
+      "lane": "parity",
+      "category": "finite-coercion-equality-merge",
+      "source_sha256": "ea57e2456cecd9d614739c3751375a0886af4b3ef096a23863c1fe189cc4a066",
+      "reference": {
+        "status": 1,
+        "primaries": [
+          "expected type 'type', found 'error{A}'"
+        ]
+      },
+      "observation": "merge non-type error value",
+      "reference_classification": "REFERENCE-LANGUAGE-REJECT"
+    },
+    {
+      "file": "m09_merged_member.zig",
+      "lane": "parity",
+      "category": "finite-coercion-equality-merge",
+      "source_sha256": "e24317c6186eab194dec8e358af66c62319ce0f058112ffdbcdc84d96d714ae2",
+      "reference": {
+        "status": 0,
+        "primaries": []
+      },
+      "observation": "merged member result type draft owner-type hypothesis",
+      "reference_classification": "REFERENCE-ACCEPT"
+    },
+    {
+      "file": "m10_merge_nonlocal_break.zig",
+      "lane": "parity",
+      "category": "finite-coercion-equality-merge",
+      "source_sha256": "515600e7f567f9a01663f8b22a8ace6757155e810b0b9bb480d5be683954978b",
+      "reference": {
+        "status": 0,
+        "primaries": []
+      },
+      "observation": "merge RHS nonlocal break must preserve enclosing target",
+      "reference_classification": "REFERENCE-ACCEPT"
+    },
+    {
+      "file": "m11_merge_continue.zig",
+      "lane": "parity",
+      "category": "finite-coercion-equality-merge",
+      "source_sha256": "2944cf565517fc0f5998c7c1bbef3e77c023aa824f63cdbf71f912efbe89bbad",
+      "reference": {
+        "status": 0,
+        "primaries": []
+      },
+      "observation": "merge RHS runtime continue must preserve enclosing loop",
+      "reference_classification": "REFERENCE-ACCEPT"
+    },
+    {
+      "file": "m12_merge_typeof.zig",
+      "lane": "parity",
+      "category": "finite-coercion-equality-merge",
+      "source_sha256": "f669b1d794cad47d054c7e4f3131e027fcacd3e05358a1f45f9b853b072c1dc8",
+      "reference": {
+        "status": 0,
+        "primaries": []
+      },
+      "observation": "TypeOf query isolation for merge/known coercion",
+      "reference_classification": "REFERENCE-ACCEPT"
+    },
+    {
+      "file": "s01_literal_singleton.zig",
+      "lane": "parity",
+      "category": "symbolic-constants-members-consumers",
+      "source_sha256": "75659feb25aac544ef26b7f9cf5fc4b38228433290c0bc17168013311bfed94a",
+      "reference": {
+        "status": 0,
+        "primaries": []
+      },
+      "observation": "literal singleton type and decoded name equality",
+      "reference_classification": "REFERENCE-ACCEPT"
+    },
+    {
+      "file": "s02_member_result_type.zig",
+      "lane": "parity",
+      "category": "symbolic-constants-members-consumers",
+      "source_sha256": "2822502e7298e48993f2d5e46f9e586040036548b16dc155e2be894cdf78dc90",
+      "reference": {
+        "status": 0,
+        "primaries": []
+      },
+      "observation": "Actual pinned owner E member type, distinct literal singleton type; known value language equality.",
+      "reference_classification": "REFERENCE-ACCEPT"
+    },
+    {
+      "file": "s03_typed_known_locals.zig",
+      "lane": "parity",
+      "category": "symbolic-constants-members-consumers",
+      "source_sha256": "873c12b605f224fc8f21defebd1dc532ad1fbaf77730b25c8133dfabd5cf6118",
+      "reference": {
+        "status": 0,
+        "primaries": []
+      },
+      "observation": "known typed local/member no backing storage demand",
+      "reference_classification": "REFERENCE-ACCEPT"
+    },
+    {
+      "file": "s04_quoted_names.zig",
+      "lane": "parity",
+      "category": "symbolic-constants-members-consumers",
+      "source_sha256": "4c257e6ae0c760206232fd05b64166d53a3b259aa4db46de1ead3fa7e8d3758d",
+      "reference": {
+        "status": 0,
+        "primaries": []
+      },
+      "observation": "quoted keyword/space/decoded names",
+      "reference_classification": "REFERENCE-ACCEPT"
+    },
+    {
+      "file": "s05_missing_member.zig",
+      "lane": "parity",
+      "category": "symbolic-constants-members-consumers",
+      "source_sha256": "d3858f9c63fae2fcc3ab006425f973b6efe98e584bf1a7361bf520f1f554db12",
+      "reference": {
+        "status": 1,
+        "primaries": [
+          "no error named 'B' in 'error{A}'"
+        ]
+      },
+      "observation": "missing finite member",
+      "reference_classification": "REFERENCE-LANGUAGE-REJECT"
+    },
+    {
+      "file": "s06_empty_member.zig",
+      "lane": "parity",
+      "category": "symbolic-constants-members-consumers",
+      "source_sha256": "2b7bb5870445d60570a2f02e44dc286071b8eca76315eeda9356c983e6eb18ac",
+      "reference": {
+        "status": 1,
+        "primaries": [
+          "no error named 'A' in 'error{}'"
+        ]
+      },
+      "observation": "member of empty set",
+      "reference_classification": "REFERENCE-LANGUAGE-REJECT"
+    },
+    {
+      "file": "s07_undefined_metatype.zig",
+      "lane": "parity",
+      "category": "symbolic-constants-members-consumers",
+      "source_sha256": "eb2e46dea448e2ad1631b1250b7e7388e9fab0dcd1c63d59f8fe56d3f1985a8f",
+      "reference": {
+        "status": 1,
+        "primaries": [
+          "use of undefined value here causes illegal behavior"
+        ]
+      },
+      "observation": "undefined metatype member lookup",
+      "reference_classification": "REFERENCE-LANGUAGE-REJECT"
+    },
+    {
+      "file": "s08_explicit_discard.zig",
+      "lane": "parity",
+      "category": "symbolic-constants-members-consumers",
+      "source_sha256": "3703bdb1f88cbed996b643d87a2232d0b8299a058cffbe15bc3e3210055b1e8c",
+      "reference": {
+        "status": 1,
+        "primaries": [
+          "error set is discarded",
+          "error set is discarded",
+          "error set is discarded"
+        ]
+      },
+      "observation": "direct/alias/coerced finite error discard distinct operations",
+      "reference_classification": "REFERENCE-LANGUAGE-REJECT"
+    },
+    {
+      "file": "s09_empty_identifier.zig",
+      "lane": "parity",
+      "category": "symbolic-constants-members-consumers",
+      "source_sha256": "e988cae64809bfc86ca82cbf16ee0a7b08570cd2005f0308a5f0cb3e794771b7",
+      "reference": {
+        "status": 1,
+        "primaries": [
+          "identifier cannot be empty"
+        ]
+      },
+      "observation": "empty decoded literal identifier",
+      "reference_classification": "REFERENCE-LANGUAGE-REJECT"
+    },
+    {
+      "file": "s10_nul_identifier.zig",
+      "lane": "parity",
+      "category": "symbolic-constants-members-consumers",
+      "source_sha256": "3b0866474ae5041a4b8ae288f76944318e11799888361c88df98894b4b42a9e3",
+      "reference": {
+        "status": 1,
+        "primaries": [
+          "identifier cannot contain null bytes"
+        ]
+      },
+      "observation": "NUL decoded literal identifier",
+      "reference_classification": "REFERENCE-LANGUAGE-REJECT"
+    },
+    {
+      "file": "s11_namespace_forward.zig",
+      "lane": "parity",
+      "category": "symbolic-constants-members-consumers",
+      "source_sha256": "67db6fe67d159899dc59f18c322e2226ffb20bb464527b5105c3bba01fc4da1e",
+      "reference": {
+        "status": 0,
+        "primaries": []
+      },
+      "observation": "namespace forward dependency known symbolic value",
+      "reference_classification": "REFERENCE-ACCEPT"
+    },
+    {
+      "file": "s12_unselected_semantics.zig",
+      "lane": "parity",
+      "category": "symbolic-constants-members-consumers",
+      "source_sha256": "b2d469ba03930047b5d74ba95131b518e2a757248299bf81440b2f20ab1702f2",
+      "reference": {
+        "status": 0,
+        "primaries": []
+      },
+      "observation": "unselected semantic-invalid coercion/discard and unused body remain lazy",
+      "reference_classification": "REFERENCE-ACCEPT"
+    },
+    {
+      "file": "s13_dead_undeclared.zig",
+      "lane": "parity",
+      "category": "existing-lexical-control",
+      "source_sha256": "efefe20948f64fbfb61f97cb3c73aae84bba395d7287562932a91f0bff47d829",
+      "reference": {
+        "status": 1,
+        "primaries": [
+          "use of undeclared identifier 'not_declared'"
+        ]
+      },
+      "observation": "undeclared name eager even in dead branch",
+      "reference_classification": "REFERENCE-LANGUAGE-REJECT"
+    },
+    {
+      "file": "s14_dead_shadow.zig",
+      "lane": "parity",
+      "category": "existing-lexical-control",
+      "source_sha256": "3713910f1e00037a19e62166d65a72033925707c590ef7efc01fd90161307b78",
+      "reference": {
+        "status": 1,
+        "primaries": [
+          "local constant 'x' shadows local constant from outer scope"
+        ]
+      },
+      "observation": "shadowing eager even in dead branch",
+      "reference_classification": "REFERENCE-LANGUAGE-REJECT"
+    },
+    {
+      "file": "s15_dead_unused.zig",
+      "lane": "parity",
+      "category": "existing-lexical-control",
+      "source_sha256": "d5769a2136710dfdcdc43c6215b5f4950490d8560d3a7da0fd0247067e0724d8",
+      "reference": {
+        "status": 1,
+        "primaries": [
+          "unused local constant"
+        ]
+      },
+      "observation": "unused local eager even in dead branch",
+      "reference_classification": "REFERENCE-LANGUAGE-REJECT"
+    },
+    {
+      "file": "s16_ignored_error.zig",
+      "lane": "parity",
+      "category": "symbolic-constants-members-consumers",
+      "source_sha256": "2d2aa6956b10cc03e7603e4edc6abb0d507a3714d5532c09f4dd962fbe82cf90",
+      "reference": {
+        "status": 1,
+        "primaries": [
+          "error set of type 'error{A}' is ignored"
+        ]
+      },
+      "observation": "ignored error expression differs from explicit discard",
+      "reference_classification": "REFERENCE-LANGUAGE-REJECT"
+    },
+    {
+      "file": "u01_canonical_union.zig",
+      "lane": "parity",
+      "category": "error-union-type-foundation",
+      "source_sha256": "3ef3679c38af4ea294a70fd3d7f285e4f9c2cf4906da77d3f70f698c3e3e6017",
+      "reference": {
+        "status": 0,
+        "primaries": []
+      },
+      "observation": "Canonical finite error-set union alias/order identity plus ANYERROR LHS TYPE identity/distinction; no values.",
+      "reference_classification": "REFERENCE-ACCEPT"
+    },
+    {
+      "file": "u02_distinct_union.zig",
+      "lane": "parity",
+      "category": "error-union-type-foundation",
+      "source_sha256": "7812e501b574a395c6254ce8910ac717b27ebf8a36b489fdc9cbeed051e687c1",
+      "reference": {
+        "status": 0,
+        "primaries": []
+      },
+      "observation": "different payloads/error sets remain distinct",
+      "reference_classification": "REFERENCE-ACCEPT"
+    },
+    {
+      "file": "u03_union_metatype_pointer.zig",
+      "lane": "parity",
+      "category": "error-union-type-foundation",
+      "source_sha256": "081de3ccf273d6346baba422313cc0ea955c37869b837296ee33405302c2fd0f",
+      "reference": {
+        "status": 0,
+        "primaries": []
+      },
+      "observation": "metatype/TypeOf/pointer qualifiers no union values",
+      "reference_classification": "REFERENCE-ACCEPT"
+    },
+    {
+      "file": "u04_union_nesting.zig",
+      "lane": "parity",
+      "category": "error-union-type-foundation",
+      "source_sha256": "ea3656ffc00949812d17e08849bb785e1c76c36a54eefb6d7bb5cbb45b53cd08",
+      "reference": {
+        "status": 0,
+        "primaries": []
+      },
+      "observation": "optional/nested union type composition actual legality",
+      "reference_classification": "REFERENCE-ACCEPT"
+    },
+    {
+      "file": "u05_empty_union_identity.zig",
+      "lane": "parity",
+      "category": "error-union-type-foundation",
+      "source_sha256": "c561ccaa98e3726c5796f86cfbe2e1596d0ddbe8b113564cfefb9a41f290eff2",
+      "reference": {
+        "status": 0,
+        "primaries": []
+      },
+      "observation": "empty set union identity distinct from payload/noreturn hypothesis",
+      "reference_classification": "REFERENCE-ACCEPT"
+    },
+    {
+      "file": "u06_void_noreturn_children.zig",
+      "lane": "parity",
+      "category": "error-union-type-foundation",
+      "source_sha256": "fbee89f963fcc20d44b136a24024039f31018f310ba99256c9d33ef3a01d8f5f",
+      "reference": {
+        "status": 0,
+        "primaries": []
+      },
+      "observation": "void/noreturn payload type legality",
+      "reference_classification": "REFERENCE-ACCEPT"
+    },
+    {
+      "file": "u07_comptime_children.zig",
+      "lane": "parity",
+      "category": "error-union-type-foundation",
+      "source_sha256": "a5ab68f23d40a500ce0d7283eb9fe1e5175473065dbc3ff9d6f35d2c3b8aca10",
+      "reference": {
+        "status": 0,
+        "primaries": []
+      },
+      "observation": "comptime-only payload type legality",
+      "reference_classification": "REFERENCE-ACCEPT"
+    },
+    {
+      "file": "u08_error_set_payload.zig",
+      "lane": "parity",
+      "category": "error-union-type-foundation",
+      "source_sha256": "96fce31e3f147bbe6d7fb7cb0f9a64107ca1930ccbf8252e01c0305af766f870",
+      "reference": {
+        "status": 1,
+        "primaries": [
+          "error union with payload of error set type 'error{B}' not allowed",
+          "error union with payload of error set type 'anyerror' not allowed"
+        ]
+      },
+      "observation": "Finite and ANYERROR error-set payload legality, separate independently reached functions.",
+      "reference_classification": "REFERENCE-LANGUAGE-REJECT"
+    },
+    {
+      "file": "u09_opaque_payload.zig",
+      "lane": "parity",
+      "category": "error-union-type-foundation",
+      "source_sha256": "998823f642d2482e825328a993d4838ea1ecf71f477e2fc1c523eba02cc524df",
+      "reference": {
+        "status": 1,
+        "primaries": [
+          "error union with payload of opaque type 'anyopaque' not allowed"
+        ]
+      },
+      "observation": "anyopaque child admission actual reference, no guessing",
+      "reference_classification": "REFERENCE-LANGUAGE-REJECT"
+    },
+    {
+      "file": "u10_invalid_union_left.zig",
+      "lane": "parity",
+      "category": "error-union-type-foundation",
+      "source_sha256": "69a0d64abb323a5dbb742162948be33a5114f82946e42695c94d370deea114b4",
+      "reference": {
+        "status": 1,
+        "primaries": [
+          "expected error set type, found 'u8'"
+        ]
+      },
+      "observation": "union left scalar non-error-set type",
+      "reference_classification": "REFERENCE-LANGUAGE-REJECT"
+    },
+    {
+      "file": "u11_invalid_union_value_left.zig",
+      "lane": "parity",
+      "category": "error-union-type-foundation",
+      "source_sha256": "e5355c4bd46689f7d4d67c8916d0a5e329d3dd5c07a1384b9e70182605ce767c",
+      "reference": {
+        "status": 1,
+        "primaries": [
+          "expected type 'type', found 'error{A}'"
+        ]
+      },
+      "observation": "union left symbolic value rather than type",
+      "reference_classification": "REFERENCE-LANGUAGE-REJECT"
+    },
+    {
+      "file": "u12_invalid_union_payload.zig",
+      "lane": "parity",
+      "category": "error-union-type-foundation",
+      "source_sha256": "144184185c0d6f18941d210a69d72a7b13d56f487b4541abc3fcb4567b48e0c9",
+      "reference": {
+        "status": 1,
+        "primaries": [
+          "expected type 'type', found 'comptime_int'"
+        ]
+      },
+      "observation": "union right non-type value",
+      "reference_classification": "REFERENCE-LANGUAGE-REJECT"
+    },
+    {
+      "file": "u13_invalid_union_pointer_left.zig",
+      "lane": "parity",
+      "category": "error-union-type-foundation",
+      "source_sha256": "f0bc4fd8922617f221b9988d4a8266896aa25ed8492079180a1ba1ae323acbed",
+      "reference": {
+        "status": 1,
+        "primaries": [
+          "expected error set type, found '*const error{A}'"
+        ]
+      },
+      "observation": "union left pointer non-error-set type",
+      "reference_classification": "REFERENCE-LANGUAGE-REJECT"
+    },
+    {
+      "file": "u14_lazy_invalid_union.zig",
+      "lane": "parity",
+      "category": "error-union-type-foundation",
+      "source_sha256": "b3e608709ad8f6030b862008f9b88a3a2f8502af25ebdeb405a9b4df69f81edf",
+      "reference": {
+        "status": 0,
+        "primaries": []
+      },
+      "observation": "unused constructors remain semantically lazy",
+      "reference_classification": "REFERENCE-ACCEPT"
+    },
+    {
+      "file": "u15_union_nonlocal_controls.zig",
+      "lane": "parity",
+      "category": "error-union-type-foundation",
+      "source_sha256": "e44c90a1dc699b58d6e71cf55dc7acebe02a1cc124539f274cbd358eb04a7f5f",
+      "reference": {
+        "status": 0,
+        "primaries": []
+      },
+      "observation": "union operand nonlocal break/continue",
+      "reference_classification": "REFERENCE-ACCEPT"
+    },
+    {
+      "file": "u16_union_pointer_nominal.zig",
+      "lane": "parity",
+      "category": "error-union-type-foundation",
+      "source_sha256": "237c3280dfe4a190c64df27b98c0e3747337239f4546e9100e85c6b32f99c50c",
+      "reference": {
+        "status": 0,
+        "primaries": []
+      },
+      "observation": "pointer-only nominal struct/zero-array TYPE identity no layout",
+      "reference_classification": "REFERENCE-ACCEPT"
+    }
+  ]
+}

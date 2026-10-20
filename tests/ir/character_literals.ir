@@ -1,4 +1,4 @@
-%226 = struct_decl (flags=0) {
+%235 = struct_decl (flags=0) {
   decl fn "add" value {
     %9 = func "add" {
       %1 = param "a" type {
@@ -20,7 +20,7 @@
     %10 = break_inline result, %9
   }
   decl fn "main" pub value {
-    %224 = func "main" {
+    %233 = func "main" {
       ret type {
         %11 = break_inline result, @type_u8
       }
@@ -48,235 +48,244 @@
         } else {
           %29 = break_inline result, @void_value
         }
-        %31 = int 10
+        %31 = check_unused_error %30
         %32 = int 10
-        %33 = cmp_neq %31, %32
-        %38 = bool_or %33 rhs {
-          %34 = int 13
+        %33 = int 10
+        %34 = cmp_neq %32, %33
+        %39 = bool_or %34 rhs {
           %35 = int 13
-          %36 = cmp_neq %34, %35
-          %37 = break_inline result, %36
+          %36 = int 13
+          %37 = cmp_neq %35, %36
+          %38 = break_inline result, %37
         }
-        %43 = bool_or %38 rhs {
-          %39 = int 9
+        %44 = bool_or %39 rhs {
           %40 = int 9
-          %41 = cmp_neq %39, %40
-          %42 = break_inline result, %41
+          %41 = int 9
+          %42 = cmp_neq %40, %41
+          %43 = break_inline result, %42
         }
-        %49 = if %43 then {
-          %44 = ret_type
-          %45 = int 2
-          %46 = as_return %44, %45
-          %47 = ret %46
+        %50 = if %44 then {
+          %45 = ret_type
+          %46 = int 2
+          %47 = as_return %45, %46
+          %48 = ret %47
         } else {
-          %48 = break_inline result, @void_value
+          %49 = break_inline result, @void_value
         }
-        %50 = int 92
-        %51 = int 92
-        %52 = cmp_neq %50, %51
-        %57 = bool_or %52 rhs {
-          %53 = int 39
-          %54 = int 39
-          %55 = cmp_neq %53, %54
-          %56 = break_inline result, %55
+        %51 = check_unused_error %50
+        %52 = int 92
+        %53 = int 92
+        %54 = cmp_neq %52, %53
+        %59 = bool_or %54 rhs {
+          %55 = int 39
+          %56 = int 39
+          %57 = cmp_neq %55, %56
+          %58 = break_inline result, %57
         }
-        %62 = bool_or %57 rhs {
-          %58 = int 34
-          %59 = int 34
-          %60 = cmp_neq %58, %59
-          %61 = break_inline result, %60
+        %64 = bool_or %59 rhs {
+          %60 = int 34
+          %61 = int 34
+          %62 = cmp_neq %60, %61
+          %63 = break_inline result, %62
         }
-        %68 = if %62 then {
-          %63 = ret_type
-          %64 = int 3
-          %65 = as_return %63, %64
-          %66 = ret %65
+        %70 = if %64 then {
+          %65 = ret_type
+          %66 = int 3
+          %67 = as_return %65, %66
+          %68 = ret %67
         } else {
-          %67 = break_inline result, @void_value
+          %69 = break_inline result, @void_value
         }
-        %69 = int 0
-        %70 = int 0
-        %71 = cmp_neq %69, %70
-        %76 = bool_or %71 rhs {
-          %72 = int 127
-          %73 = int 127
-          %74 = cmp_neq %72, %73
-          %75 = break_inline result, %74
+        %71 = check_unused_error %70
+        %72 = int 0
+        %73 = int 0
+        %74 = cmp_neq %72, %73
+        %79 = bool_or %74 rhs {
+          %75 = int 127
+          %76 = int 127
+          %77 = cmp_neq %75, %76
+          %78 = break_inline result, %77
         }
-        %81 = bool_or %76 rhs {
-          %77 = int 255
-          %78 = int 255
-          %79 = cmp_neq %77, %78
-          %80 = break_inline result, %79
+        %84 = bool_or %79 rhs {
+          %80 = int 255
+          %81 = int 255
+          %82 = cmp_neq %80, %81
+          %83 = break_inline result, %82
         }
-        %87 = if %81 then {
-          %82 = ret_type
-          %83 = int 4
-          %84 = as_return %82, %83
-          %85 = ret %84
+        %90 = if %84 then {
+          %85 = ret_type
+          %86 = int 4
+          %87 = as_return %85, %86
+          %88 = ret %87
         } else {
-          %86 = break_inline result, @void_value
+          %89 = break_inline result, @void_value
         }
-        %88 = int 228
-        %89 = int 228
-        %90 = cmp_neq %88, %89
-        %95 = bool_or %90 rhs {
-          %91 = int 12353
-          %92 = int 12353
-          %93 = cmp_neq %91, %92
-          %94 = break_inline result, %93
+        %91 = check_unused_error %90
+        %92 = int 228
+        %93 = int 228
+        %94 = cmp_neq %92, %93
+        %99 = bool_or %94 rhs {
+          %95 = int 12353
+          %96 = int 12353
+          %97 = cmp_neq %95, %96
+          %98 = break_inline result, %97
         }
-        %100 = bool_or %95 rhs {
-          %96 = int 128512
-          %97 = int 128512
-          %98 = cmp_neq %96, %97
-          %99 = break_inline result, %98
+        %104 = bool_or %99 rhs {
+          %100 = int 128512
+          %101 = int 128512
+          %102 = cmp_neq %100, %101
+          %103 = break_inline result, %102
         }
-        %106 = if %100 then {
-          %101 = ret_type
-          %102 = int 5
-          %103 = as_return %101, %102
-          %104 = ret %103
+        %110 = if %104 then {
+          %105 = ret_type
+          %106 = int 5
+          %107 = as_return %105, %106
+          %108 = ret %107
         } else {
-          %105 = break_inline result, @void_value
+          %109 = break_inline result, @void_value
         }
-        %107 = int 2047
-        %108 = int 2047
-        %109 = cmp_neq %107, %108
-        %114 = bool_or %109 rhs {
-          %110 = int 1114111
-          %111 = int 1114111
-          %112 = cmp_neq %110, %111
-          %113 = break_inline result, %112
+        %111 = check_unused_error %110
+        %112 = int 2047
+        %113 = int 2047
+        %114 = cmp_neq %112, %113
+        %119 = bool_or %114 rhs {
+          %115 = int 1114111
+          %116 = int 1114111
+          %117 = cmp_neq %115, %116
+          %118 = break_inline result, %117
         }
-        %120 = if %114 then {
-          %115 = ret_type
-          %116 = int 6
-          %117 = as_return %115, %116
-          %118 = ret %117
+        %125 = if %119 then {
+          %120 = ret_type
+          %121 = int 6
+          %122 = as_return %120, %121
+          %123 = ret %122
         } else {
-          %119 = break_inline result, @void_value
+          %124 = break_inline result, @void_value
         }
-        %121 = int 55296
-        %122 = int 55296
-        %123 = cmp_neq %121, %122
-        %128 = bool_or %123 rhs {
-          %124 = int 57343
-          %125 = int 57343
-          %126 = cmp_neq %124, %125
-          %127 = break_inline result, %126
+        %126 = check_unused_error %125
+        %127 = int 55296
+        %128 = int 55296
+        %129 = cmp_neq %127, %128
+        %134 = bool_or %129 rhs {
+          %130 = int 57343
+          %131 = int 57343
+          %132 = cmp_neq %130, %131
+          %133 = break_inline result, %132
         }
-        %134 = if %128 then {
-          %129 = ret_type
-          %130 = int 7
-          %131 = as_return %129, %130
-          %132 = ret %131
+        %140 = if %134 then {
+          %135 = ret_type
+          %136 = int 7
+          %137 = as_return %135, %136
+          %138 = ret %137
         } else {
-          %133 = break_inline result, @void_value
+          %139 = break_inline result, @void_value
         }
-        %135 = int 4
-        %136 = as @type_usize, %135
-        %137 = int_type u21
-        %138 = array_type %136, %137
-        %139 = array_elem_type %138
-        %140 = int 228
-        %141 = as %139, %140
-        %142 = int 12353
-        %143 = as %139, %142
-        %144 = int 128512
-        %145 = as %139, %144
-        %146 = int 1114111
-        %147 = as %139, %146
-        %148 = array_init %138, %141, %143, %145, %147
-        %149 = decl_val "add"
-        %150 = call %149 arg0 {
-          %151 = arg_type %150, 0
-          %152 = int 0
-          %153 = as @type_usize, %152
-          %154 = array_index %148, %153
-          %155 = as %151, %154
-          %156 = break_inline result, %155
+        %141 = check_unused_error %140
+        %142 = int 4
+        %143 = as @type_usize, %142
+        %144 = int_type u21
+        %145 = array_type %143, %144
+        %146 = array_elem_type %145
+        %147 = int 228
+        %148 = as %146, %147
+        %149 = int 12353
+        %150 = as %146, %149
+        %151 = int 128512
+        %152 = as %146, %151
+        %153 = int 1114111
+        %154 = as %146, %153
+        %155 = array_init %145, %148, %150, %152, %154
+        %156 = decl_val "add"
+        %157 = call %156 arg0 {
+          %158 = arg_type %157, 0
+          %159 = int 0
+          %160 = as @type_usize, %159
+          %161 = array_index %155, %160
+          %162 = as %158, %161
+          %163 = break_inline result, %162
         } arg1 {
-          %157 = arg_type %150, 1
-          %158 = int 1
-          %159 = as @type_usize, %158
-          %160 = array_index %148, %159
-          %161 = as %157, %160
-          %162 = break_inline result, %161
+          %164 = arg_type %157, 1
+          %165 = int 1
+          %166 = as @type_usize, %165
+          %167 = array_index %155, %166
+          %168 = as %164, %167
+          %169 = break_inline result, %168
         }
-        %163 = int 12581
-        %164 = cmp_neq %150, %163
-        %182 = bool_or %164 rhs {
-          %165 = decl_val "add"
-          %166 = call %165 arg0 {
-            %167 = arg_type %166, 0
-            %168 = int 2
-            %169 = as @type_usize, %168
-            %170 = array_index %148, %169
-            %171 = as %167, %170
-            %172 = break_inline result, %171
+        %170 = int 12581
+        %171 = cmp_neq %157, %170
+        %189 = bool_or %171 rhs {
+          %172 = decl_val "add"
+          %173 = call %172 arg0 {
+            %174 = arg_type %173, 0
+            %175 = int 2
+            %176 = as @type_usize, %175
+            %177 = array_index %155, %176
+            %178 = as %174, %177
+            %179 = break_inline result, %178
           } arg1 {
-            %173 = arg_type %166, 1
-            %174 = int 3
-            %175 = as @type_usize, %174
-            %176 = array_index %148, %175
-            %177 = as %173, %176
-            %178 = break_inline result, %177
+            %180 = arg_type %173, 1
+            %181 = int 3
+            %182 = as @type_usize, %181
+            %183 = array_index %155, %182
+            %184 = as %180, %183
+            %185 = break_inline result, %184
           }
-          %179 = int 1242623
-          %180 = cmp_neq %166, %179
-          %181 = break_inline result, %180
+          %186 = int 1242623
+          %187 = cmp_neq %173, %186
+          %188 = break_inline result, %187
         }
-        %188 = if %182 then {
-          %183 = ret_type
-          %184 = int 8
-          %185 = as_return %183, %184
-          %186 = ret %185
+        %195 = if %189 then {
+          %190 = ret_type
+          %191 = int 8
+          %192 = as_return %190, %191
+          %193 = ret %192
         } else {
-          %187 = break_inline result, @void_value
+          %194 = break_inline result, @void_value
         }
-        %189 = str "\xff\xdf\xbf\xf0\x90\x80\x80"
-        %190 = field_val "len", %189
-        %191 = int 7
-        %192 = cmp_neq %190, %191
-        %199 = bool_or %192 rhs {
-          %193 = int 0
-          %194 = as @type_usize, %193
-          %195 = array_index %189, %194
-          %196 = int 255
-          %197 = cmp_neq %195, %196
-          %198 = break_inline result, %197
+        %196 = check_unused_error %195
+        %197 = str "\xff\xdf\xbf\xf0\x90\x80\x80"
+        %198 = field_val "len", %197
+        %199 = int 7
+        %200 = cmp_neq %198, %199
+        %207 = bool_or %200 rhs {
+          %201 = int 0
+          %202 = as @type_usize, %201
+          %203 = array_index %197, %202
+          %204 = int 255
+          %205 = cmp_neq %203, %204
+          %206 = break_inline result, %205
         }
-        %206 = bool_or %199 rhs {
-          %200 = int 1
-          %201 = as @type_usize, %200
-          %202 = array_index %189, %201
-          %203 = int 223
-          %204 = cmp_neq %202, %203
-          %205 = break_inline result, %204
+        %214 = bool_or %207 rhs {
+          %208 = int 1
+          %209 = as @type_usize, %208
+          %210 = array_index %197, %209
+          %211 = int 223
+          %212 = cmp_neq %210, %211
+          %213 = break_inline result, %212
         }
-        %213 = bool_or %206 rhs {
-          %207 = int 3
-          %208 = as @type_usize, %207
-          %209 = array_index %189, %208
-          %210 = int 240
-          %211 = cmp_neq %209, %210
-          %212 = break_inline result, %211
+        %221 = bool_or %214 rhs {
+          %215 = int 3
+          %216 = as @type_usize, %215
+          %217 = array_index %197, %216
+          %218 = int 240
+          %219 = cmp_neq %217, %218
+          %220 = break_inline result, %219
         }
-        %219 = if %213 then {
-          %214 = ret_type
-          %215 = int 9
-          %216 = as_return %214, %215
-          %217 = ret %216
+        %227 = if %221 then {
+          %222 = ret_type
+          %223 = int 9
+          %224 = as_return %222, %223
+          %225 = ret %224
         } else {
-          %218 = break_inline result, @void_value
+          %226 = break_inline result, @void_value
         }
-        %220 = ret_type
-        %221 = int 0
-        %222 = as_return %220, %221
-        %223 = ret %222
+        %228 = check_unused_error %227
+        %229 = ret_type
+        %230 = int 0
+        %231 = as_return %229, %230
+        %232 = ret %231
       }
     }
-    %225 = break_inline result, %224
+    %234 = break_inline result, %233
   }
 }

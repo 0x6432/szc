@@ -535,6 +535,9 @@ value_hash(const Value *value)
 	case VALUE_ENUM_LITERAL:
 		hash = hash_mix(hash, value->as.enum_literal);
 		break;
+	case VALUE_ERROR:
+		hash = hash_mix(hash, value->as.error_name);
+		break;
 	case VALUE_TYPE:
 		hash = hash_mix(hash, value->as.type_value);
 		break;
@@ -615,6 +618,8 @@ value_equal(const Value *a, const Value *b)
 		return a->as.enum_tag == b->as.enum_tag;
 	case VALUE_ENUM_LITERAL:
 		return a->as.enum_literal == b->as.enum_literal;
+	case VALUE_ERROR:
+		return a->as.error_name == b->as.error_name;
 	case VALUE_TYPE:
 		return a->as.type_value == b->as.type_value;
 	case VALUE_GLOBAL:
@@ -839,6 +844,14 @@ value_enum_literal(ValueTable *table, TypeId type, StringId name)
 {
 	Value value = make_value(VALUE_ENUM_LITERAL, type);
 	value.as.enum_literal = name;
+	return value_intern(table, &value);
+}
+
+ValueId
+value_error(ValueTable *table, TypeId type, StringId name)
+{
+	Value value = make_value(VALUE_ERROR, type);
+	value.as.error_name = name;
 	return value_intern(table, &value);
 }
 

@@ -1,4 +1,4 @@
-%90 = struct_decl (flags=0) {
+%91 = struct_decl (flags=0) {
   decl const "value" type {
     %0 = break_inline result, @type_u32
   } align {
@@ -73,7 +73,7 @@
     %48 = break_inline result, %47
   }
   decl fn "main" pub value {
-    %88 = func "main" {
+    %89 = func "main" {
       ret type {
         %49 = break_inline result, @type_u8
       }
@@ -118,12 +118,13 @@
         } else {
           %82 = break_inline result, @void_value
         }
-        %84 = ret_type
-        %85 = int 0
-        %86 = as_return %84, %85
-        %87 = ret %86
+        %84 = check_unused_error %83
+        %85 = ret_type
+        %86 = int 0
+        %87 = as_return %85, %86
+        %88 = ret %87
       }
     }
-    %89 = break_inline result, %88
+    %90 = break_inline result, %89
   }
 }

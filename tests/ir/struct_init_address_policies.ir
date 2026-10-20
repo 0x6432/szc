@@ -1,4 +1,4 @@
-%77 = struct_decl (flags=0) {
+%83 = struct_decl (flags=0) {
   decl const "S" value {
     %1 = struct_decl (flags=0) {
       field "a" type {
@@ -13,7 +13,7 @@
     %4 = break_inline result, %3
   }
   decl fn "main" pub value {
-    %75 = func "main" {
+    %81 = func "main" {
       ret type {
         %5 = break_inline result, @type_void
       }
@@ -88,9 +88,15 @@
         %71 = as %69, %70
         %72 = ref %71
         %73 = as %66, %72
-        %74 = ret_implicit
+        %74 = discard %17
+        %75 = discard %24
+        %76 = discard %35
+        %77 = discard %51
+        %78 = discard %62
+        %79 = discard %73
+        %80 = ret_implicit
       }
     }
-    %76 = break_inline result, %75
+    %82 = break_inline result, %81
   }
 }

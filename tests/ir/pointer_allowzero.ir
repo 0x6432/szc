@@ -1,4 +1,4 @@
-%155 = struct_decl (flags=0) {
+%157 = struct_decl (flags=0) {
   decl var "value" type {
     %0 = break_inline result, @type_u8
   } value {
@@ -120,7 +120,7 @@
     %77 = break_inline result, %76
   }
   decl fn "main" pub value {
-    %153 = func "main" {
+    %155 = func "main" {
       ret type {
         %78 = break_inline result, @type_u8
       }
@@ -159,57 +159,59 @@
         } else {
           %109 = break_inline result, @void_value
         }
-        %111 = ptr_type @type_u8, @false allowzero
-        %112 = ptr_type @type_u8, @false
-        %113 = cmp_eq %111, %112
-        %119 = if %113 then {
-          %114 = ret_type
-          %115 = int 2
-          %116 = as_return %114, %115
-          %117 = ret %116
+        %111 = check_unused_error %110
+        %112 = ptr_type @type_u8, @false allowzero
+        %113 = ptr_type @type_u8, @false
+        %114 = cmp_eq %112, %113
+        %120 = if %114 then {
+          %115 = ret_type
+          %116 = int 2
+          %117 = as_return %115, %116
+          %118 = ret %117
         } else {
-          %118 = break_inline result, @void_value
+          %119 = break_inline result, @void_value
         }
-        %120 = ret_type
-        %121 = decl_val "select"
-        %122 = call %121 arg0 {
-          %123 = arg_type %122, 0
-          %124 = as %123, @false
-          %125 = break_inline result, %124
+        %121 = check_unused_error %120
+        %122 = ret_type
+        %123 = decl_val "select"
+        %124 = call %123 arg0 {
+          %125 = arg_type %124, 0
+          %126 = as %125, @false
+          %127 = break_inline result, %126
         } arg1 {
-          %126 = arg_type %122, 1
-          %127 = decl_ref "value"
-          %128 = as %126, %127
-          %129 = break_inline result, %128
+          %128 = arg_type %124, 1
+          %129 = decl_ref "value"
+          %130 = as %128, %129
+          %131 = break_inline result, %130
         } arg2 {
-          %130 = arg_type %122, 2
-          %131 = decl_val "pointer"
-          %132 = as %130, %131
-          %133 = break_inline result, %132
+          %132 = arg_type %124, 2
+          %133 = decl_val "pointer"
+          %134 = as %132, %133
+          %135 = break_inline result, %134
         }
-        %134 = deref %122
-        %135 = decl_val "read"
-        %136 = call %135 arg0 {
-          %137 = arg_type %136, 0
-          %138 = deref %94
-          %139 = as %137, %138
-          %140 = break_inline result, %139
+        %136 = deref %124
+        %137 = decl_val "read"
+        %138 = call %137 arg0 {
+          %139 = arg_type %138, 0
+          %140 = deref %94
+          %141 = as %139, %140
+          %142 = break_inline result, %141
         }
-        %141 = add %134, %136
-        %142 = decl_val "call"
-        %143 = call %142 arg0 {
-          %144 = arg_type %143, 0
-          %145 = decl_val "read"
-          %146 = as %144, %145
-          %147 = break_inline result, %146
+        %143 = add %136, %138
+        %144 = decl_val "call"
+        %145 = call %144 arg0 {
+          %146 = arg_type %145, 0
+          %147 = decl_val "read"
+          %148 = as %146, %147
+          %149 = break_inline result, %148
         }
-        %148 = add %141, %143
-        %149 = int 36
-        %150 = sub %148, %149
-        %151 = as_return %120, %150
-        %152 = ret %151
+        %150 = add %143, %145
+        %151 = int 36
+        %152 = sub %150, %151
+        %153 = as_return %122, %152
+        %154 = ret %153
       }
     }
-    %154 = break_inline result, %153
+    %156 = break_inline result, %155
   }
 }

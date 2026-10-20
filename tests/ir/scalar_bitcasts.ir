@@ -1,4 +1,4 @@
-%426 = struct_decl (flags=0) {
+%438 = struct_decl (flags=0) {
   decl fn "signed5" value {
     %8 = func "signed5" {
       %2 = param "n" type {
@@ -264,7 +264,7 @@
     %145 = break_inline result, %144
   }
   decl fn "main" pub value {
-    %424 = func "main" {
+    %436 = func "main" {
       ret type {
         %146 = break_inline result, @type_u8
       }
@@ -312,296 +312,308 @@
         } else {
           %181 = break_inline result, @void_value
         }
-        %183 = decl_val "unsigned5"
-        %184 = call %183 arg0 {
-          %185 = arg_type %184, 0
-          %186 = int 1
-          %187 = negate %186
-          %188 = as %185, %187
-          %189 = break_inline result, %188
+        %183 = check_unused_error %182
+        %184 = decl_val "unsigned5"
+        %185 = call %184 arg0 {
+          %186 = arg_type %185, 0
+          %187 = int 1
+          %188 = negate %187
+          %189 = as %186, %188
+          %190 = break_inline result, %189
         }
-        %190 = int 31
-        %191 = cmp_neq %184, %190
-        %202 = bool_or %191 rhs {
-          %192 = decl_val "unsigned5"
-          %193 = call %192 arg0 {
-            %194 = arg_type %193, 0
-            %195 = int 16
-            %196 = negate %195
-            %197 = as %194, %196
-            %198 = break_inline result, %197
+        %191 = int 31
+        %192 = cmp_neq %185, %191
+        %203 = bool_or %192 rhs {
+          %193 = decl_val "unsigned5"
+          %194 = call %193 arg0 {
+            %195 = arg_type %194, 0
+            %196 = int 16
+            %197 = negate %196
+            %198 = as %195, %197
+            %199 = break_inline result, %198
           }
-          %199 = int 16
-          %200 = cmp_neq %193, %199
-          %201 = break_inline result, %200
+          %200 = int 16
+          %201 = cmp_neq %194, %200
+          %202 = break_inline result, %201
         }
-        %208 = if %202 then {
-          %203 = ret_type
-          %204 = int 2
-          %205 = as_return %203, %204
-          %206 = ret %205
+        %209 = if %203 then {
+          %204 = ret_type
+          %205 = int 2
+          %206 = as_return %204, %205
+          %207 = ret %206
         } else {
-          %207 = break_inline result, @void_value
+          %208 = break_inline result, @void_value
         }
-        %209 = decl_val "signed33"
-        %210 = call %209 arg0 {
-          %211 = arg_type %210, 0
-          %212 = int 8589934591
-          %213 = as %211, %212
-          %214 = break_inline result, %213
+        %210 = check_unused_error %209
+        %211 = decl_val "signed33"
+        %212 = call %211 arg0 {
+          %213 = arg_type %212, 0
+          %214 = int 8589934591
+          %215 = as %213, %214
+          %216 = break_inline result, %215
         }
-        %215 = int 1
-        %216 = negate %215
-        %217 = cmp_neq %210, %216
-        %228 = bool_or %217 rhs {
-          %218 = decl_val "signed33"
-          %219 = call %218 arg0 {
-            %220 = arg_type %219, 0
-            %221 = int 4294967296
-            %222 = as %220, %221
-            %223 = break_inline result, %222
+        %217 = int 1
+        %218 = negate %217
+        %219 = cmp_neq %212, %218
+        %230 = bool_or %219 rhs {
+          %220 = decl_val "signed33"
+          %221 = call %220 arg0 {
+            %222 = arg_type %221, 0
+            %223 = int 4294967296
+            %224 = as %222, %223
+            %225 = break_inline result, %224
           }
-          %224 = int 4294967296
-          %225 = negate %224
-          %226 = cmp_neq %219, %225
-          %227 = break_inline result, %226
+          %226 = int 4294967296
+          %227 = negate %226
+          %228 = cmp_neq %221, %227
+          %229 = break_inline result, %228
         }
-        %234 = if %228 then {
-          %229 = ret_type
-          %230 = int 3
-          %231 = as_return %229, %230
-          %232 = ret %231
+        %236 = if %230 then {
+          %231 = ret_type
+          %232 = int 3
+          %233 = as_return %231, %232
+          %234 = ret %233
         } else {
-          %233 = break_inline result, @void_value
+          %235 = break_inline result, @void_value
         }
-        %235 = decl_val "unsigned33"
-        %236 = call %235 arg0 {
-          %237 = arg_type %236, 0
-          %238 = int 1
-          %239 = negate %238
-          %240 = as %237, %239
-          %241 = break_inline result, %240
+        %237 = check_unused_error %236
+        %238 = decl_val "unsigned33"
+        %239 = call %238 arg0 {
+          %240 = arg_type %239, 0
+          %241 = int 1
+          %242 = negate %241
+          %243 = as %240, %242
+          %244 = break_inline result, %243
         }
-        %242 = int 8589934591
-        %243 = cmp_neq %236, %242
-        %249 = if %243 then {
-          %244 = ret_type
-          %245 = int 4
-          %246 = as_return %244, %245
-          %247 = ret %246
+        %245 = int 8589934591
+        %246 = cmp_neq %239, %245
+        %252 = if %246 then {
+          %247 = ret_type
+          %248 = int 4
+          %249 = as_return %247, %248
+          %250 = ret %249
         } else {
-          %248 = break_inline result, @void_value
+          %251 = break_inline result, @void_value
         }
-        %250 = decl_val "signed64"
-        %251 = call %250 arg0 {
-          %252 = arg_type %251, 0
-          %253 = int 18446744073709551615
-          %254 = as %252, %253
-          %255 = break_inline result, %254
+        %253 = check_unused_error %252
+        %254 = decl_val "signed64"
+        %255 = call %254 arg0 {
+          %256 = arg_type %255, 0
+          %257 = int 18446744073709551615
+          %258 = as %256, %257
+          %259 = break_inline result, %258
         }
-        %256 = int 1
-        %257 = negate %256
-        %258 = cmp_neq %251, %257
-        %269 = bool_or %258 rhs {
-          %259 = decl_val "unsigned64"
-          %260 = call %259 arg0 {
-            %261 = arg_type %260, 0
-            %262 = int 1
-            %263 = negate %262
-            %264 = as %261, %263
-            %265 = break_inline result, %264
+        %260 = int 1
+        %261 = negate %260
+        %262 = cmp_neq %255, %261
+        %273 = bool_or %262 rhs {
+          %263 = decl_val "unsigned64"
+          %264 = call %263 arg0 {
+            %265 = arg_type %264, 0
+            %266 = int 1
+            %267 = negate %266
+            %268 = as %265, %267
+            %269 = break_inline result, %268
           }
-          %266 = int 18446744073709551615
-          %267 = cmp_neq %260, %266
-          %268 = break_inline result, %267
+          %270 = int 18446744073709551615
+          %271 = cmp_neq %264, %270
+          %272 = break_inline result, %271
         }
-        %275 = if %269 then {
-          %270 = ret_type
-          %271 = int 5
-          %272 = as_return %270, %271
-          %273 = ret %272
+        %279 = if %273 then {
+          %274 = ret_type
+          %275 = int 5
+          %276 = as_return %274, %275
+          %277 = ret %276
         } else {
-          %274 = break_inline result, @void_value
+          %278 = break_inline result, @void_value
         }
-        %276 = decl_val "signed_bool"
-        %277 = call %276 arg0 {
-          %278 = arg_type %277, 0
-          %279 = as %278, @true
-          %280 = break_inline result, %279
+        %280 = check_unused_error %279
+        %281 = decl_val "signed_bool"
+        %282 = call %281 arg0 {
+          %283 = arg_type %282, 0
+          %284 = as %283, @true
+          %285 = break_inline result, %284
         }
-        %281 = int 1
-        %282 = negate %281
-        %283 = cmp_neq %277, %282
-        %292 = bool_or %283 rhs {
-          %284 = decl_val "signed_bool"
-          %285 = call %284 arg0 {
-            %286 = arg_type %285, 0
-            %287 = as %286, @false
-            %288 = break_inline result, %287
+        %286 = int 1
+        %287 = negate %286
+        %288 = cmp_neq %282, %287
+        %297 = bool_or %288 rhs {
+          %289 = decl_val "signed_bool"
+          %290 = call %289 arg0 {
+            %291 = arg_type %290, 0
+            %292 = as %291, @false
+            %293 = break_inline result, %292
           }
-          %289 = int 0
-          %290 = cmp_neq %285, %289
-          %291 = break_inline result, %290
+          %294 = int 0
+          %295 = cmp_neq %290, %294
+          %296 = break_inline result, %295
         }
-        %298 = if %292 then {
-          %293 = ret_type
-          %294 = int 6
-          %295 = as_return %293, %294
-          %296 = ret %295
+        %303 = if %297 then {
+          %298 = ret_type
+          %299 = int 6
+          %300 = as_return %298, %299
+          %301 = ret %300
         } else {
-          %297 = break_inline result, @void_value
+          %302 = break_inline result, @void_value
         }
-        %299 = decl_val "bool_signed"
-        %300 = call %299 arg0 {
-          %301 = arg_type %300, 0
-          %302 = int 1
-          %303 = negate %302
-          %304 = as %301, %303
-          %305 = break_inline result, %304
+        %304 = check_unused_error %303
+        %305 = decl_val "bool_signed"
+        %306 = call %305 arg0 {
+          %307 = arg_type %306, 0
+          %308 = int 1
+          %309 = negate %308
+          %310 = as %307, %309
+          %311 = break_inline result, %310
         }
-        %306 = as @type_bool, %300
-        %307 = bool_not %306
-        %316 = bool_or %307 rhs {
-          %308 = decl_val "bool_signed"
-          %309 = call %308 arg0 {
-            %310 = arg_type %309, 0
-            %311 = int 0
-            %312 = as %310, %311
-            %313 = break_inline result, %312
+        %312 = as @type_bool, %306
+        %313 = bool_not %312
+        %322 = bool_or %313 rhs {
+          %314 = decl_val "bool_signed"
+          %315 = call %314 arg0 {
+            %316 = arg_type %315, 0
+            %317 = int 0
+            %318 = as %316, %317
+            %319 = break_inline result, %318
           }
-          %314 = as @type_bool, %309
-          %315 = break_inline result, %314
+          %320 = as @type_bool, %315
+          %321 = break_inline result, %320
         }
-        %326 = bool_or %316 rhs {
-          %317 = decl_val "bool_unsigned"
-          %318 = call %317 arg0 {
-            %319 = arg_type %318, 0
-            %320 = int 1
-            %321 = as %319, %320
-            %322 = break_inline result, %321
+        %332 = bool_or %322 rhs {
+          %323 = decl_val "bool_unsigned"
+          %324 = call %323 arg0 {
+            %325 = arg_type %324, 0
+            %326 = int 1
+            %327 = as %325, %326
+            %328 = break_inline result, %327
           }
-          %323 = as @type_bool, %318
-          %324 = bool_not %323
-          %325 = break_inline result, %324
+          %329 = as @type_bool, %324
+          %330 = bool_not %329
+          %331 = break_inline result, %330
         }
-        %335 = bool_or %326 rhs {
-          %327 = decl_val "bool_unsigned"
-          %328 = call %327 arg0 {
-            %329 = arg_type %328, 0
-            %330 = int 0
-            %331 = as %329, %330
-            %332 = break_inline result, %331
+        %341 = bool_or %332 rhs {
+          %333 = decl_val "bool_unsigned"
+          %334 = call %333 arg0 {
+            %335 = arg_type %334, 0
+            %336 = int 0
+            %337 = as %335, %336
+            %338 = break_inline result, %337
           }
-          %333 = as @type_bool, %328
-          %334 = break_inline result, %333
+          %339 = as @type_bool, %334
+          %340 = break_inline result, %339
         }
-        %341 = if %335 then {
-          %336 = ret_type
-          %337 = int 7
-          %338 = as_return %336, %337
-          %339 = ret %338
+        %347 = if %341 then {
+          %342 = ret_type
+          %343 = int 7
+          %344 = as_return %342, %343
+          %345 = ret %344
         } else {
-          %340 = break_inline result, @void_value
+          %346 = break_inline result, @void_value
         }
-        %342 = decl_val "unsigned_bool"
-        %343 = call %342 arg0 {
-          %344 = arg_type %343, 0
-          %345 = as %344, @true
-          %346 = break_inline result, %345
+        %348 = check_unused_error %347
+        %349 = decl_val "unsigned_bool"
+        %350 = call %349 arg0 {
+          %351 = arg_type %350, 0
+          %352 = as %351, @true
+          %353 = break_inline result, %352
         }
-        %347 = int 1
-        %348 = cmp_neq %343, %347
-        %357 = bool_or %348 rhs {
-          %349 = decl_val "unsigned_bool"
-          %350 = call %349 arg0 {
-            %351 = arg_type %350, 0
-            %352 = as %351, @false
-            %353 = break_inline result, %352
+        %354 = int 1
+        %355 = cmp_neq %350, %354
+        %364 = bool_or %355 rhs {
+          %356 = decl_val "unsigned_bool"
+          %357 = call %356 arg0 {
+            %358 = arg_type %357, 0
+            %359 = as %358, @false
+            %360 = break_inline result, %359
           }
-          %354 = int 0
-          %355 = cmp_neq %350, %354
-          %356 = break_inline result, %355
+          %361 = int 0
+          %362 = cmp_neq %357, %361
+          %363 = break_inline result, %362
         }
-        %363 = if %357 then {
-          %358 = ret_type
-          %359 = int 8
-          %360 = as_return %358, %359
-          %361 = ret %360
+        %370 = if %364 then {
+          %365 = ret_type
+          %366 = int 8
+          %367 = as_return %365, %366
+          %368 = ret %367
         } else {
-          %362 = break_inline result, @void_value
+          %369 = break_inline result, @void_value
         }
-        %364 = decl_val "nested"
-        %365 = call %364 arg0 {
-          %366 = arg_type %365, 0
-          %367 = int 31
-          %368 = as %366, %367
-          %369 = break_inline result, %368
+        %371 = check_unused_error %370
+        %372 = decl_val "nested"
+        %373 = call %372 arg0 {
+          %374 = arg_type %373, 0
+          %375 = int 31
+          %376 = as %374, %375
+          %377 = break_inline result, %376
         }
-        %370 = int 31
-        %371 = cmp_neq %365, %370
-        %382 = bool_or %371 rhs {
-          %372 = decl_val "extend"
-          %373 = call %372 arg0 {
-            %374 = arg_type %373, 0
-            %375 = int 31
-            %376 = as %374, %375
-            %377 = break_inline result, %376
+        %378 = int 31
+        %379 = cmp_neq %373, %378
+        %390 = bool_or %379 rhs {
+          %380 = decl_val "extend"
+          %381 = call %380 arg0 {
+            %382 = arg_type %381, 0
+            %383 = int 31
+            %384 = as %382, %383
+            %385 = break_inline result, %384
           }
-          %378 = int 1
-          %379 = negate %378
-          %380 = cmp_neq %373, %379
-          %381 = break_inline result, %380
+          %386 = int 1
+          %387 = negate %386
+          %388 = cmp_neq %381, %387
+          %389 = break_inline result, %388
         }
-        %388 = if %382 then {
-          %383 = ret_type
-          %384 = int 9
-          %385 = as_return %383, %384
-          %386 = ret %385
+        %396 = if %390 then {
+          %391 = ret_type
+          %392 = int 9
+          %393 = as_return %391, %392
+          %394 = ret %393
         } else {
-          %387 = break_inline result, @void_value
+          %395 = break_inline result, @void_value
         }
-        %389 = decl_val "negative128"
-        %390 = int 1
-        %391 = negate %390
-        %392 = cmp_neq %389, %391
-        %401 = bool_or %392 rhs {
-          %393 = decl_val "positive257"
-          %394 = int 1
-          %395 = int 257
-          %396 = shl %394, %395
-          %397 = int 1
-          %398 = sub %396, %397
-          %399 = cmp_neq %393, %398
-          %400 = break_inline result, %399
+        %397 = check_unused_error %396
+        %398 = decl_val "negative128"
+        %399 = int 1
+        %400 = negate %399
+        %401 = cmp_neq %398, %400
+        %410 = bool_or %401 rhs {
+          %402 = decl_val "positive257"
+          %403 = int 1
+          %404 = int 257
+          %405 = shl %403, %404
+          %406 = int 1
+          %407 = sub %405, %406
+          %408 = cmp_neq %402, %407
+          %409 = break_inline result, %408
         }
-        %407 = if %401 then {
-          %402 = ret_type
-          %403 = int 10
-          %404 = as_return %402, %403
-          %405 = ret %404
+        %416 = if %410 then {
+          %411 = ret_type
+          %412 = int 10
+          %413 = as_return %411, %412
+          %414 = ret %413
         } else {
-          %406 = break_inline result, @void_value
+          %415 = break_inline result, @void_value
         }
-        %408 = decl_val "empty"
-        %409 = call %408 arg0 {
-          %410 = arg_type %409, 0
-          %411 = decl_val "zero"
-          %412 = call %411 arg0 {
-            %413 = arg_type %412, 0
-            %414 = as %413, @void_value
-            %415 = break_inline result, %414
+        %417 = check_unused_error %416
+        %418 = decl_val "empty"
+        %419 = call %418 arg0 {
+          %420 = arg_type %419, 0
+          %421 = decl_val "zero"
+          %422 = call %421 arg0 {
+            %423 = arg_type %422, 0
+            %424 = as %423, @void_value
+            %425 = break_inline result, %424
           }
-          %416 = as %410, %412
-          %417 = break_inline result, %416
+          %426 = as %420, %422
+          %427 = break_inline result, %426
         }
-        %418 = as @type_i8, @undefined
-        %419 = bit_cast @type_u8, %418
-        %420 = ret_type
-        %421 = int 0
-        %422 = as_return %420, %421
-        %423 = ret %422
+        %428 = check_unused_error %419
+        %429 = as @type_i8, @undefined
+        %430 = bit_cast @type_u8, %429
+        %431 = discard %430
+        %432 = ret_type
+        %433 = int 0
+        %434 = as_return %432, %433
+        %435 = ret %434
       }
     }
-    %425 = break_inline result, %424
+    %437 = break_inline result, %436
   }
 }

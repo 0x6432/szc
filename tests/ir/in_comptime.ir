@@ -1,4 +1,4 @@
-%44 = struct_decl (flags=0) {
+%45 = struct_decl (flags=0) {
   decl const "T" value {
     %2 = typeof_builtin %0 query {
       %0 = in_comptime
@@ -29,7 +29,7 @@
     %16 = break_inline result, %15
   }
   decl fn "main" pub value {
-    %42 = func "main" {
+    %43 = func "main" {
       ret type {
         %17 = break_inline result, @type_u8
       }
@@ -59,12 +59,13 @@
         } else {
           %36 = break_inline result, @void_value
         }
-        %38 = ret_type
-        %39 = int 0
-        %40 = as_return %38, %39
-        %41 = ret %40
+        %38 = check_unused_error %37
+        %39 = ret_type
+        %40 = int 0
+        %41 = as_return %39, %40
+        %42 = ret %41
       }
     }
-    %43 = break_inline result, %42
+    %44 = break_inline result, %43
   }
 }

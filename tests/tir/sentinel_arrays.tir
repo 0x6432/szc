@@ -14,7 +14,7 @@ fn szc.main.1: fn () u8 {
       %14: bool = const true
       %15: noreturn = br %8, %14
     } else {
-      %9: *u16 = const elem(base.49, index.3, offset.6)
+      %9: *u16 = const elem(base.50, index.3, offset.6)
       %10: u16 = load %9
       %11: u16 = const 17
       %12: bool = cmp_neq %10, %11

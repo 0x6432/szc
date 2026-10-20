@@ -1,4 +1,4 @@
-%79 = struct_decl (flags=0) {
+%80 = struct_decl (flags=0) {
   decl fn "f" value {
     %19 = func "f" {
       %7 = param "p" type {
@@ -30,7 +30,7 @@
     %20 = break_inline result, %19
   }
   decl fn "main" pub value {
-    %77 = func "main" {
+    %78 = func "main" {
       ret type {
         %21 = break_inline result, @type_void
       }
@@ -84,16 +84,17 @@
           %67 = as %60, %66
           %68 = break_inline result, %67
         }
-        %69 = memset_elem_type %54
-        %70 = array_base_ptr %54
-        %71 = int 1
-        %72 = as @type_usize, %71
-        %73 = array_index %70, %72
-        %74 = as %69, %73
-        %75 = memset %54, %74
-        %76 = ret_implicit
+        %69 = check_unused_error %56
+        %70 = memset_elem_type %54
+        %71 = array_base_ptr %54
+        %72 = int 1
+        %73 = as @type_usize, %72
+        %74 = array_index %71, %73
+        %75 = as %70, %74
+        %76 = memset %54, %75
+        %77 = ret_implicit
       }
     }
-    %78 = break_inline result, %77
+    %79 = break_inline result, %78
   }
 }

@@ -1,4 +1,4 @@
-%278 = struct_decl (flags=0) {
+%287 = struct_decl (flags=0) {
   decl const "known" type {
     %0 = break_inline result, @type_u29
   } value {
@@ -83,7 +83,7 @@
     %49 = break_inline result, %48
   }
   decl fn "adjust" value {
-    %109 = func "adjust" {
+    %111 = func "adjust" {
       %53 = param "p" type {
         %50 = ptr_type @type_u8, @false volatile
         %51 = as @type_type, %50
@@ -135,11 +135,13 @@
             }
           }
         }
-        %103 = deref %53
-        %104 = ret_type
-        %105 = deref %53
-        %106 = as_return %104, %105
-        %107 = defer  {
+        %103 = check_unused_error %82
+        %104 = deref %53
+        %105 = discard %104
+        %106 = ret_type
+        %107 = deref %53
+        %108 = as_return %106, %107
+        %109 = defer  {
           %55 = ref_deref %53
           %56 = load %55
           %57 = add_sub_rhs_type %56
@@ -152,223 +154,230 @@
           %64 = ensure_result @void_value
           %65 = break_inline result, @void_value
         }
-        %108 = ret %106
+        %110 = ret %108
       }
     }
-    %110 = break_inline result, %109
+    %112 = break_inline result, %111
   }
   decl fn "choose" value {
-    %132 = func "choose" {
-      %112 = param "flag" type {
-        %111 = break_inline result, @type_bool
+    %134 = func "choose" {
+      %114 = param "flag" type {
+        %113 = break_inline result, @type_bool
       }
-      %116 = param "a" type {
-        %113 = ptr_type @type_u8, @false volatile
-        %114 = as @type_type, %113
-        %115 = break_inline result, %114
+      %118 = param "a" type {
+        %115 = ptr_type @type_u8, @false volatile
+        %116 = as @type_type, %115
+        %117 = break_inline result, %116
       }
-      %120 = param "b" type {
-        %117 = ptr_type @type_u8, @false
-        %118 = as @type_type, %117
-        %119 = break_inline result, %118
+      %122 = param "b" type {
+        %119 = ptr_type @type_u8, @false
+        %120 = as @type_type, %119
+        %121 = break_inline result, %120
       }
       ret type {
-        %121 = ptr_type @type_u8, @false volatile
-        %122 = as @type_type, %121
-        %123 = break_inline result, %122
+        %123 = ptr_type @type_u8, @false volatile
+        %124 = as @type_type, %123
+        %125 = break_inline result, %124
       }
       body insts {
-        %124 = ret_type
-        %125 = as @type_bool, %112
-        %130 = if %125 then {
-          %126 = as %124, %116
-          %127 = break_inline result, %126
-        } else {
-          %128 = as %124, %120
+        %126 = ret_type
+        %127 = as @type_bool, %114
+        %132 = if %127 then {
+          %128 = as %126, %118
           %129 = break_inline result, %128
+        } else {
+          %130 = as %126, %122
+          %131 = break_inline result, %130
         }
-        %131 = ret %130
+        %133 = ret %132
       }
     }
-    %133 = break_inline result, %132
+    %135 = break_inline result, %134
   }
   decl fn "swap" value {
-    %155 = func "swap" {
-      %142 = param "slot" type {
-        %135 = fn_type "" {
+    %158 = func "swap" {
+      %144 = param "slot" type {
+        %137 = fn_type "" {
           ret type {
-            %134 = break_inline result, @type_u8
+            %136 = break_inline result, @type_u8
           }
         }
-        %136 = as @type_type, %135
-        %137 = ptr_type %136, @true
         %138 = as @type_type, %137
-        %139 = ptr_type %138, @false volatile
+        %139 = ptr_type %138, @true
         %140 = as @type_type, %139
-        %141 = break_inline result, %140
+        %141 = ptr_type %140, @false volatile
+        %142 = as @type_type, %141
+        %143 = break_inline result, %142
       }
       ret type {
-        %143 = break_inline result, @type_u8
+        %145 = break_inline result, @type_u8
       }
       body insts {
-        %144 = ref_deref %142
-        %145 = decl_val "nine"
-        %146 = elem_type %144
-        %147 = as %146, %145
-        %148 = store %144, %147
-        %149 = deref %142
-        %150 = ret_type
-        %151 = deref %142
-        %152 = call %151
-        %153 = as_return %150, %152
-        %154 = ret %153
+        %146 = ref_deref %144
+        %147 = decl_val "nine"
+        %148 = elem_type %146
+        %149 = as %148, %147
+        %150 = store %146, %149
+        %151 = deref %144
+        %152 = discard %151
+        %153 = ret_type
+        %154 = deref %144
+        %155 = call %154
+        %156 = as_return %153, %155
+        %157 = ret %156
       }
     }
-    %156 = break_inline result, %155
+    %159 = break_inline result, %158
   }
   decl fn "main" pub value {
-    %276 = func "main" {
+    %285 = func "main" {
       ret type {
-        %157 = break_inline result, @type_u8
+        %160 = break_inline result, @type_u8
       }
       body insts {
-        %158 = ptr_type @type_u8, @false volatile
-        %159 = as @type_type, %158
-        %160 = decl_ref "global"
-        %161 = as %159, %160
-        %162 = decl_val "adjust"
-        %163 = call %162 arg0 {
-          %164 = arg_type %163, 0
-          %165 = as %164, %161
-          %166 = break_inline result, %165
+        %161 = ptr_type @type_u8, @false volatile
+        %162 = as @type_type, %161
+        %163 = decl_ref "global"
+        %164 = as %162, %163
+        %165 = decl_val "adjust"
+        %166 = call %165 arg0 {
+          %167 = arg_type %166, 0
+          %168 = as %167, %164
+          %169 = break_inline result, %168
         }
-        %167 = int 8
-        %168 = cmp_neq %163, %167
-        %173 = bool_or %168 rhs {
-          %169 = decl_val "global"
-          %170 = int 9
-          %171 = cmp_neq %169, %170
-          %172 = break_inline result, %171
+        %170 = int 8
+        %171 = cmp_neq %166, %170
+        %176 = bool_or %171 rhs {
+          %172 = decl_val "global"
+          %173 = int 9
+          %174 = cmp_neq %172, %173
+          %175 = break_inline result, %174
         }
-        %179 = if %173 then {
-          %174 = ret_type
-          %175 = int 1
-          %176 = as_return %174, %175
-          %177 = ret %176
+        %182 = if %176 then {
+          %177 = ret_type
+          %178 = int 1
+          %179 = as_return %177, %178
+          %180 = ret %179
         } else {
-          %178 = break_inline result, @void_value
+          %181 = break_inline result, @void_value
         }
-        %183 = align value {
-          %180 = int 1
-          %181 = as @type_u29, %180
-          %182 = break_inline result, %181
+        %183 = check_unused_error %182
+        %187 = align value {
+          %184 = int 1
+          %185 = as @type_u29, %184
+          %186 = break_inline result, %185
         }
-        %184 = int 4
-        %185 = as @type_u8, %184
-        %186 = alloc type=@type_u8 init=%185 align=%183
-        %187 = decl_val "choose"
-        %188 = call %187 arg0 {
-          %189 = arg_type %188, 0
-          %190 = as %189, @false
-          %191 = break_inline result, %190
+        %188 = int 4
+        %189 = as @type_u8, %188
+        %190 = alloc type=@type_u8 init=%189 align=%187
+        %191 = decl_val "choose"
+        %192 = call %191 arg0 {
+          %193 = arg_type %192, 0
+          %194 = as %193, @false
+          %195 = break_inline result, %194
         } arg1 {
-          %192 = arg_type %188, 1
-          %193 = as %192, %161
-          %194 = break_inline result, %193
+          %196 = arg_type %192, 1
+          %197 = as %196, %164
+          %198 = break_inline result, %197
         } arg2 {
-          %195 = arg_type %188, 2
-          %196 = as %195, %186
-          %197 = break_inline result, %196
+          %199 = arg_type %192, 2
+          %200 = as %199, %190
+          %201 = break_inline result, %200
         }
-        %198 = ref_deref %188
-        %199 = int 5
-        %200 = elem_type %198
-        %201 = as %200, %199
-        %202 = store %198, %201
-        %203 = deref %188
-        %204 = int 5
-        %205 = cmp_neq %203, %204
-        %210 = bool_or %205 rhs {
-          %206 = load %186
-          %207 = int 5
-          %208 = cmp_neq %206, %207
-          %209 = break_inline result, %208
+        %202 = ref_deref %192
+        %203 = int 5
+        %204 = elem_type %202
+        %205 = as %204, %203
+        %206 = store %202, %205
+        %207 = deref %192
+        %208 = int 5
+        %209 = cmp_neq %207, %208
+        %214 = bool_or %209 rhs {
+          %210 = load %190
+          %211 = int 5
+          %212 = cmp_neq %210, %211
+          %213 = break_inline result, %212
         }
-        %220 = bool_or %210 rhs {
-          %211 = decl_val "swap"
-          %212 = call %211 arg0 {
-            %213 = arg_type %212, 0
-            %214 = decl_ref "callback"
-            %215 = as %213, %214
-            %216 = break_inline result, %215
+        %224 = bool_or %214 rhs {
+          %215 = decl_val "swap"
+          %216 = call %215 arg0 {
+            %217 = arg_type %216, 0
+            %218 = decl_ref "callback"
+            %219 = as %217, %218
+            %220 = break_inline result, %219
           }
-          %217 = int 9
-          %218 = cmp_neq %212, %217
-          %219 = break_inline result, %218
+          %221 = int 9
+          %222 = cmp_neq %216, %221
+          %223 = break_inline result, %222
         }
-        %226 = if %220 then {
-          %221 = ret_type
-          %222 = int 2
-          %223 = as_return %221, %222
-          %224 = ret %223
+        %230 = if %224 then {
+          %225 = ret_type
+          %226 = int 2
+          %227 = as_return %225, %226
+          %228 = ret %227
         } else {
-          %225 = break_inline result, @void_value
+          %229 = break_inline result, @void_value
         }
-        %227 = ptr_type @type_u8, @true volatile
-        %228 = as @type_type, %227
-        %229 = as %228, %161
-        %230 = deref %229
-        %231 = int 9
-        %232 = cmp_neq %230, %231
-        %236 = bool_or %232 rhs {
-          %233 = ref_deref %161
-          %234 = cmp_neq %233, %161
-          %235 = break_inline result, %234
+        %231 = check_unused_error %230
+        %232 = ptr_type @type_u8, @true volatile
+        %233 = as @type_type, %232
+        %234 = as %233, %164
+        %235 = deref %234
+        %236 = int 9
+        %237 = cmp_neq %235, %236
+        %241 = bool_or %237 rhs {
+          %238 = ref_deref %164
+          %239 = cmp_neq %238, %164
+          %240 = break_inline result, %239
         }
-        %242 = if %236 then {
-          %237 = ret_type
-          %238 = int 3
-          %239 = as_return %237, %238
-          %240 = ret %239
+        %247 = if %241 then {
+          %242 = ret_type
+          %243 = int 3
+          %244 = as_return %242, %243
+          %245 = ret %244
         } else {
-          %241 = break_inline result, @void_value
+          %246 = break_inline result, @void_value
         }
-        %243 = int_type u0
-        %244 = ptr_type %243, @false volatile
-        %245 = as @type_type, %244
-        %246 = as %245, @undefined
-        %247 = ptr_type @type_void, @false volatile
-        %248 = as @type_type, %247
-        %249 = as %248, @undefined
-        %250 = deref %246
-        %251 = ref_deref %246
-        %252 = int 0
-        %253 = elem_type %251
-        %254 = as %253, %252
-        %255 = store %251, %254
-        %256 = deref %249
-        %257 = ref_deref %249
-        %258 = elem_type %257
-        %259 = as %258, @void_value
-        %260 = store %257, %259
-        %261 = ref_deref %188
-        %262 = elem_type %261
-        %263 = as %262, @undefined
-        %264 = store %261, %263
-        %268 = ptr_type @type_u8, @false align {
-          %265 = decl_val "A"
-          %266 = as @type_u29, %265
-          %267 = break_inline result, %266
+        %248 = check_unused_error %247
+        %249 = int_type u0
+        %250 = ptr_type %249, @false volatile
+        %251 = as @type_type, %250
+        %252 = as %251, @undefined
+        %253 = ptr_type @type_void, @false volatile
+        %254 = as @type_type, %253
+        %255 = as %254, @undefined
+        %256 = deref %252
+        %257 = discard %256
+        %258 = ref_deref %252
+        %259 = int 0
+        %260 = elem_type %258
+        %261 = as %260, %259
+        %262 = store %258, %261
+        %263 = deref %255
+        %264 = discard %263
+        %265 = ref_deref %255
+        %266 = elem_type %265
+        %267 = as %266, @void_value
+        %268 = store %265, %267
+        %269 = ref_deref %192
+        %270 = elem_type %269
+        %271 = as %270, @undefined
+        %272 = store %269, %271
+        %276 = ptr_type @type_u8, @false align {
+          %273 = decl_val "A"
+          %274 = as @type_u29, %273
+          %275 = break_inline result, %274
         }
-        %269 = as @type_type, %268
-        %270 = decl_ref "global"
-        %271 = as %269, %270
-        %272 = ret_type
-        %273 = int 0
-        %274 = as_return %272, %273
-        %275 = ret %274
+        %277 = as @type_type, %276
+        %278 = decl_ref "global"
+        %279 = as %277, %278
+        %280 = discard %279
+        %281 = ret_type
+        %282 = int 0
+        %283 = as_return %281, %282
+        %284 = ret %283
       }
     }
-    %277 = break_inline result, %276
+    %286 = break_inline result, %285
   }
 }

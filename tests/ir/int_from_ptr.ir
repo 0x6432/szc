@@ -1,4 +1,4 @@
-%41 = struct_decl (flags=0) {
+%42 = struct_decl (flags=0) {
   decl fn "address" value {
     %9 = func "address" {
       %3 = param "p" type {
@@ -19,7 +19,7 @@
     %10 = break_inline result, %9
   }
   decl fn "main" pub value {
-    %39 = func "main" {
+    %40 = func "main" {
       ret type {
         %11 = break_inline result, @type_u8
       }
@@ -50,12 +50,13 @@
         } else {
           %33 = break_inline result, @void_value
         }
-        %35 = ret_type
-        %36 = int 0
-        %37 = as_return %35, %36
-        %38 = ret %37
+        %35 = check_unused_error %34
+        %36 = ret_type
+        %37 = int 0
+        %38 = as_return %36, %37
+        %39 = ret %38
       }
     }
-    %40 = break_inline result, %39
+    %41 = break_inline result, %40
   }
 }

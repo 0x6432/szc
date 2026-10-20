@@ -1,4 +1,4 @@
-%63 = struct_decl (flags=0) {
+%64 = struct_decl (flags=0) {
   decl fn "stop" value {
     %2 = func "stop" {
       ret type {
@@ -39,7 +39,7 @@
     %20 = break_inline result, %19
   }
   decl fn "cleanup" value {
-    %40 = func "cleanup" {
+    %41 = func "cleanup" {
       %22 = param "c" type {
         %21 = break_inline result, @type_bool
       }
@@ -62,43 +62,44 @@
         } else {
           %34 = break_inline result, @void_value
         }
-        %36 = ret_type
-        %37 = int 2
-        %38 = as_return %36, %37
-        %39 = ret %38
+        %36 = check_unused_error %35
+        %37 = ret_type
+        %38 = int 2
+        %39 = as_return %37, %38
+        %40 = ret %39
       }
     }
-    %41 = break_inline result, %40
+    %42 = break_inline result, %41
   }
   decl fn "main" pub value {
-    %61 = func "main" {
+    %62 = func "main" {
       ret type {
-        %42 = break_inline result, @type_u8
+        %43 = break_inline result, @type_u8
       }
       body insts {
-        %43 = ret_type
-        %44 = decl_val "choose"
-        %45 = call %44 arg0 {
-          %46 = arg_type %45, 0
-          %47 = as %46, @true
-          %48 = break_inline result, %47
+        %44 = ret_type
+        %45 = decl_val "choose"
+        %46 = call %45 arg0 {
+          %47 = arg_type %46, 0
+          %48 = as %47, @true
+          %49 = break_inline result, %48
         } arg1 {
-          %49 = arg_type %45, 1
-          %50 = int 7
-          %51 = as %49, %50
-          %52 = break_inline result, %51
+          %50 = arg_type %46, 1
+          %51 = int 7
+          %52 = as %50, %51
+          %53 = break_inline result, %52
         }
-        %53 = decl_val "cleanup"
-        %54 = call %53 arg0 {
-          %55 = arg_type %54, 0
-          %56 = as %55, @false
-          %57 = break_inline result, %56
+        %54 = decl_val "cleanup"
+        %55 = call %54 arg0 {
+          %56 = arg_type %55, 0
+          %57 = as %56, @false
+          %58 = break_inline result, %57
         }
-        %58 = add %45, %54
-        %59 = as_return %43, %58
-        %60 = ret %59
+        %59 = add %46, %55
+        %60 = as_return %44, %59
+        %61 = ret %60
       }
     }
-    %62 = break_inline result, %61
+    %63 = break_inline result, %62
   }
 }

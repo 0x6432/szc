@@ -1,4 +1,4 @@
-%182 = struct_decl (flags=0) {
+%184 = struct_decl (flags=0) {
   decl const "natural" type {
     %0 = break_inline result, @type_u29
   } value {
@@ -161,7 +161,7 @@
     %101 = break_inline result, %100
   }
   decl fn "main" pub value {
-    %180 = func "main" {
+    %182 = func "main" {
       ret type {
         %102 = break_inline result, @type_u8
       }
@@ -201,63 +201,65 @@
         } else {
           %132 = break_inline result, @void_value
         }
-        %134 = decl_val "read"
-        %135 = call %134 arg0 {
-          %136 = arg_type %135, 0
-          %137 = deref %121
-          %138 = as %136, %137
-          %139 = break_inline result, %138
+        %134 = check_unused_error %133
+        %135 = decl_val "read"
+        %136 = call %135 arg0 {
+          %137 = arg_type %136, 0
+          %138 = deref %121
+          %139 = as %137, %138
+          %140 = break_inline result, %139
         }
-        %140 = int 22
-        %141 = cmp_neq %135, %140
-        %159 = bool_or %141 rhs {
-          %142 = decl_val "choose"
-          %143 = call %142 arg0 {
-            %144 = arg_type %143, 0
-            %145 = as %144, @false
-            %146 = break_inline result, %145
+        %141 = int 22
+        %142 = cmp_neq %136, %141
+        %160 = bool_or %142 rhs {
+          %143 = decl_val "choose"
+          %144 = call %143 arg0 {
+            %145 = arg_type %144, 0
+            %146 = as %145, @false
+            %147 = break_inline result, %146
           } arg1 {
-            %147 = arg_type %143, 1
-            %148 = decl_ref "value"
-            %149 = as %147, %148
-            %150 = break_inline result, %149
+            %148 = arg_type %144, 1
+            %149 = decl_ref "value"
+            %150 = as %148, %149
+            %151 = break_inline result, %150
           } arg2 {
-            %151 = arg_type %143, 2
-            %152 = decl_ref "value"
-            %153 = as %151, %152
-            %154 = break_inline result, %153
+            %152 = arg_type %144, 2
+            %153 = decl_ref "value"
+            %154 = as %152, %153
+            %155 = break_inline result, %154
           }
-          %155 = deref %143
-          %156 = int 22
-          %157 = cmp_neq %155, %156
-          %158 = break_inline result, %157
+          %156 = deref %144
+          %157 = int 22
+          %158 = cmp_neq %156, %157
+          %159 = break_inline result, %158
         }
-        %165 = if %159 then {
-          %160 = ret_type
-          %161 = int 2
-          %162 = as_return %160, %161
-          %163 = ret %162
+        %166 = if %160 then {
+          %161 = ret_type
+          %162 = int 2
+          %163 = as_return %161, %162
+          %164 = ret %163
         } else {
-          %164 = break_inline result, @void_value
+          %165 = break_inline result, @void_value
         }
-        %166 = ret_type
-        %167 = decl_val "function"
-        %168 = call %167 arg0 {
-          %169 = arg_type %168, 0
-          %170 = as %169, @true
-          %171 = break_inline result, %170
+        %167 = check_unused_error %166
+        %168 = ret_type
+        %169 = decl_val "function"
+        %170 = call %169 arg0 {
+          %171 = arg_type %170, 0
+          %172 = as %171, @true
+          %173 = break_inline result, %172
         } arg1 {
-          %172 = arg_type %168, 1
-          %173 = as %172, @undefined
-          %174 = break_inline result, %173
+          %174 = arg_type %170, 1
+          %175 = as %174, @undefined
+          %176 = break_inline result, %175
         }
-        %175 = call %168
-        %176 = int 7
-        %177 = sub %175, %176
-        %178 = as_return %166, %177
-        %179 = ret %178
+        %177 = call %170
+        %178 = int 7
+        %179 = sub %177, %178
+        %180 = as_return %168, %179
+        %181 = ret %180
       }
     }
-    %181 = break_inline result, %180
+    %183 = break_inline result, %182
   }
 }

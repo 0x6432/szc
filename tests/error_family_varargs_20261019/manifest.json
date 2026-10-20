@@ -1,0 +1,42 @@
+{
+  "contract": "error_family_varargs_20261019",
+  "state": "FROZEN-APPROVED-POLICY",
+  "reference_version": "0.17.0",
+  "base_commit": "8fc08706a68d1fa913dcedbb240eca75d38a7ead",
+  "scope": "Exactly TWO separately authorized appendix programs, exact source copies, not new members of strict60 or durable26. No native/externalQBE. Ref-invalid error vararg receives honest NYI refusal, NOT reference-primary parity.",
+  "cases": [
+    {
+      "file": "known_error_vararg.zig",
+      "source_sha256": "1692ca4522ff6d720ade2c1a3c00aefc0def173a1625d06bad083e8d9776a0a3",
+      "label": "REF-INVALID-NYI-REFUSAL",
+      "reference": {
+        "status": 1,
+        "primaries": [
+          "cannot pass 'error{A}' to variadic function"
+        ]
+      },
+      "candidate": {
+        "status": 1,
+        "primaries": [
+          "not supported by szc yet: finite error-set value or layout demand"
+        ],
+        "sink_call_present": false
+      }
+    },
+    {
+      "file": "ordinary_c_int_vararg.zig",
+      "source_sha256": "19dc0ff2a301610e9a09493a5476054178616ae412273096cec0bf12fae29c2b",
+      "label": "ACCEPT",
+      "reference": {
+        "status": 0,
+        "primaries": []
+      },
+      "candidate": {
+        "status": 0,
+        "primaries": [],
+        "sink_call_present": true
+      }
+    }
+  ],
+  "expectation_basis": "Parent authorized existing finite-error value/layout preflight plus call failure atomicity. Owner confirms exact NYI policy before independentV2 proof; original reference-invalid status/primary retained, not parity. TIR sink-call absence and no invalid NONE required separately from QBE empty-output refusal."
+}

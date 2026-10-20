@@ -1,4 +1,4 @@
-%90 = struct_decl (flags=0) {
+%93 = struct_decl (flags=0) {
   decl const "N" value {
     %12 = struct_decl (flags=0) {
       decl const "len" pub type {
@@ -27,7 +27,7 @@
     %13 = break_inline result, %12
   }
   decl fn "main" pub value {
-    %88 = func "main" {
+    %91 = func "main" {
       ret type {
         %14 = break_inline result, @type_u8
       }
@@ -67,59 +67,62 @@
         } else {
           %43 = break_inline result, @void_value
         }
-        %45 = decl_val "N"
-        %46 = as @type_type, %45
-        %51 = has_field %46 name {
-          %47 = ptr_type @type_u8, @true slice
-          %48 = str "len"
-          %49 = as %47, %48
-          %50 = break_inline result, %49
+        %45 = check_unused_error %44
+        %46 = decl_val "N"
+        %47 = as @type_type, %46
+        %52 = has_field %47 name {
+          %48 = ptr_type @type_u8, @true slice
+          %49 = str "len"
+          %50 = as %48, %49
+          %51 = break_inline result, %50
         }
-        %52 = as @type_bool, %51
-        %62 = bool_or %52 rhs {
-          %53 = this
-          %54 = as @type_type, %53
-          %59 = has_field %54 name {
-            %55 = ptr_type @type_u8, @true slice
-            %56 = str "main"
-            %57 = as %55, %56
-            %58 = break_inline result, %57
+        %53 = as @type_bool, %52
+        %63 = bool_or %53 rhs {
+          %54 = this
+          %55 = as @type_type, %54
+          %60 = has_field %55 name {
+            %56 = ptr_type @type_u8, @true slice
+            %57 = str "main"
+            %58 = as %56, %57
+            %59 = break_inline result, %58
           }
-          %60 = as @type_bool, %59
-          %61 = break_inline result, %60
+          %61 = as @type_bool, %60
+          %62 = break_inline result, %61
         }
-        %68 = if %62 then {
-          %63 = ret_type
-          %64 = int 2
-          %65 = as_return %63, %64
-          %66 = ret %65
+        %69 = if %63 then {
+          %64 = ret_type
+          %65 = int 2
+          %66 = as_return %64, %65
+          %67 = ret %66
         } else {
-          %67 = break_inline result, @void_value
+          %68 = break_inline result, @void_value
         }
-        %69 = ptr_type @type_u8, @false slice
-        %70 = as @type_type, %69
-        %75 = has_field %70 name {
-          %71 = ptr_type @type_u8, @true slice
-          %72 = str "len\x00tail"
-          %73 = as %71, %72
-          %74 = break_inline result, %73
+        %70 = check_unused_error %69
+        %71 = ptr_type @type_u8, @false slice
+        %72 = as @type_type, %71
+        %77 = has_field %72 name {
+          %73 = ptr_type @type_u8, @true slice
+          %74 = str "len\x00tail"
+          %75 = as %73, %74
+          %76 = break_inline result, %75
         }
-        %76 = as @type_bool, %75
-        %77 = bool_not %76
-        %83 = if %77 then {
-          %78 = ret_type
-          %79 = int 3
-          %80 = as_return %78, %79
-          %81 = ret %80
+        %78 = as @type_bool, %77
+        %79 = bool_not %78
+        %85 = if %79 then {
+          %80 = ret_type
+          %81 = int 3
+          %82 = as_return %80, %81
+          %83 = ret %82
         } else {
-          %82 = break_inline result, @void_value
+          %84 = break_inline result, @void_value
         }
-        %84 = ret_type
-        %85 = int 0
-        %86 = as_return %84, %85
-        %87 = ret %86
+        %86 = check_unused_error %85
+        %87 = ret_type
+        %88 = int 0
+        %89 = as_return %87, %88
+        %90 = ret %89
       }
     }
-    %89 = break_inline result, %88
+    %92 = break_inline result, %91
   }
 }

@@ -179,6 +179,9 @@ typedef enum IrDataKind {
 	X(FIELD_REF, "field_ref", IR_DATA_NAME)	/* type-only array .len through an expression address */ \
 	X(FIELD_VAL, "field_val", IR_DATA_NAME)	/* field name, base operand (array .len initially) */ \
 	X(OPTIONAL_TYPE, "optional_type", IR_DATA_UN) /* child type -> optional type identity only */ \
+	X(ERROR_VALUE, "error_value", IR_DATA_NAME) /* decoded symbolic name, operand NONE; known value only */ \
+	X(ERROR_SET_MERGE, "error_set_merge", IR_DATA_BIN) /* left and right finite error-set types */ \
+	X(ERROR_UNION_TYPE, "error_union_type", IR_DATA_BIN) /* explicit error-set type and payload type; identity only */ \
 	X(ERROR_SET_TYPE, "error_set_type", IR_DATA_PAYLOAD) /* IrErrorSetHeader then source-ordered IrErrorSetMember; no refs */ \
 	X(PTR_TYPE, "ptr_type", IR_DATA_PAYLOAD)	/* IrPointerType */ \
 	/* Result types and coercion */ \
@@ -190,6 +193,8 @@ typedef enum IrDataKind {
 	X(LOG2_INT_TYPE, "log2_int_type", IR_DATA_UN)	/* shift amount type for integer value operand */ \
 	X(PANIC, "panic", IR_DATA_PAYLOAD)	/* normal message expression operand */ \
 	X(DEFER, "defer", IR_DATA_PAYLOAD)	/* reusable cleanup body, ending in break_inline */ \
+	X(DISCARD, "discard", IR_DATA_UN) /* explicit underscore discard; rejects error values */ \
+	X(CHECK_UNUSED_ERROR, "check_unused_error", IR_DATA_UN) /* otherwise unchecked ignored result; rejects error values */ \
 	X(ENSURE_RESULT, "ensure_result", IR_DATA_UN)	/* discarded expression must be void or noreturn */ \
 	X(FOR_PTR_CHECK, "for_ptr_check", IR_DATA_UN)	/* reject pointer captures of array values */ \
 	X(FOR_LEN, "for_len", IR_DATA_PAYLOAD)	/* count, then bounded input length refs */ \

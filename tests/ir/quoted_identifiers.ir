@@ -1,4 +1,4 @@
-%33 = struct_decl (flags=0) {
+%34 = struct_decl (flags=0) {
   decl const "answer" type {
     %0 = break_inline result, @type_u8
   } value {
@@ -31,7 +31,7 @@
     %16 = break_inline result, %15
   }
   decl fn "main" pub value {
-    %31 = func "main" {
+    %32 = func "main" {
       ret type {
         %17 = break_inline result, @type_u8
       }
@@ -39,20 +39,21 @@
         %18 = block  {
           %19 = break %18, @void_value
         }
-        %20 = ret_type
-        %21 = decl_ref "N"
-        %22 = field_call %21, "space name" arg0 {
-          %23 = arg_type %22, 0
-          %24 = decl_val "answer"
-          %25 = as %23, %24
-          %26 = break_inline result, %25
+        %20 = check_unused_error %18
+        %21 = ret_type
+        %22 = decl_ref "N"
+        %23 = field_call %22, "space name" arg0 {
+          %24 = arg_type %23, 0
+          %25 = decl_val "answer"
+          %26 = as %24, %25
+          %27 = break_inline result, %26
         }
-        %27 = int 8
-        %28 = sub %22, %27
-        %29 = as_return %20, %28
-        %30 = ret %29
+        %28 = int 8
+        %29 = sub %23, %28
+        %30 = as_return %21, %29
+        %31 = ret %30
       }
     }
-    %32 = break_inline result, %31
+    %33 = break_inline result, %32
   }
 }

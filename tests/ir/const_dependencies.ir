@@ -1,4 +1,4 @@
-%408 = struct_decl (flags=0) {
+%418 = struct_decl (flags=0) {
   decl const "left" type {
     %0 = break_inline result, @type_u8
   } align {
@@ -377,7 +377,7 @@
     %248 = break_inline result, %247
   }
   decl fn "main" pub value {
-    %406 = func "main" {
+    %416 = func "main" {
       ret type {
         %249 = break_inline result, @type_u8
       }
@@ -405,171 +405,181 @@
         } else {
           %267 = break_inline result, @void_value
         }
-        %269 = decl_val "read"
-        %270 = call %269 arg0 {
-          %271 = arg_type %270, 0
-          %272 = decl_ref "left"
-          %273 = as %271, %272
-          %274 = break_inline result, %273
+        %269 = check_unused_error %268
+        %270 = decl_val "read"
+        %271 = call %270 arg0 {
+          %272 = arg_type %271, 0
+          %273 = decl_ref "left"
+          %274 = as %272, %273
+          %275 = break_inline result, %274
         }
-        %275 = int 7
-        %276 = cmp_neq %270, %275
-        %287 = bool_or %276 rhs {
-          %277 = decl_val "signed_read"
-          %278 = call %277 arg0 {
-            %279 = arg_type %278, 0
-            %280 = decl_ref "right"
-            %281 = as %279, %280
-            %282 = break_inline result, %281
+        %276 = int 7
+        %277 = cmp_neq %271, %276
+        %288 = bool_or %277 rhs {
+          %278 = decl_val "signed_read"
+          %279 = call %278 arg0 {
+            %280 = arg_type %279, 0
+            %281 = decl_ref "right"
+            %282 = as %280, %281
+            %283 = break_inline result, %282
           }
-          %283 = int 9
-          %284 = negate %283
-          %285 = cmp_neq %278, %284
-          %286 = break_inline result, %285
+          %284 = int 9
+          %285 = negate %284
+          %286 = cmp_neq %279, %285
+          %287 = break_inline result, %286
         }
-        %293 = if %287 then {
-          %288 = ret_type
-          %289 = int 2
-          %290 = as_return %288, %289
-          %291 = ret %290
+        %294 = if %288 then {
+          %289 = ret_type
+          %290 = int 2
+          %291 = as_return %289, %290
+          %292 = ret %291
         } else {
-          %292 = break_inline result, @void_value
+          %293 = break_inline result, @void_value
         }
-        %294 = decl_val "chain"
-        %295 = call %294 arg0 {
-          %296 = arg_type %295, 0
-          %297 = decl_ref "link"
-          %298 = as %296, %297
-          %299 = break_inline result, %298
+        %295 = check_unused_error %294
+        %296 = decl_val "chain"
+        %297 = call %296 arg0 {
+          %298 = arg_type %297, 0
+          %299 = decl_ref "link"
+          %300 = as %298, %299
+          %301 = break_inline result, %300
         }
-        %300 = int 7
-        %301 = cmp_neq %295, %300
-        %306 = bool_or %301 rhs {
-          %302 = decl_val "folded"
-          %303 = int 7
-          %304 = cmp_neq %302, %303
-          %305 = break_inline result, %304
+        %302 = int 7
+        %303 = cmp_neq %297, %302
+        %308 = bool_or %303 rhs {
+          %304 = decl_val "folded"
+          %305 = int 7
+          %306 = cmp_neq %304, %305
+          %307 = break_inline result, %306
         }
-        %312 = bool_or %306 rhs {
-          %307 = decl_val "inferred"
-          %308 = deref %307
-          %309 = decl_ref "left"
-          %310 = cmp_neq %308, %309
-          %311 = break_inline result, %310
+        %314 = bool_or %308 rhs {
+          %309 = decl_val "inferred"
+          %310 = deref %309
+          %311 = decl_ref "left"
+          %312 = cmp_neq %310, %311
+          %313 = break_inline result, %312
         }
-        %318 = if %312 then {
-          %313 = ret_type
-          %314 = int 3
-          %315 = as_return %313, %314
-          %316 = ret %315
+        %320 = if %314 then {
+          %315 = ret_type
+          %316 = int 3
+          %317 = as_return %315, %316
+          %318 = ret %317
         } else {
-          %317 = break_inline result, @void_value
+          %319 = break_inline result, @void_value
         }
-        %319 = decl_val "invoke"
-        %320 = call %319 arg0 {
-          %321 = arg_type %320, 0
-          %322 = decl_ref "callback"
-          %323 = as %321, %322
-          %324 = break_inline result, %323
+        %321 = check_unused_error %320
+        %322 = decl_val "invoke"
+        %323 = call %322 arg0 {
+          %324 = arg_type %323, 0
+          %325 = decl_ref "callback"
+          %326 = as %324, %325
+          %327 = break_inline result, %326
         }
-        %325 = int 42
-        %326 = cmp_neq %320, %325
-        %336 = bool_or %326 rhs {
-          %327 = decl_val "read_bool"
-          %328 = call %327 arg0 {
-            %329 = arg_type %328, 0
-            %330 = decl_ref "yes"
-            %331 = as %329, %330
-            %332 = break_inline result, %331
+        %328 = int 42
+        %329 = cmp_neq %323, %328
+        %339 = bool_or %329 rhs {
+          %330 = decl_val "read_bool"
+          %331 = call %330 arg0 {
+            %332 = arg_type %331, 0
+            %333 = decl_ref "yes"
+            %334 = as %332, %333
+            %335 = break_inline result, %334
           }
-          %333 = as @type_bool, %328
-          %334 = bool_not %333
-          %335 = break_inline result, %334
+          %336 = as @type_bool, %331
+          %337 = bool_not %336
+          %338 = break_inline result, %337
         }
-        %342 = if %336 then {
-          %337 = ret_type
-          %338 = int 4
-          %339 = as_return %337, %338
-          %340 = ret %339
+        %345 = if %339 then {
+          %340 = ret_type
+          %341 = int 4
+          %342 = as_return %340, %341
+          %343 = ret %342
         } else {
-          %341 = break_inline result, @void_value
+          %344 = break_inline result, @void_value
         }
-        %343 = decl_val "mutable"
-        %344 = int 11
-        %345 = cmp_neq %343, %344
-        %355 = bool_or %345 rhs {
-          %346 = decl_val "read"
-          %347 = call %346 arg0 {
-            %348 = arg_type %347, 0
-            %349 = decl_ref "mutable"
-            %350 = as %348, %349
-            %351 = break_inline result, %350
+        %346 = check_unused_error %345
+        %347 = decl_val "mutable"
+        %348 = int 11
+        %349 = cmp_neq %347, %348
+        %359 = bool_or %349 rhs {
+          %350 = decl_val "read"
+          %351 = call %350 arg0 {
+            %352 = arg_type %351, 0
+            %353 = decl_ref "mutable"
+            %354 = as %352, %353
+            %355 = break_inline result, %354
           }
-          %352 = int 11
-          %353 = cmp_neq %347, %352
-          %354 = break_inline result, %353
+          %356 = int 11
+          %357 = cmp_neq %351, %356
+          %358 = break_inline result, %357
         }
-        %361 = if %355 then {
-          %356 = ret_type
-          %357 = int 5
-          %358 = as_return %356, %357
-          %359 = ret %358
+        %365 = if %359 then {
+          %360 = ret_type
+          %361 = int 5
+          %362 = as_return %360, %361
+          %363 = ret %362
         } else {
-          %360 = break_inline result, @void_value
+          %364 = break_inline result, @void_value
         }
-        %365 = ptr_type @type_u8, @true align {
-          %362 = int 1
-          %363 = as @type_u29, %362
-          %364 = break_inline result, %363
+        %366 = check_unused_error %365
+        %370 = ptr_type @type_u8, @true align {
+          %367 = int 1
+          %368 = as @type_u29, %367
+          %369 = break_inline result, %368
         }
-        %366 = as @type_type, %365
-        %367 = decl_ref "left"
-        %368 = as %366, %367
-        %369 = decl_ref "left"
-        %370 = cmp_neq %368, %369
-        %376 = bool_or %370 rhs {
-          %371 = decl_ref "left"
-          %372 = deref %371
-          %373 = int 7
-          %374 = cmp_neq %372, %373
-          %375 = break_inline result, %374
+        %371 = as @type_type, %370
+        %372 = decl_ref "left"
+        %373 = as %371, %372
+        %374 = decl_ref "left"
+        %375 = cmp_neq %373, %374
+        %381 = bool_or %375 rhs {
+          %376 = decl_ref "left"
+          %377 = deref %376
+          %378 = int 7
+          %379 = cmp_neq %377, %378
+          %380 = break_inline result, %379
         }
-        %383 = bool_or %376 rhs {
-          %377 = decl_ref "right"
-          %378 = deref %377
-          %379 = int 9
-          %380 = negate %379
-          %381 = cmp_neq %378, %380
-          %382 = break_inline result, %381
+        %388 = bool_or %381 rhs {
+          %382 = decl_ref "right"
+          %383 = deref %382
+          %384 = int 9
+          %385 = negate %384
+          %386 = cmp_neq %383, %385
+          %387 = break_inline result, %386
         }
-        %389 = if %383 then {
-          %384 = ret_type
-          %385 = int 6
-          %386 = as_return %384, %385
-          %387 = ret %386
+        %394 = if %388 then {
+          %389 = ret_type
+          %390 = int 6
+          %391 = as_return %389, %390
+          %392 = ret %391
         } else {
-          %388 = break_inline result, @void_value
+          %393 = break_inline result, @void_value
         }
-        %390 = decl_val "zero"
-        %391 = int 0
-        %392 = cmp_neq %390, %391
-        %398 = if %392 then {
-          %393 = ret_type
-          %394 = int 7
-          %395 = as_return %393, %394
-          %396 = ret %395
+        %395 = check_unused_error %394
+        %396 = decl_val "zero"
+        %397 = int 0
+        %398 = cmp_neq %396, %397
+        %404 = if %398 then {
+          %399 = ret_type
+          %400 = int 7
+          %401 = as_return %399, %400
+          %402 = ret %401
         } else {
-          %397 = break_inline result, @void_value
+          %403 = break_inline result, @void_value
         }
-        %399 = decl_val "empty"
-        %400 = decl_ref "zero"
-        %401 = decl_ref "empty"
-        %402 = ret_type
-        %403 = int 0
-        %404 = as_return %402, %403
-        %405 = ret %404
+        %405 = check_unused_error %404
+        %406 = decl_val "empty"
+        %407 = discard %406
+        %408 = decl_ref "zero"
+        %409 = discard %408
+        %410 = decl_ref "empty"
+        %411 = discard %410
+        %412 = ret_type
+        %413 = int 0
+        %414 = as_return %412, %413
+        %415 = ret %414
       }
     }
-    %407 = break_inline result, %406
+    %417 = break_inline result, %416
   }
 }

@@ -1,4 +1,4 @@
-%69 = struct_decl (flags=0) {
+%70 = struct_decl (flags=0) {
   decl const "S" value {
     %12 = struct_decl (flags=0) {
       field "a" type {
@@ -71,7 +71,7 @@
     %43 = break_inline result, %42
   }
   decl fn "main" pub value {
-    %67 = func "main" {
+    %68 = func "main" {
       ret type {
         %44 = break_inline result, @type_u8
       }
@@ -88,19 +88,20 @@
         %53 = store %45, %52
         %54 = decl_val "partial"
         %55 = call %54
-        %56 = ret_type
-        %57 = decl_val "g"
-        %58 = field_val "a", %57
-        %59 = decl_val "g"
-        %60 = field_val "b", %59
-        %61 = add %58, %60
-        %62 = decl_val "g"
-        %63 = field_val "c", %62
-        %64 = add %61, %63
-        %65 = as_return %56, %64
-        %66 = ret %65
+        %56 = check_unused_error %55
+        %57 = ret_type
+        %58 = decl_val "g"
+        %59 = field_val "a", %58
+        %60 = decl_val "g"
+        %61 = field_val "b", %60
+        %62 = add %59, %61
+        %63 = decl_val "g"
+        %64 = field_val "c", %63
+        %65 = add %62, %64
+        %66 = as_return %57, %65
+        %67 = ret %66
       }
     }
-    %68 = break_inline result, %67
+    %69 = break_inline result, %68
   }
 }

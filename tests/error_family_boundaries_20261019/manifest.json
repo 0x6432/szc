@@ -1,0 +1,678 @@
+{
+  "contract": "error_family_boundaries_20261019",
+  "state": "FROZEN-APPROVED-POLICY",
+  "base_commit": "8fc08706a68d1fa913dcedbb240eca75d38a7ead",
+  "reference_version": "0.17.0",
+  "candidate_stage": "emit-qbe",
+  "source_budget": "25 exact frozen60 copies + ONE separately authorized appendix=26 durable programs; strict60 remains unchanged.",
+  "cases": [
+    {
+      "file": "s01_literal_singleton.zig",
+      "source_sha256": "75659feb25aac544ef26b7f9cf5fc4b38228433290c0bc17168013311bfed94a",
+      "provenance": {
+        "kind": "frozen60-copy",
+        "original_file": "s01_literal_singleton.zig",
+        "original_manifest_sha256": "5dc2137c6a234f565691502be0f52d14d7730e253e69b98b28954fda97c7e03b"
+      },
+      "reference": {
+        "status": 0,
+        "primaries": []
+      },
+      "candidate": {
+        "status": 0,
+        "primaries": [],
+        "generated_stdout": "nonempty"
+      },
+      "label": "ACCEPT",
+      "observation": "literal singleton type and decoded name equality",
+      "diagnostic_operation_attribution": [
+        "probe literal singleton type/name equality, no runtime error backing"
+      ]
+    },
+    {
+      "file": "s02_member_result_type.zig",
+      "source_sha256": "2822502e7298e48993f2d5e46f9e586040036548b16dc155e2be894cdf78dc90",
+      "provenance": {
+        "kind": "frozen60-copy",
+        "original_file": "s02_member_result_type.zig",
+        "original_manifest_sha256": "5dc2137c6a234f565691502be0f52d14d7730e253e69b98b28954fda97c7e03b"
+      },
+      "reference": {
+        "status": 0,
+        "primaries": []
+      },
+      "candidate": {
+        "status": 0,
+        "primaries": [],
+        "generated_stdout": "nonempty"
+      },
+      "label": "ACCEPT",
+      "observation": "Actual pinned owner E member type, distinct literal singleton type; known value language equality.",
+      "diagnostic_operation_attribution": [
+        "probe E.Name owner type and known symbolic equality"
+      ]
+    },
+    {
+      "file": "s08_explicit_discard.zig",
+      "source_sha256": "3703bdb1f88cbed996b643d87a2232d0b8299a058cffbe15bc3e3210055b1e8c",
+      "provenance": {
+        "kind": "frozen60-copy",
+        "original_file": "s08_explicit_discard.zig",
+        "original_manifest_sha256": "5dc2137c6a234f565691502be0f52d14d7730e253e69b98b28954fda97c7e03b"
+      },
+      "reference": {
+        "status": 1,
+        "primaries": [
+          "error set is discarded",
+          "error set is discarded",
+          "error set is discarded"
+        ]
+      },
+      "candidate": {
+        "status": 1,
+        "primaries": [
+          "error set is discarded",
+          "error set is discarded",
+          "error set is discarded"
+        ],
+        "generated_stdout": "empty"
+      },
+      "label": "PARITY-REJECT",
+      "observation": "direct/alias/coerced finite error discard distinct operations",
+      "diagnostic_operation_attribution": [
+        "direct: selected explicit error literal discard",
+        "alias: explicit known symbolic alias discard",
+        "coerced: explicit owner-typed finite error discard"
+      ]
+    },
+    {
+      "file": "s16_ignored_error.zig",
+      "source_sha256": "2d2aa6956b10cc03e7603e4edc6abb0d507a3714d5532c09f4dd962fbe82cf90",
+      "provenance": {
+        "kind": "frozen60-copy",
+        "original_file": "s16_ignored_error.zig",
+        "original_manifest_sha256": "5dc2137c6a234f565691502be0f52d14d7730e253e69b98b28954fda97c7e03b"
+      },
+      "reference": {
+        "status": 1,
+        "primaries": [
+          "error set of type 'error{A}' is ignored"
+        ]
+      },
+      "candidate": {
+        "status": 1,
+        "primaries": [
+          "error set of type 'error{@\"A\"}' is ignored"
+        ],
+        "generated_stdout": "empty"
+      },
+      "label": "STRUCTURAL-DIAGNOSTIC-REJECT",
+      "observation": "ignored error expression differs from explicit discard",
+      "diagnostic_operation_attribution": [
+        "probe: bare ignored symbolic error; existing always-quoted internal type renderer"
+      ]
+    },
+    {
+      "file": "m01_known_widening.zig",
+      "source_sha256": "c2f841ab5cbf50b9695d0124b7f490df62f2eb26508c5fc1fd9eb31f2bc26be0",
+      "provenance": {
+        "kind": "frozen60-copy",
+        "original_file": "m01_known_widening.zig",
+        "original_manifest_sha256": "5dc2137c6a234f565691502be0f52d14d7730e253e69b98b28954fda97c7e03b"
+      },
+      "reference": {
+        "status": 0,
+        "primaries": []
+      },
+      "candidate": {
+        "status": 0,
+        "primaries": [],
+        "generated_stdout": "nonempty"
+      },
+      "label": "ACCEPT",
+      "observation": "singleton/subset widening with known member",
+      "diagnostic_operation_attribution": [
+        "probe known whole-source-set subset widening/equality"
+      ]
+    },
+    {
+      "file": "m02_known_narrowing_member.zig",
+      "source_sha256": "3def34cef6c9cc1209d2082bec9f8ac156bf77b4f794c1340046799837a2dc45",
+      "provenance": {
+        "kind": "frozen60-copy",
+        "original_file": "m02_known_narrowing_member.zig",
+        "original_manifest_sha256": "5dc2137c6a234f565691502be0f52d14d7730e253e69b98b28954fda97c7e03b"
+      },
+      "reference": {
+        "status": 1,
+        "primaries": [
+          "expected type 'error{A}', found 'error{A,B}'"
+        ]
+      },
+      "candidate": {
+        "status": 1,
+        "primaries": [
+          "expected type 'error{@\"A\"}', found 'error{@\"A\",@\"B\"}'"
+        ],
+        "generated_stdout": "empty"
+      },
+      "label": "STRUCTURAL-DIAGNOSTIC-REJECT",
+      "observation": "actual known-member narrowing legality",
+      "diagnostic_operation_attribution": [
+        "probe: whole-source-set narrowing fails even when the known member belongs; approved structural rendering"
+      ]
+    },
+    {
+      "file": "m05_canonical_merge.zig",
+      "source_sha256": "e2fb203eb2a3e8373311425061bd88c37729d447667f17bcd5bde53c0c9ea273",
+      "provenance": {
+        "kind": "frozen60-copy",
+        "original_file": "m05_canonical_merge.zig",
+        "original_manifest_sha256": "5dc2137c6a234f565691502be0f52d14d7730e253e69b98b28954fda97c7e03b"
+      },
+      "reference": {
+        "status": 0,
+        "primaries": []
+      },
+      "candidate": {
+        "status": 0,
+        "primaries": [],
+        "generated_stdout": "nonempty"
+      },
+      "label": "ACCEPT",
+      "observation": "merge canonical order/alias/empty/decoded duplicate identities",
+      "diagnostic_operation_attribution": [
+        "probe canonical merge/order/empty/decoded duplicate identities"
+      ]
+    },
+    {
+      "file": "m10_merge_nonlocal_break.zig",
+      "source_sha256": "515600e7f567f9a01663f8b22a8ace6757155e810b0b9bb480d5be683954978b",
+      "provenance": {
+        "kind": "frozen60-copy",
+        "original_file": "m10_merge_nonlocal_break.zig",
+        "original_manifest_sha256": "5dc2137c6a234f565691502be0f52d14d7730e253e69b98b28954fda97c7e03b"
+      },
+      "reference": {
+        "status": 0,
+        "primaries": []
+      },
+      "candidate": {
+        "status": 0,
+        "primaries": [],
+        "generated_stdout": "nonempty"
+      },
+      "label": "ACCEPT",
+      "observation": "merge RHS nonlocal break must preserve enclosing target",
+      "diagnostic_operation_attribution": [
+        "probe merge RHS nonlocal labeled break"
+      ]
+    },
+    {
+      "file": "m11_merge_continue.zig",
+      "source_sha256": "2944cf565517fc0f5998c7c1bbef3e77c023aa824f63cdbf71f912efbe89bbad",
+      "provenance": {
+        "kind": "frozen60-copy",
+        "original_file": "m11_merge_continue.zig",
+        "original_manifest_sha256": "5dc2137c6a234f565691502be0f52d14d7730e253e69b98b28954fda97c7e03b"
+      },
+      "reference": {
+        "status": 0,
+        "primaries": []
+      },
+      "candidate": {
+        "status": 0,
+        "primaries": [],
+        "generated_stdout": "nonempty"
+      },
+      "label": "ACCEPT",
+      "observation": "merge RHS runtime continue must preserve enclosing loop",
+      "diagnostic_operation_attribution": [
+        "probe merge RHS runtime continue"
+      ]
+    },
+    {
+      "file": "u01_canonical_union.zig",
+      "source_sha256": "3ef3679c38af4ea294a70fd3d7f285e4f9c2cf4906da77d3f70f698c3e3e6017",
+      "provenance": {
+        "kind": "frozen60-copy",
+        "original_file": "u01_canonical_union.zig",
+        "original_manifest_sha256": "5dc2137c6a234f565691502be0f52d14d7730e253e69b98b28954fda97c7e03b"
+      },
+      "reference": {
+        "status": 0,
+        "primaries": []
+      },
+      "candidate": {
+        "status": 0,
+        "primaries": [],
+        "generated_stdout": "nonempty"
+      },
+      "label": "ACCEPT",
+      "observation": "Canonical finite error-set union alias/order identity plus ANYERROR LHS TYPE identity/distinction; no values.",
+      "diagnostic_operation_attribution": [
+        "probe finite and ANYERROR union TYPE identity/distinction; no values"
+      ]
+    },
+    {
+      "file": "u08_error_set_payload.zig",
+      "source_sha256": "96fce31e3f147bbe6d7fb7cb0f9a64107ca1930ccbf8252e01c0305af766f870",
+      "provenance": {
+        "kind": "frozen60-copy",
+        "original_file": "u08_error_set_payload.zig",
+        "original_manifest_sha256": "5dc2137c6a234f565691502be0f52d14d7730e253e69b98b28954fda97c7e03b"
+      },
+      "reference": {
+        "status": 1,
+        "primaries": [
+          "error union with payload of error set type 'error{B}' not allowed",
+          "error union with payload of error set type 'anyerror' not allowed"
+        ]
+      },
+      "candidate": {
+        "status": 1,
+        "primaries": [
+          "error union with payload of error set type 'error{@\"B\"}' not allowed",
+          "error union with payload of error set type 'anyerror' not allowed"
+        ],
+        "generated_stdout": "empty"
+      },
+      "label": "STRUCTURAL-DIAGNOSTIC-REJECT",
+      "observation": "Finite and ANYERROR error-set payload legality, separate independently reached functions.",
+      "diagnostic_operation_attribution": [
+        "finite: rejected finite-error-set payload, approved structural spelling",
+        "broad: rejected ANYERROR payload"
+      ]
+    },
+    {
+      "file": "u15_union_nonlocal_controls.zig",
+      "source_sha256": "e44c90a1dc699b58d6e71cf55dc7acebe02a1cc124539f274cbd358eb04a7f5f",
+      "provenance": {
+        "kind": "frozen60-copy",
+        "original_file": "u15_union_nonlocal_controls.zig",
+        "original_manifest_sha256": "5dc2137c6a234f565691502be0f52d14d7730e253e69b98b28954fda97c7e03b"
+      },
+      "reference": {
+        "status": 0,
+        "primaries": []
+      },
+      "candidate": {
+        "status": 0,
+        "primaries": [],
+        "generated_stdout": "nonempty"
+      },
+      "label": "ACCEPT",
+      "observation": "union operand nonlocal break/continue",
+      "diagnostic_operation_attribution": [
+        "broken: union RHS nonlocal break",
+        "continuing: union RHS continue"
+      ]
+    },
+    {
+      "file": "f01_runtime_error_load.zig",
+      "source_sha256": "acd07df369e5386c02495e55ff2985b33162528347089863ac622a282ed0d456",
+      "provenance": {
+        "kind": "frozen60-copy",
+        "original_file": "f01_runtime_error_load.zig",
+        "original_manifest_sha256": "5dc2137c6a234f565691502be0f52d14d7730e253e69b98b28954fda97c7e03b"
+      },
+      "reference": {
+        "status": 0,
+        "primaries": []
+      },
+      "candidate": {
+        "status": 1,
+        "primaries": [
+          "not supported by szc yet: finite error-set value or layout demand"
+        ],
+        "generated_stdout": "empty"
+      },
+      "label": "VALID-UNSUPPORTED-FENCE",
+      "observation": "runtime finite error load fence; no native execution",
+      "diagnostic_operation_attribution": [
+        "probe: runtime finite-error pointer load"
+      ]
+    },
+    {
+      "file": "f02_internal_error_signature.zig",
+      "source_sha256": "bee7f61e402aa62a7f68fe4f7596af5740a51d464c0577eb14542c8be8d1fd28",
+      "provenance": {
+        "kind": "frozen60-copy",
+        "original_file": "f02_internal_error_signature.zig",
+        "original_manifest_sha256": "5dc2137c6a234f565691502be0f52d14d7730e253e69b98b28954fda97c7e03b"
+      },
+      "reference": {
+        "status": 0,
+        "primaries": []
+      },
+      "candidate": {
+        "status": 1,
+        "primaries": [
+          "not supported by szc yet: finite error-set values in runtime function signatures"
+        ],
+        "generated_stdout": "empty"
+      },
+      "label": "VALID-UNSUPPORTED-FENCE",
+      "observation": "internal finite error parameter/return negative fence",
+      "diagnostic_operation_attribution": [
+        "probe: live internal call finite-error runtime signature; output alone does not prove argument lowering order"
+      ]
+    },
+    {
+      "file": "f05_known_error_array.zig",
+      "source_sha256": "55b1e490cc08bc4bed51a369ea24d627bbeb20278a15adc812fe3f7d65eb3ab2",
+      "provenance": {
+        "kind": "frozen60-copy",
+        "original_file": "f05_known_error_array.zig",
+        "original_manifest_sha256": "5dc2137c6a234f565691502be0f52d14d7730e253e69b98b28954fda97c7e03b"
+      },
+      "reference": {
+        "status": 0,
+        "primaries": []
+      },
+      "candidate": {
+        "status": 1,
+        "primaries": [
+          "not supported by szc yet: finite error-set value or layout demand"
+        ],
+        "generated_stdout": "empty"
+      },
+      "label": "VALID-UNSUPPORTED-FENCE",
+      "observation": "known-element error aggregate backing fence",
+      "diagnostic_operation_attribution": [
+        "probe: known-error array backing/aggregate construction"
+      ]
+    },
+    {
+      "file": "f06_zero_error_array.zig",
+      "source_sha256": "b6ce28cf563c1fd943f9277ea801173004fffd5fc83f5d676b9da19f40fcc0aa",
+      "provenance": {
+        "kind": "frozen60-copy",
+        "original_file": "f06_zero_error_array.zig",
+        "original_manifest_sha256": "5dc2137c6a234f565691502be0f52d14d7730e253e69b98b28954fda97c7e03b"
+      },
+      "reference": {
+        "status": 0,
+        "primaries": []
+      },
+      "candidate": {
+        "status": 1,
+        "primaries": [
+          "not supported by szc yet: finite error-set value or layout demand"
+        ],
+        "generated_stdout": "empty"
+      },
+      "label": "VALID-UNSUPPORTED-FENCE",
+      "observation": "zero-array finite error backing fence",
+      "diagnostic_operation_attribution": [
+        "probe: zero-array finite-error backing admission"
+      ]
+    },
+    {
+      "file": "f07_error_zero_concat.zig",
+      "source_sha256": "3ead67a437f021457f844655b14cbad2b6d5ef3500df63bf06804d7896d59fe7",
+      "provenance": {
+        "kind": "frozen60-copy",
+        "original_file": "f07_error_zero_concat.zig",
+        "original_manifest_sha256": "5dc2137c6a234f565691502be0f52d14d7730e253e69b98b28954fda97c7e03b"
+      },
+      "reference": {
+        "status": 1,
+        "primaries": [
+          "use of undefined value here causes illegal behavior"
+        ]
+      },
+      "candidate": {
+        "status": 1,
+        "primaries": [
+          "not supported by szc yet: finite error-set value or layout demand"
+        ],
+        "generated_stdout": "empty"
+      },
+      "label": "REF-INVALID-NYI-REFUSAL",
+      "observation": "reference-invalid undefined finite error concat frontier",
+      "diagnostic_operation_attribution": [
+        "probe: finite-error zero-pointer concat frontier; reference rejects undefined pointer use"
+      ]
+    },
+    {
+      "file": "f08_error_alignment.zig",
+      "source_sha256": "ffabbc38b2de380ecc68741458e48212d93f176017b050e0cdccb482905d3676",
+      "provenance": {
+        "kind": "frozen60-copy",
+        "original_file": "f08_error_alignment.zig",
+        "original_manifest_sha256": "5dc2137c6a234f565691502be0f52d14d7730e253e69b98b28954fda97c7e03b"
+      },
+      "reference": {
+        "status": 0,
+        "primaries": []
+      },
+      "candidate": {
+        "status": 1,
+        "primaries": [
+          "not supported by szc yet: finite error-set value or layout demand"
+        ],
+        "generated_stdout": "empty"
+      },
+      "label": "VALID-UNSUPPORTED-FENCE",
+      "observation": "natural pointer alignment finite error demand",
+      "diagnostic_operation_attribution": [
+        "probe: natural pointer alignment demand for finite-error child"
+      ]
+    },
+    {
+      "file": "f10_optional_error_value.zig",
+      "source_sha256": "21c905c9c84ac56e972d2c40ebb7f76e7bfb5c567788d440f4a9e812df408de9",
+      "provenance": {
+        "kind": "frozen60-copy",
+        "original_file": "f10_optional_error_value.zig",
+        "original_manifest_sha256": "5dc2137c6a234f565691502be0f52d14d7730e253e69b98b28954fda97c7e03b"
+      },
+      "reference": {
+        "status": 0,
+        "primaries": []
+      },
+      "candidate": {
+        "status": 1,
+        "primaries": [
+          "not supported by szc yet: optional value or layout demand"
+        ],
+        "generated_stdout": "empty"
+      },
+      "label": "VALID-UNSUPPORTED-FENCE",
+      "observation": "existing optional value negative fence, not optional support",
+      "diagnostic_operation_attribution": [
+        "probe: existing optional-value representation frontier"
+      ]
+    },
+    {
+      "file": "f11_union_layout.zig",
+      "source_sha256": "1fe4db61e444e343563761b3177ac55ab7a0302d9b7e6654cbcd8f0c3a248d73",
+      "provenance": {
+        "kind": "frozen60-copy",
+        "original_file": "f11_union_layout.zig",
+        "original_manifest_sha256": "5dc2137c6a234f565691502be0f52d14d7730e253e69b98b28954fda97c7e03b"
+      },
+      "reference": {
+        "status": 0,
+        "primaries": []
+      },
+      "candidate": {
+        "status": 1,
+        "primaries": [
+          "not supported by szc yet: error-union value or layout demand",
+          "not supported by szc yet: error-union value or layout demand",
+          "not supported by szc yet: error-union value or layout demand"
+        ],
+        "generated_stdout": "empty"
+      },
+      "label": "VALID-UNSUPPORTED-FENCE",
+      "observation": "Union size/alignment/zero-array size representation demands (combined parent-approved existing query slots).",
+      "diagnostic_operation_attribution": [
+        "size: union size query",
+        "alignment: union alignment query",
+        "zero: zero-array union size query"
+      ]
+    },
+    {
+      "file": "f12_runtime_error_join_forms.zig",
+      "source_sha256": "68ca7841b3f1a495e023f12cc3a6736dfb5beeceb35693221277feb6ab2d18dc",
+      "provenance": {
+        "kind": "frozen60-copy",
+        "original_file": "f12_runtime_error_join_forms.zig",
+        "original_manifest_sha256": "5dc2137c6a234f565691502be0f52d14d7730e253e69b98b28954fda97c7e03b"
+      },
+      "reference": {
+        "status": 0,
+        "primaries": []
+      },
+      "candidate": {
+        "status": 1,
+        "primaries": [
+          "not supported by szc yet: finite error-set value or layout demand",
+          "not supported by szc yet: finite error-set value or layout demand",
+          "not supported by szc yet: finite error-set value or layout demand"
+        ],
+        "generated_stdout": "empty"
+      },
+      "label": "VALID-UNSUPPORTED-FENCE",
+      "observation": "Runtime if/u8-switch/labeled-block joins of known errors must fence before runtime typed error TIR.",
+      "diagnostic_operation_attribution": [
+        "branch: runtime if known-error join",
+        "choose: runtime u8-switch known-error join",
+        "labeled: runtime labeled-block known-error join"
+      ]
+    },
+    {
+      "file": "f13_indirect_union_signature.zig",
+      "source_sha256": "cabe184040d1eb6aed07838d7c1cb80e0d3ba5a5a3b5c6a57d80c1bcabe2ad9d",
+      "provenance": {
+        "kind": "frozen60-copy",
+        "original_file": "f13_indirect_union_signature.zig",
+        "original_manifest_sha256": "5dc2137c6a234f565691502be0f52d14d7730e253e69b98b28954fda97c7e03b"
+      },
+      "reference": {
+        "status": 0,
+        "primaries": []
+      },
+      "candidate": {
+        "status": 1,
+        "primaries": [
+          "not supported by szc yet: error-union values in runtime function signatures"
+        ],
+        "generated_stdout": "empty"
+      },
+      "label": "VALID-UNSUPPORTED-FENCE",
+      "observation": "compile-only opaque indirect union return admission fence; no value construction",
+      "diagnostic_operation_attribution": [
+        "probe: zero-argument indirect union-return signature; no claim of internal call absence from output only"
+      ]
+    },
+    {
+      "file": "f14_runtime_union_load.zig",
+      "source_sha256": "8d607d741bb77e327eba489df158f23af1f466c14db09c13b4121f4e27fd599d",
+      "provenance": {
+        "kind": "frozen60-copy",
+        "original_file": "f14_runtime_union_load.zig",
+        "original_manifest_sha256": "5dc2137c6a234f565691502be0f52d14d7730e253e69b98b28954fda97c7e03b"
+      },
+      "reference": {
+        "status": 0,
+        "primaries": []
+      },
+      "candidate": {
+        "status": 1,
+        "primaries": [
+          "not supported by szc yet: error-union value or layout demand"
+        ],
+        "generated_stdout": "empty"
+      },
+      "label": "VALID-UNSUPPORTED-FENCE",
+      "observation": "compile-only opaque union load/address admission fence; no value construction",
+      "diagnostic_operation_attribution": [
+        "probe: runtime opaque union pointer load"
+      ]
+    },
+    {
+      "file": "f15_union_zero_concat.zig",
+      "source_sha256": "36ade37d005d24f011c3b200ba219d2805ef3456c98d143d7eb29041d089db74",
+      "provenance": {
+        "kind": "frozen60-copy",
+        "original_file": "f15_union_zero_concat.zig",
+        "original_manifest_sha256": "5dc2137c6a234f565691502be0f52d14d7730e253e69b98b28954fda97c7e03b"
+      },
+      "reference": {
+        "status": 1,
+        "primaries": [
+          "use of undefined value here causes illegal behavior"
+        ]
+      },
+      "candidate": {
+        "status": 1,
+        "primaries": [
+          "not supported by szc yet: error-union value or layout demand"
+        ],
+        "generated_stdout": "empty"
+      },
+      "label": "REF-INVALID-NYI-REFUSAL",
+      "observation": "reference-invalid undefined union zero-pointer concat frontier",
+      "diagnostic_operation_attribution": [
+        "probe: union zero-pointer concat frontier; reference rejects undefined pointer use"
+      ]
+    },
+    {
+      "file": "f16_ordinary_discard_concat.zig",
+      "source_sha256": "c9343fd637c41b1e333c86d4c68415b888018b3ed0ab229acfeca0c7ab8e50e4",
+      "provenance": {
+        "kind": "frozen60-copy",
+        "original_file": "f16_ordinary_discard_concat.zig",
+        "original_manifest_sha256": "5dc2137c6a234f565691502be0f52d14d7730e253e69b98b28954fda97c7e03b"
+      },
+      "reference": {
+        "status": 0,
+        "primaries": []
+      },
+      "candidate": {
+        "status": 0,
+        "primaries": [],
+        "generated_stdout": "nonempty"
+      },
+      "label": "ACCEPT",
+      "observation": "ordinary scalar/type underscore and terminating RHS plus concat controls",
+      "diagnostic_operation_attribution": [
+        "probe: ordinary scalar/type underscore and ordinary concat",
+        "terminating: break RHS must not acquire a consumer after terminator",
+        "continuing: continue RHS must not acquire a consumer after terminator"
+      ]
+    },
+    {
+      "file": "appendix_known_error_store_and_address.zig",
+      "source_sha256": "33ed8f22f270b0a9420f2246adc1fe54ac8bfc6c1bb675cd7169ad8f23112531",
+      "provenance": {
+        "kind": "authorized-single-producer-appendix",
+        "strict60_member": false
+      },
+      "reference": {
+        "status": 0,
+        "primaries": []
+      },
+      "candidate": {
+        "status": 1,
+        "primaries": [
+          "not supported by szc yet: finite error-set value or layout demand",
+          "not supported by szc yet: finite error-set value or layout demand"
+        ],
+        "generated_stdout": "empty"
+      },
+      "label": "VALID-UNSUPPORTED-FENCE",
+      "observation": "Two independent producer preflights: store destination before known coercion/materialize/TIR_STORE; namespace constant address before VALUE_REF/global backing. Driver empty output alone is not internal proof.",
+      "diagnostic_operation_attribution": [
+        "store: destination admission before known coercion/materialize/TIR_STORE (static audit separate)",
+        "address: namespace-constant address admission before VALUE_REF/global backing (static audit separate)"
+      ]
+    }
+  ],
+  "expectation_basis": "Approved source-operation intent/guard strings/structural renderer policy, then independently validated against immutable raw emit-qbe output; no deduplication/filters/auto-golden manufacture. Driver refusal is not internal TIR/store/backing proof.",
+  "strict60_manifest_sha256": "5dc2137c6a234f565691502be0f52d14d7730e253e69b98b28954fda97c7e03b",
+  "appendix_source_sha256": "33ed8f22f270b0a9420f2246adc1fe54ac8bfc6c1bb675cd7169ad8f23112531"
+}

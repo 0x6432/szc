@@ -22,6 +22,22 @@ Read this first when resuming work (the sandbox resets often).
    candidate. Never mutate frozen validation sources or mix flag configurations.
    The GitHub token is **never** committed. Restore authenticated Git access if needed.
 
+## Grouped known-error / finite algebra / union-TYPE candidate
+
+- Read `ERROR_FAMILY_STATUS.md`. Baseline is published 8fc0870.
+- Three submilestones are integrated together; M6.5 remains partial. No runtime
+  errors/unions, error numbering, anyerror values, try/catch/errdefer or ABI work.
+- Preserve strict60 and all outside/formatting mismatches; focused V1 is 35 exact
+  /25 failures, not an all-green claim. Reference has 36 accepts/24 rejects.
+- V1 is blocked and immutable: refused variadic errors could publish an invalid
+  NONE call argument. A bounded V2 is authorized; do not reuse V1 as accepted.
+- Five frontend operations preserve explicit/bare discard provenance, RHS source
+  anchor, lexical contexts and stronger ENSURE_RESULT behavior. No control barriers.
+- 58 old IR goldens change only by new consumers plus reference renumbering;
+  parent audited all 92 instruction streams. Original Zig sources stay unchanged; four separately reviewed non-IR golden
+  substitutions cover opaque ValueIds/byte-symbol names only after full-output
+  identity proof. Preserve both failed-gate evidence and the fresh gate. Fresh final validation and independent immutable review are mandatory.
+
 ## Finite error-set type-only candidate (V2; not error value support)
 
 - Based on published ea86b15. Read `ERROR_SET_TYPE_STATUS.md` before extension.

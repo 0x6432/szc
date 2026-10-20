@@ -1,4 +1,4 @@
-%106 = struct_decl (flags=0) {
+%107 = struct_decl (flags=0) {
   decl fn "read" value {
     %12 = func "read" {
       %6 = param "p" type {
@@ -57,7 +57,7 @@
     %35 = break_inline result, %34
   }
   decl fn "main" pub value {
-    %104 = func "main" {
+    %105 = func "main" {
       ret type {
         %36 = break_inline result, @type_u8
       }
@@ -137,12 +137,13 @@
         } else {
           %98 = break_inline result, @void_value
         }
-        %100 = ret_type
-        %101 = int 0
-        %102 = as_return %100, %101
-        %103 = ret %102
+        %100 = check_unused_error %99
+        %101 = ret_type
+        %102 = int 0
+        %103 = as_return %101, %102
+        %104 = ret %103
       }
     }
-    %105 = break_inline result, %104
+    %106 = break_inline result, %105
   }
 }

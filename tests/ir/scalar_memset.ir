@@ -1,4 +1,4 @@
-%52 = struct_decl (flags=0) {
+%53 = struct_decl (flags=0) {
   decl fn "fill" value {
     %11 = func "fill" {
       %3 = param "p" type {
@@ -22,7 +22,7 @@
     %12 = break_inline result, %11
   }
   decl fn "main" pub value {
-    %50 = func "main" {
+    %51 = func "main" {
       ret type {
         %13 = break_inline result, @type_u8
       }
@@ -50,25 +50,26 @@
           %33 = as %31, %32
           %34 = break_inline result, %33
         }
-        %35 = ret_type
-        %36 = array_base_ptr %25
-        %37 = int 1
-        %38 = as @type_usize, %37
-        %39 = array_index %36, %38
-        %40 = int 1234
-        %41 = cmp_eq %39, %40
-        %48 = if %41 then {
-          %42 = int 0
-          %43 = as %35, %42
-          %44 = break_inline result, %43
+        %35 = check_unused_error %27
+        %36 = ret_type
+        %37 = array_base_ptr %25
+        %38 = int 1
+        %39 = as @type_usize, %38
+        %40 = array_index %37, %39
+        %41 = int 1234
+        %42 = cmp_eq %40, %41
+        %49 = if %42 then {
+          %43 = int 0
+          %44 = as %36, %43
+          %45 = break_inline result, %44
         } else {
-          %45 = int 1
-          %46 = as %35, %45
-          %47 = break_inline result, %46
+          %46 = int 1
+          %47 = as %36, %46
+          %48 = break_inline result, %47
         }
-        %49 = ret %48
+        %50 = ret %49
       }
     }
-    %51 = break_inline result, %50
+    %52 = break_inline result, %51
   }
 }

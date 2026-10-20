@@ -1,4 +1,4 @@
-%152 = struct_decl (flags=0) {
+%154 = struct_decl (flags=0) {
   decl const "alignment" type {
     %0 = break_inline result, @type_u29
   } value {
@@ -55,7 +55,7 @@
     %41 = break_inline result, %40
   }
   decl fn "main" pub value {
-    %150 = func "main" {
+    %152 = func "main" {
       ret type {
         %42 = break_inline result, @type_u8
       }
@@ -153,35 +153,37 @@
         } else {
           %125 = break_inline result, @void_value
         }
-        %127 = load %64
-        %128 = int 10
-        %129 = cmp_neq %127, %128
-        %134 = bool_or %129 rhs {
-          %130 = load %79
-          %131 = int 3
-          %132 = cmp_neq %130, %131
-          %133 = break_inline result, %132
+        %127 = check_unused_error %126
+        %128 = load %64
+        %129 = int 10
+        %130 = cmp_neq %128, %129
+        %135 = bool_or %130 rhs {
+          %131 = load %79
+          %132 = int 3
+          %133 = cmp_neq %131, %132
+          %134 = break_inline result, %133
         }
-        %139 = bool_or %134 rhs {
-          %135 = load %94
-          %136 = int 8
-          %137 = cmp_neq %135, %136
-          %138 = break_inline result, %137
+        %140 = bool_or %135 rhs {
+          %136 = load %94
+          %137 = int 8
+          %138 = cmp_neq %136, %137
+          %139 = break_inline result, %138
         }
-        %145 = if %139 then {
-          %140 = ret_type
-          %141 = int 2
-          %142 = as_return %140, %141
-          %143 = ret %142
+        %146 = if %140 then {
+          %141 = ret_type
+          %142 = int 2
+          %143 = as_return %141, %142
+          %144 = ret %143
         } else {
-          %144 = break_inline result, @void_value
+          %145 = break_inline result, @void_value
         }
-        %146 = ret_type
-        %147 = int 0
-        %148 = as_return %146, %147
-        %149 = ret %148
+        %147 = check_unused_error %146
+        %148 = ret_type
+        %149 = int 0
+        %150 = as_return %148, %149
+        %151 = ret %150
       }
     }
-    %151 = break_inline result, %150
+    %153 = break_inline result, %152
   }
 }

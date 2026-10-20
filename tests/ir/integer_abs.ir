@@ -1,4 +1,4 @@
-%80 = struct_decl (flags=0) {
+%83 = struct_decl (flags=0) {
   decl fn "magnitude" value {
     %9 = func "magnitude" {
       %2 = param "n" type {
@@ -38,7 +38,7 @@
     %21 = break_inline result, %20
   }
   decl fn "main" pub value {
-    %78 = func "main" {
+    %81 = func "main" {
       ret type {
         %22 = break_inline result, @type_u8
       }
@@ -59,56 +59,59 @@
           %34 = as @type_u8, %33
           %35 = break_inline result, %34
         }
-        %37 = int 12345678901234567890
-        %38 = negate %37
-        %39 = abs %38
-        %40 = int 12345678901234567890
-        %41 = cmp_eq %39, %40
-        %48 = if %41 then {
-          %42 = int 0
-          %43 = as @type_u8, %42
-          %44 = break_inline result, %43
+        %37 = discard %36
+        %38 = int 12345678901234567890
+        %39 = negate %38
+        %40 = abs %39
+        %41 = int 12345678901234567890
+        %42 = cmp_eq %40, %41
+        %49 = if %42 then {
+          %43 = int 0
+          %44 = as @type_u8, %43
+          %45 = break_inline result, %44
         } else {
-          %45 = int 256
-          %46 = as @type_u8, %45
-          %47 = break_inline result, %46
+          %46 = int 256
+          %47 = as @type_u8, %46
+          %48 = break_inline result, %47
         }
-        %49 = decl_val "magnitude"
-        %50 = call %49 arg0 {
-          %51 = arg_type %50, 0
-          %52 = int 4294967296
-          %53 = negate %52
-          %54 = as %51, %53
-          %55 = break_inline result, %54
+        %50 = discard %49
+        %51 = decl_val "magnitude"
+        %52 = call %51 arg0 {
+          %53 = arg_type %52, 0
+          %54 = int 4294967296
+          %55 = negate %54
+          %56 = as %53, %55
+          %57 = break_inline result, %56
         }
-        %56 = int 4294967296
-        %57 = cmp_neq %50, %56
-        %67 = bool_or %57 rhs {
-          %58 = decl_val "identity"
-          %59 = call %58 arg0 {
-            %60 = arg_type %59, 0
-            %61 = int 31
-            %62 = as %60, %61
-            %63 = break_inline result, %62
+        %58 = int 4294967296
+        %59 = cmp_neq %52, %58
+        %69 = bool_or %59 rhs {
+          %60 = decl_val "identity"
+          %61 = call %60 arg0 {
+            %62 = arg_type %61, 0
+            %63 = int 31
+            %64 = as %62, %63
+            %65 = break_inline result, %64
           }
-          %64 = int 31
-          %65 = cmp_neq %59, %64
-          %66 = break_inline result, %65
+          %66 = int 31
+          %67 = cmp_neq %61, %66
+          %68 = break_inline result, %67
         }
-        %73 = if %67 then {
-          %68 = ret_type
-          %69 = int 1
-          %70 = as_return %68, %69
-          %71 = ret %70
+        %75 = if %69 then {
+          %70 = ret_type
+          %71 = int 1
+          %72 = as_return %70, %71
+          %73 = ret %72
         } else {
-          %72 = break_inline result, @void_value
+          %74 = break_inline result, @void_value
         }
-        %74 = ret_type
-        %75 = int 0
-        %76 = as_return %74, %75
-        %77 = ret %76
+        %76 = check_unused_error %75
+        %77 = ret_type
+        %78 = int 0
+        %79 = as_return %77, %78
+        %80 = ret %79
       }
     }
-    %79 = break_inline result, %78
+    %82 = break_inline result, %81
   }
 }

@@ -1280,6 +1280,11 @@ binary(GenBody *body, Scope *scope, ResultInfo info, AstNode *node)
 		IrOp op = binary_node->op == AST_OP_BOOL_AND ? IR_BOOL_AND : IR_BOOL_OR;
 		return rvalue(body, info, emit_payload(body, op, node->offset, APPEND_EXTRA(body->gen, payload)), node->offset);
 	}
+	if (binary_node->op == AST_OP_MERGE_ERROR_SETS) {
+		IrRef lhs = type_expr(body, scope, binary_node->lhs);
+		IrRef rhs = type_expr(body, scope, binary_node->rhs);
+		return rvalue(body, info, emit_bin(body, IR_ERROR_SET_MERGE, node->offset, lhs, rhs), node->offset);
+	}
 	IrOp op = binary_op(binary_node->op);
 	if (op == IR_OP_COUNT) {
 		unsupported(body, node, ast_binary_op_name(binary_node->op));
@@ -2561,6 +2566,18 @@ expr(GenBody *body, Scope *scope, ResultInfo info, AstNode *node)
 		return identifier(body, scope, info, node);
 	case AST_FN_PROTO:
 		return rvalue(body, info, function_proto(body, scope, AST_CAST(AstFnProto, node, AST_FN_PROTO), STRING_NONE, 0, STRING_NONE, NULL, IR_FN_TYPE), node->offset);
+	case AST_ERROR_VALUE: {
+		StringId name = intern_span(body->gen, AST_CAST(AstNamedValue, node, AST_ERROR_VALUE)->name);
+		if (name == STRING_NONE)
+			return IR_REF_VOID_VALUE;
+		return rvalue(body, info, emit_name(body, IR_ERROR_VALUE, node->offset, name, IR_REF_NONE), node->offset);
+	}
+	case AST_ERROR_UNION_TYPE: {
+		AstErrorUnionType *type = AST_CAST(AstErrorUnionType, node, AST_ERROR_UNION_TYPE);
+		IrRef error_set = type_expr(body, scope, type->error_set);
+		IrRef payload = type_expr(body, scope, type->payload);
+		return rvalue(body, info, emit_bin(body, IR_ERROR_UNION_TYPE, node->offset, error_set, payload), node->offset);
+	}
 	case AST_ERROR_SET_DECL:
 		return rvalue(body, info, error_set_type(body, AST_CAST(AstErrorSetDecl, node, AST_ERROR_SET_DECL)), node->offset);
 	case AST_OPTIONAL_TYPE:
@@ -2725,8 +2742,10 @@ assign(GenBody *body, Scope *scope, AstAssign *node)
 	if (node->op == AST_ASSIGN_PLAIN && node->target->kind == AST_IDENTIFIER) {
 		AstIdentifier *target = AST_CAST(AstIdentifier, node->target, AST_IDENTIFIER);
 		if (target->name.end - target->name.start == 1 && body->gen->source[target->name.start] == '_') {
-			/* `_ = x;` discards the value. */
-			expr(body, scope, result_none, node->value);
+			/* Explicit discard still has the semantic error-consumption obligation. */
+			IrRef value = expr(body, scope, result_none, node->value);
+			if (!body_is_terminated(body))
+				emit_un(body, IR_DISCARD, node->value->offset, value);
 			return;
 		}
 	}
@@ -2806,8 +2825,8 @@ block_statements(GenBody *body, Scope *scope, AstBlock *block)
 				if (current->kind == SCOPE_DEFER_BODY)
 					ensure_result = true;
 			}
-			if (ensure_result && !body_is_terminated(body) && value != IR_REF_VOID_VALUE)
-				emit_un(body, IR_ENSURE_RESULT, statement->offset, value);
+			if (!body_is_terminated(body) && value != IR_REF_VOID_VALUE)
+				emit_un(body, ensure_result ? IR_ENSURE_RESULT : IR_CHECK_UNUSED_ERROR, statement->offset, value);
 			break;
 		}
 		}

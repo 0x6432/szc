@@ -34,6 +34,7 @@ typedef enum ValueKind {
 	VALUE_INT,	/* integer of any integer type, including comptime_int */
 	VALUE_ENUM,	/* nominal enum with a sema-validated canonical integer tag ID */
 	VALUE_ENUM_LITERAL,	/* contextual enum name, represented by interned StringId */
+	VALUE_ERROR,	/* known symbolic finite error; decoded name, NEVER numeric code */
 	VALUE_TYPE,
 	VALUE_FUNCTION,
 	VALUE_GLOBAL,	/* stable declaration address; contents resolve separately */
@@ -105,6 +106,7 @@ typedef struct Value {
 		BigInt integer;
 		ValueId enum_tag;
 		StringId enum_literal;
+		StringId error_name;
 		TypeId type_value;
 		FuncId function;
 		GlobalId global;
@@ -168,6 +170,8 @@ ValueId value_int(ValueTable *table, TypeId type, const BigInt *value);
 /* Sema validates enum membership/tag type and contextual literal type. */
 ValueId value_enum(ValueTable *table, TypeId type, ValueId tag);
 ValueId value_enum_literal(ValueTable *table, TypeId type, StringId name);
+/* Sema validates finite membership; this is not a runtime representation. */
+ValueId value_error(ValueTable *table, TypeId type, StringId name);
 ValueId value_undefined(ValueTable *table, TypeId type);
 ValueId value_function(ValueTable *table, TypeId fn_type, FuncId function);
 

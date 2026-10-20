@@ -195,3 +195,12 @@ be added to that count or used to claim M6.3/M6.4 completion.
 The bounded TYPE-only V2 candidate is documented in ERROR_SET_TYPE_STATUS.md.
 It does not construct error values/unions or close the earlier error-union switch
 producer gate. Original switch sources and the 80/84 checkpoint remain unchanged.
+
+## Grouped known-error / finite algebra / union-TYPE follow-up
+
+See ERROR_FAMILY_STATUS.md. Known symbolic errors and explicit union TYPE identity
+do not enable runtime union values or switch payload transport. Keep the original
+84 source files and their 80/84 checkpoint distinct from the new shared60 and
+representation policies. V1 is preserved but blocked by a variadic-call TIR escape;
+V2 and the full gate must close it before publication. No hosted-green or full
+M6.3/M6.5 completion is implied.

@@ -8,7 +8,7 @@ function w $szc.main.1() {
 	%t4 =w copy 1
 	jmp @b4
 @c12_else
-	%t6 =l call $szc.length.3(l $szc.bytes.29)
+	%t6 =l call $szc.length.3(l $szc.bytes.30)
 	%t8 =w cnel %t6, 0
 	%t4 =w copy %t8
 	jmp @b4
@@ -18,7 +18,7 @@ function w $szc.main.1() {
 	%t13 =w copy 1
 	jmp @b13
 @c21_else
-	%t15 =l call $szc.length.3(l $szc.bytes.31)
+	%t15 =l call $szc.length.3(l $szc.bytes.32)
 	%t17 =w cnel %t15, 1
 	%t13 =w copy %t17
 	jmp @b13
@@ -288,9 +288,9 @@ data $szc.g.2 = align 8 { l $szc.bytes.7 }
 section ".rodata"
 data $szc.bytes.7 = { b 104, b 101, b 108, b 108, b 111, b 0 }
 section ".rodata"
-data $szc.bytes.29 = { b 0 }
+data $szc.bytes.30 = { b 0 }
 section ".rodata"
-data $szc.bytes.31 = { b 97, b 0, b 98, b 0 }
+data $szc.bytes.32 = { b 97, b 0, b 98, b 0 }
 section ".rodata"
 data $szc.bytes.38 = { b 97, b 98, b 99, b 0 }
 section ".rodata"

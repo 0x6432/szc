@@ -1,4 +1,4 @@
-%53 = struct_decl (flags=0) {
+%54 = struct_decl (flags=0) {
   decl var "s" type {
     %0 = ptr_type @type_u8, @true slice
     %1 = as @type_type, %0
@@ -52,7 +52,7 @@
     %38 = break_inline result, %37
   }
   decl fn "main" pub value {
-    %51 = func "main" {
+    %52 = func "main" {
       ret type {
         %39 = break_inline result, @type_u8
       }
@@ -64,13 +64,14 @@
           %44 = as %42, %43
           %45 = break_inline result, %44
         }
-        %46 = ret_type
-        %47 = decl_val "length"
-        %48 = deref %47
-        %49 = int_cast %46, %48
-        %50 = ret %49
+        %46 = check_unused_error %41
+        %47 = ret_type
+        %48 = decl_val "length"
+        %49 = deref %48
+        %50 = int_cast %47, %49
+        %51 = ret %50
       }
     }
-    %52 = break_inline result, %51
+    %53 = break_inline result, %52
   }
 }

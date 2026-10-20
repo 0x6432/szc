@@ -1,6 +1,6 @@
-%66 = struct_decl (flags=0) {
+%68 = struct_decl (flags=0) {
   decl fn "choose" value {
-    %44 = func "choose" {
+    %46 = func "choose" {
       %1 = param "n" type {
         %0 = break_inline result, @type_u8
       }
@@ -21,7 +21,7 @@
           %11 = loop  {
             %12 = load %9
             %13 = cmp_lt %12, %1
-            %40 = condbr %13 then {
+            %42 = condbr %13 then {
               %14 = block  {
                 %15 = load %9
                 %16 = int 0
@@ -31,67 +31,69 @@
                 } else {
                   %19 = break_inline result, @void_value
                 }
-                %21 = load %9
-                %22 = int 2
-                %23 = cmp_eq %21, %22
-                %26 = if %23 then {
-                  %24 = break %10, %3
+                %21 = check_unused_error %20
+                %22 = load %9
+                %23 = int 2
+                %24 = cmp_eq %22, %23
+                %27 = if %24 then {
+                  %25 = break %10, %3
                 } else {
-                  %25 = break_inline result, @void_value
+                  %26 = break_inline result, @void_value
                 }
-                %27 = as @type_void, @void_value
-                %28 = break %14, @void_value
+                %28 = check_unused_error %27
+                %29 = as @type_void, @void_value
+                %30 = break %14, @void_value
               }
-              %29 = load %9
-              %30 = add_sub_rhs_type %29
-              %31 = int 1
-              %32 = as %30, %31
-              %33 = add %29, %32
-              %34 = elem_type %9
-              %35 = as %34, %33
-              %36 = store %9, %35
-              %37 = as @type_void, @void_value
-              %38 = repeat %11
+              %31 = load %9
+              %32 = add_sub_rhs_type %31
+              %33 = int 1
+              %34 = as %32, %33
+              %35 = add %31, %34
+              %36 = elem_type %9
+              %37 = as %36, %35
+              %38 = store %9, %37
+              %39 = as @type_void, @void_value
+              %40 = repeat %11
             } else {
-              %39 = break %10, %5
+              %41 = break %10, %5
             }
           }
         }
-        %41 = ret_type
-        %42 = as_return %41, %10
-        %43 = ret %42
+        %43 = ret_type
+        %44 = as_return %43, %10
+        %45 = ret %44
       }
     }
-    %45 = break_inline result, %44
+    %47 = break_inline result, %46
   }
   decl fn "main" pub value {
-    %64 = func "main" {
+    %66 = func "main" {
       ret type {
-        %46 = break_inline result, @type_u8
+        %48 = break_inline result, @type_u8
       }
       body insts {
-        %47 = ret_type
-        %48 = decl_val "choose"
-        %49 = call %48 arg0 {
-          %50 = arg_type %49, 0
-          %51 = int 3
-          %52 = as %50, %51
-          %53 = break_inline result, %52
+        %49 = ret_type
+        %50 = decl_val "choose"
+        %51 = call %50 arg0 {
+          %52 = arg_type %51, 0
+          %53 = int 3
+          %54 = as %52, %53
+          %55 = break_inline result, %54
         } arg1 {
-          %54 = arg_type %49, 1
-          %55 = int 7
-          %56 = as %54, %55
-          %57 = break_inline result, %56
+          %56 = arg_type %51, 1
+          %57 = int 7
+          %58 = as %56, %57
+          %59 = break_inline result, %58
         } arg2 {
-          %58 = arg_type %49, 2
-          %59 = int 300
-          %60 = as %58, %59
-          %61 = break_inline result, %60
+          %60 = arg_type %51, 2
+          %61 = int 300
+          %62 = as %60, %61
+          %63 = break_inline result, %62
         }
-        %62 = truncate %47, %49
-        %63 = ret %62
+        %64 = truncate %49, %51
+        %65 = ret %64
       }
     }
-    %65 = break_inline result, %64
+    %67 = break_inline result, %66
   }
 }

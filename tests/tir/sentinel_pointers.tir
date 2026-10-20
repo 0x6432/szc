@@ -10,7 +10,7 @@ fn szc.main.1: fn () u8 {
       %10: bool = const true
       %11: noreturn = br %4, %10
     } else {
-      %5: [*:0]const u8 = const ptr_cast(value.29)
+      %5: [*:0]const u8 = const ptr_cast(value.30)
       %6: usize = call szc.length.3(%5)
       %7: usize = const 0
       %8: bool = cmp_neq %6, %7
@@ -22,7 +22,7 @@ fn szc.main.1: fn () u8 {
       %19: bool = const true
       %20: noreturn = br %13, %19
     } else {
-      %14: [*:0]const u8 = const ptr_cast(value.31)
+      %14: [*:0]const u8 = const ptr_cast(value.32)
       %15: usize = call szc.length.3(%14)
       %16: usize = const 1
       %17: bool = cmp_neq %15, %16

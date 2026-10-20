@@ -169,12 +169,19 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
   - Deferred: null/payload injection, optional layouts/values, `orelse`, `.?`,
     if-payloads and runtime optional-pointer optimization. The original switch
     optional case remains an earlier producer gate.
-- [~] **M6.5 Error sets + error unions**: finite explicit TYPE foundation candidate only.
-  - [~] **M6.5a Finite explicit error-set type identity**: decoded canonical members,
-    eager duplicates, aliases/type composition and explicit value/layout fences.
-    See `ERROR_SET_TYPE_STATUS.md`; no error values or representation support.
-  - Deferred: error values/numbering, storage/ABI, error unions, anyerror expansion,
-    `try`, `catch`, `errdefer`, error set merging and inferred error sets.
+- [~] **M6.5 Error sets + error unions**: bounded type/known-value foundations.
+  - [~] **M6.5a Finite explicit error-set type identity**: canonical decoded members,
+    eager duplicates, aliases/type composition and explicit representation fences.
+  - [~] **M6.5b Known symbolic errors**: `error.Name`, owner-typed `E.Name`,
+    distinct discard consumers; grouped candidate awaiting final acceptance.
+  - [~] **M6.5c Finite algebra**: subset coercion, known equality and set merge;
+    no numeric error IDs or runtime transport. Grouped validation pending.
+  - [~] **M6.5d Explicit error-union type identity**: finite/anyerror TYPE lhs,
+    canonical payload pairs and all-count value/layout fences, not union values.
+  - See `ERROR_SET_TYPE_STATUS.md` for the prior type-only batch and
+    `ERROR_FAMILY_STATUS.md` for the grouped candidate and visible strict gaps.
+  - Deferred: numbering, runtime storage/ABI, union payload injection/unwrap,
+    anyerror values, `try`, `catch`, `errdefer` and inferred error sets.
 - [ ] **M6.6 Unions**: bare and tagged, switch payload capture.
 - [ ] **M6.7 extern/packed struct layout.**
 

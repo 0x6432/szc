@@ -1,4 +1,4 @@
-%81 = struct_decl (flags=0) {
+%82 = struct_decl (flags=0) {
   decl const "N" value {
     %20 = struct_decl (flags=0) {
       decl const "space name" type {
@@ -39,7 +39,7 @@
     %21 = break_inline result, %20
   }
   decl fn "main" pub value {
-    %79 = func "main" {
+    %80 = func "main" {
       ret type {
         %22 = break_inline result, @type_u8
       }
@@ -83,33 +83,34 @@
         } else {
           %55 = break_inline result, @void_value
         }
-        %57 = ret_type
-        %58 = decl_ref "N"
-        %59 = ref %58
-        %64 = field_named_val %59 name {
-          %60 = ptr_type @type_u8, @true slice
-          %61 = str "add"
-          %62 = as %60, %61
-          %63 = break_inline result, %62
+        %57 = check_unused_error %56
+        %58 = ret_type
+        %59 = decl_ref "N"
+        %60 = ref %59
+        %65 = field_named_val %60 name {
+          %61 = ptr_type @type_u8, @true slice
+          %62 = str "add"
+          %63 = as %61, %62
+          %64 = break_inline result, %63
         }
-        %65 = call %64 arg0 {
-          %66 = arg_type %65, 0
-          %67 = decl_ref "N"
-          %72 = field_named_val %67 name {
-            %68 = ptr_type @type_u8, @true slice
-            %69 = str "space name"
-            %70 = as %68, %69
-            %71 = break_inline result, %70
+        %66 = call %65 arg0 {
+          %67 = arg_type %66, 0
+          %68 = decl_ref "N"
+          %73 = field_named_val %68 name {
+            %69 = ptr_type @type_u8, @true slice
+            %70 = str "space name"
+            %71 = as %69, %70
+            %72 = break_inline result, %71
           }
-          %73 = as %66, %72
-          %74 = break_inline result, %73
+          %74 = as %67, %73
+          %75 = break_inline result, %74
         }
-        %75 = int 8
-        %76 = sub %65, %75
-        %77 = as_return %57, %76
-        %78 = ret %77
+        %76 = int 8
+        %77 = sub %66, %76
+        %78 = as_return %58, %77
+        %79 = ret %78
       }
     }
-    %80 = break_inline result, %79
+    %81 = break_inline result, %80
   }
 }
