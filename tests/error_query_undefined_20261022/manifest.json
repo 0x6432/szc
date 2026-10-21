@@ -1,0 +1,662 @@
+{
+  "reference_version": "0.17.0",
+  "baseline_commit": "466f1d7",
+  "cases": [
+    {
+      "file": "n01_empty_name.zig",
+      "category": "name",
+      "observation": "Demanded undefined empty-set errorName; independent strict56 n16 control.",
+      "source_sha256": "34d76e95af5bd0c06a93a8c2e724992300740db6c2008ce1fabdab4a6e7a4211",
+      "reference": {
+        "status": 1,
+        "primaries": [
+          "use of undefined value here causes illegal behavior"
+        ]
+      },
+      "baseline_candidate": {
+        "status": 1,
+        "primaries": [
+          "not supported by szc yet: finite error-set value or layout demand"
+        ]
+      },
+      "baseline_accounting": "REFERENCE-INVALID-NYI"
+    },
+    {
+      "file": "n02_finite_name.zig",
+      "category": "name",
+      "observation": "Demanded undefined nonempty finite errorName.",
+      "source_sha256": "96e8e2a5ca5d7cf612390718658405b05ca1b47de4724559d972b4163d0aefd3",
+      "reference": {
+        "status": 1,
+        "primaries": [
+          "use of undefined value here causes illegal behavior"
+        ]
+      },
+      "baseline_candidate": {
+        "status": 1,
+        "primaries": [
+          "not supported by szc yet: finite error-set value or layout demand"
+        ]
+      },
+      "baseline_accounting": "REFERENCE-INVALID-NYI"
+    },
+    {
+      "file": "n03_singleton_name.zig",
+      "category": "name",
+      "observation": "A singleton finite set still has an undefined value.",
+      "source_sha256": "1b7a617396176b420b9a270202f93042b0a1c281c54491cec8fde6c6cf674a8b",
+      "reference": {
+        "status": 1,
+        "primaries": [
+          "use of undefined value here causes illegal behavior"
+        ]
+      },
+      "baseline_candidate": {
+        "status": 1,
+        "primaries": [
+          "not supported by szc yet: finite error-set value or layout demand"
+        ]
+      },
+      "baseline_accounting": "REFERENCE-INVALID-NYI"
+    },
+    {
+      "file": "n04_untyped_name.zig",
+      "category": "name",
+      "observation": "Untyped undefined errorName operand.",
+      "source_sha256": "5886ec423b18b76743de0c67e6dca2312cf4b08445cdfefd48aa8b2115e6b461",
+      "reference": {
+        "status": 1,
+        "primaries": [
+          "use of undefined value here causes illegal behavior"
+        ]
+      },
+      "baseline_candidate": {
+        "status": 1,
+        "primaries": [
+          "use of undefined value here causes illegal behavior"
+        ]
+      },
+      "baseline_accounting": "EXACT-REJECT"
+    },
+    {
+      "file": "t01_empty_name_typeof.zig",
+      "category": "typeof",
+      "observation": "TypeOf still demands undefined empty-set errorName bytes.",
+      "source_sha256": "8f388b738de7de38a70d3ca45731699d50cdae36fbe5838f4096e45c1485bb27",
+      "reference": {
+        "status": 1,
+        "primaries": [
+          "use of undefined value here causes illegal behavior"
+        ]
+      },
+      "baseline_candidate": {
+        "status": 1,
+        "primaries": [
+          "not supported by szc yet: finite error-set value or layout demand"
+        ]
+      },
+      "baseline_accounting": "REFERENCE-INVALID-NYI"
+    },
+    {
+      "file": "t02_finite_name_typeof.zig",
+      "category": "typeof",
+      "observation": "TypeOf versus demanded undefined nonempty errorName.",
+      "source_sha256": "f4f66d4115c4295d37489c0655ef09602ef76503e617ef17e42dc5ffc7019197",
+      "reference": {
+        "status": 1,
+        "primaries": [
+          "use of undefined value here causes illegal behavior"
+        ]
+      },
+      "baseline_candidate": {
+        "status": 1,
+        "primaries": [
+          "not supported by szc yet: finite error-set value or layout demand"
+        ]
+      },
+      "baseline_accounting": "REFERENCE-INVALID-NYI"
+    },
+    {
+      "file": "t03_untyped_name_typeof.zig",
+      "category": "typeof",
+      "observation": "TypeOf errorName still demands untyped undefined.",
+      "source_sha256": "3625c5751f1ecea4c674de394c72966b50a15323631fb242bc5c6086f70eee38",
+      "reference": {
+        "status": 1,
+        "primaries": [
+          "use of undefined value here causes illegal behavior"
+        ]
+      },
+      "baseline_candidate": {
+        "status": 1,
+        "primaries": [
+          "use of undefined value here causes illegal behavior"
+        ]
+      },
+      "baseline_accounting": "EXACT-REJECT"
+    },
+    {
+      "file": "t04_cast_typeof.zig",
+      "category": "typeof",
+      "observation": "TypeOf versus demanded undefined intersecting errorCast.",
+      "source_sha256": "0b6d3206a7cba39ef1efe620afca1f9e4b39a7301e6e8f3a6ef302de54f7e755",
+      "reference": {
+        "status": 1,
+        "primaries": [
+          "use of undefined value here causes illegal behavior"
+        ]
+      },
+      "baseline_candidate": {
+        "status": 1,
+        "primaries": [
+          "not supported by szc yet: finite error-set value or layout demand"
+        ]
+      },
+      "baseline_accounting": "REFERENCE-INVALID-NYI"
+    },
+    {
+      "file": "t05_disjoint_cast_typeof.zig",
+      "category": "typeof",
+      "observation": "TypeOf does not erase disjoint cast type validation.",
+      "source_sha256": "22fffce28e6c24c88e1d8a2b6bce0bccfb9eba585c70440ece7e93b2beeb2182",
+      "reference": {
+        "status": 1,
+        "primaries": [
+          "error sets 'error{B}' and 'error{A}' have no common errors"
+        ]
+      },
+      "baseline_candidate": {
+        "status": 1,
+        "primaries": [
+          "not supported by szc yet: finite error-set value or layout demand"
+        ]
+      },
+      "baseline_accounting": "REFERENCE-INVALID-NYI"
+    },
+    {
+      "file": "t06_empty_cast_typeof.zig",
+      "category": "typeof",
+      "observation": "TypeOf empty source cast.",
+      "source_sha256": "2c12505097b55d6c4edfd311de55761c8ca99519c9ba4e8a440098ba8798146f",
+      "reference": {
+        "status": 1,
+        "primaries": [
+          "error sets 'error{}' and 'error{A}' have no common errors"
+        ]
+      },
+      "baseline_candidate": {
+        "status": 1,
+        "primaries": [
+          "not supported by szc yet: finite error-set value or layout demand"
+        ]
+      },
+      "baseline_accounting": "REFERENCE-INVALID-NYI"
+    },
+    {
+      "file": "c01_finite_cast.zig",
+      "category": "cast",
+      "observation": "Undefined finite intersecting cast result is discarded.",
+      "source_sha256": "2b36e392f5186e86450775ebdbd4037403f7b6bb3443ddfa47b5bef90138d78a",
+      "reference": {
+        "status": 1,
+        "primaries": [
+          "use of undefined value here causes illegal behavior"
+        ]
+      },
+      "baseline_candidate": {
+        "status": 1,
+        "primaries": [
+          "not supported by szc yet: finite error-set value or layout demand"
+        ]
+      },
+      "baseline_accounting": "REFERENCE-INVALID-NYI"
+    },
+    {
+      "file": "c02_empty_source.zig",
+      "category": "cast",
+      "observation": "Undefined empty-set source cast.",
+      "source_sha256": "2b8d4a4bbd1b1f15acce171a0f36dcd1b47edbc6a09e953466363b24ba5b3a67",
+      "reference": {
+        "status": 1,
+        "primaries": [
+          "error sets 'error{}' and 'error{A}' have no common errors"
+        ]
+      },
+      "baseline_candidate": {
+        "status": 1,
+        "primaries": [
+          "not supported by szc yet: finite error-set value or layout demand"
+        ]
+      },
+      "baseline_accounting": "REFERENCE-INVALID-NYI"
+    },
+    {
+      "file": "c03_empty_target.zig",
+      "category": "cast",
+      "observation": "Undefined finite source to empty destination.",
+      "source_sha256": "6a968367b3c109893192f15f46c37512c5f360da3c21e2c19d5374e9fa352049",
+      "reference": {
+        "status": 1,
+        "primaries": [
+          "error sets 'error{A}' and 'error{}' have no common errors"
+        ]
+      },
+      "baseline_candidate": {
+        "status": 1,
+        "primaries": [
+          "not supported by szc yet: finite error-set value or layout demand"
+        ]
+      },
+      "baseline_accounting": "REFERENCE-INVALID-NYI"
+    },
+    {
+      "file": "c04_empty_both.zig",
+      "category": "cast",
+      "observation": "Undefined empty source and destination.",
+      "source_sha256": "ca473e84e3d9088b908eaa4ec63fbdecbbb7f805287ab93a578aee4a8dac9413",
+      "reference": {
+        "status": 1,
+        "primaries": [
+          "error sets 'error{}' and 'error{}' have no common errors"
+        ]
+      },
+      "baseline_candidate": {
+        "status": 1,
+        "primaries": [
+          "not supported by szc yet: finite error-set value or layout demand"
+        ]
+      },
+      "baseline_accounting": "REFERENCE-INVALID-NYI"
+    },
+    {
+      "file": "c05_disjoint.zig",
+      "category": "cast",
+      "observation": "Undefined does not make disjoint finite sets intersect.",
+      "source_sha256": "b6c764e43bde8ac77498758ffebe7389b25207f1e43d51467ccb5221712a3480",
+      "reference": {
+        "status": 1,
+        "primaries": [
+          "error sets 'error{B}' and 'error{A}' have no common errors"
+        ]
+      },
+      "baseline_candidate": {
+        "status": 1,
+        "primaries": [
+          "not supported by szc yet: finite error-set value or layout demand"
+        ]
+      },
+      "baseline_accounting": "REFERENCE-INVALID-NYI"
+    },
+    {
+      "file": "c06_untyped_operand.zig",
+      "category": "cast",
+      "observation": "Untyped undefined cast operand.",
+      "source_sha256": "a1c410d9fb1c739ee5736d41d6fb2a080352f43f517214bb37a36af53f40af8d",
+      "reference": {
+        "status": 1,
+        "primaries": [
+          "expected error set or error union type, found 'undefined'"
+        ]
+      },
+      "baseline_candidate": {
+        "status": 1,
+        "primaries": [
+          "use of undefined value here causes illegal behavior"
+        ]
+      },
+      "baseline_accounting": "PRIMARY-GAP"
+    },
+    {
+      "file": "c07_cast_then_name.zig",
+      "category": "cast",
+      "observation": "Demand undefined cast result through errorName.",
+      "source_sha256": "1f801eea626b3983fd89b341dfd0a4cab5338d6ef33312744f4b5b137549b020",
+      "reference": {
+        "status": 1,
+        "primaries": [
+          "use of undefined value here causes illegal behavior"
+        ]
+      },
+      "baseline_candidate": {
+        "status": 1,
+        "primaries": [
+          "not supported by szc yet: finite error-set value or layout demand"
+        ]
+      },
+      "baseline_accounting": "REFERENCE-INVALID-NYI"
+    },
+    {
+      "file": "c08_no_target.zig",
+      "category": "cast",
+      "observation": "errorCast without a result type.",
+      "source_sha256": "f156cbbaf2457c049013a5e5523ca9f6e14ccd203e14bf090eceddf2821388cd",
+      "reference": {
+        "status": 1,
+        "primaries": [
+          "@errorCast must have a known result type"
+        ]
+      },
+      "baseline_candidate": {
+        "status": 1,
+        "primaries": [
+          "@errorCast must have a known result type"
+        ]
+      },
+      "baseline_accounting": "EXACT-REJECT"
+    },
+    {
+      "file": "d01_dead_if_name.zig",
+      "category": "dead",
+      "observation": "Dead branch avoids errorName value demand.",
+      "source_sha256": "0b690537301bacdda5abb1ded7918688d86736066293e95b859043978eb1f4e0",
+      "reference": {
+        "status": 0,
+        "primaries": []
+      },
+      "baseline_candidate": {
+        "status": 0,
+        "primaries": []
+      },
+      "baseline_accounting": "EXACT-ACCEPT"
+    },
+    {
+      "file": "d02_unselected_if_name.zig",
+      "category": "dead",
+      "observation": "Unselected if result is not demanded.",
+      "source_sha256": "dcabf0d8ae82c16e0cdb5eae0408afe0bb27995d164a7f39f72b16597d9114f1",
+      "reference": {
+        "status": 0,
+        "primaries": []
+      },
+      "baseline_candidate": {
+        "status": 0,
+        "primaries": []
+      },
+      "baseline_accounting": "EXACT-ACCEPT"
+    },
+    {
+      "file": "d03_unselected_switch_name.zig",
+      "category": "dead",
+      "observation": "Unselected switch result is not demanded.",
+      "source_sha256": "18bc61e8c91c3005c87dba259ec472571158edf271894f71fad1742329e4624c",
+      "reference": {
+        "status": 0,
+        "primaries": []
+      },
+      "baseline_candidate": {
+        "status": 0,
+        "primaries": []
+      },
+      "baseline_accounting": "EXACT-ACCEPT"
+    },
+    {
+      "file": "d04_selected_if_name.zig",
+      "category": "dead",
+      "observation": "Selected undefined name result is demanded.",
+      "source_sha256": "6e6c3582740e86053489c8e2513905e28144235014cf72e9d9aae9c67e9d8842",
+      "reference": {
+        "status": 1,
+        "primaries": [
+          "use of undefined value here causes illegal behavior"
+        ]
+      },
+      "baseline_candidate": {
+        "status": 1,
+        "primaries": [
+          "not supported by szc yet: finite error-set value or layout demand"
+        ]
+      },
+      "baseline_accounting": "REFERENCE-INVALID-NYI"
+    },
+    {
+      "file": "d05_dead_disjoint_cast.zig",
+      "category": "dead",
+      "observation": "Dead branch avoids disjoint cast validation.",
+      "source_sha256": "ea252febfea039959514a0e86855cbe378610c22dd1081c9a625f491c2dd5216",
+      "reference": {
+        "status": 0,
+        "primaries": []
+      },
+      "baseline_candidate": {
+        "status": 0,
+        "primaries": []
+      },
+      "baseline_accounting": "EXACT-ACCEPT"
+    },
+    {
+      "file": "d06_unselected_cast.zig",
+      "category": "dead",
+      "observation": "Unselected disjoint cast result.",
+      "source_sha256": "1cf9a5445ddcf38dde19525b6b97b10dae0496a647b325a5818367e75720826d",
+      "reference": {
+        "status": 0,
+        "primaries": []
+      },
+      "baseline_candidate": {
+        "status": 0,
+        "primaries": []
+      },
+      "baseline_accounting": "EXACT-ACCEPT"
+    },
+    {
+      "file": "p01_undefined_target.zig",
+      "category": "precedence",
+      "observation": "Undefined type target with valid operand.",
+      "source_sha256": "a36e8dad74278d60c2ca4d8dcffd2df629abf68c63cb8b437481fb52a55ae7c3",
+      "reference": {
+        "status": 1,
+        "primaries": [
+          "use of undefined value here causes illegal behavior"
+        ]
+      },
+      "baseline_candidate": {
+        "status": 1,
+        "primaries": [
+          "use of undefined value here causes illegal behavior"
+        ]
+      },
+      "baseline_accounting": "EXACT-REJECT"
+    },
+    {
+      "file": "p02_target_and_operand_undefined.zig",
+      "category": "precedence",
+      "observation": "Undefined target versus untyped undefined operand.",
+      "source_sha256": "6d4d783455f88bc5c6025fd9de57bed565b76f773a6a644d1968b433b01b1f47",
+      "reference": {
+        "status": 1,
+        "primaries": [
+          "use of undefined value here causes illegal behavior"
+        ]
+      },
+      "baseline_candidate": {
+        "status": 1,
+        "primaries": [
+          "use of undefined value here causes illegal behavior"
+        ]
+      },
+      "baseline_accounting": "EXACT-REJECT"
+    },
+    {
+      "file": "p03_target_and_bad_operand.zig",
+      "category": "precedence",
+      "observation": "Undefined target versus integer operand validation.",
+      "source_sha256": "ee11c6c7419b1d2706129ee08876f0f49a69c5431c88a282d0d9f09c4900ba63",
+      "reference": {
+        "status": 1,
+        "primaries": [
+          "use of undefined value here causes illegal behavior"
+        ]
+      },
+      "baseline_candidate": {
+        "status": 1,
+        "primaries": [
+          "use of undefined value here causes illegal behavior"
+        ]
+      },
+      "baseline_accounting": "EXACT-REJECT"
+    },
+    {
+      "file": "p04_target_and_compileerror.zig",
+      "category": "precedence",
+      "observation": "Undefined target versus explicit operand demand sentinel.",
+      "source_sha256": "96e945aedbc0ba152b7bde803e25aa40438e946c65ec8f189b679aec1ca8c42c",
+      "reference": {
+        "status": 1,
+        "primaries": [
+          "operand demanded"
+        ]
+      },
+      "baseline_candidate": {
+        "status": 1,
+        "primaries": [
+          "not supported by szc yet: builtin @compileError"
+        ]
+      },
+      "baseline_accounting": "REFERENCE-INVALID-NYI"
+    },
+    {
+      "file": "p05_bad_target_undefined_operand.zig",
+      "category": "precedence",
+      "observation": "Non-error target versus untyped undefined operand.",
+      "source_sha256": "075adc9ad78cebcb69aef6f0f23245f0e3e47f11e2884415b6b3372f432f142a",
+      "reference": {
+        "status": 1,
+        "primaries": [
+          "expected error set or error union type, found 'int'"
+        ]
+      },
+      "baseline_candidate": {
+        "status": 1,
+        "primaries": [
+          "use of undefined value here causes illegal behavior"
+        ]
+      },
+      "baseline_accounting": "PRIMARY-GAP"
+    },
+    {
+      "file": "p06_bad_target_finite_operand.zig",
+      "category": "precedence",
+      "observation": "Non-error target versus typed undefined operand.",
+      "source_sha256": "d2f2b85ec796dd47880d803709e6a9ce445d2980821622dbf8102e092ad27adc",
+      "reference": {
+        "status": 1,
+        "primaries": [
+          "expected error set or error union type, found 'int'"
+        ]
+      },
+      "baseline_candidate": {
+        "status": 1,
+        "primaries": [
+          "not supported by szc yet: finite error-set value or layout demand"
+        ]
+      },
+      "baseline_accounting": "REFERENCE-INVALID-NYI"
+    },
+    {
+      "file": "p07_bad_target_compileerror.zig",
+      "category": "precedence",
+      "observation": "Non-error target versus explicit operand sentinel.",
+      "source_sha256": "e4d6f61ec34020ced6b6d3ba075680821f0197691d09b97304abd592afe29f86",
+      "reference": {
+        "status": 1,
+        "primaries": [
+          "operand demanded"
+        ]
+      },
+      "baseline_candidate": {
+        "status": 1,
+        "primaries": [
+          "not supported by szc yet: builtin @compileError"
+        ]
+      },
+      "baseline_accounting": "REFERENCE-INVALID-NYI"
+    },
+    {
+      "file": "p08_good_target_compileerror.zig",
+      "category": "precedence",
+      "observation": "Valid target must demand operand sentinel.",
+      "source_sha256": "eb42229045488c4520dd4509f5265a65910136b3c3526e728eabeca86d6beef1",
+      "reference": {
+        "status": 1,
+        "primaries": [
+          "operand demanded"
+        ]
+      },
+      "baseline_candidate": {
+        "status": 1,
+        "primaries": [
+          "not supported by szc yet: builtin @compileError"
+        ]
+      },
+      "baseline_accounting": "REFERENCE-INVALID-NYI"
+    },
+    {
+      "file": "t07_empty_carrier_typeof.zig",
+      "category": "typeof",
+      "observation": "TypeOf carrier alone does not demand an undefined error value.",
+      "source_sha256": "11d3ae963fedb1f1dc1b6538e01815eb6aca46ea0664597a76ffb1b13a418e56",
+      "reference": {
+        "status": 0,
+        "primaries": []
+      },
+      "baseline_candidate": {
+        "status": 1,
+        "primaries": [
+          "not supported by szc yet: finite error-set value or layout demand"
+        ]
+      },
+      "baseline_accounting": "REFERENCE-VALID-UNSUPPORTED"
+    },
+    {
+      "file": "t08_finite_carrier_typeof.zig",
+      "category": "typeof",
+      "observation": "Nonempty carrier TypeOf is not an error query.",
+      "source_sha256": "7eaf7c8568597ab718a93011271ac09e72097b5795747d73addcbd44930285d8",
+      "reference": {
+        "status": 0,
+        "primaries": []
+      },
+      "baseline_candidate": {
+        "status": 1,
+        "primaries": [
+          "not supported by szc yet: finite error-set value or layout demand"
+        ]
+      },
+      "baseline_accounting": "REFERENCE-VALID-UNSUPPORTED"
+    },
+    {
+      "file": "t09_cast_without_target_typeof.zig",
+      "category": "typeof",
+      "observation": "TypeOf supplies no errorCast destination type.",
+      "source_sha256": "57b2d38eb94b4e5afa3cbe395f638344ce0076940ae9a85bcdb1edce8c4edd29",
+      "reference": {
+        "status": 1,
+        "primaries": [
+          "@errorCast must have a known result type"
+        ]
+      },
+      "baseline_candidate": {
+        "status": 1,
+        "primaries": [
+          "@errorCast must have a known result type"
+        ]
+      },
+      "baseline_accounting": "EXACT-REJECT"
+    },
+    {
+      "file": "d07_unselected_undefined_target.zig",
+      "category": "dead",
+      "observation": "Unselected result does not demand undefined target or operand.",
+      "source_sha256": "4e38d008552a44a83cdaef73cb553cdeaa726ba78fe292e36be347e369fcdde7",
+      "reference": {
+        "status": 0,
+        "primaries": []
+      },
+      "baseline_candidate": {
+        "status": 0,
+        "primaries": []
+      },
+      "baseline_accounting": "EXACT-ACCEPT"
+    }
+  ]
+}

@@ -1,0 +1,357 @@
+{
+  "reference_version": "0.17.0",
+  "input_sema_sha256": "611bbfd0b642c6a1317c23d1f27cb971509324b536ed33f12b0ea938060d20cc",
+  "scope": "Compile-only safety containment, not error/runtime/ABI parity.",
+  "cases": [
+    {
+      "file": "a01_explicit_local_slot.zig",
+      "category": "allocation",
+      "policy": "ANYERROR-FENCE",
+      "source_sha256": "18fcc7eec3c4f035c0015960fd32995ea91a31e7ed25069e2351c9b2f99d660b",
+      "internal": {},
+      "reference": {
+        "status": 0,
+        "primaries": []
+      },
+      "classification": "REFERENCE-VALID-UNSUPPORTED"
+    },
+    {
+      "file": "a02_inferred_local_slot.zig",
+      "category": "allocation",
+      "policy": "ANYERROR-FENCE",
+      "source_sha256": "13e24da28dd04f164f6e9bf2ce53ce279e8f549dcc74e4b22debecee37d11e48",
+      "internal": {},
+      "reference": {
+        "status": 0,
+        "primaries": []
+      },
+      "classification": "REFERENCE-VALID-UNSUPPORTED"
+    },
+    {
+      "file": "a03_local_const_backing.zig",
+      "category": "backing",
+      "policy": "ANYERROR-FENCE",
+      "source_sha256": "97fe83dbdbdcd6adeecb3c477d45b626cc3fcc348bbefb93c6e715dc7c5db69c",
+      "internal": {},
+      "reference": {
+        "status": 0,
+        "primaries": []
+      },
+      "classification": "REFERENCE-VALID-UNSUPPORTED"
+    },
+    {
+      "file": "a04_global_const_backing.zig",
+      "category": "backing",
+      "policy": "ANYERROR-FENCE",
+      "source_sha256": "c372f8f9e003c5b6e9f13608a6e1aa2a077e2807145201615a14b8dca7c2ac2e",
+      "internal": {},
+      "reference": {
+        "status": 0,
+        "primaries": []
+      },
+      "classification": "REFERENCE-VALID-UNSUPPORTED"
+    },
+    {
+      "file": "a05_temporary_backing.zig",
+      "category": "backing",
+      "policy": "ANYERROR-FENCE",
+      "source_sha256": "cf4356e1d8cff35ab0f2d70cc13ce8f6e59396c4af2bb281cc00a93e5f6649d5",
+      "internal": {},
+      "reference": {
+        "status": 0,
+        "primaries": []
+      },
+      "classification": "REFERENCE-VALID-UNSUPPORTED"
+    },
+    {
+      "file": "a06_global_slot.zig",
+      "category": "allocation",
+      "policy": "ANYERROR-FENCE",
+      "source_sha256": "c412f30c9985ac7662748e37448fec3eeeb59793737ae635646ccf8390d83ad1",
+      "internal": {},
+      "reference": {
+        "status": 0,
+        "primaries": []
+      },
+      "classification": "REFERENCE-VALID-UNSUPPORTED"
+    },
+    {
+      "file": "s01_internal_parameter.zig",
+      "category": "signature",
+      "policy": "ANYERROR-FENCE",
+      "source_sha256": "c6e38882195ab89c9583213c8d2b1c141f1f4d9ebfd785f54d846b5e5a5a3295",
+      "internal": {},
+      "reference": {
+        "status": 0,
+        "primaries": []
+      },
+      "classification": "REFERENCE-VALID-UNSUPPORTED"
+    },
+    {
+      "file": "s02_internal_return.zig",
+      "category": "signature",
+      "policy": "ANYERROR-FENCE",
+      "source_sha256": "6cc3d64872ec7ed14b793de0dbbe68047021a4d8dfd2ff4c93a58125bc7330fc",
+      "internal": {},
+      "reference": {
+        "status": 0,
+        "primaries": []
+      },
+      "classification": "REFERENCE-VALID-UNSUPPORTED"
+    },
+    {
+      "file": "s03_extern_parameter.zig",
+      "category": "signature",
+      "policy": "ANYERROR-FENCE",
+      "source_sha256": "e1df824fe63d340ee227c316b866985f2f0466b8f9b05d7a2dc3c2067ef7228c",
+      "internal": {},
+      "reference": {
+        "status": 1,
+        "primaries": [
+          "parameter of type 'anyerror' not allowed in function with calling convention 'x86_64_sysv'"
+        ]
+      },
+      "classification": "REFERENCE-INVALID-NYI-REFUSAL"
+    },
+    {
+      "file": "s04_extern_return.zig",
+      "category": "signature",
+      "policy": "ANYERROR-FENCE",
+      "source_sha256": "7abd3d93e2bccd0efe39fcfca39deb0e0a9391a8321c2b2ca10b47d6590e1511",
+      "internal": {},
+      "reference": {
+        "status": 1,
+        "primaries": [
+          "return type 'anyerror' not allowed in function with calling convention 'x86_64_sysv'"
+        ]
+      },
+      "classification": "REFERENCE-INVALID-NYI-REFUSAL"
+    },
+    {
+      "file": "s05_export_parameter.zig",
+      "category": "signature",
+      "policy": "ANYERROR-FENCE",
+      "source_sha256": "1e5cfff9b05e32bd1c555d6f93f96849cf390f6b2d05f5b717c7adc23c9625db",
+      "internal": {},
+      "reference": {
+        "status": 1,
+        "primaries": [
+          "parameter of type 'anyerror' not allowed in function with calling convention 'x86_64_sysv'"
+        ]
+      },
+      "classification": "REFERENCE-INVALID-NYI-REFUSAL"
+    },
+    {
+      "file": "s06_export_return.zig",
+      "category": "signature",
+      "policy": "ANYERROR-FENCE",
+      "source_sha256": "a8edeb7f4859e3dbcc22be9ace98281dc9991ac89ac2782b1781a417f70f31ff",
+      "internal": {},
+      "reference": {
+        "status": 1,
+        "primaries": [
+          "return type 'anyerror' not allowed in function with calling convention 'x86_64_sysv'"
+        ]
+      },
+      "classification": "REFERENCE-INVALID-NYI-REFUSAL"
+    },
+    {
+      "file": "s07_indirect_parameter.zig",
+      "category": "signature",
+      "policy": "ANYERROR-FENCE",
+      "source_sha256": "1b37bce506bb7aac71ce7c0dfcaaee58edd0d5114ef9850e2ab1f93addbc4c39",
+      "internal": {},
+      "reference": {
+        "status": 1,
+        "primaries": [
+          "parameter of type '*const fn (anyerror) void' not allowed in function with calling convention 'x86_64_sysv'"
+        ]
+      },
+      "classification": "REFERENCE-INVALID-NYI-REFUSAL"
+    },
+    {
+      "file": "v01_sole_vararg.zig",
+      "category": "vararg",
+      "policy": "ANYERROR-FENCE",
+      "source_sha256": "25a1d5529ae71aebfc2b3b773ab9d28e6ed4212565e3c093e24772433d7c3c3b",
+      "internal": {},
+      "reference": {
+        "status": 1,
+        "primaries": [
+          "cannot pass 'anyerror' to variadic function"
+        ]
+      },
+      "classification": "REFERENCE-INVALID-NYI-REFUSAL"
+    },
+    {
+      "file": "v02_first_vararg.zig",
+      "category": "vararg",
+      "policy": "ANYERROR-FENCE",
+      "source_sha256": "48eef00ddd5abdbb20b6551d3cae0860c1ed8c18822901774884394734aaefed",
+      "internal": {},
+      "reference": {
+        "status": 1,
+        "primaries": [
+          "cannot pass 'anyerror' to variadic function"
+        ]
+      },
+      "classification": "REFERENCE-INVALID-NYI-REFUSAL"
+    },
+    {
+      "file": "v03_last_vararg.zig",
+      "category": "vararg",
+      "policy": "ANYERROR-FENCE",
+      "source_sha256": "9b62f4e0f3a6b5f652026de95dab73159e8624ef79d24301b2ead0f8a6ff3f96",
+      "internal": {},
+      "reference": {
+        "status": 1,
+        "primaries": [
+          "cannot pass 'anyerror' to variadic function"
+        ]
+      },
+      "classification": "REFERENCE-INVALID-NYI-REFUSAL"
+    },
+    {
+      "file": "v04_local_const_vararg.zig",
+      "category": "vararg",
+      "policy": "ANYERROR-FENCE",
+      "source_sha256": "6f94eb3675cf19128ab5262f4a01cfb3335a9e8cd2ef8b1f5f65924b6c718eec",
+      "internal": {},
+      "reference": {
+        "status": 1,
+        "primaries": [
+          "cannot pass 'anyerror' to variadic function"
+        ]
+      },
+      "classification": "REFERENCE-INVALID-NYI-REFUSAL"
+    },
+    {
+      "file": "q01_carrier_typeof.zig",
+      "category": "carrier",
+      "policy": "ANYERROR-FENCE",
+      "source_sha256": "7a773c6fdc31545e99add85e82789badf692fa008e08357aa68e1fe68245a8c9",
+      "internal": {},
+      "reference": {
+        "status": 0,
+        "primaries": []
+      },
+      "classification": "REFERENCE-VALID-UNSUPPORTED"
+    },
+    {
+      "file": "t01_anyerror_type.zig",
+      "category": "type-only",
+      "policy": "ACCEPT",
+      "source_sha256": "88ccd51ca8e5e30d19a92d7e1f5001066cb5a2e21ad9f9aa2a5b0b790dad99bf",
+      "internal": {},
+      "reference": {
+        "status": 0,
+        "primaries": []
+      },
+      "classification": "ACCEPT"
+    },
+    {
+      "file": "t02_anyerror_union_type.zig",
+      "category": "type-only",
+      "policy": "ACCEPT",
+      "source_sha256": "446036ada6cba955fed35478b56a04edb99f45498dcbdf70fbc6618d874d2ae1",
+      "internal": {},
+      "reference": {
+        "status": 0,
+        "primaries": []
+      },
+      "classification": "ACCEPT"
+    },
+    {
+      "file": "t03_finite_union_type.zig",
+      "category": "type-only",
+      "policy": "ACCEPT",
+      "source_sha256": "1e843cc3a130ab2fd548a4266f7bf5b340ce5daf8b2bea981de40022f117a424",
+      "internal": {},
+      "reference": {
+        "status": 0,
+        "primaries": []
+      },
+      "classification": "ACCEPT"
+    },
+    {
+      "file": "t04_function_type.zig",
+      "category": "type-only",
+      "policy": "ACCEPT",
+      "source_sha256": "9c12c2dc3fba5d321305fb30c62111f6a34a45790bc3d4b0569997a8bf9fcd79",
+      "internal": {},
+      "reference": {
+        "status": 0,
+        "primaries": []
+      },
+      "classification": "ACCEPT"
+    },
+    {
+      "file": "t05_pointer_type.zig",
+      "category": "type-only",
+      "policy": "ACCEPT",
+      "source_sha256": "d3378755c8dc69223265abf8324e6f7c0d65feb451030732322f4fe323b89984",
+      "internal": {},
+      "reference": {
+        "status": 0,
+        "primaries": []
+      },
+      "classification": "ACCEPT"
+    },
+    {
+      "file": "t06_dead_anyerror_value.zig",
+      "category": "dead",
+      "policy": "ACCEPT",
+      "source_sha256": "7769008c8eb259da0af9cf2a1d4d2e116a8c9aadbcdcb7ca661d0aba428a5970",
+      "internal": {},
+      "reference": {
+        "status": 0,
+        "primaries": []
+      },
+      "classification": "ACCEPT"
+    },
+    {
+      "file": "c01_ordinary_vararg.zig",
+      "category": "witness-control",
+      "policy": "ACCEPT",
+      "source_sha256": "53ba66da5debbfcc40fca71f527cb0a49dda6a43e63b454c812a7f937a132461",
+      "internal": {
+        "calls": 1,
+        "sink_calls": 1
+      },
+      "reference": {
+        "status": 0,
+        "primaries": []
+      },
+      "classification": "ACCEPT"
+    },
+    {
+      "file": "c02_ordinary_local_slot.zig",
+      "category": "witness-control",
+      "policy": "ACCEPT",
+      "source_sha256": "3c61a644621a682bbb0028c5a5bf1c3e90dfefa717fc267799af7215a31d730c",
+      "internal": {
+        "allocations": 1,
+        "stores": 1
+      },
+      "reference": {
+        "status": 0,
+        "primaries": []
+      },
+      "classification": "ACCEPT"
+    },
+    {
+      "file": "c03_ordinary_const_backing.zig",
+      "category": "witness-control",
+      "policy": "ACCEPT",
+      "source_sha256": "52bb18b1c8a70b5e6de6d38ff92773377390b5fca78f184245bf4a92945211da",
+      "internal": {
+        "backing_objects": 1
+      },
+      "reference": {
+        "status": 0,
+        "primaries": []
+      },
+      "classification": "ACCEPT"
+    }
+  ]
+}

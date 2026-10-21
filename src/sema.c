@@ -256,12 +256,31 @@ static const Operand operand_none = {OPERAND_NONE, 0, VALUE_NONE, 0};
 static void
 sema_error(Block *block, uint32_t src, const char *format, ...)
 {
-	char message[512];
-	va_list args;
+	char buffer[512];
+	va_list args, copy;
 	va_start(args, format);
-	vsnprintf(message, sizeof(message), format, args);
+	va_copy(copy, args);
+	int length = vsnprintf(buffer, sizeof(buffer), format, copy);
+	va_end(copy);
+	char *message = buffer;
+	if (length < 0) {
+		message = "diagnostic formatting failed";
+		length = (int)strlen(message);
+	} else if ((uintmax_t)length >= SIZE_MAX) {
+		message = "diagnostic exceeds size limit";
+		length = (int)strlen(message);
+	} else if ((size_t)length >= sizeof(buffer)) {
+		/* Type names can contain arbitrarily long decoded error names. Keep
+		 * the entire diagnostic, not a silently truncated C-string prefix. */
+		message = arena_alloc(block->sema->arena, (size_t)length + 1, 1);
+		int written = vsnprintf(message, (size_t)length + 1, format, args);
+		if (written != length) {
+			message = "diagnostic formatting failed";
+			length = (int)strlen(message);
+		}
+	}
 	va_end(args);
-	diag_report(block->sema->diag, DIAG_ERROR, block->ir->file, src, "%s", message);
+	diag_report_bytes(block->sema->diag, DIAG_ERROR, block->ir->file, src, message, (size_t)length);
 }
 
 /* The new namespace work has its own cumulative budget. Existing scalar,
@@ -637,6 +656,7 @@ typedef enum RepresentationBlocker {
 	REPRESENTATION_OPTIONAL,
 	REPRESENTATION_ERROR_SET,
 	REPRESENTATION_ERROR_UNION,
+	REPRESENTATION_ANYERROR,
 } RepresentationBlocker;
 
 /* Immutable array child edges are acyclic; no new fuel or eager nominal walk.
@@ -650,6 +670,8 @@ value_representation_blocker(const Sema *sema, TypeId type)
 			return REPRESENTATION_OPTIONAL;
 		if (kind == TYPE_ERROR_SET)
 			return REPRESENTATION_ERROR_SET;
+		if (kind == TYPE_ANYERROR)
+			return REPRESENTATION_ANYERROR;
 		if (kind == TYPE_ERROR_UNION)
 			return REPRESENTATION_ERROR_UNION;
 		if (kind != TYPE_ARRAY)
@@ -668,6 +690,8 @@ value_representation_allowed(Block *block, TypeId type, uint32_t src)
 		? "not supported by szc yet: optional value or layout demand"
 		: reason == REPRESENTATION_ERROR_UNION
 		? "not supported by szc yet: error-union value or layout demand"
+		: reason == REPRESENTATION_ANYERROR
+		? "not supported by szc yet: anyerror value or layout demand"
 		: "not supported by szc yet: finite error-set value or layout demand");
 	return false;
 }
@@ -694,46 +718,38 @@ is_comptime_only_type(const Sema *sema, TypeId type)
 static const char *value_text(Sema *sema, ValueId id);
 static const char *namespace_name(Sema *sema, SemaNamespace *ns);
 
+/* Zig 0.17 error-set type names concatenate decoded member bytes verbatim,
+ * even for keywords, quotes, control bytes and invalid UTF-8. This is NOT Zig
+ * identifier formatting. Metadata is already in canonical decoded-byte order;
+ * rendering must neither re-sort it nor change type identity. */
 static const char *
 error_set_type_name(Sema *sema, TypeErrorSet set)
 {
-	size_t size = sizeof("error{}");
+	size_t size = sizeof("error{}"); /* Includes the final C-string terminator. */
 	for (uint32_t i = 0; i < set.count; i++) {
-		const unsigned char *text = (const unsigned char *)intern_text(sema->interner, set.names[i]);
-		uint32_t length = intern_length(sema->interner, set.names[i]);
-		if (size > SIZE_MAX - 4)
+		const char *text = intern_text(sema->interner, set.names[i]);
+		size_t length = intern_length(sema->interner, set.names[i]);
+		/* Source identifiers reject NUL before type construction. Guard the
+		 * C-string API for synthetic metadata too, rather than displaying a
+		 * misleading prefix of the name (or silently dropping later names). */
+		if (memchr(text, '\0', length) != NULL)
+			return "error{<invalid NUL in name>}";
+		size_t separator = i != 0 ? 1u : 0u;
+		if (size > SIZE_MAX - separator || length > SIZE_MAX - size - separator)
 			return "error{<name exceeds size limit>}";
-		size += 3 + (i != 0 ? 1u : 0u); /* @"name" and comma */
-		for (uint32_t j = 0; j < length; j++) {
-			size_t bytes = text[j] < 32 || text[j] >= 127 ? 4u : text[j] == '"' || text[j] == '\\' ? 2u : 1u;
-			if (size > SIZE_MAX - bytes)
-				return "error{<name exceeds size limit>}";
-			size += bytes;
-		}
+		size += length + separator;
 	}
 	char *out = arena_alloc(sema->arena, size, 1);
 	char *at = out;
 	memcpy(at, "error{", 6);
 	at += 6;
-	static const char hex[] = "0123456789abcdef";
 	for (uint32_t i = 0; i < set.count; i++) {
 		if (i != 0)
 			*at++ = ',';
-		*at++ = '@';
-		*at++ = '"';
-		const unsigned char *text = (const unsigned char *)intern_text(sema->interner, set.names[i]);
-		uint32_t length = intern_length(sema->interner, set.names[i]);
-		for (uint32_t j = 0; j < length; j++) {
-			unsigned char byte = text[j];
-			if (byte < 32 || byte >= 127) {
-				*at++ = '\\'; *at++ = 'x'; *at++ = hex[byte >> 4]; *at++ = hex[byte & 15];
-			} else {
-				if (byte == '"' || byte == '\\')
-					*at++ = '\\';
-				*at++ = (char)byte;
-			}
-		}
-		*at++ = '"';
+		const char *text = intern_text(sema->interner, set.names[i]);
+		size_t length = intern_length(sema->interner, set.names[i]);
+		memcpy(at, text, length);
+		at += length;
 	}
 	*at++ = '}';
 	*at = '\0';
@@ -833,6 +849,7 @@ sema_type_size(const Sema *sema, TypeId type_id, uint64_t *out)
 	case TYPE_OPTIONAL:
 	case TYPE_ERROR_SET:
 	case TYPE_ERROR_UNION:
+	case TYPE_ANYERROR:
 		return false;
 	case TYPE_BOOL:
 		size = 1;
@@ -1518,6 +1535,8 @@ signature_representation_message(RepresentationBlocker reason)
 		? "not supported by szc yet: optional values in runtime function signatures"
 		: reason == REPRESENTATION_ERROR_UNION
 		? "not supported by szc yet: error-union values in runtime function signatures"
+		: reason == REPRESENTATION_ANYERROR
+		? "not supported by szc yet: anyerror values in runtime function signatures"
 		: "not supported by szc yet: finite error-set values in runtime function signatures";
 }
 
@@ -2498,6 +2517,18 @@ coerce(Block *block, Operand operand, TypeId dest, uint32_t src)
 			return operand_none;
 		}
 		return comptime_operand(dest, value_error(&sema->values, dest, error_name));
+	}
+	/* An undefined scalar has no name or representation. Preserve only literal
+	 * initialization and ordinary finite-set subset coercions; consumers must
+	 * still check definedness, and storage/ABI demands retain their own fences. */
+	if (sema->types[dest].kind == TYPE_ERROR_SET && operand_is_undefined(block, operand)
+		&& operand_value(block, operand)->type == operand.type
+		&& (operand.type == T_UNDEFINED || sema->types[operand.type].kind == TYPE_ERROR_SET)) {
+		if (operand.type != T_UNDEFINED && !error_set_subset(sema, operand.type, dest)) {
+			sema_error(block, src, "expected type '%s', found '%s'", sema_type_name(sema, dest), sema_type_name(sema, operand.type));
+			return operand_none;
+		}
+		return comptime_operand(dest, value_undefined(&sema->values, dest));
 	}
 	if (!value_representation_allowed(block, dest, src)
 		|| !value_representation_allowed(block, operand.type, src))
@@ -6635,6 +6666,10 @@ analyze_alloc(Block *block, const IrInst *inst)
 		if (init.kind == OPERAND_NONE)
 			return operand_none;
 	}
+	/* Coercion may produce a symbolic undefined finite error without layout.
+	 * Allocation, including an uninitialized slot, is a representation demand. */
+	if (!value_representation_allowed(block, type, src))
+		return operand_none;
 	if (sema->types[type].kind == TYPE_ENUM && !ensure_type_layout(block, type, src))
 		return operand_none;
 	if (sema->types[type].kind == TYPE_ENUM && !enum_runtime_allowed(sema, type)) {
@@ -9561,8 +9596,7 @@ analyze_error_cast(Block *block, const IrInst *inst)
 	Operand source = resolve_ref(block, inst->data.bin.rhs);
 	TypeId dest;
 	if (target.kind == OPERAND_NONE || source.kind == OPERAND_NONE
-		|| !check_defined(block, target, inst->src) || !operand_to_type(block, target, inst->src, &dest)
-		|| !check_defined(block, source, inst->src))
+		|| !check_defined(block, target, inst->src) || !operand_to_type(block, target, inst->src, &dest))
 		return operand_none;
 	TypeKind dest_kind = sema->types[dest].kind;
 	TypeKind source_kind = sema->types[source.type].kind;
@@ -9573,6 +9607,16 @@ analyze_error_cast(Block *block, const IrInst *inst)
 			sema_error(block, inst->src, "not supported by szc yet: @errorCast requires finite error sets");
 		else
 			sema_error(block, inst->src, "expected error set or error union type, found '%s'", type_tag_name(sema, invalid));
+		return operand_none;
+	}
+	/* Even undefined sources must have compatible error-set types before the
+	 * cast reads their value. Never turn undefined into a known member. */
+	if (operand_is_undefined(block, source)) {
+		if (!error_sets_intersect(sema, source.type, dest))
+			sema_error(block, inst->src, "error sets '%s' and '%s' have no common errors",
+				sema_type_name(sema, source.type), sema_type_name(sema, dest));
+		else
+			check_defined(block, source, inst->src);
 		return operand_none;
 	}
 	StringId name;

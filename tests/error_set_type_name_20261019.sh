@@ -1,5 +1,6 @@
 #!/bin/sh
-# Eight direct-metadata renderer vectors, no Zig programs or native fixtures.
+# Direct-metadata renderer vectors, no Zig programs or native fixtures.
+# 2026-10-22 raw-byte parity replaces the obsolete quoted ASCII-only policy.
 # Usage: tests/error_set_type_name_20261019.sh [SOURCE_ROOT [FROZEN_SRC_OVERLAY]]
 # Optional immutable overlay is copied into a PRIVATE temporary source tree;
 # original sources are never changed. Caller records base/overlay source hashes.

@@ -102,7 +102,7 @@
       "candidate": {
         "status": 1,
         "primaries": [
-          "error set of type 'error{@\"A\"}' is ignored"
+          "error set of type 'error{A}' is ignored"
         ],
         "generated_stdout": "empty"
       },
@@ -152,7 +152,7 @@
       "candidate": {
         "status": 1,
         "primaries": [
-          "expected type 'error{@\"A\"}', found 'error{@\"A\",@\"B\"}'"
+          "expected type 'error{A}', found 'error{A,B}'"
         ],
         "generated_stdout": "empty"
       },
@@ -272,7 +272,7 @@
       "candidate": {
         "status": 1,
         "primaries": [
-          "error union with payload of error set type 'error{@\"B\"}' not allowed",
+          "error union with payload of error set type 'error{B}' not allowed",
           "error union with payload of error set type 'anyerror' not allowed"
         ],
         "generated_stdout": "empty"

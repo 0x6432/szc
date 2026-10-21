@@ -455,11 +455,11 @@
     {
       "file": "c03_narrow_nonmember.zig",
       "source_sha256": "9d60500ec40f60b0237ec375cfdae244ad62f4164ffa1f89a2b2e1b4acac9cc7",
-      "label": "STRUCTURAL-DIAGNOSTIC-REJECT",
+      "label": "PARITY-REJECT",
       "candidate": {
         "status": 1,
         "primaries": [
-          "'error.B' not a member of error set 'error{@\"A\"}'"
+          "'error.B' not a member of error set 'error{A}'"
         ]
       },
       "reference": {
@@ -557,12 +557,12 @@
     {
       "file": "c16_cast_consumers.zig",
       "source_sha256": "709795b4ffd7a7c0087e86584f5906d5d9582b32cad985cb80029273095854bc",
-      "label": "STRUCTURAL-DIAGNOSTIC-REJECT",
+      "label": "PARITY-REJECT",
       "candidate": {
         "status": 1,
         "primaries": [
           "error set is discarded",
-          "error set of type 'error{@\"A\"}' is ignored"
+          "error set of type 'error{A}' is ignored"
         ]
       },
       "reference": {
@@ -582,11 +582,11 @@
       "file": "known_nonmember_typeof.zig",
       "source_group": "appendix",
       "source_sha256": "7e8c6df21916353d8552630e3f0c805b06db857af05ad20d3221f7c74a01b29b",
-      "label": "STRUCTURAL-DIAGNOSTIC-REJECT",
+      "label": "PARITY-REJECT",
       "candidate": {
         "status": 1,
         "primaries": [
-          "'error.B' not a member of error set 'error{@\"A\"}'"
+          "'error.B' not a member of error set 'error{A}'"
         ]
       },
       "reference": {

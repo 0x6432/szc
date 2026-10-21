@@ -56,6 +56,11 @@ test: unit-test golden-test fuzz-driver-test fuzz-partition-test
 	python3 tools/check_error_family_boundaries_20261019.py build/asan/szc
 	python3 tools/check_error_family_varargs_20261019.py build/asan/szc
 	python3 tools/check_error_query_policies_20261019.py build/asan/szc
+	python3 tests/run_error_set_renderer_20261022.py build/asan/szc
+	python3 tests/test_error_query_undefined_checker_20261022.py
+	python3 tools/check_error_query_undefined_20261022.py build/asan/szc --allow-known-gaps
+	python3 tests/test_anyerror_value_containment_20261022.py
+	CC="$(CC)" CFLAGS="$(CFLAGS) $(SAN_FLAGS)" python3 tools/check_anyerror_value_containment_20261022.py build/asan/szc
 
 build/memcpy-widths.zig: tools/generate_memcpy_tests.py
 	python3 $< $@

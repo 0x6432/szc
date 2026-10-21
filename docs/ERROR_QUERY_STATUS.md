@@ -75,3 +75,9 @@ Every existing file was compared to baseline:6911 unchanged and58 explicitly
 reviewed modifications; no original Zig fixture changed. Hosted
 CI health is a separate gate; lost-runner annotations do not establish a
 compiler timeout, exit143, cleanup defect or root cause.
+
+## Diagnostic and undefined-value follow-up
+
+See [the bounded follow-up](ERROR_QUERY_DIAGNOSTICS_STATUS.md) for reference-backed
+raw-byte type-name rendering, symbolic undefined demand, and the unchanged
+strict56 improvement from46/56 to52/56. Four runtime gaps remain explicit.

@@ -1,3 +1,6 @@
-tests/tir/errors/memcpy_unknown_layout.zig:1:106: error: not supported by szc yet: @memcpy element type 'anyerror'
+tests/tir/errors/memcpy_unknown_layout.zig:1:42: error: not supported by szc yet: anyerror value or layout demand
 pub fn main() void { const d:[*]anyerror=@ptrFromInt(4096); const s:[*]const anyerror=@ptrFromInt(8192); @memcpy(d[0..1],s[0..1]); }
-                                                                                                         ^
+                                         ^
+tests/tir/errors/memcpy_unknown_layout.zig:1:87: error: not supported by szc yet: anyerror value or layout demand
+pub fn main() void { const d:[*]anyerror=@ptrFromInt(4096); const s:[*]const anyerror=@ptrFromInt(8192); @memcpy(d[0..1],s[0..1]); }
+                                                                                      ^
