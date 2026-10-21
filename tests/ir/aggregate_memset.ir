@@ -84,7 +84,7 @@
           %67 = as %60, %66
           %68 = break_inline result, %67
         }
-        %69 = check_unused_error %56
+        %69 = ensure_result %56
         %70 = memset_elem_type %54
         %71 = array_base_ptr %54
         %72 = int 1

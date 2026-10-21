@@ -326,7 +326,7 @@
         } else {
           %213 = break_inline result, @void_value
         }
-        %215 = check_unused_error %214
+        %215 = ensure_result %214
         %216 = decl_val "to_array"
         %217 = call %216 arg0 {
           %218 = arg_type %217, 0
@@ -356,7 +356,7 @@
         } else {
           %239 = break_inline result, @void_value
         }
-        %241 = check_unused_error %240
+        %241 = ensure_result %240
         %242 = decl_val "to_bool"
         %243 = call %242 arg0 {
           %244 = arg_type %243, 0
@@ -392,7 +392,7 @@
         } else {
           %270 = break_inline result, @void_value
         }
-        %272 = check_unused_error %271
+        %272 = ensure_result %271
         %273 = decl_val "to_nested"
         %274 = call %273 arg0 {
           %275 = arg_type %274, 0
@@ -449,7 +449,7 @@
         } else {
           %321 = break_inline result, @void_value
         }
-        %323 = check_unused_error %322
+        %323 = ensure_result %322
         %324 = decl_val "from_nested"
         %325 = call %324 arg0 {
           %326 = arg_type %325, 0
@@ -466,7 +466,7 @@
         } else {
           %335 = break_inline result, @void_value
         }
-        %337 = check_unused_error %336
+        %337 = ensure_result %336
         %338 = decl_val "sent"
         %339 = call %338 arg0 {
           %340 = arg_type %339, 0
@@ -503,7 +503,7 @@
         } else {
           %367 = break_inline result, @void_value
         }
-        %369 = check_unused_error %368
+        %369 = ensure_result %368
         %370 = decl_val "signed_pack"
         %371 = call %370 arg0 {
           %372 = arg_type %371, 0
@@ -545,7 +545,7 @@
         } else {
           %404 = break_inline result, @void_value
         }
-        %406 = check_unused_error %405
+        %406 = ensure_result %405
         %407 = decl_val "reshape"
         %408 = call %407 arg0 {
           %409 = arg_type %408, 0
@@ -603,7 +603,7 @@
         } else {
           %455 = break_inline result, @void_value
         }
-        %457 = check_unused_error %456
+        %457 = ensure_result %456
         %458 = decl_val "sentinel_pack"
         %459 = call %458 arg0 {
           %460 = arg_type %459, 0
@@ -626,7 +626,7 @@
         } else {
           %475 = break_inline result, @void_value
         }
-        %477 = check_unused_error %476
+        %477 = ensure_result %476
         %478 = decl_val "zero"
         %479 = call %478 arg0 {
           %480 = arg_type %479, 0
@@ -650,7 +650,7 @@
         } else {
           %496 = break_inline result, @void_value
         }
-        %498 = check_unused_error %497
+        %498 = ensure_result %497
         %499 = decl_val "bool_sentinel_pack"
         %500 = call %499 arg0 {
           %501 = arg_type %500, 0
@@ -671,7 +671,7 @@
         } else {
           %514 = break_inline result, @void_value
         }
-        %516 = check_unused_error %515
+        %516 = ensure_result %515
         %517 = decl_val "bool_sentinel_unpack"
         %518 = call %517 arg0 {
           %519 = arg_type %518, 0
@@ -707,7 +707,7 @@
         } else {
           %545 = break_inline result, @void_value
         }
-        %547 = check_unused_error %546
+        %547 = ensure_result %546
         %548 = int 2
         %549 = as @type_usize, %548
         %550 = array_type %549, @type_u8
@@ -749,7 +749,7 @@
         } else {
           %584 = break_inline result, @void_value
         }
-        %586 = check_unused_error %585
+        %586 = ensure_result %585
         %587 = ret_type
         %588 = int 0
         %589 = as_return %587, %588

@@ -103,7 +103,7 @@
         } else {
           %77 = break_inline result, @void_value
         }
-        %79 = check_unused_error %78
+        %79 = ensure_result %78
         %80 = ret_type
         %81 = int 0
         %82 = as_return %80, %81

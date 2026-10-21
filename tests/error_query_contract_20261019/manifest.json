@@ -1,0 +1,1107 @@
+{
+  "contract": "error_query_contract_20261019",
+  "baseline_commit": "e594a4ddd3fb2f05d24fe102fd12332b4b4c9d16",
+  "reference_version": "0.17.0",
+  "reference_binary_sha256": "7c61539af19fa4082c94848f1c2b57b89e76dc6cfd5bd4c57764c3caf8f82272",
+  "case_count": 56,
+  "cases": [
+    {
+      "file": "c01_explicit_narrow_member.zig",
+      "lane": "parity",
+      "category": "error-cast",
+      "scope": "potential-target",
+      "source_sha256": "e176021fb2dcef5232bd5ecbd5859c5757a84b8e8c71b43d15ded84525fb43e1",
+      "reference": {
+        "status": 0,
+        "primaries": []
+      },
+      "baseline_observation": {
+        "status": 1,
+        "primaries": [
+          "not supported by szc yet: builtin @errorCast"
+        ],
+        "exact": false
+      },
+      "observation": "Compile-only exact reference status/full ordered primary list; scope is not pass credit."
+    },
+    {
+      "file": "c02_local_result_context.zig",
+      "lane": "parity",
+      "category": "error-cast",
+      "scope": "potential-target",
+      "source_sha256": "fb13cea35f0f84c0303dd7c28d11b42f4be53f81a14d86b8fa43c9cd9723ff64",
+      "reference": {
+        "status": 0,
+        "primaries": []
+      },
+      "baseline_observation": {
+        "status": 1,
+        "primaries": [
+          "not supported by szc yet: builtin @errorCast"
+        ],
+        "exact": false
+      },
+      "observation": "Compile-only exact reference status/full ordered primary list; scope is not pass credit."
+    },
+    {
+      "file": "c03_narrow_nonmember.zig",
+      "lane": "parity",
+      "category": "error-cast",
+      "scope": "potential-target",
+      "source_sha256": "9d60500ec40f60b0237ec375cfdae244ad62f4164ffa1f89a2b2e1b4acac9cc7",
+      "reference": {
+        "status": 1,
+        "primaries": [
+          "'error.B' not a member of error set 'error{A}'"
+        ]
+      },
+      "baseline_observation": {
+        "status": 1,
+        "primaries": [
+          "not supported by szc yet: builtin @errorCast"
+        ],
+        "exact": false
+      },
+      "observation": "Compile-only exact reference status/full ordered primary list; scope is not pass credit."
+    },
+    {
+      "file": "c04_widening.zig",
+      "lane": "parity",
+      "category": "error-cast",
+      "scope": "potential-target",
+      "source_sha256": "f1acb20e416b1d408c01338d20f40efcc348aae1e9b392ed4f5f5c8555cd71b2",
+      "reference": {
+        "status": 0,
+        "primaries": []
+      },
+      "baseline_observation": {
+        "status": 1,
+        "primaries": [
+          "not supported by szc yet: builtin @errorCast"
+        ],
+        "exact": false
+      },
+      "observation": "Compile-only exact reference status/full ordered primary list; scope is not pass credit."
+    },
+    {
+      "file": "c05_same_empty_destination.zig",
+      "lane": "parity",
+      "category": "error-cast",
+      "scope": "potential-target",
+      "source_sha256": "8f87e5b28712c1e35424a73d7563e3b111be422c43dc6857695d0bd371651a80",
+      "reference": {
+        "status": 1,
+        "primaries": [
+          "error sets 'error{A}' and 'error{}' have no common errors"
+        ]
+      },
+      "baseline_observation": {
+        "status": 1,
+        "primaries": [
+          "not supported by szc yet: builtin @errorCast",
+          "not supported by szc yet: builtin @errorCast"
+        ],
+        "exact": false
+      },
+      "observation": "Compile-only exact reference status/full ordered primary list; scope is not pass credit."
+    },
+    {
+      "file": "c06_missing_result_type.zig",
+      "lane": "parity",
+      "category": "error-cast",
+      "scope": "potential-target",
+      "source_sha256": "866c96564d89a5f4d6377cc9a6169858f8d90e55ca9759c13da865878f6cfddd",
+      "reference": {
+        "status": 1,
+        "primaries": [
+          "@errorCast must have a known result type",
+          "@errorCast must have a known result type"
+        ]
+      },
+      "baseline_observation": {
+        "status": 1,
+        "primaries": [
+          "not supported by szc yet: builtin @errorCast",
+          "not supported by szc yet: builtin @errorCast"
+        ],
+        "exact": false
+      },
+      "observation": "Compile-only exact reference status/full ordered primary list; scope is not pass credit."
+    },
+    {
+      "file": "c07_invalid_result_type.zig",
+      "lane": "parity",
+      "category": "error-cast",
+      "scope": "potential-target",
+      "source_sha256": "3288f74a26c380370e38c83f026d530c07ff5a7e2a7e9301804d7cb35cdac44f",
+      "reference": {
+        "status": 1,
+        "primaries": [
+          "expected error set or error union type, found 'int'"
+        ]
+      },
+      "baseline_observation": {
+        "status": 1,
+        "primaries": [
+          "not supported by szc yet: builtin @errorCast"
+        ],
+        "exact": false
+      },
+      "observation": "Compile-only exact reference status/full ordered primary list; scope is not pass credit."
+    },
+    {
+      "file": "c08_invalid_operand.zig",
+      "lane": "parity",
+      "category": "error-cast",
+      "scope": "potential-target",
+      "source_sha256": "97d36cc422f6d9b75308ab3ef97840dd92997b9c31ab46caea5be0ff5d3d23c8",
+      "reference": {
+        "status": 1,
+        "primaries": [
+          "expected error set or error union type, found 'int'"
+        ]
+      },
+      "baseline_observation": {
+        "status": 1,
+        "primaries": [
+          "not supported by szc yet: builtin @errorCast"
+        ],
+        "exact": false
+      },
+      "observation": "Compile-only exact reference status/full ordered primary list; scope is not pass credit."
+    },
+    {
+      "file": "c09_member_owner.zig",
+      "lane": "parity",
+      "category": "error-cast",
+      "scope": "potential-target",
+      "source_sha256": "388b0b271e08190ad72e969ebfbbaf8a2384e6b28690cfe2f68a4566ebd204ca",
+      "reference": {
+        "status": 0,
+        "primaries": []
+      },
+      "baseline_observation": {
+        "status": 1,
+        "primaries": [
+          "not supported by szc yet: builtin @errorCast"
+        ],
+        "exact": false
+      },
+      "observation": "Compile-only exact reference status/full ordered primary list; scope is not pass credit."
+    },
+    {
+      "file": "c10_implicit_narrow_control.zig",
+      "lane": "parity",
+      "category": "error-cast",
+      "scope": "inherited-structural-primary",
+      "source_sha256": "b0904c88ccd91e57cc8acdabd6d4fa34c2defd6abb04979ce71290230645376a",
+      "reference": {
+        "status": 1,
+        "primaries": [
+          "expected type 'error{A}', found 'error{A,B}'"
+        ]
+      },
+      "baseline_observation": {
+        "status": 1,
+        "primaries": [
+          "expected type 'error{@\"A\"}', found 'error{@\"A\",@\"B\"}'"
+        ],
+        "exact": false
+      },
+      "observation": "Compile-only exact reference status/full ordered primary list; scope is not pass credit."
+    },
+    {
+      "file": "c11_quoted_member.zig",
+      "lane": "parity",
+      "category": "error-cast",
+      "scope": "potential-target",
+      "source_sha256": "f0647b4cb45d11575d1747c0f020859d0a9700384f5af3e5ed11b3f7f8fa7bcd",
+      "reference": {
+        "status": 0,
+        "primaries": []
+      },
+      "baseline_observation": {
+        "status": 1,
+        "primaries": [
+          "not supported by szc yet: builtin @errorCast"
+        ],
+        "exact": false
+      },
+      "observation": "Compile-only exact reference status/full ordered primary list; scope is not pass credit."
+    },
+    {
+      "file": "c12_runtime_source.zig",
+      "lane": "parity",
+      "category": "error-cast",
+      "scope": "outside-runtime-producer",
+      "source_sha256": "7fb587aa237672c54035f463686f57f050344907aa97381c3b9fa30d6bb2033b",
+      "reference": {
+        "status": 0,
+        "primaries": []
+      },
+      "baseline_observation": {
+        "status": 1,
+        "primaries": [
+          "not supported by szc yet: builtin @errorCast",
+          "not supported by szc yet: builtin @errorCast"
+        ],
+        "exact": false
+      },
+      "observation": "Compile-only exact reference status/full ordered primary list; scope is not pass credit."
+    },
+    {
+      "file": "c13_return_argument_assignment.zig",
+      "lane": "parity",
+      "category": "error-cast",
+      "scope": "outside-runtime-producer",
+      "source_sha256": "78cdc524193113530d3e24575aef22af84ab34c655da010c41a8933ecad02214",
+      "reference": {
+        "status": 0,
+        "primaries": []
+      },
+      "baseline_observation": {
+        "status": 1,
+        "primaries": [
+          "not supported by szc yet: builtin @errorCast",
+          "not supported by szc yet: builtin @errorCast",
+          "not supported by szc yet: builtin @errorCast"
+        ],
+        "exact": false
+      },
+      "observation": "Compile-only exact reference status/full ordered primary list; scope is not pass credit."
+    },
+    {
+      "file": "c14_lazy_invalid.zig",
+      "lane": "parity",
+      "category": "error-cast",
+      "scope": "potential-target",
+      "source_sha256": "fc97a1d7c4457e149adf0825daac7d11cb1979684f6f9d71139a23b0a45ba72a",
+      "reference": {
+        "status": 0,
+        "primaries": []
+      },
+      "baseline_observation": {
+        "status": 1,
+        "primaries": [
+          "not supported by szc yet: builtin @errorCast"
+        ],
+        "exact": false
+      },
+      "observation": "Compile-only exact reference status/full ordered primary list; scope is not pass credit."
+    },
+    {
+      "file": "c15_typeof_cast.zig",
+      "lane": "parity",
+      "category": "error-cast",
+      "scope": "potential-target",
+      "source_sha256": "93d97a693a268cbe45650e964eded01176c226b78c4a59e78e6028653bd08783",
+      "reference": {
+        "status": 0,
+        "primaries": []
+      },
+      "baseline_observation": {
+        "status": 1,
+        "primaries": [
+          "not supported by szc yet: builtin @errorCast"
+        ],
+        "exact": false
+      },
+      "observation": "Compile-only exact reference status/full ordered primary list; scope is not pass credit."
+    },
+    {
+      "file": "c16_cast_consumers.zig",
+      "lane": "parity",
+      "category": "error-cast",
+      "scope": "inherited-structural-primary",
+      "source_sha256": "709795b4ffd7a7c0087e86584f5906d5d9582b32cad985cb80029273095854bc",
+      "reference": {
+        "status": 1,
+        "primaries": [
+          "error set is discarded",
+          "error set of type 'error{A}' is ignored"
+        ]
+      },
+      "baseline_observation": {
+        "status": 1,
+        "primaries": [
+          "not supported by szc yet: builtin @errorCast",
+          "not supported by szc yet: builtin @errorCast"
+        ],
+        "exact": false
+      },
+      "observation": "Compile-only exact reference status/full ordered primary list; scope is not pass credit."
+    },
+    {
+      "file": "i01_bare_scalar.zig",
+      "lane": "parity",
+      "category": "ignored-result",
+      "scope": "potential-target",
+      "source_sha256": "1f72c8d348bbfec61ebade31a5fdb5af949b09b710319afa325ca79f866840dd",
+      "reference": {
+        "status": 1,
+        "primaries": [
+          "value of type 'comptime_int' ignored"
+        ]
+      },
+      "baseline_observation": {
+        "status": 0,
+        "primaries": [],
+        "exact": false
+      },
+      "observation": "Compile-only exact reference status/full ordered primary list; scope is not pass credit."
+    },
+    {
+      "file": "i02_ignored_call.zig",
+      "lane": "parity",
+      "category": "ignored-result",
+      "scope": "potential-target",
+      "source_sha256": "5d255c615fd8cdfd92496b27879bc0b19a78fcab574347b7a4029002d5403987",
+      "reference": {
+        "status": 1,
+        "primaries": [
+          "value of type 'u8' ignored"
+        ]
+      },
+      "baseline_observation": {
+        "status": 0,
+        "primaries": [],
+        "exact": false
+      },
+      "observation": "Compile-only exact reference status/full ordered primary list; scope is not pass credit."
+    },
+    {
+      "file": "i03_bare_aggregate.zig",
+      "lane": "parity",
+      "category": "ignored-result",
+      "scope": "potential-target",
+      "source_sha256": "76b64728d4514fa9af6ce5984dc190d74a32ddf4b9fcd4fb3fa44232cc04e85e",
+      "reference": {
+        "status": 1,
+        "primaries": [
+          "value of type '[2]u8' ignored"
+        ]
+      },
+      "baseline_observation": {
+        "status": 0,
+        "primaries": [],
+        "exact": false
+      },
+      "observation": "Compile-only exact reference status/full ordered primary list; scope is not pass credit."
+    },
+    {
+      "file": "i04_bare_type_string.zig",
+      "lane": "parity",
+      "category": "ignored-result",
+      "scope": "potential-target",
+      "source_sha256": "fde3933a478399821d8cde70d6ba64889ee82a130e434ae359e5962a38ac835f",
+      "reference": {
+        "status": 1,
+        "primaries": [
+          "value of type 'type' ignored",
+          "value of type '*const [3:0]u8' ignored"
+        ]
+      },
+      "baseline_observation": {
+        "status": 0,
+        "primaries": [],
+        "exact": false
+      },
+      "observation": "Compile-only exact reference status/full ordered primary list; scope is not pass credit."
+    },
+    {
+      "file": "i05_bare_error.zig",
+      "lane": "parity",
+      "category": "ignored-result",
+      "scope": "inherited-structural-primary",
+      "source_sha256": "a439bdc608d31e1e29c6524ba6fe360ded31a59736b4cceac237b307f13693c2",
+      "reference": {
+        "status": 1,
+        "primaries": [
+          "error set of type 'error{A}' is ignored"
+        ]
+      },
+      "baseline_observation": {
+        "status": 1,
+        "primaries": [
+          "error set of type 'error{@\"A\"}' is ignored"
+        ],
+        "exact": false
+      },
+      "observation": "Compile-only exact reference status/full ordered primary list; scope is not pass credit."
+    },
+    {
+      "file": "i06_explicit_discard.zig",
+      "lane": "parity",
+      "category": "ignored-result",
+      "scope": "preserved-control",
+      "source_sha256": "43bc06a421a15b77b9f7975b820fa81aebdee141ae28e3bc25a966b15e9e315e",
+      "reference": {
+        "status": 0,
+        "primaries": []
+      },
+      "baseline_observation": {
+        "status": 0,
+        "primaries": [],
+        "exact": true
+      },
+      "observation": "Compile-only exact reference status/full ordered primary list; scope is not pass credit."
+    },
+    {
+      "file": "i07_void_noreturn.zig",
+      "lane": "parity",
+      "category": "ignored-result",
+      "scope": "preserved-control",
+      "source_sha256": "4a61acc5c9f75f290bdb1c018e56bb5228cd59e69166855878bf5140301b700e",
+      "reference": {
+        "status": 0,
+        "primaries": []
+      },
+      "baseline_observation": {
+        "status": 0,
+        "primaries": [],
+        "exact": true
+      },
+      "observation": "Compile-only exact reference status/full ordered primary list; scope is not pass credit."
+    },
+    {
+      "file": "i08_ignored_if.zig",
+      "lane": "parity",
+      "category": "ignored-result",
+      "scope": "potential-target",
+      "source_sha256": "e4c2550e92d6a632f6ca10e555c5fb7e96b88ff7f9b460dd47af3ef5ef516f71",
+      "reference": {
+        "status": 1,
+        "primaries": [
+          "value of type 'u8' ignored",
+          "incompatible types: 'u8' and 'void'"
+        ]
+      },
+      "baseline_observation": {
+        "status": 1,
+        "primaries": [
+          "incompatible types: 'u8' and 'void'"
+        ],
+        "exact": false
+      },
+      "observation": "Compile-only exact reference status/full ordered primary list; scope is not pass credit."
+    },
+    {
+      "file": "i09_ignored_switch.zig",
+      "lane": "parity",
+      "category": "ignored-result",
+      "scope": "potential-target",
+      "source_sha256": "d8964b2a5afb4be3deb593e9c0016cbd860aef1181c97705046118a2a087a946",
+      "reference": {
+        "status": 1,
+        "primaries": [
+          "value of type 'u8' ignored"
+        ]
+      },
+      "baseline_observation": {
+        "status": 0,
+        "primaries": [],
+        "exact": false
+      },
+      "observation": "Compile-only exact reference status/full ordered primary list; scope is not pass credit."
+    },
+    {
+      "file": "i10_consuming_labeled.zig",
+      "lane": "parity",
+      "category": "ignored-result",
+      "scope": "preserved-control",
+      "source_sha256": "d7e5f7c45965f9c2f013503e644fff0b03a4a674d83e1587868f28a9bc820e5d",
+      "reference": {
+        "status": 0,
+        "primaries": []
+      },
+      "baseline_observation": {
+        "status": 0,
+        "primaries": [],
+        "exact": true
+      },
+      "observation": "Compile-only exact reference status/full ordered primary list; scope is not pass credit."
+    },
+    {
+      "file": "i11_while_single.zig",
+      "lane": "parity",
+      "category": "ignored-result",
+      "scope": "potential-target",
+      "source_sha256": "2b8fa9344374c57c393ded86783a21ed0f9e07c680dd813ea6b79f2d9ce05640",
+      "reference": {
+        "status": 1,
+        "primaries": [
+          "value of type 'u8' ignored",
+          "value of type 'u8' ignored"
+        ]
+      },
+      "baseline_observation": {
+        "status": 1,
+        "primaries": [
+          "expected type 'void', found 'u8'",
+          "expected type 'void', found 'u8'"
+        ],
+        "exact": false
+      },
+      "observation": "Compile-only exact reference status/full ordered primary list; scope is not pass credit."
+    },
+    {
+      "file": "i12_for_single.zig",
+      "lane": "parity",
+      "category": "ignored-result",
+      "scope": "potential-target",
+      "source_sha256": "a0495ff038b66845ff05f3a97d511794674395185f8b2cef4ad01dcabcdb5a7c",
+      "reference": {
+        "status": 1,
+        "primaries": [
+          "value of type 'u8' ignored"
+        ]
+      },
+      "baseline_observation": {
+        "status": 1,
+        "primaries": [
+          "expected type 'void', found 'u8'"
+        ],
+        "exact": false
+      },
+      "observation": "Compile-only exact reference status/full ordered primary list; scope is not pass credit."
+    },
+    {
+      "file": "i13_while_block.zig",
+      "lane": "parity",
+      "category": "ignored-result",
+      "scope": "potential-target",
+      "source_sha256": "3909519c082545bad072dd3d48d4a7eb44dcfb1f195fd9cb1ca75d1a0e8edd6b",
+      "reference": {
+        "status": 1,
+        "primaries": [
+          "value of type 'u8' ignored",
+          "value of type 'u8' ignored",
+          "value of type 'u8' ignored"
+        ]
+      },
+      "baseline_observation": {
+        "status": 1,
+        "primaries": [
+          "incompatible types: 'void' and 'u8'"
+        ],
+        "exact": false
+      },
+      "observation": "Compile-only exact reference status/full ordered primary list; scope is not pass credit."
+    },
+    {
+      "file": "i14_for_block.zig",
+      "lane": "parity",
+      "category": "ignored-result",
+      "scope": "potential-target",
+      "source_sha256": "ee314290eb7f651a61094a337ff18ddcfcd46bbac23659928fabf823ad2a8b12",
+      "reference": {
+        "status": 1,
+        "primaries": [
+          "value of type 'u8' ignored"
+        ]
+      },
+      "baseline_observation": {
+        "status": 0,
+        "primaries": [],
+        "exact": false
+      },
+      "observation": "Compile-only exact reference status/full ordered primary list; scope is not pass credit."
+    },
+    {
+      "file": "i15_lazy_ignored.zig",
+      "lane": "parity",
+      "category": "ignored-result",
+      "scope": "preserved-control",
+      "source_sha256": "3236e5554cbcb863b978df050a61e0974fe2d153c832aea269cfafc17b486b23",
+      "reference": {
+        "status": 0,
+        "primaries": []
+      },
+      "baseline_observation": {
+        "status": 0,
+        "primaries": [],
+        "exact": true
+      },
+      "observation": "Compile-only exact reference status/full ordered primary list; scope is not pass credit."
+    },
+    {
+      "file": "i16_namespace_lazy.zig",
+      "lane": "parity",
+      "category": "ignored-result",
+      "scope": "preserved-control",
+      "source_sha256": "f57de3120cc3f420021cb18169bd0fbf277febade9d479e885ae5cd39dc716f0",
+      "reference": {
+        "status": 0,
+        "primaries": []
+      },
+      "baseline_observation": {
+        "status": 0,
+        "primaries": [],
+        "exact": true
+      },
+      "observation": "Compile-only exact reference status/full ordered primary list; scope is not pass credit."
+    },
+    {
+      "file": "i17_defer_scalar.zig",
+      "lane": "parity",
+      "category": "ignored-result",
+      "scope": "preserved-control",
+      "source_sha256": "aeb3c679864a5890b4715b03b6a33b56dbf08b2bbcda3739f2ca9385b16d2c97",
+      "reference": {
+        "status": 1,
+        "primaries": [
+          "value of type 'u8' ignored"
+        ]
+      },
+      "baseline_observation": {
+        "status": 1,
+        "primaries": [
+          "value of type 'u8' ignored"
+        ],
+        "exact": true
+      },
+      "observation": "Compile-only exact reference status/full ordered primary list; scope is not pass credit."
+    },
+    {
+      "file": "i18_defer_void_discard.zig",
+      "lane": "parity",
+      "category": "ignored-result",
+      "scope": "preserved-control",
+      "source_sha256": "6587f6b227ce859f8aed240ee93109cc4d4653ef03449039d353960d73bc1142",
+      "reference": {
+        "status": 0,
+        "primaries": []
+      },
+      "baseline_observation": {
+        "status": 0,
+        "primaries": [],
+        "exact": true
+      },
+      "observation": "Compile-only exact reference status/full ordered primary list; scope is not pass credit."
+    },
+    {
+      "file": "i19_explicit_error_discard.zig",
+      "lane": "parity",
+      "category": "ignored-result",
+      "scope": "preserved-control",
+      "source_sha256": "e72046ec3736394355ed1e42fbe8af4bd29cf84da9b808a8ba090e390be69ca9",
+      "reference": {
+        "status": 1,
+        "primaries": [
+          "error set is discarded"
+        ]
+      },
+      "baseline_observation": {
+        "status": 1,
+        "primaries": [
+          "error set is discarded"
+        ],
+        "exact": true
+      },
+      "observation": "Compile-only exact reference status/full ordered primary list; scope is not pass credit."
+    },
+    {
+      "file": "i20_nonlocal_break.zig",
+      "lane": "parity",
+      "category": "ignored-result",
+      "scope": "preserved-control",
+      "source_sha256": "8760b2add07e26880deec763eced0a08d27d1305b4afe98f22693531185a2822",
+      "reference": {
+        "status": 0,
+        "primaries": []
+      },
+      "baseline_observation": {
+        "status": 0,
+        "primaries": [],
+        "exact": true
+      },
+      "observation": "Compile-only exact reference status/full ordered primary list; scope is not pass credit."
+    },
+    {
+      "file": "i21_nonlocal_continue.zig",
+      "lane": "parity",
+      "category": "ignored-result",
+      "scope": "preserved-control",
+      "source_sha256": "30a04d0bf804b4f09ec8afbf90a945f5e461308f63b0b7eab595da652cf25276",
+      "reference": {
+        "status": 0,
+        "primaries": []
+      },
+      "baseline_observation": {
+        "status": 0,
+        "primaries": [],
+        "exact": true
+      },
+      "observation": "Compile-only exact reference status/full ordered primary list; scope is not pass credit."
+    },
+    {
+      "file": "i22_runtime_void_branches.zig",
+      "lane": "parity",
+      "category": "ignored-result",
+      "scope": "preserved-control",
+      "source_sha256": "9005474c655a7fd4446b76452869e0fa44061c77273488a2c76951991b329d5e",
+      "reference": {
+        "status": 0,
+        "primaries": []
+      },
+      "baseline_observation": {
+        "status": 0,
+        "primaries": [],
+        "exact": true
+      },
+      "observation": "Compile-only exact reference status/full ordered primary list; scope is not pass credit."
+    },
+    {
+      "file": "i23_consumed_values.zig",
+      "lane": "parity",
+      "category": "ignored-result",
+      "scope": "preserved-control",
+      "source_sha256": "3485e70c3484e534f39abd7fb66bbd3b2ece9fec93e7c1cd03f0c46f3253f339",
+      "reference": {
+        "status": 0,
+        "primaries": []
+      },
+      "baseline_observation": {
+        "status": 0,
+        "primaries": [],
+        "exact": true
+      },
+      "observation": "Compile-only exact reference status/full ordered primary list; scope is not pass credit."
+    },
+    {
+      "file": "i24_namespace_call.zig",
+      "lane": "parity",
+      "category": "ignored-result",
+      "scope": "potential-target",
+      "source_sha256": "b9f327a2c7804211bce2472a969e31ac4f6e2210656f6703e067472778777181",
+      "reference": {
+        "status": 1,
+        "primaries": [
+          "value of type 'u8' ignored"
+        ]
+      },
+      "baseline_observation": {
+        "status": 0,
+        "primaries": [],
+        "exact": false
+      },
+      "observation": "Compile-only exact reference status/full ordered primary list; scope is not pass credit."
+    },
+    {
+      "file": "n01_literal_bytes.zig",
+      "lane": "parity",
+      "category": "error-name",
+      "scope": "potential-target",
+      "source_sha256": "925307a7364e41740e8c881689226c4926e5e8a1427edaa61ca9c63e581d1f57",
+      "reference": {
+        "status": 0,
+        "primaries": []
+      },
+      "baseline_observation": {
+        "status": 1,
+        "primaries": [
+          "not supported by szc yet: builtin @errorName"
+        ],
+        "exact": false
+      },
+      "observation": "Compile-only exact reference status/full ordered primary list; scope is not pass credit."
+    },
+    {
+      "file": "n02_ownerwide_name.zig",
+      "lane": "parity",
+      "category": "error-name",
+      "scope": "potential-target",
+      "source_sha256": "e60a58ca89a05cbeed62f43e46ef98d6c4a27c1cae50aae0f05d400cd880cc16",
+      "reference": {
+        "status": 0,
+        "primaries": []
+      },
+      "baseline_observation": {
+        "status": 1,
+        "primaries": [
+          "not supported by szc yet: builtin @errorName"
+        ],
+        "exact": false
+      },
+      "observation": "Compile-only exact reference status/full ordered primary list; scope is not pass credit."
+    },
+    {
+      "file": "n03_finite_member.zig",
+      "lane": "parity",
+      "category": "error-name",
+      "scope": "potential-target",
+      "source_sha256": "36ac6776cb040fc01e4a7dab14bb406b84d9739ba98bde533c4120002ca3bfcf",
+      "reference": {
+        "status": 0,
+        "primaries": []
+      },
+      "baseline_observation": {
+        "status": 1,
+        "primaries": [
+          "not supported by szc yet: builtin @errorName"
+        ],
+        "exact": false
+      },
+      "observation": "Compile-only exact reference status/full ordered primary list; scope is not pass credit."
+    },
+    {
+      "file": "n04_escaped_name.zig",
+      "lane": "parity",
+      "category": "error-name",
+      "scope": "potential-target",
+      "source_sha256": "a27ca2df3057704015f606c19902c08088059a9c5cad2b39b2476b1a45985219",
+      "reference": {
+        "status": 0,
+        "primaries": []
+      },
+      "baseline_observation": {
+        "status": 1,
+        "primaries": [
+          "not supported by szc yet: builtin @errorName"
+        ],
+        "exact": false
+      },
+      "observation": "Compile-only exact reference status/full ordered primary list; scope is not pass credit."
+    },
+    {
+      "file": "n05_name_exact_type.zig",
+      "lane": "parity",
+      "category": "error-name",
+      "scope": "potential-target",
+      "source_sha256": "e5763f1244d499e8635e0eae60093217042fbac51ea23d6ec81e91c84f9984f6",
+      "reference": {
+        "status": 0,
+        "primaries": []
+      },
+      "baseline_observation": {
+        "status": 1,
+        "primaries": [
+          "not supported by szc yet: builtin @errorName"
+        ],
+        "exact": false
+      },
+      "observation": "Compile-only exact reference status/full ordered primary list; scope is not pass credit."
+    },
+    {
+      "file": "n06_name_alias_sentinel.zig",
+      "lane": "parity",
+      "category": "error-name",
+      "scope": "potential-target",
+      "source_sha256": "d0d2282282630b343cfe2627e7c885527cb2b4719d6931436d005a0f05a7ffc5",
+      "reference": {
+        "status": 0,
+        "primaries": []
+      },
+      "baseline_observation": {
+        "status": 1,
+        "primaries": [
+          "not supported by szc yet: builtin @errorName"
+        ],
+        "exact": false
+      },
+      "observation": "Compile-only exact reference status/full ordered primary list; scope is not pass credit."
+    },
+    {
+      "file": "n07_invalid_integer.zig",
+      "lane": "parity",
+      "category": "error-name",
+      "scope": "potential-target",
+      "source_sha256": "822fb81b6f680286daaa767214f48f770e4966fd5749287535712fa3049f7652",
+      "reference": {
+        "status": 1,
+        "primaries": [
+          "expected type 'anyerror', found 'u8'"
+        ]
+      },
+      "baseline_observation": {
+        "status": 1,
+        "primaries": [
+          "not supported by szc yet: builtin @errorName"
+        ],
+        "exact": false
+      },
+      "observation": "Compile-only exact reference status/full ordered primary list; scope is not pass credit."
+    },
+    {
+      "file": "n08_invalid_metatype.zig",
+      "lane": "parity",
+      "category": "error-name",
+      "scope": "potential-target",
+      "source_sha256": "42bc21a8060cacf93a364572569acd2fd78d0a477b07a9d3309e59c27d6bed6f",
+      "reference": {
+        "status": 1,
+        "primaries": [
+          "expected type 'anyerror', found 'type'"
+        ]
+      },
+      "baseline_observation": {
+        "status": 1,
+        "primaries": [
+          "not supported by szc yet: builtin @errorName"
+        ],
+        "exact": false
+      },
+      "observation": "Compile-only exact reference status/full ordered primary list; scope is not pass credit."
+    },
+    {
+      "file": "n09_invalid_void.zig",
+      "lane": "parity",
+      "category": "error-name",
+      "scope": "potential-target",
+      "source_sha256": "211c7456ad9ed8a811feb5d0f90ea5e8c3ecd9708a73c3c8e5c03aa2fe61203f",
+      "reference": {
+        "status": 1,
+        "primaries": [
+          "expected type 'anyerror', found 'void'"
+        ]
+      },
+      "baseline_observation": {
+        "status": 1,
+        "primaries": [
+          "not supported by szc yet: builtin @errorName"
+        ],
+        "exact": false
+      },
+      "observation": "Compile-only exact reference status/full ordered primary list; scope is not pass credit."
+    },
+    {
+      "file": "n10_runtime_load.zig",
+      "lane": "parity",
+      "category": "error-name",
+      "scope": "outside-runtime-producer",
+      "source_sha256": "c652ee20011172a95216ea190e68dca59429ad5a1fc9b10a80f3d8e027b13e33",
+      "reference": {
+        "status": 0,
+        "primaries": []
+      },
+      "baseline_observation": {
+        "status": 1,
+        "primaries": [
+          "not supported by szc yet: builtin @errorName"
+        ],
+        "exact": false
+      },
+      "observation": "Compile-only exact reference status/full ordered primary list; scope is not pass credit."
+    },
+    {
+      "file": "n11_runtime_argument.zig",
+      "lane": "parity",
+      "category": "error-name",
+      "scope": "outside-runtime-producer",
+      "source_sha256": "47a4e30913c0ed2fa331c78a111c73c3cbd321a023f659d3a6de31f3235958da",
+      "reference": {
+        "status": 0,
+        "primaries": []
+      },
+      "baseline_observation": {
+        "status": 1,
+        "primaries": [
+          "not supported by szc yet: builtin @errorName"
+        ],
+        "exact": false
+      },
+      "observation": "Compile-only exact reference status/full ordered primary list; scope is not pass credit."
+    },
+    {
+      "file": "n12_lazy_invalid.zig",
+      "lane": "parity",
+      "category": "error-name",
+      "scope": "potential-target",
+      "source_sha256": "5d24af16723aaf776d438aaac1d3a2a39b064ca821ec84b5387511082e525feb",
+      "reference": {
+        "status": 0,
+        "primaries": []
+      },
+      "baseline_observation": {
+        "status": 1,
+        "primaries": [
+          "not supported by szc yet: builtin @errorName"
+        ],
+        "exact": false
+      },
+      "observation": "Compile-only exact reference status/full ordered primary list; scope is not pass credit."
+    },
+    {
+      "file": "n13_typeof_name.zig",
+      "lane": "parity",
+      "category": "error-name",
+      "scope": "potential-target",
+      "source_sha256": "174aa91a8be9f54d15585da21afaf200bbde88b0aab44a1cd98bce0c140ee399",
+      "reference": {
+        "status": 0,
+        "primaries": []
+      },
+      "baseline_observation": {
+        "status": 1,
+        "primaries": [
+          "not supported by szc yet: builtin @errorName"
+        ],
+        "exact": false
+      },
+      "observation": "Compile-only exact reference status/full ordered primary list; scope is not pass credit."
+    },
+    {
+      "file": "n14_name_consumers.zig",
+      "lane": "parity",
+      "category": "error-name",
+      "scope": "potential-target",
+      "source_sha256": "16b7c88a11626d336d94beb60a5f2e1be13ae05f234088d647a5fd7891991909",
+      "reference": {
+        "status": 1,
+        "primaries": [
+          "value of type '*const [1:0]u8' ignored"
+        ]
+      },
+      "baseline_observation": {
+        "status": 1,
+        "primaries": [
+          "not supported by szc yet: builtin @errorName",
+          "not supported by szc yet: builtin @errorName"
+        ],
+        "exact": false
+      },
+      "observation": "Compile-only exact reference status/full ordered primary list; scope is not pass credit."
+    },
+    {
+      "file": "n15_name_array.zig",
+      "lane": "parity",
+      "category": "error-name",
+      "scope": "potential-target",
+      "source_sha256": "00dc0bd3efa1f0d17a7b3ee263458efeb728000313e9b0eb40d6bb9dc7960706",
+      "reference": {
+        "status": 0,
+        "primaries": []
+      },
+      "baseline_observation": {
+        "status": 1,
+        "primaries": [
+          "not supported by szc yet: builtin @errorName",
+          "not supported by szc yet: builtin @errorName"
+        ],
+        "exact": false
+      },
+      "observation": "Compile-only exact reference status/full ordered primary list; scope is not pass credit."
+    },
+    {
+      "file": "n16_unknown_empty.zig",
+      "lane": "parity",
+      "category": "error-name",
+      "scope": "outside-undefined-value",
+      "source_sha256": "7835911a6bc17ed76551638a605c44fff919d9300a1b46ae983773537600eb86",
+      "reference": {
+        "status": 1,
+        "primaries": [
+          "use of undefined value here causes illegal behavior"
+        ]
+      },
+      "baseline_observation": {
+        "status": 1,
+        "primaries": [
+          "not supported by szc yet: builtin @errorName"
+        ],
+        "exact": false
+      },
+      "observation": "Compile-only exact reference status/full ordered primary list; scope is not pass credit."
+    }
+  ]
+}

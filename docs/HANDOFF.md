@@ -22,6 +22,17 @@ Read this first when resuming work (the sandbox resets often).
    candidate. Never mutate frozen validation sources or mix flag configurations.
    The GitHub token is **never** committed. Restore authenticated Git access if needed.
 
+## Error-query and ignored-result follow-up
+
+Read `ERROR_QUERY_STATUS.md`. Baseline is published e594a4d. Three grouped
+submilestones: general ignored results, known finite errorName, contextual finite
+errorCast. Strict56 is46 exact/10 visible failures; policy31 is distinct. Source
+recovery was hash-exact after rollback; historical lost raw is not new evidence.
+The three-source immutable audit and independent expectation review cleared.
+Fresh GCC/Clang roots,308 native safety cases each, standalone20000 mutations
+per target/compiler, four61-second fuzz campaigns and integrity checks pass. No runtime error/union representation or
+full M6.5 completion is implied. Keep original sources and strict expectations.
+
 ## Grouped known-error / finite algebra / union-TYPE candidate
 
 - Read `ERROR_FAMILY_STATUS.md`. Baseline is published 8fc0870.

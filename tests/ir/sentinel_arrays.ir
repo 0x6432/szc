@@ -241,7 +241,7 @@
         } else {
           %194 = break_inline result, @void_value
         }
-        %196 = check_unused_error %195
+        %196 = ensure_result %195
         %197 = array_base_ptr %174
         %198 = int 3
         %199 = as @type_usize, %198
@@ -333,7 +333,7 @@
         } else {
           %281 = break_inline result, @void_value
         }
-        %283 = check_unused_error %282
+        %283 = ensure_result %282
         %284 = int 17
         %285 = as @type_u16, %284
         %286 = ptr_type @type_u16, @false many sentinel %285
@@ -352,7 +352,7 @@
         } else {
           %298 = break_inline result, @void_value
         }
-        %300 = check_unused_error %299
+        %300 = ensure_result %299
         %301 = decl_val "make"
         %302 = call %301 arg0 {
           %303 = arg_type %302, 0
@@ -389,7 +389,7 @@
         } else {
           %330 = break_inline result, @void_value
         }
-        %332 = check_unused_error %331
+        %332 = ensure_result %331
         %333 = int 1
         %334 = as @type_usize, %333
         %335 = array_type_sentinel %334, @type_bool, @true
@@ -421,7 +421,7 @@
         } else {
           %359 = break_inline result, @void_value
         }
-        %361 = check_unused_error %360
+        %361 = ensure_result %360
         %362 = elem_type %341
         %363 = array_elem_type %362
         %364 = int 1
@@ -459,7 +459,7 @@
         } else {
           %394 = break_inline result, @void_value
         }
-        %396 = check_unused_error %395
+        %396 = ensure_result %395
         %397 = int 2
         %398 = as @type_usize, %397
         %399 = int_type u0
@@ -511,7 +511,7 @@
         } else {
           %444 = break_inline result, @void_value
         }
-        %446 = check_unused_error %445
+        %446 = ensure_result %445
         %447 = int 0
         %448 = as @type_usize, %447
         %449 = int 255
@@ -535,7 +535,7 @@
         } else {
           %466 = break_inline result, @void_value
         }
-        %468 = check_unused_error %467
+        %468 = ensure_result %467
         %469 = array_base_ptr %455
         %470 = int 0
         %471 = as @type_usize, %470
@@ -560,7 +560,7 @@
         } else {
           %489 = break_inline result, @void_value
         }
-        %491 = check_unused_error %490
+        %491 = ensure_result %490
         %492 = int 2
         %493 = as @type_usize, %492
         %494 = int 17
@@ -653,7 +653,7 @@
         } else {
           %575 = break_inline result, @void_value
         }
-        %577 = check_unused_error %576
+        %577 = ensure_result %576
         %578 = int 2
         %579 = as @type_usize, %578
         %580 = array_type %579, @type_u16
@@ -693,7 +693,7 @@
         } else {
           %612 = break_inline result, @void_value
         }
-        %614 = check_unused_error %613
+        %614 = ensure_result %613
         %615 = int 17
         %616 = as @type_u8, %615
         %617 = ptr_type @type_u8, @true many sentinel %616
@@ -740,7 +740,7 @@
         } else {
           %656 = break_inline result, @void_value
         }
-        %658 = check_unused_error %657
+        %658 = ensure_result %657
         %659 = int 1
         %660 = as @type_usize, %659
         %661 = int 0
@@ -783,7 +783,7 @@
         } else {
           %697 = break_inline result, @void_value
         }
-        %699 = check_unused_error %698
+        %699 = ensure_result %698
         %700 = ret_type
         %701 = int 0
         %702 = as_return %700, %701

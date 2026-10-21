@@ -153,7 +153,7 @@
         } else {
           %125 = break_inline result, @void_value
         }
-        %127 = check_unused_error %126
+        %127 = ensure_result %126
         %128 = load %64
         %129 = int 10
         %130 = cmp_neq %128, %129
@@ -177,7 +177,7 @@
         } else {
           %145 = break_inline result, @void_value
         }
-        %147 = check_unused_error %146
+        %147 = ensure_result %146
         %148 = ret_type
         %149 = int 0
         %150 = as_return %148, %149

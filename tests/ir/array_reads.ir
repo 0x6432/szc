@@ -543,7 +543,7 @@
         } else {
           %375 = break_inline result, @void_value
         }
-        %377 = check_unused_error %376
+        %377 = ensure_result %376
         %378 = decl_val "read_wide"
         %379 = call %378 arg0 {
           %380 = arg_type %379, 0
@@ -566,7 +566,7 @@
         } else {
           %394 = break_inline result, @void_value
         }
-        %396 = check_unused_error %395
+        %396 = ensure_result %395
         %397 = decl_val "read_bool"
         %398 = call %397 arg0 {
           %399 = arg_type %398, 0
@@ -605,7 +605,7 @@
         } else {
           %426 = break_inline result, @void_value
         }
-        %428 = check_unused_error %427
+        %428 = ensure_result %427
         %429 = int 31
         %430 = as @type_u8, %429
         %444 = ref %430
@@ -651,7 +651,7 @@
         } else {
           %467 = break_inline result, @void_value
         }
-        %469 = check_unused_error %468
+        %469 = ensure_result %468
         %470 = int 2
         %471 = as @type_usize, %470
         %473 = fn_type "" {
@@ -699,7 +699,7 @@
         } else {
           %507 = break_inline result, @void_value
         }
-        %509 = check_unused_error %508
+        %509 = ensure_result %508
         %510 = decl_val "bytes"
         %511 = call %510 arg0 {
           %512 = arg_type %511, 0
@@ -746,7 +746,7 @@
         } else {
           %546 = break_inline result, @void_value
         }
-        %548 = check_unused_error %547
+        %548 = ensure_result %547
         %549 = decl_val "volatile_read"
         %550 = call %549 arg0 {
           %551 = arg_type %550, 0
@@ -769,7 +769,7 @@
         } else {
           %565 = break_inline result, @void_value
         }
-        %567 = check_unused_error %566
+        %567 = ensure_result %566
         %568 = int 2
         %569 = as @type_usize, %568
         %570 = int_type u0
@@ -802,7 +802,7 @@
         } else {
           %594 = break_inline result, @void_value
         }
-        %596 = check_unused_error %595
+        %596 = ensure_result %595
         %597 = int 2
         %598 = as @type_usize, %597
         %599 = array_type %598, @type_void
@@ -822,7 +822,7 @@
           %612 = as %610, %611
           %613 = break_inline result, %612
         }
-        %614 = check_unused_error %605
+        %614 = ensure_result %605
         %615 = decl_val "zero_value"
         %616 = call %615 arg0 {
           %617 = arg_type %616, 0
@@ -840,7 +840,7 @@
         } else {
           %627 = break_inline result, @void_value
         }
-        %629 = check_unused_error %628
+        %629 = ensure_result %628
         %630 = decl_val "void_value"
         %631 = call %630 arg0 {
           %632 = arg_type %631, 0
@@ -848,7 +848,7 @@
           %634 = as %632, %633
           %635 = break_inline result, %634
         }
-        %636 = check_unused_error %631
+        %636 = ensure_result %631
         %637 = decl_val "undefined_value"
         %638 = call %637 arg0 {
           %639 = arg_type %638, 0

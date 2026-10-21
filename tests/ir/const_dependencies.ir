@@ -405,7 +405,7 @@
         } else {
           %267 = break_inline result, @void_value
         }
-        %269 = check_unused_error %268
+        %269 = ensure_result %268
         %270 = decl_val "read"
         %271 = call %270 arg0 {
           %272 = arg_type %271, 0
@@ -436,7 +436,7 @@
         } else {
           %293 = break_inline result, @void_value
         }
-        %295 = check_unused_error %294
+        %295 = ensure_result %294
         %296 = decl_val "chain"
         %297 = call %296 arg0 {
           %298 = arg_type %297, 0
@@ -467,7 +467,7 @@
         } else {
           %319 = break_inline result, @void_value
         }
-        %321 = check_unused_error %320
+        %321 = ensure_result %320
         %322 = decl_val "invoke"
         %323 = call %322 arg0 {
           %324 = arg_type %323, 0
@@ -497,7 +497,7 @@
         } else {
           %344 = break_inline result, @void_value
         }
-        %346 = check_unused_error %345
+        %346 = ensure_result %345
         %347 = decl_val "mutable"
         %348 = int 11
         %349 = cmp_neq %347, %348
@@ -521,7 +521,7 @@
         } else {
           %364 = break_inline result, @void_value
         }
-        %366 = check_unused_error %365
+        %366 = ensure_result %365
         %370 = ptr_type @type_u8, @true align {
           %367 = int 1
           %368 = as @type_u29, %367
@@ -555,7 +555,7 @@
         } else {
           %393 = break_inline result, @void_value
         }
-        %395 = check_unused_error %394
+        %395 = ensure_result %394
         %396 = decl_val "zero"
         %397 = int 0
         %398 = cmp_neq %396, %397
@@ -567,7 +567,7 @@
         } else {
           %403 = break_inline result, @void_value
         }
-        %405 = check_unused_error %404
+        %405 = ensure_result %404
         %406 = decl_val "empty"
         %407 = discard %406
         %408 = decl_ref "zero"

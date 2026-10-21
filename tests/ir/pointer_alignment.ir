@@ -201,7 +201,7 @@
         } else {
           %132 = break_inline result, @void_value
         }
-        %134 = check_unused_error %133
+        %134 = ensure_result %133
         %135 = decl_val "read"
         %136 = call %135 arg0 {
           %137 = arg_type %136, 0
@@ -241,7 +241,7 @@
         } else {
           %165 = break_inline result, @void_value
         }
-        %167 = check_unused_error %166
+        %167 = ensure_result %166
         %168 = ret_type
         %169 = decl_val "function"
         %170 = call %169 arg0 {

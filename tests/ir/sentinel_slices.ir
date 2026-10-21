@@ -251,7 +251,7 @@
         } else {
           %181 = break_inline result, @void_value
         }
-        %183 = check_unused_error %182
+        %183 = ensure_result %182
         %184 = decl_val "at"
         %185 = call %184 arg0 {
           %186 = arg_type %185, 0
@@ -292,7 +292,7 @@
         } else {
           %215 = break_inline result, @void_value
         }
-        %217 = check_unused_error %216
+        %217 = ensure_result %216
         %218 = decl_val "tail"
         %219 = call %218 arg0 {
           %220 = arg_type %219, 0
@@ -325,7 +325,7 @@
         } else {
           %243 = break_inline result, @void_value
         }
-        %245 = check_unused_error %244
+        %245 = ensure_result %244
         %246 = array_base_ptr %227
         %247 = int 0
         %248 = as @type_usize, %247
@@ -349,7 +349,7 @@
         } else {
           %265 = break_inline result, @void_value
         }
-        %267 = check_unused_error %266
+        %267 = ensure_result %266
         %268 = int 17
         %269 = as @type_u16, %268
         %270 = ptr_type @type_u16, @false many sentinel %269
@@ -370,7 +370,7 @@
         } else {
           %284 = break_inline result, @void_value
         }
-        %286 = check_unused_error %285
+        %286 = ensure_result %285
         %287 = int 17
         %288 = as @type_u16, %287
         %289 = ptr_type @type_u16, @false many sentinel %288
@@ -412,7 +412,7 @@
         } else {
           %323 = break_inline result, @void_value
         }
-        %325 = check_unused_error %324
+        %325 = ensure_result %324
         %326 = decl_val "window"
         %327 = call %326 arg0 {
           %328 = arg_type %327, 0
@@ -448,7 +448,7 @@
         } else {
           %353 = break_inline result, @void_value
         }
-        %355 = check_unused_error %354
+        %355 = ensure_result %354
         %356 = decl_val "tail"
         %357 = call %356 arg0 {
           %358 = arg_type %357, 0
@@ -480,7 +480,7 @@
         } else {
           %380 = break_inline result, @void_value
         }
-        %382 = check_unused_error %381
+        %382 = ensure_result %381
         %383 = decl_ref "values"
         %384 = int 1
         %385 = as @type_usize, %384
@@ -505,7 +505,7 @@
         } else {
           %402 = break_inline result, @void_value
         }
-        %404 = check_unused_error %403
+        %404 = ensure_result %403
         %405 = decl_val "pick"
         %406 = call %405 arg0 {
           %407 = arg_type %406, 0
@@ -531,7 +531,7 @@
         } else {
           %424 = break_inline result, @void_value
         }
-        %426 = check_unused_error %425
+        %426 = ensure_result %425
         %427 = ptr_type @type_u16, @true slice
         %428 = as @type_type, %427
         %429 = decl_val "values"
@@ -555,7 +555,7 @@
         } else {
           %445 = break_inline result, @void_value
         }
-        %447 = check_unused_error %446
+        %447 = ensure_result %446
         %448 = ptr_type @type_bool, @true slice sentinel @true
         %449 = as @type_type, %448
         %450 = int 1
@@ -587,7 +587,7 @@
         } else {
           %474 = break_inline result, @void_value
         }
-        %476 = check_unused_error %475
+        %476 = ensure_result %475
         %477 = decl_ref "global"
         %478 = decl_ref "backing"
         %479 = elem_type %477
@@ -612,7 +612,7 @@
         } else {
           %496 = break_inline result, @void_value
         }
-        %498 = check_unused_error %497
+        %498 = ensure_result %497
         %499 = int 2
         %500 = as @type_usize, %499
         %501 = int_type u0
@@ -647,7 +647,7 @@
         } else {
           %527 = break_inline result, @void_value
         }
-        %529 = check_unused_error %528
+        %529 = ensure_result %528
         %530 = int_type u0
         %531 = int 0
         %532 = as %530, %531
@@ -671,7 +671,7 @@
         } else {
           %549 = break_inline result, @void_value
         }
-        %551 = check_unused_error %550
+        %551 = ensure_result %550
         %552 = ret_type
         %553 = int 0
         %554 = as_return %552, %553

@@ -39,7 +39,7 @@
         %18 = block  {
           %19 = break %18, @void_value
         }
-        %20 = check_unused_error %18
+        %20 = ensure_result %18
         %21 = ret_type
         %22 = decl_ref "N"
         %23 = field_call %22, "space name" arg0 {

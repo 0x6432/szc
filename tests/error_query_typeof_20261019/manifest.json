@@ -1,0 +1,31 @@
+{
+  "contract": "error_query_typeof_20261019",
+  "baseline_commit": "e594a4ddd3fb2f05d24fe102fd12332b4b4c9d16",
+  "scope": "Exactly the separately authorized existing program57. Core56 unchanged. Compile-only, never execute. Recovered after workspace rollback without reference rerun or source revision.",
+  "reference_version": "0.17.0",
+  "reference_binary_sha256": "7c61539af19fa4082c94848f1c2b57b89e76dc6cfd5bd4c57764c3caf8f82272",
+  "raw_reference_record_sha256": "fd551191b15eb18b71837c4030242c217fa4239e0a1750d137d1e0a58fc93442",
+  "evidence_provenance": "Prior reference-first pin retained in committed transcript tool results3522/3529 and messages3540-3542. Original full raw record lost in workspace rollback; hash retained, no fabricated raw bytes.",
+  "reference_observation": {
+    "status": 1,
+    "primary_location": {
+      "line": 5,
+      "column": 30
+    },
+    "primaries": [
+      "'error.B' not a member of error set 'error{A}'"
+    ]
+  },
+  "cases": [
+    {
+      "file": "known_nonmember_typeof.zig",
+      "source_sha256": "7e8c6df21916353d8552630e3f0c805b06db857af05ad20d3221f7c74a01b29b",
+      "reference": {
+        "status": 1,
+        "primaries": [
+          "'error.B' not a member of error set 'error{A}'"
+        ]
+      }
+    }
+  ]
+}

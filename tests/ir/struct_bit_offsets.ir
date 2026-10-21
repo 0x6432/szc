@@ -78,7 +78,7 @@
         } else {
           %46 = break_inline result, @void_value
         }
-        %48 = check_unused_error %47
+        %48 = ensure_result %47
         %49 = int 34359738352
         %50 = cmp_neq %34, %49
         %56 = if %50 then {
@@ -89,7 +89,7 @@
         } else {
           %55 = break_inline result, @void_value
         }
-        %57 = check_unused_error %56
+        %57 = ensure_result %56
         %58 = ret_type
         %59 = decl_val "S"
         %60 = as @type_type, %59

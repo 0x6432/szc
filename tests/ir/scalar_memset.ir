@@ -50,7 +50,7 @@
           %33 = as %31, %32
           %34 = break_inline result, %33
         }
-        %35 = check_unused_error %27
+        %35 = ensure_result %27
         %36 = ret_type
         %37 = array_base_ptr %25
         %38 = int 1

@@ -67,7 +67,7 @@
         } else {
           %43 = break_inline result, @void_value
         }
-        %45 = check_unused_error %44
+        %45 = ensure_result %44
         %46 = decl_val "N"
         %47 = as @type_type, %46
         %52 = has_field %47 name {
@@ -97,7 +97,7 @@
         } else {
           %68 = break_inline result, @void_value
         }
-        %70 = check_unused_error %69
+        %70 = ensure_result %69
         %71 = ptr_type @type_u8, @false slice
         %72 = as @type_type, %71
         %77 = has_field %72 name {
@@ -116,7 +116,7 @@
         } else {
           %84 = break_inline result, @void_value
         }
-        %86 = check_unused_error %85
+        %86 = ensure_result %85
         %87 = ret_type
         %88 = int 0
         %89 = as_return %87, %88

@@ -22,7 +22,10 @@ lexical defers use the existing evaluator. Anonymous namespace statements now
 check ignored nonvoid results using existing IR_ENSURE_RESULT. Explicit discards
 and consuming initializers/break values remain consuming contexts. Fresh function,
 test and namespace-member initializer boundaries do not inherit that statement
-policy. Generic runtime ignored-result behavior is not broadened by this batch.
+policy in that original batch. The later error-query follow-up independently
+adds general ordinary ignored-result checks, including fresh function/test/member
+initializer statements, without inheriting namespace execution context. See
+`ERROR_QUERY_STATUS.md`; original namespace activation and work limits remain.
 
 ## Explicit bounds and unsupported capabilities
 

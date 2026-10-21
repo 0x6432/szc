@@ -243,7 +243,7 @@
         } else {
           %195 = break_inline result, @void_value
         }
-        %197 = check_unused_error %196
+        %197 = ensure_result %196
         %198 = decl_ref "narrow"
         %199 = array_base_ptr %198
         %200 = int 0
@@ -290,7 +290,7 @@
         } else {
           %237 = break_inline result, @void_value
         }
-        %239 = check_unused_error %238
+        %239 = ensure_result %238
         %240 = decl_ref "nested"
         %241 = array_base_ptr %240
         %242 = int 0
@@ -348,7 +348,7 @@
         } else {
           %290 = break_inline result, @void_value
         }
-        %292 = check_unused_error %291
+        %292 = ensure_result %291
         %293 = decl_ref "booleans"
         %294 = array_base_ptr %293
         %295 = int 0
@@ -383,7 +383,7 @@
         } else {
           %321 = break_inline result, @void_value
         }
-        %323 = check_unused_error %322
+        %323 = ensure_result %322
         %324 = decl_ref "with_sentinel"
         %325 = array_base_ptr %324
         %326 = int 0
@@ -425,7 +425,7 @@
         } else {
           %358 = break_inline result, @void_value
         }
-        %360 = check_unused_error %359
+        %360 = ensure_result %359
         %361 = decl_val "partial"
         %362 = int 1
         %363 = cmp_neq %361, %362
@@ -457,7 +457,7 @@
         } else {
           %386 = break_inline result, @void_value
         }
-        %388 = check_unused_error %387
+        %388 = ensure_result %387
         %389 = decl_ref "wide"
         %390 = array_base_ptr %389
         %391 = int 0
@@ -495,7 +495,7 @@
         } else {
           %420 = break_inline result, @void_value
         }
-        %422 = check_unused_error %421
+        %422 = ensure_result %421
         %423 = decl_val "nested_back"
         %424 = int 1
         %425 = int 2
@@ -526,7 +526,7 @@
         } else {
           %448 = break_inline result, @void_value
         }
-        %450 = check_unused_error %449
+        %450 = ensure_result %449
         %451 = int_type u24
         %452 = int 2
         %453 = as @type_usize, %452
@@ -582,7 +582,7 @@
         } else {
           %501 = break_inline result, @void_value
         }
-        %503 = check_unused_error %502
+        %503 = ensure_result %502
         %504 = int 2
         %505 = as @type_usize, %504
         %506 = int_type u0
@@ -620,7 +620,7 @@
         } else {
           %536 = break_inline result, @void_value
         }
-        %538 = check_unused_error %537
+        %538 = ensure_result %537
         %539 = int 2
         %540 = as @type_usize, %539
         %541 = array_type %540, @type_u8

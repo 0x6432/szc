@@ -31,7 +31,7 @@
           } else {
             %20 = break_inline result, @void_value
           }
-          %22 = check_unused_error %21
+          %22 = ensure_result %21
           %23 = load %5
           %24 = int 2
           %25 = elem_type %5

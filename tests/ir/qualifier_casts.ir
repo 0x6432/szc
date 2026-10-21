@@ -124,7 +124,7 @@
         } else {
           %91 = break_inline result, @void_value
         }
-        %93 = check_unused_error %92
+        %93 = ensure_result %92
         %94 = decl_val "mutate"
         %95 = call %94 arg0 {
           %96 = arg_type %95, 0
@@ -162,7 +162,7 @@
         } else {
           %125 = break_inline result, @void_value
         }
-        %127 = check_unused_error %126
+        %127 = ensure_result %126
         %128 = ptr_type @type_u16, @true volatile
         %129 = as @type_type, %128
         %130 = decl_ref "a"
@@ -207,7 +207,7 @@
         } else {
           %167 = break_inline result, @void_value
         }
-        %169 = check_unused_error %168
+        %169 = ensure_result %168
         %170 = int 2
         %171 = as @type_usize, %170
         %172 = array_type %171, @type_u8
@@ -251,7 +251,7 @@
         } else {
           %208 = break_inline result, @void_value
         }
-        %210 = check_unused_error %209
+        %210 = ensure_result %209
         %211 = decl_ref "seven"
         %212 = const_cast %211
         %213 = call %212
@@ -265,7 +265,7 @@
         } else {
           %220 = break_inline result, @void_value
         }
-        %222 = check_unused_error %221
+        %222 = ensure_result %221
         %223 = ret_type
         %224 = int 0
         %225 = as_return %223, %224

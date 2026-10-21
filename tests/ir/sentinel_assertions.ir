@@ -175,7 +175,7 @@
         } else {
           %133 = break_inline result, @void_value
         }
-        %135 = check_unused_error %134
+        %135 = ensure_result %134
         %136 = int 5
         %137 = as @type_usize, %136
         %138 = array_type %137, @type_u16
@@ -235,7 +235,7 @@
         } else {
           %185 = break_inline result, @void_value
         }
-        %187 = check_unused_error %186
+        %187 = ensure_result %186
         %189 = array_base_ptr %188
         %190 = int 0
         %191 = as @type_usize, %190
@@ -258,7 +258,7 @@
         } else {
           %207 = break_inline result, @void_value
         }
-        %209 = check_unused_error %208
+        %209 = ensure_result %208
         %210 = decl_val "array_cut"
         %211 = call %210 arg0 {
           %212 = arg_type %211, 0
@@ -278,7 +278,7 @@
         } else {
           %224 = break_inline result, @void_value
         }
-        %226 = check_unused_error %225
+        %226 = ensure_result %225
         %227 = decl_val "many_cut"
         %228 = call %227 arg0 {
           %229 = arg_type %228, 0
@@ -309,7 +309,7 @@
         } else {
           %250 = break_inline result, @void_value
         }
-        %252 = check_unused_error %251
+        %252 = ensure_result %251
         %253 = int 1
         %254 = as @type_usize, %253
         %255 = int 2
@@ -339,7 +339,7 @@
         } else {
           %277 = break_inline result, @void_value
         }
-        %279 = check_unused_error %278
+        %279 = ensure_result %278
         %280 = int 3
         %281 = as @type_usize, %280
         %282 = array_type %281, @type_bool
@@ -376,7 +376,7 @@
         } else {
           %311 = break_inline result, @void_value
         }
-        %313 = check_unused_error %312
+        %313 = ensure_result %312
         %314 = int 2
         %315 = as @type_usize, %314
         %316 = int 17
@@ -422,7 +422,7 @@
         } else {
           %354 = break_inline result, @void_value
         }
-        %356 = check_unused_error %355
+        %356 = ensure_result %355
         %357 = ret_type
         %358 = int 0
         %359 = as_return %357, %358

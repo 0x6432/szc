@@ -62,7 +62,7 @@
         } else {
           %34 = break_inline result, @void_value
         }
-        %36 = check_unused_error %35
+        %36 = ensure_result %35
         %37 = ret_type
         %38 = int 2
         %39 = as_return %37, %38

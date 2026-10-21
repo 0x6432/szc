@@ -1,4 +1,4 @@
-%151 = struct_decl (flags=0) {
+%150 = struct_decl (flags=0) {
   decl const "Tag" value {
     %7 = enum_decl (flags=1) {
        tag_type {
@@ -135,7 +135,7 @@
     %80 = break_inline result, %79
   }
   decl fn "effects" value {
-    %125 = func "effects" {
+    %124 = func "effects" {
       %82 = param "x" type {
         %81 = break_inline result, @type_u8
       }
@@ -148,7 +148,7 @@
         %86 = alloc type=@type_u8 init=%85
         %87 = block  {
           %88 = loop  {
-            %122 = condbr @true then {
+            %121 = condbr @true then {
               %89 = block  {
                 %94 = switch %82 prongs=2
                   prong 0 src=460 items=1
@@ -194,60 +194,59 @@
                     }
                     %115 = break %87, @void_value
                   }
-                %116 = check_unused_error %107
+                %116 = ensure_result %107
                 %117 = defer  {
                   %90 = load %86
                   %91 = discard %90
                   %92 = ensure_result @void_value
                   %93 = break_inline result, @void_value
                 }
-                %118 = as @type_void, @void_value
-                %119 = break %89, @void_value
+                %118 = break %89, @void_value
               }
-              %120 = repeat %88
+              %119 = repeat %88
             } else {
-              %121 = break %87, @void_value
+              %120 = break %87, @void_value
             }
           }
         }
-        %123 = check_unused_error %87
-        %124 = ret_implicit
+        %122 = ensure_result %87
+        %123 = ret_implicit
       }
     }
-    %126 = break_inline result, %125
+    %125 = break_inline result, %124
   }
   decl fn "main" pub value {
-    %149 = func "main" {
+    %148 = func "main" {
       ret type {
-        %127 = break_inline result, @type_u8
+        %126 = break_inline result, @type_u8
       }
       body insts {
-        %128 = decl_val "effects"
-        %129 = call %128 arg0 {
-          %130 = arg_type %129, 0
-          %131 = int 0
-          %132 = as %130, %131
-          %133 = break_inline result, %132
+        %127 = decl_val "effects"
+        %128 = call %127 arg0 {
+          %129 = arg_type %128, 0
+          %130 = int 0
+          %131 = as %129, %130
+          %132 = break_inline result, %131
         }
-        %134 = check_unused_error %129
-        %135 = ret_type
-        %136 = decl_val "nested"
-        %137 = call %136 arg0 {
-          %138 = arg_type %137, 0
-          %139 = decl_val "choose"
-          %140 = call %139 arg0 {
-            %141 = arg_type %140, 0
-            %142 = decl_literal "a", %141
-            %143 = break_inline result, %142
+        %133 = ensure_result %128
+        %134 = ret_type
+        %135 = decl_val "nested"
+        %136 = call %135 arg0 {
+          %137 = arg_type %136, 0
+          %138 = decl_val "choose"
+          %139 = call %138 arg0 {
+            %140 = arg_type %139, 0
+            %141 = decl_literal "a", %140
+            %142 = break_inline result, %141
           }
-          %144 = int_from_enum %140
-          %145 = as %138, %144
-          %146 = break_inline result, %145
+          %143 = int_from_enum %139
+          %144 = as %137, %143
+          %145 = break_inline result, %144
         }
-        %147 = as_return %135, %137
-        %148 = ret %147
+        %146 = as_return %134, %136
+        %147 = ret %146
       }
     }
-    %150 = break_inline result, %149
+    %149 = break_inline result, %148
   }
 }

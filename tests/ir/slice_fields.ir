@@ -64,7 +64,7 @@
           %44 = as %42, %43
           %45 = break_inline result, %44
         }
-        %46 = check_unused_error %41
+        %46 = ensure_result %41
         %47 = ret_type
         %48 = decl_val "length"
         %49 = deref %48

@@ -200,7 +200,7 @@
         } else {
           %129 = break_inline result, @void_value
         }
-        %131 = check_unused_error %130
+        %131 = ensure_result %130
         %133 = array_base_ptr %132
         %134 = int 1
         %135 = as @type_usize, %134
@@ -216,7 +216,7 @@
         } else {
           %144 = break_inline result, @void_value
         }
-        %146 = check_unused_error %145
+        %146 = ensure_result %145
         %147 = int_type u0
         %148 = ptr_type %147, @false
         %149 = as @type_type, %148
@@ -239,7 +239,7 @@
         } else {
           %164 = break_inline result, @void_value
         }
-        %166 = check_unused_error %165
+        %166 = ensure_result %165
         %167 = decl_val "fixed"
         %168 = int_from_ptr %167
         %169 = int 0
@@ -263,7 +263,7 @@
         } else {
           %185 = break_inline result, @void_value
         }
-        %187 = check_unused_error %186
+        %187 = ensure_result %186
         %188 = ret_type
         %189 = int 0
         %190 = as_return %188, %189
@@ -290,7 +290,7 @@
         } else {
           %203 = break_inline result, @void_value
         }
-        %205 = check_unused_error %204
+        %205 = ensure_result %204
         %206 = decl_val "last"
         %207 = int_from_ptr %206
         %208 = int 18446744073709551615
@@ -303,7 +303,7 @@
         } else {
           %214 = break_inline result, @void_value
         }
-        %216 = check_unused_error %215
+        %216 = ensure_result %215
         %217 = decl_val "restore_zero"
         %218 = call %217 arg0 {
           %219 = arg_type %218, 0
@@ -335,7 +335,7 @@
         } else {
           %241 = break_inline result, @void_value
         }
-        %243 = check_unused_error %242
+        %243 = ensure_result %242
         %244 = int 3
         %245 = as @type_usize, %244
         %246 = array_type %245, @type_u16
@@ -378,7 +378,7 @@
         } else {
           %281 = break_inline result, @void_value
         }
-        %283 = check_unused_error %282
+        %283 = ensure_result %282
         %284 = decl_val "restore_many"
         %285 = call %284 arg0 {
           %286 = arg_type %285, 0
@@ -417,7 +417,7 @@
         } else {
           %316 = break_inline result, @void_value
         }
-        %318 = check_unused_error %317
+        %318 = ensure_result %317
         %319 = decl_val "restore_function"
         %320 = call %319 arg0 {
           %321 = arg_type %320, 0
@@ -437,7 +437,7 @@
         } else {
           %333 = break_inline result, @void_value
         }
-        %335 = check_unused_error %334
+        %335 = ensure_result %334
         %336 = ret_type
         %337 = int 0
         %338 = as_return %336, %337

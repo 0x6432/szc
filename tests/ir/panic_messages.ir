@@ -49,7 +49,7 @@
         } else {
           %29 = break_inline result, @void_value
         }
-        %31 = check_unused_error %30
+        %31 = ensure_result %30
         %32 = ret_type
         %33 = int 0
         %34 = as_return %32, %33
@@ -73,7 +73,7 @@
           %44 = as %43, %39
           %45 = break_inline result, %44
         }
-        %46 = check_unused_error %42
+        %46 = ensure_result %42
         %47 = ret_implicit
       }
     }

@@ -173,11 +173,15 @@ Status: `[x]` done, `[~]` in progress, `[ ]` not started.
   - [~] **M6.5a Finite explicit error-set type identity**: canonical decoded members,
     eager duplicates, aliases/type composition and explicit representation fences.
   - [~] **M6.5b Known symbolic errors**: `error.Name`, owner-typed `E.Name`,
-    distinct discard consumers; grouped candidate awaiting final acceptance.
+    distinct discard consumers; published known-only subset, no runtime transport.
   - [~] **M6.5c Finite algebra**: subset coercion, known equality and set merge;
-    no numeric error IDs or runtime transport. Grouped validation pending.
+    no numeric error IDs or runtime transport.
   - [~] **M6.5d Explicit error-union type identity**: finite/anyerror TYPE lhs,
     canonical payload pairs and all-count value/layout fences, not union values.
+  - [~] **M6.5e Known error queries**: known finite `@errorName` and contextual
+    `@errorCast`; implicit subset coercion remains strict. General ignored-result
+    enforcement is integrated with these queries. See `ERROR_QUERY_STATUS.md`;
+    runtime/anyerror values and strict diagnostic gaps remain visible.
   - See `ERROR_SET_TYPE_STATUS.md` for the prior type-only batch and
     `ERROR_FAMILY_STATUS.md` for the grouped candidate and visible strict gaps.
   - Deferred: numbering, runtime storage/ABI, union payload injection/unwrap,

@@ -312,7 +312,7 @@
         } else {
           %181 = break_inline result, @void_value
         }
-        %183 = check_unused_error %182
+        %183 = ensure_result %182
         %184 = decl_val "unsigned5"
         %185 = call %184 arg0 {
           %186 = arg_type %185, 0
@@ -344,7 +344,7 @@
         } else {
           %208 = break_inline result, @void_value
         }
-        %210 = check_unused_error %209
+        %210 = ensure_result %209
         %211 = decl_val "signed33"
         %212 = call %211 arg0 {
           %213 = arg_type %212, 0
@@ -376,7 +376,7 @@
         } else {
           %235 = break_inline result, @void_value
         }
-        %237 = check_unused_error %236
+        %237 = ensure_result %236
         %238 = decl_val "unsigned33"
         %239 = call %238 arg0 {
           %240 = arg_type %239, 0
@@ -395,7 +395,7 @@
         } else {
           %251 = break_inline result, @void_value
         }
-        %253 = check_unused_error %252
+        %253 = ensure_result %252
         %254 = decl_val "signed64"
         %255 = call %254 arg0 {
           %256 = arg_type %255, 0
@@ -427,7 +427,7 @@
         } else {
           %278 = break_inline result, @void_value
         }
-        %280 = check_unused_error %279
+        %280 = ensure_result %279
         %281 = decl_val "signed_bool"
         %282 = call %281 arg0 {
           %283 = arg_type %282, 0
@@ -456,7 +456,7 @@
         } else {
           %302 = break_inline result, @void_value
         }
-        %304 = check_unused_error %303
+        %304 = ensure_result %303
         %305 = decl_val "bool_signed"
         %306 = call %305 arg0 {
           %307 = arg_type %306, 0
@@ -509,7 +509,7 @@
         } else {
           %346 = break_inline result, @void_value
         }
-        %348 = check_unused_error %347
+        %348 = ensure_result %347
         %349 = decl_val "unsigned_bool"
         %350 = call %349 arg0 {
           %351 = arg_type %350, 0
@@ -537,7 +537,7 @@
         } else {
           %369 = break_inline result, @void_value
         }
-        %371 = check_unused_error %370
+        %371 = ensure_result %370
         %372 = decl_val "nested"
         %373 = call %372 arg0 {
           %374 = arg_type %373, 0
@@ -568,7 +568,7 @@
         } else {
           %395 = break_inline result, @void_value
         }
-        %397 = check_unused_error %396
+        %397 = ensure_result %396
         %398 = decl_val "negative128"
         %399 = int 1
         %400 = negate %399
@@ -591,7 +591,7 @@
         } else {
           %415 = break_inline result, @void_value
         }
-        %417 = check_unused_error %416
+        %417 = ensure_result %416
         %418 = decl_val "empty"
         %419 = call %418 arg0 {
           %420 = arg_type %419, 0
@@ -604,7 +604,7 @@
           %426 = as %420, %422
           %427 = break_inline result, %426
         }
-        %428 = check_unused_error %419
+        %428 = ensure_result %419
         %429 = as @type_i8, @undefined
         %430 = bit_cast @type_u8, %429
         %431 = discard %430

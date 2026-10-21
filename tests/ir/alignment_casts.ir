@@ -280,7 +280,7 @@
         } else {
           %203 = break_inline result, @void_value
         }
-        %205 = check_unused_error %204
+        %205 = ensure_result %204
         %206 = decl_val "slice"
         %207 = call %206 arg0 {
           %208 = arg_type %207, 0
@@ -315,7 +315,7 @@
         } else {
           %233 = break_inline result, @void_value
         }
-        %235 = check_unused_error %234
+        %235 = ensure_result %234
         %236 = decl_val "array"
         %237 = call %236 arg0 {
           %238 = arg_type %237, 0
@@ -342,7 +342,7 @@
         } else {
           %256 = break_inline result, @void_value
         }
-        %258 = check_unused_error %257
+        %258 = ensure_result %257
         %259 = ptr_type @type_u8, @false many
         %260 = as @type_type, %259
         %261 = int 17
@@ -377,7 +377,7 @@
         } else {
           %287 = break_inline result, @void_value
         }
-        %289 = check_unused_error %288
+        %289 = ensure_result %288
         %290 = ptr_type @type_u8, @false
         %291 = as @type_type, %290
         %292 = int 16
@@ -400,7 +400,7 @@
         } else {
           %307 = break_inline result, @void_value
         }
-        %309 = check_unused_error %308
+        %309 = ensure_result %308
         %310 = int 3
         %311 = as @type_usize, %310
         %312 = int 0
@@ -448,7 +448,7 @@
         } else {
           %350 = break_inline result, @void_value
         }
-        %352 = check_unused_error %351
+        %352 = ensure_result %351
         %353 = ret_type
         %354 = int 0
         %355 = as_return %353, %354

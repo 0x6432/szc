@@ -83,7 +83,7 @@
         } else {
           %54 = break_inline result, @void_value
         }
-        %56 = check_unused_error %55
+        %56 = ensure_result %55
         %57 = decl_val "N"
         %58 = as @type_type, %57
         %63 = has_decl %58 name {
@@ -113,7 +113,7 @@
         } else {
           %79 = break_inline result, @void_value
         }
-        %81 = check_unused_error %80
+        %81 = ensure_result %80
         %82 = ret_type
         %83 = int 0
         %84 = as_return %82, %83

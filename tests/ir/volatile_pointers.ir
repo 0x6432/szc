@@ -129,7 +129,7 @@
           %80 = as %79, %76
           %81 = break_inline result, %80
         }
-        %82 = check_unused_error %78
+        %82 = ensure_result %78
         %83 = ret_implicit
       }
     }
@@ -200,7 +200,7 @@
         } else {
           %135 = break_inline result, @void_value
         }
-        %137 = check_unused_error %136
+        %137 = ensure_result %136
         %138 = decl_ref "value"
         %139 = cmp_neq %90, %138
         %143 = bool_or %139 rhs {
@@ -216,7 +216,7 @@
         } else {
           %148 = break_inline result, @void_value
         }
-        %150 = check_unused_error %149
+        %150 = ensure_result %149
         %151 = decl_val "invoke"
         %152 = call %151 arg0 {
           %153 = arg_type %152, 0
@@ -229,7 +229,7 @@
           %159 = as %157, %158
           %160 = break_inline result, %159
         }
-        %161 = check_unused_error %152
+        %161 = ensure_result %152
         %162 = ret_type
         %163 = int 0
         %164 = as_return %162, %163

@@ -83,7 +83,7 @@
         } else {
           %55 = break_inline result, @void_value
         }
-        %57 = check_unused_error %56
+        %57 = ensure_result %56
         %58 = ret_type
         %59 = decl_ref "N"
         %60 = ref %59

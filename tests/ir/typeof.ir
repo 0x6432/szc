@@ -152,7 +152,7 @@
         } else {
           %111 = break_inline result, @void_value
         }
-        %113 = check_unused_error %112
+        %113 = ensure_result %112
         %114 = ret_type
         %115 = int 0
         %116 = as_return %114, %115

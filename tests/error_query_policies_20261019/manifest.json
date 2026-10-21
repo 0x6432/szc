@@ -1,0 +1,606 @@
+{
+  "contract": "error_query_policies_20261019",
+  "baseline_commit": "e594a4ddd3fb2f05d24fe102fd12332b4b4c9d16",
+  "source_contract": "error_query_contract_20261019",
+  "source_manifest_sha256": "572edc99094feeb2ba67d9d195280e75693ecaf6777b8665c8825da2853f72ea",
+  "reference_version": "0.17.0",
+  "candidate_stage": "emit-qbe",
+  "case_count": 31,
+  "cases": [
+    {
+      "file": "i01_bare_scalar.zig",
+      "source_sha256": "1f72c8d348bbfec61ebade31a5fdb5af949b09b710319afa325ca79f866840dd",
+      "label": "PARITY-REJECT",
+      "candidate": {
+        "status": 1,
+        "primaries": [
+          "value of type 'comptime_int' ignored"
+        ]
+      },
+      "reference": {
+        "status": 1,
+        "primaries": [
+          "value of type 'comptime_int' ignored"
+        ]
+      },
+      "diagnostic_operations": [
+        "Compile-only exact reference status/full ordered primary list; scope is not pass credit."
+      ],
+      "expectation_origin": "Frozen reference primary list"
+    },
+    {
+      "file": "i02_ignored_call.zig",
+      "source_sha256": "5d255c615fd8cdfd92496b27879bc0b19a78fcab574347b7a4029002d5403987",
+      "label": "PARITY-REJECT",
+      "candidate": {
+        "status": 1,
+        "primaries": [
+          "value of type 'u8' ignored"
+        ]
+      },
+      "reference": {
+        "status": 1,
+        "primaries": [
+          "value of type 'u8' ignored"
+        ]
+      },
+      "diagnostic_operations": [
+        "Compile-only exact reference status/full ordered primary list; scope is not pass credit."
+      ],
+      "expectation_origin": "Frozen reference primary list"
+    },
+    {
+      "file": "i03_bare_aggregate.zig",
+      "source_sha256": "76b64728d4514fa9af6ce5984dc190d74a32ddf4b9fcd4fb3fa44232cc04e85e",
+      "label": "PARITY-REJECT",
+      "candidate": {
+        "status": 1,
+        "primaries": [
+          "value of type '[2]u8' ignored"
+        ]
+      },
+      "reference": {
+        "status": 1,
+        "primaries": [
+          "value of type '[2]u8' ignored"
+        ]
+      },
+      "diagnostic_operations": [
+        "Compile-only exact reference status/full ordered primary list; scope is not pass credit."
+      ],
+      "expectation_origin": "Frozen reference primary list"
+    },
+    {
+      "file": "i04_bare_type_string.zig",
+      "source_sha256": "fde3933a478399821d8cde70d6ba64889ee82a130e434ae359e5962a38ac835f",
+      "label": "PARITY-REJECT",
+      "candidate": {
+        "status": 1,
+        "primaries": [
+          "value of type 'type' ignored",
+          "value of type '*const [3:0]u8' ignored"
+        ]
+      },
+      "reference": {
+        "status": 1,
+        "primaries": [
+          "value of type 'type' ignored",
+          "value of type '*const [3:0]u8' ignored"
+        ]
+      },
+      "diagnostic_operations": [
+        "bare type expression",
+        "bare string expression"
+      ],
+      "expectation_origin": "Frozen reference primary list"
+    },
+    {
+      "file": "i06_explicit_discard.zig",
+      "source_sha256": "43bc06a421a15b77b9f7975b820fa81aebdee141ae28e3bc25a966b15e9e315e",
+      "label": "ACCEPT",
+      "candidate": {
+        "status": 0,
+        "primaries": []
+      },
+      "reference": {
+        "status": 0,
+        "primaries": []
+      },
+      "diagnostic_operations": [],
+      "expectation_origin": "Frozen reference primary list"
+    },
+    {
+      "file": "i08_ignored_if.zig",
+      "source_sha256": "e4c2550e92d6a632f6ca10e555c5fb7e96b88ff7f9b460dd47af3ef5ef516f71",
+      "label": "PARITY-REJECT",
+      "candidate": {
+        "status": 1,
+        "primaries": [
+          "value of type 'u8' ignored",
+          "incompatible types: 'u8' and 'void'"
+        ]
+      },
+      "reference": {
+        "status": 1,
+        "primaries": [
+          "value of type 'u8' ignored",
+          "incompatible types: 'u8' and 'void'"
+        ]
+      },
+      "diagnostic_operations": [
+        "one outer ignored two-arm if result after peer analysis",
+        "missing else ordinary incompatible u8/void peer result"
+      ],
+      "expectation_origin": "Frozen reference primary list"
+    },
+    {
+      "file": "i09_ignored_switch.zig",
+      "source_sha256": "d8964b2a5afb4be3deb593e9c0016cbd860aef1181c97705046118a2a087a946",
+      "label": "PARITY-REJECT",
+      "candidate": {
+        "status": 1,
+        "primaries": [
+          "value of type 'u8' ignored"
+        ]
+      },
+      "reference": {
+        "status": 1,
+        "primaries": [
+          "value of type 'u8' ignored"
+        ]
+      },
+      "diagnostic_operations": [
+        "Compile-only exact reference status/full ordered primary list; scope is not pass credit."
+      ],
+      "expectation_origin": "Frozen reference primary list"
+    },
+    {
+      "file": "i11_while_single.zig",
+      "source_sha256": "2b8fa9344374c57c393ded86783a21ed0f9e07c680dd813ea6b79f2d9ce05640",
+      "label": "PARITY-REJECT",
+      "candidate": {
+        "status": 1,
+        "primaries": [
+          "value of type 'u8' ignored",
+          "value of type 'u8' ignored"
+        ]
+      },
+      "reference": {
+        "status": 1,
+        "primaries": [
+          "value of type 'u8' ignored",
+          "value of type 'u8' ignored"
+        ]
+      },
+      "diagnostic_operations": [
+        "ignored singleton while body",
+        "ignored reachable while continuation expression"
+      ],
+      "expectation_origin": "Frozen reference primary list"
+    },
+    {
+      "file": "i12_for_single.zig",
+      "source_sha256": "a0495ff038b66845ff05f3a97d511794674395185f8b2cef4ad01dcabcdb5a7c",
+      "label": "PARITY-REJECT",
+      "candidate": {
+        "status": 1,
+        "primaries": [
+          "value of type 'u8' ignored"
+        ]
+      },
+      "reference": {
+        "status": 1,
+        "primaries": [
+          "value of type 'u8' ignored"
+        ]
+      },
+      "diagnostic_operations": [
+        "Compile-only exact reference status/full ordered primary list; scope is not pass credit."
+      ],
+      "expectation_origin": "Frozen reference primary list"
+    },
+    {
+      "file": "i13_while_block.zig",
+      "source_sha256": "3909519c082545bad072dd3d48d4a7eb44dcfb1f195fd9cb1ca75d1a0e8edd6b",
+      "label": "PARITY-REJECT",
+      "candidate": {
+        "status": 1,
+        "primaries": [
+          "value of type 'u8' ignored",
+          "value of type 'u8' ignored",
+          "value of type 'u8' ignored"
+        ]
+      },
+      "reference": {
+        "status": 1,
+        "primaries": [
+          "value of type 'u8' ignored",
+          "value of type 'u8' ignored",
+          "value of type 'u8' ignored"
+        ]
+      },
+      "diagnostic_operations": [
+        "ignored scalar in while block body",
+        "ignored loop else scalar",
+        "outer ignored labeled loop result"
+      ],
+      "expectation_origin": "Frozen reference primary list"
+    },
+    {
+      "file": "i20_nonlocal_break.zig",
+      "source_sha256": "8760b2add07e26880deec763eced0a08d27d1305b4afe98f22693531185a2822",
+      "label": "ACCEPT",
+      "candidate": {
+        "status": 0,
+        "primaries": []
+      },
+      "reference": {
+        "status": 0,
+        "primaries": []
+      },
+      "diagnostic_operations": [],
+      "expectation_origin": "Frozen reference primary list"
+    },
+    {
+      "file": "i21_nonlocal_continue.zig",
+      "source_sha256": "30a04d0bf804b4f09ec8afbf90a945f5e461308f63b0b7eab595da652cf25276",
+      "label": "ACCEPT",
+      "candidate": {
+        "status": 0,
+        "primaries": []
+      },
+      "reference": {
+        "status": 0,
+        "primaries": []
+      },
+      "diagnostic_operations": [],
+      "expectation_origin": "Frozen reference primary list"
+    },
+    {
+      "file": "i22_runtime_void_branches.zig",
+      "source_sha256": "9005474c655a7fd4446b76452869e0fa44061c77273488a2c76951991b329d5e",
+      "label": "ACCEPT",
+      "candidate": {
+        "status": 0,
+        "primaries": []
+      },
+      "reference": {
+        "status": 0,
+        "primaries": []
+      },
+      "diagnostic_operations": [],
+      "expectation_origin": "Frozen reference primary list"
+    },
+    {
+      "file": "n01_literal_bytes.zig",
+      "source_sha256": "925307a7364e41740e8c881689226c4926e5e8a1427edaa61ca9c63e581d1f57",
+      "label": "ACCEPT",
+      "candidate": {
+        "status": 0,
+        "primaries": []
+      },
+      "reference": {
+        "status": 0,
+        "primaries": []
+      },
+      "diagnostic_operations": [],
+      "expectation_origin": "Frozen reference primary list"
+    },
+    {
+      "file": "n04_escaped_name.zig",
+      "source_sha256": "a27ca2df3057704015f606c19902c08088059a9c5cad2b39b2476b1a45985219",
+      "label": "ACCEPT",
+      "candidate": {
+        "status": 0,
+        "primaries": []
+      },
+      "reference": {
+        "status": 0,
+        "primaries": []
+      },
+      "diagnostic_operations": [],
+      "expectation_origin": "Frozen reference primary list"
+    },
+    {
+      "file": "n05_name_exact_type.zig",
+      "source_sha256": "e5763f1244d499e8635e0eae60093217042fbac51ea23d6ec81e91c84f9984f6",
+      "label": "ACCEPT",
+      "candidate": {
+        "status": 0,
+        "primaries": []
+      },
+      "reference": {
+        "status": 0,
+        "primaries": []
+      },
+      "diagnostic_operations": [],
+      "expectation_origin": "Frozen reference primary list"
+    },
+    {
+      "file": "n06_name_alias_sentinel.zig",
+      "source_sha256": "d0d2282282630b343cfe2627e7c885527cb2b4719d6931436d005a0f05a7ffc5",
+      "label": "ACCEPT",
+      "candidate": {
+        "status": 0,
+        "primaries": []
+      },
+      "reference": {
+        "status": 0,
+        "primaries": []
+      },
+      "diagnostic_operations": [],
+      "expectation_origin": "Frozen reference primary list"
+    },
+    {
+      "file": "n07_invalid_integer.zig",
+      "source_sha256": "822fb81b6f680286daaa767214f48f770e4966fd5749287535712fa3049f7652",
+      "label": "PARITY-REJECT",
+      "candidate": {
+        "status": 1,
+        "primaries": [
+          "expected type 'anyerror', found 'u8'"
+        ]
+      },
+      "reference": {
+        "status": 1,
+        "primaries": [
+          "expected type 'anyerror', found 'u8'"
+        ]
+      },
+      "diagnostic_operations": [
+        "Compile-only exact reference status/full ordered primary list; scope is not pass credit."
+      ],
+      "expectation_origin": "Frozen reference primary list"
+    },
+    {
+      "file": "n10_runtime_load.zig",
+      "source_sha256": "c652ee20011172a95216ea190e68dca59429ad5a1fc9b10a80f3d8e027b13e33",
+      "label": "VALID-UNSUPPORTED-FENCE",
+      "candidate": {
+        "status": 1,
+        "primaries": [
+          "not supported by szc yet: finite error-set value or layout demand"
+        ]
+      },
+      "reference": {
+        "status": 0,
+        "primaries": []
+      },
+      "diagnostic_operations": [
+        "load of runtime finite error p.*; no runtime name lookup admission"
+      ],
+      "expectation_origin": "Manual approved source-based producer/renderer intent before immutable candidate proof; not language parity"
+    },
+    {
+      "file": "n12_lazy_invalid.zig",
+      "source_sha256": "5d24af16723aaf776d438aaac1d3a2a39b064ca821ec84b5387511082e525feb",
+      "label": "ACCEPT",
+      "candidate": {
+        "status": 0,
+        "primaries": []
+      },
+      "reference": {
+        "status": 0,
+        "primaries": []
+      },
+      "diagnostic_operations": [],
+      "expectation_origin": "Frozen reference primary list"
+    },
+    {
+      "file": "n13_typeof_name.zig",
+      "source_sha256": "174aa91a8be9f54d15585da21afaf200bbde88b0aab44a1cd98bce0c140ee399",
+      "label": "ACCEPT",
+      "candidate": {
+        "status": 0,
+        "primaries": []
+      },
+      "reference": {
+        "status": 0,
+        "primaries": []
+      },
+      "diagnostic_operations": [],
+      "expectation_origin": "Frozen reference primary list"
+    },
+    {
+      "file": "n14_name_consumers.zig",
+      "source_sha256": "16b7c88a11626d336d94beb60a5f2e1be13ae05f234088d647a5fd7891991909",
+      "label": "PARITY-REJECT",
+      "candidate": {
+        "status": 1,
+        "primaries": [
+          "value of type '*const [1:0]u8' ignored"
+        ]
+      },
+      "reference": {
+        "status": 1,
+        "primaries": [
+          "value of type '*const [1:0]u8' ignored"
+        ]
+      },
+      "diagnostic_operations": [
+        "Compile-only exact reference status/full ordered primary list; scope is not pass credit."
+      ],
+      "expectation_origin": "Frozen reference primary list"
+    },
+    {
+      "file": "c01_explicit_narrow_member.zig",
+      "source_sha256": "e176021fb2dcef5232bd5ecbd5859c5757a84b8e8c71b43d15ded84525fb43e1",
+      "label": "ACCEPT",
+      "candidate": {
+        "status": 0,
+        "primaries": []
+      },
+      "reference": {
+        "status": 0,
+        "primaries": []
+      },
+      "diagnostic_operations": [],
+      "expectation_origin": "Frozen reference primary list"
+    },
+    {
+      "file": "c02_local_result_context.zig",
+      "source_sha256": "fb13cea35f0f84c0303dd7c28d11b42f4be53f81a14d86b8fa43c9cd9723ff64",
+      "label": "ACCEPT",
+      "candidate": {
+        "status": 0,
+        "primaries": []
+      },
+      "reference": {
+        "status": 0,
+        "primaries": []
+      },
+      "diagnostic_operations": [],
+      "expectation_origin": "Frozen reference primary list"
+    },
+    {
+      "file": "c03_narrow_nonmember.zig",
+      "source_sha256": "9d60500ec40f60b0237ec375cfdae244ad62f4164ffa1f89a2b2e1b4acac9cc7",
+      "label": "STRUCTURAL-DIAGNOSTIC-REJECT",
+      "candidate": {
+        "status": 1,
+        "primaries": [
+          "'error.B' not a member of error set 'error{@\"A\"}'"
+        ]
+      },
+      "reference": {
+        "status": 1,
+        "primaries": [
+          "'error.B' not a member of error set 'error{A}'"
+        ]
+      },
+      "diagnostic_operations": [
+        "known source B not member of destination A; structural type renderer intentionally retained"
+      ],
+      "expectation_origin": "Manual approved source-based producer/renderer intent before immutable candidate proof; not language parity"
+    },
+    {
+      "file": "c06_missing_result_type.zig",
+      "source_sha256": "866c96564d89a5f4d6377cc9a6169858f8d90e55ca9759c13da865878f6cfddd",
+      "label": "PARITY-REJECT",
+      "candidate": {
+        "status": 1,
+        "primaries": [
+          "@errorCast must have a known result type",
+          "@errorCast must have a known result type"
+        ]
+      },
+      "reference": {
+        "status": 1,
+        "primaries": [
+          "@errorCast must have a known result type",
+          "@errorCast must have a known result type"
+        ]
+      },
+      "diagnostic_operations": [
+        "untyped constant has no cast result type",
+        "explicit discard does not invent a cast result type"
+      ],
+      "expectation_origin": "Frozen reference primary list"
+    },
+    {
+      "file": "c07_invalid_result_type.zig",
+      "source_sha256": "3288f74a26c380370e38c83f026d530c07ff5a7e2a7e9301804d7cb35cdac44f",
+      "label": "PARITY-REJECT",
+      "candidate": {
+        "status": 1,
+        "primaries": [
+          "expected error set or error union type, found 'int'"
+        ]
+      },
+      "reference": {
+        "status": 1,
+        "primaries": [
+          "expected error set or error union type, found 'int'"
+        ]
+      },
+      "diagnostic_operations": [
+        "Compile-only exact reference status/full ordered primary list; scope is not pass credit."
+      ],
+      "expectation_origin": "Frozen reference primary list"
+    },
+    {
+      "file": "c12_runtime_source.zig",
+      "source_sha256": "7fb587aa237672c54035f463686f57f050344907aa97381c3b9fa30d6bb2033b",
+      "label": "VALID-UNSUPPORTED-FENCE",
+      "candidate": {
+        "status": 1,
+        "primaries": [
+          "not supported by szc yet: finite error-set value or layout demand",
+          "not supported by szc yet: finite error-set value or layout demand"
+        ]
+      },
+      "reference": {
+        "status": 0,
+        "primaries": []
+      },
+      "diagnostic_operations": [
+        "runtime finite load in load(p)",
+        "known cast store to finite destination p.* in store(p)"
+      ],
+      "expectation_origin": "Manual approved source-based producer/renderer intent before immutable candidate proof; not language parity"
+    },
+    {
+      "file": "c14_lazy_invalid.zig",
+      "source_sha256": "fc97a1d7c4457e149adf0825daac7d11cb1979684f6f9d71139a23b0a45ba72a",
+      "label": "ACCEPT",
+      "candidate": {
+        "status": 0,
+        "primaries": []
+      },
+      "reference": {
+        "status": 0,
+        "primaries": []
+      },
+      "diagnostic_operations": [],
+      "expectation_origin": "Frozen reference primary list"
+    },
+    {
+      "file": "c16_cast_consumers.zig",
+      "source_sha256": "709795b4ffd7a7c0087e86584f5906d5d9582b32cad985cb80029273095854bc",
+      "label": "STRUCTURAL-DIAGNOSTIC-REJECT",
+      "candidate": {
+        "status": 1,
+        "primaries": [
+          "error set is discarded",
+          "error set of type 'error{@\"A\"}' is ignored"
+        ]
+      },
+      "reference": {
+        "status": 1,
+        "primaries": [
+          "error set is discarded",
+          "error set of type 'error{A}' is ignored"
+        ]
+      },
+      "diagnostic_operations": [
+        "explicit discard of known cast value",
+        "bare ignored known cast value"
+      ],
+      "expectation_origin": "Manual approved source-based producer/renderer intent before immutable candidate proof; not language parity"
+    },
+    {
+      "file": "known_nonmember_typeof.zig",
+      "source_group": "appendix",
+      "source_sha256": "7e8c6df21916353d8552630e3f0c805b06db857af05ad20d3221f7c74a01b29b",
+      "label": "STRUCTURAL-DIAGNOSTIC-REJECT",
+      "candidate": {
+        "status": 1,
+        "primaries": [
+          "'error.B' not a member of error set 'error{@\"A\"}'"
+        ]
+      },
+      "reference": {
+        "status": 1,
+        "primaries": [
+          "'error.B' not a member of error set 'error{A}'"
+        ]
+      },
+      "diagnostic_operations": [
+        "known nonmember errorCast MUST validate member even inside @TypeOf(@as(Small,...)); no unevaluated bypass"
+      ],
+      "expectation_origin": "Reference-demand rejection plus same source-based owner-approved structural membership renderer as C03, fixed BEFORE candidate output"
+    }
+  ],
+  "appendix_contract": "error_query_typeof_20261019",
+  "appendix_manifest_sha256": "6a15cf89cb5c420457eb9bfe17c7038d6452ae7b94ba82d7609053f1864c2a15"
+}

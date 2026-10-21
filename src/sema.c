@@ -5126,10 +5126,9 @@ analyze_unary(Block *block, const IrInst *inst)
 
 /* String literals are pointers to immutable, zero-sentinel u8 arrays. */
 static Operand
-analyze_string(Block *block, const IrInst *inst)
+string_operand(Block *block, StringId id)
 {
 	Sema *sema = block->sema;
-	StringId id = inst->data.name.name;
 	uint32_t length = intern_length(sema->interner, id);
 	Type array = make_type(TYPE_ARRAY);
 	array.as.array.child = type_id_of_well_known(IR_REF_TYPE_U8);
@@ -5138,6 +5137,12 @@ analyze_string(Block *block, const IrInst *inst)
 	TypeId child = type_intern(sema, &array);
 	TypeId pointer = type_pointer(sema, child, POINTER_ONE, true, false, 0);
 	return comptime_operand(pointer, value_bytes(&sema->values, pointer, (const uint8_t *)intern_text(sema->interner, id), length));
+}
+
+static Operand
+analyze_string(Block *block, const IrInst *inst)
+{
+	return string_operand(block, inst->data.name.name);
 }
 
 static Operand analyze_many_index(Block *block, Operand base, Operand index, uint32_t src, bool address_only, bool borrow);
@@ -9503,6 +9508,94 @@ analyze_error_type_binary(Block *block, const IrInst *inst)
 	return type_operand(sema, type_intern(sema, &type));
 }
 
+/* Queries inspect a genuine known scalar; they never admit its representation. */
+static Operand
+analyze_error_name(Block *block, const IrInst *inst)
+{
+	Sema *sema = block->sema;
+	Operand source = resolve_ref(block, inst->data.un.operand);
+	if (source.kind == OPERAND_NONE || !check_defined(block, source, inst->src))
+		return operand_none;
+	TypeKind kind = sema->types[source.type].kind;
+	if (kind != TYPE_ERROR_SET) {
+		if (kind == TYPE_ANYERROR || kind == TYPE_ERROR_UNION)
+			sema_error(block, inst->src, "not supported by szc yet: @errorName requires a known finite error");
+		else
+			sema_error(block, inst->src, "expected type 'anyerror', found '%s'", sema_type_name(sema, source.type));
+		return operand_none;
+	}
+	StringId name;
+	if (!known_error_name(block, source, &name)) {
+		if (source.kind == OPERAND_RUNTIME)
+			value_representation_allowed(block, source.type, inst->src);
+		else
+			sema_error(block, inst->src, "not supported by szc yet: @errorName requires a known finite error");
+		return operand_none;
+	}
+	return string_operand(block, name);
+}
+
+static bool
+error_sets_intersect(const Sema *sema, TypeId source, TypeId dest)
+{
+	TypeErrorSet a = sema->types[source].as.error_set;
+	TypeErrorSet b = sema->types[dest].as.error_set;
+	uint32_t i = 0, j = 0;
+	while (i < a.count && j < b.count) {
+		int order = error_name_compare(sema, a.names[i], b.names[j]);
+		if (order == 0)
+			return true;
+		if (order < 0)
+			i++;
+		else
+			j++;
+	}
+	return false;
+}
+
+static Operand
+analyze_error_cast(Block *block, const IrInst *inst)
+{
+	Sema *sema = block->sema;
+	Operand target = resolve_ref(block, inst->data.bin.lhs);
+	Operand source = resolve_ref(block, inst->data.bin.rhs);
+	TypeId dest;
+	if (target.kind == OPERAND_NONE || source.kind == OPERAND_NONE
+		|| !check_defined(block, target, inst->src) || !operand_to_type(block, target, inst->src, &dest)
+		|| !check_defined(block, source, inst->src))
+		return operand_none;
+	TypeKind dest_kind = sema->types[dest].kind;
+	TypeKind source_kind = sema->types[source.type].kind;
+	if (dest_kind != TYPE_ERROR_SET || source_kind != TYPE_ERROR_SET) {
+		TypeId invalid = dest_kind != TYPE_ERROR_SET ? dest : source.type;
+		TypeKind kind = sema->types[invalid].kind;
+		if (kind == TYPE_ANYERROR || kind == TYPE_ERROR_UNION)
+			sema_error(block, inst->src, "not supported by szc yet: @errorCast requires finite error sets");
+		else
+			sema_error(block, inst->src, "expected error set or error union type, found '%s'", type_tag_name(sema, invalid));
+		return operand_none;
+	}
+	StringId name;
+	if (!known_error_name(block, source, &name)) {
+		if (source.kind == OPERAND_RUNTIME)
+			value_representation_allowed(block, source.type, inst->src);
+		else
+			sema_error(block, inst->src, "not supported by szc yet: @errorCast requires a known finite error");
+		return operand_none;
+	}
+	if (!error_sets_intersect(sema, source.type, dest)) {
+		sema_error(block, inst->src, "error sets '%s' and '%s' have no common errors",
+			sema_type_name(sema, source.type), sema_type_name(sema, dest));
+		return operand_none;
+	}
+	if (!error_set_contains(sema, dest, name)) {
+		sema_name_error(block, inst->src, "'error.", name,
+			arena_sprintf(sema->arena, "' not a member of error set '%s'", sema_type_name(sema, dest)));
+		return operand_none;
+	}
+	return comptime_operand(dest, value_error(&sema->values, dest, name));
+}
+
 /* Consumer provenance comes from IR, never from AST or diagnostic text guesses. */
 static bool
 validate_discarded_error(Block *block, Operand operand, bool explicit_discard, uint32_t src)
@@ -9530,6 +9623,12 @@ analyze_inst(Block *block, IrInstIndex index, Operand *break_value)
 	switch (inst->op) {
 	case IR_ERROR_VALUE:
 		result = analyze_error_value(block, inst->data.name.name);
+		break;
+	case IR_ERROR_NAME:
+		result = analyze_error_name(block, inst);
+		break;
+	case IR_ERROR_CAST:
+		result = analyze_error_cast(block, inst);
 		break;
 	case IR_ERROR_SET_MERGE:
 	case IR_ERROR_UNION_TYPE:

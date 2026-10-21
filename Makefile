@@ -55,6 +55,7 @@ test: unit-test golden-test fuzz-driver-test fuzz-partition-test
 	CC="$(CC)" sh tests/error_set_type_name_20261019.sh
 	python3 tools/check_error_family_boundaries_20261019.py build/asan/szc
 	python3 tools/check_error_family_varargs_20261019.py build/asan/szc
+	python3 tools/check_error_query_policies_20261019.py build/asan/szc
 
 build/memcpy-widths.zig: tools/generate_memcpy_tests.py
 	python3 $< $@

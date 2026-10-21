@@ -45,7 +45,7 @@
           %26 = as %24, %25
           %27 = break_inline result, %26
         }
-        %28 = check_unused_error %20
+        %28 = ensure_result %20
         %29 = ret_implicit
       }
     }

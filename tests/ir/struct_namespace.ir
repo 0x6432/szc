@@ -101,7 +101,7 @@
         } else {
           %64 = break_inline result, @void_value
         }
-        %66 = check_unused_error %65
+        %66 = ensure_result %65
         %67 = ret_type
         %68 = decl_ref "Namespace"
         %69 = field_call %68, "add" arg0 {

@@ -74,7 +74,7 @@
           %42 = as_return %40, %41
           %43 = ret %42
         }
-        %45 = check_unused_error %44
+        %45 = ensure_result %44
         %46 = ret_implicit
       }
     }
@@ -130,7 +130,7 @@
           %84 = store %52, %83
           %85 = break_inline result, @void_value
         }
-        %87 = check_unused_error %86
+        %87 = ensure_result %86
         %88 = ret_type
         %97 = if @false then {
           %89 = int 1

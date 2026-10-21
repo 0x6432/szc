@@ -317,7 +317,7 @@
         } else {
           %239 = break_inline result, @void_value
         }
-        %241 = check_unused_error %240
+        %241 = ensure_result %240
         %242 = decl_ref "nested"
         %243 = array_base_ptr %242
         %244 = int 1
@@ -346,7 +346,7 @@
         } else {
           %265 = break_inline result, @void_value
         }
-        %267 = check_unused_error %266
+        %267 = ensure_result %266
         %268 = decl_ref "text"
         %269 = field_ref "len", %268
         %270 = int 4
@@ -379,7 +379,7 @@
         } else {
           %294 = break_inline result, @void_value
         }
-        %296 = check_unused_error %295
+        %296 = ensure_result %295
         %297 = decl_ref "mixed"
         %298 = field_ref "len", %297
         %299 = int 2
@@ -412,7 +412,7 @@
         } else {
           %323 = break_inline result, @void_value
         }
-        %325 = check_unused_error %324
+        %325 = ensure_result %324
         %326 = decl_ref "tail"
         %327 = array_base_ptr %326
         %328 = int 0
@@ -448,7 +448,7 @@
         } else {
           %355 = break_inline result, @void_value
         }
-        %357 = check_unused_error %356
+        %357 = ensure_result %356
         %358 = decl_ref "plain"
         %359 = array_base_ptr %358
         %360 = int 1
@@ -475,7 +475,7 @@
         } else {
           %379 = break_inline result, @void_value
         }
-        %381 = check_unused_error %380
+        %381 = ensure_result %380
         %382 = decl_ref "flags"
         %383 = array_base_ptr %382
         %384 = int 0
@@ -518,7 +518,7 @@
         } else {
           %417 = break_inline result, @void_value
         }
-        %419 = check_unused_error %418
+        %419 = ensure_result %418
         %420 = decl_ref "undef_array"
         %421 = field_ref "len", %420
         %422 = int 3
@@ -538,7 +538,7 @@
         } else {
           %434 = break_inline result, @void_value
         }
-        %436 = check_unused_error %435
+        %436 = ensure_result %435
         %437 = decl_ref "partly"
         %438 = array_base_ptr %437
         %439 = int 1
@@ -574,7 +574,7 @@
         } else {
           %466 = break_inline result, @void_value
         }
-        %468 = check_unused_error %467
+        %468 = ensure_result %467
         %469 = decl_ref "huge"
         %470 = field_ref "len", %469
         %471 = int 4294967296
@@ -594,7 +594,7 @@
         } else {
           %483 = break_inline result, @void_value
         }
-        %485 = check_unused_error %484
+        %485 = ensure_result %484
         %486 = int 4294967296
         %487 = as @type_usize, %486
         %488 = int_type u0
@@ -622,7 +622,7 @@
         } else {
           %508 = break_inline result, @void_value
         }
-        %510 = check_unused_error %509
+        %510 = ensure_result %509
         %511 = decl_ref "callback"
         %512 = array_base_ptr %511
         %513 = int 1
@@ -639,7 +639,7 @@
         } else {
           %523 = break_inline result, @void_value
         }
-        %525 = check_unused_error %524
+        %525 = ensure_result %524
         %526 = int 2
         %527 = as @type_usize, %526
         %528 = array_type %527, @type_u8
@@ -665,7 +665,7 @@
         } else {
           %547 = break_inline result, @void_value
         }
-        %549 = check_unused_error %548
+        %549 = ensure_result %548
         %550 = ret_type
         %551 = int 0
         %552 = as_return %550, %551

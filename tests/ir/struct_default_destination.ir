@@ -88,7 +88,7 @@
         %53 = store %45, %52
         %54 = decl_val "partial"
         %55 = call %54
-        %56 = check_unused_error %55
+        %56 = ensure_result %55
         %57 = ret_type
         %58 = decl_val "g"
         %59 = field_val "a", %58

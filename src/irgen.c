@@ -88,6 +88,7 @@ typedef struct GenBody {
 /* What the value of an expression is used for. */
 typedef enum ResultKind {
 	RESULT_NONE,	/* any type */
+	RESULT_IGNORED, /* ordinary statement use, not an expected type */
 	RESULT_TYPE,	/* coerce to the type `ref` */
 	RESULT_COERCED_TYPE, /* type hint; enclosing initializer performs final coercion */
 	RESULT_INIT_TYPE, /* same coercion, but inherit declaration initializer order */
@@ -111,6 +112,7 @@ typedef struct ControlScope {
 } ControlScope;
 
 static const ResultInfo result_none = {RESULT_NONE, IR_REF_NONE};
+static const ResultInfo result_ignored = {RESULT_IGNORED, IR_REF_NONE};
 
 static ResultInfo
 result_type(IrRef type)
@@ -603,7 +605,7 @@ is_coerced_to(const GenBody *body, IrRef value, IrRef type)
 		return true;
 	if (type == IR_REF_TYPE_BOOL && inst->op >= IR_CMP_EQ && inst->op <= IR_CMP_GTE)
 		return true;
-	if ((inst->op == IR_BIT_CAST || inst->op == IR_INT_CAST || inst->op == IR_TRUNCATE || inst->op == IR_PTR_FROM_INT || inst->op == IR_ENUM_FROM_INT) && inst->data.bin.lhs == type)
+	if ((inst->op == IR_BIT_CAST || inst->op == IR_INT_CAST || inst->op == IR_ERROR_CAST || inst->op == IR_TRUNCATE || inst->op == IR_PTR_FROM_INT || inst->op == IR_ENUM_FROM_INT) && inst->data.bin.lhs == type)
 		return true;
 	if (inst->op == IR_DECL_LITERAL && inst->data.name.operand == type)
 		return true;
@@ -620,6 +622,10 @@ rvalue(GenBody *body, ResultInfo info, IrRef value, uint32_t src)
 	case RESULT_NONE:
 	case RESULT_COERCED_TYPE:
 		return value;
+	case RESULT_IGNORED:
+		if (value != IR_REF_VOID_VALUE)
+			emit_un(body, IR_ENSURE_RESULT, src, value);
+		return IR_REF_VOID_VALUE;
 	case RESULT_TYPE:
 	case RESULT_INIT_TYPE:
 		if (is_coerced_to(body, value, info.ref))
@@ -1380,6 +1386,8 @@ typedef enum Builtin {
 	BUILTIN_AS,
 	BUILTIN_BIT_CAST,
 	BUILTIN_INT_CAST,
+	BUILTIN_ERROR_CAST,
+	BUILTIN_ERROR_NAME,
 	BUILTIN_ENUM_FROM_INT,
 	BUILTIN_TRUNCATE,
 	BUILTIN_INT_FROM_BOOL,
@@ -1422,6 +1430,8 @@ static const BuiltinInfo builtin_table[] = {
 	{"as", BUILTIN_AS, 2, IR_OP_COUNT},
 	{"bitCast", BUILTIN_BIT_CAST, 1, IR_OP_COUNT},
 	{"intCast", BUILTIN_INT_CAST, 1, IR_OP_COUNT},
+	{"errorCast", BUILTIN_ERROR_CAST, 1, IR_OP_COUNT},
+	{"errorName", BUILTIN_ERROR_NAME, 1, IR_ERROR_NAME},
 	{"enumFromInt", BUILTIN_ENUM_FROM_INT, 1, IR_OP_COUNT},
 	{"intFromEnum", BUILTIN_INT_BITS, 1, IR_INT_FROM_ENUM},
 	{"truncate", BUILTIN_TRUNCATE, 1, IR_OP_COUNT},
@@ -1575,6 +1585,7 @@ cast_result_type(GenBody *body, ResultInfo info, AstNode *node, const char *name
 	case RESULT_PTR_ELEM:
 		return emit_un(body, IR_ELEM_TYPE, node->offset, info.ref);
 	case RESULT_NONE:
+	case RESULT_IGNORED:
 		break;
 	}
 	error_at(body->gen, node->offset, "@%s must have a known result type", name);
@@ -1713,19 +1724,27 @@ builtin_call(GenBody *body, Scope *scope, ResultInfo info, AstNode *node)
 		IrRef value = expr(body, scope, result_type(type), args[1]);
 		return rvalue(body, info, value, node->offset);
 	}
+	case BUILTIN_ERROR_NAME: {
+		IrRef operand = expr(body, scope, result_none, args[0]);
+		if (body_is_terminated(body))
+			return IR_REF_VOID_VALUE;
+		return rvalue(body, info, emit_un(body, IR_ERROR_NAME, node->offset, operand), node->offset);
+	}
 	case BUILTIN_BIT_CAST:
 	case BUILTIN_PTR_FROM_INT:
 	case BUILTIN_INT_CAST:
+	case BUILTIN_ERROR_CAST:
 	case BUILTIN_ENUM_FROM_INT:
 	case BUILTIN_TRUNCATE: {
 		IrRef type = cast_result_type(body, info, node, builtin->name);
 		IrRef operand = expr(body, scope, result_none, args[0]);
-		if (type == IR_REF_NONE)
+		if (type == IR_REF_NONE || (builtin->builtin == BUILTIN_ERROR_CAST && body_is_terminated(body)))
 			return IR_REF_VOID_VALUE;
 		IrOp op = builtin->builtin == BUILTIN_BIT_CAST ? IR_BIT_CAST
 			: builtin->builtin == BUILTIN_PTR_FROM_INT ? IR_PTR_FROM_INT
 			: builtin->builtin == BUILTIN_ENUM_FROM_INT ? IR_ENUM_FROM_INT
-			: builtin->builtin == BUILTIN_INT_CAST ? IR_INT_CAST : IR_TRUNCATE;
+			: builtin->builtin == BUILTIN_INT_CAST ? IR_INT_CAST
+			: builtin->builtin == BUILTIN_ERROR_CAST ? IR_ERROR_CAST : IR_TRUNCATE;
 		return emit_bin(body, op, node->offset, type, operand);
 	}
 	case BUILTIN_ARITH: {
@@ -1943,17 +1962,17 @@ while_expr(GenBody *body, Scope *scope, ResultInfo info, AstNode *node)
 	control.label = check_label(gen, scope, loop->label);
 	control.break_target = ir_ref_inst(result);
 	control.continue_target = ir_ref_inst(continuation);
-	control.result = info;
+	control.result = info.kind == RESULT_IGNORED ? result_none : info;
 	control.allow_unlabeled = true;
 	control.allow_continue = true;
 	GenBody iteration;
 	body_init(&iteration, gen, &control.base, body->is_comptime);
-	expr(&iteration, &iteration.base, result_type(IR_REF_TYPE_VOID), loop->body);
+	expr(&iteration, &iteration.base, result_ignored, loop->body);
 	if (!body_is_terminated(&iteration))
 		emit_break(&iteration, IR_BREAK, node->offset, control.continue_target, IR_REF_VOID_VALUE);
 	gen->ir->insts[control.continue_target].data.payload = body_finish(&iteration);
 	if (loop->continue_expr != NULL)
-		expr(&then_body, &control.base, result_type(IR_REF_TYPE_VOID), loop->continue_expr);
+		expr(&then_body, &control.base, result_ignored, loop->continue_expr);
 	if (!body_is_terminated(&then_body))
 		emit_un(&then_body, IR_REPEAT, node->offset, repeat);
 	branch.then_body = body_finish(&then_body);
@@ -2066,7 +2085,7 @@ for_expr(GenBody *body, Scope *scope, ResultInfo info, AstNode *node)
 	control.label = label;
 	control.break_target = ir_ref_inst(result);
 	control.continue_target = ir_ref_inst(continuation);
-	control.result = info;
+	control.result = info.kind == RESULT_IGNORED ? result_none : info;
 	control.allow_unlabeled = true;
 	control.allow_continue = true;
 	GenBody iteration;
@@ -2084,7 +2103,7 @@ for_expr(GenBody *body, Scope *scope, ResultInfo info, AstNode *node)
 		local_init(local, capture_scope, name, LOCAL_CONST, value, capture.name.start);
 		capture_scope = &local->base;
 	}
-	expr(&iteration, capture_scope, result_type(IR_REF_TYPE_VOID), loop->body);
+	expr(&iteration, capture_scope, result_ignored, loop->body);
 	if (!body_is_terminated(&iteration))
 		emit_break(&iteration, IR_BREAK, node->offset, control.continue_target, IR_REF_VOID_VALUE);
 	gen->ir->insts[control.continue_target].data.payload = body_finish(&iteration);
@@ -2503,6 +2522,21 @@ array_init(GenBody *body, Scope *scope, ResultInfo info, AstInitList *node)
 static IrRef
 expr(GenBody *body, Scope *scope, ResultInfo info, AstNode *node)
 {
+	if (info.kind == RESULT_IGNORED) {
+		/* Only loops need this disposition while lowering: their explicit else
+		 * value is ignored independently. Other expressions keep ordinary peer
+		 * analysis and receive one check on their complete result. */
+		if (node->kind == AST_GROUPED)
+			return expr(body, scope, info, AST_CAST(AstWrap, node, AST_GROUPED)->operand);
+		IrRef value;
+		if (node->kind == AST_WHILE)
+			value = while_expr(body, scope, info, node);
+		else if (node->kind == AST_FOR)
+			value = for_expr(body, scope, info, node);
+		else
+			value = expr(body, scope, result_none, node);
+		return rvalue(body, info, value, node->offset);
+	}
 	switch (node->kind) {
 	case AST_ARRAY_TYPE:
 		return rvalue(body, info, array_type(body, scope, AST_CAST(AstArrayType, node, AST_ARRAY_TYPE), false, 0), node->offset);
@@ -2817,16 +2851,19 @@ block_statements(GenBody *body, Scope *scope, AstBlock *block)
 			assign(body, inner, AST_CAST(AstAssign, statement, AST_ASSIGN));
 			break;
 		default: {
-			IrRef value = expr(body, inner, result_none, statement);
-			/* Anonymous namespace comptime work checks ordinary ignored values.
-			 * Keep the existing cleanup-only rule outside that execution scope. */
+			/* Preserve the existing stronger namespace/defer consumer path. */
 			bool ensure_result = body->ensure_statement_result;
 			for (Scope *current = inner; !ensure_result && current != NULL && current->kind != SCOPE_NAMESPACE; current = current->parent) {
 				if (current->kind == SCOPE_DEFER_BODY)
 					ensure_result = true;
 			}
-			if (!body_is_terminated(body) && value != IR_REF_VOID_VALUE)
-				emit_un(body, ensure_result ? IR_ENSURE_RESULT : IR_CHECK_UNUSED_ERROR, statement->offset, value);
+			if (ensure_result) {
+				IrRef value = expr(body, inner, result_none, statement);
+				if (!body_is_terminated(body) && value != IR_REF_VOID_VALUE)
+					emit_un(body, IR_ENSURE_RESULT, statement->offset, value);
+			} else {
+				expr(body, inner, result_ignored, statement);
+			}
 			break;
 		}
 		}

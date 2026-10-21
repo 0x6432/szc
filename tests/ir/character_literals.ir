@@ -48,7 +48,7 @@
         } else {
           %29 = break_inline result, @void_value
         }
-        %31 = check_unused_error %30
+        %31 = ensure_result %30
         %32 = int 10
         %33 = int 10
         %34 = cmp_neq %32, %33
@@ -72,7 +72,7 @@
         } else {
           %49 = break_inline result, @void_value
         }
-        %51 = check_unused_error %50
+        %51 = ensure_result %50
         %52 = int 92
         %53 = int 92
         %54 = cmp_neq %52, %53
@@ -96,7 +96,7 @@
         } else {
           %69 = break_inline result, @void_value
         }
-        %71 = check_unused_error %70
+        %71 = ensure_result %70
         %72 = int 0
         %73 = int 0
         %74 = cmp_neq %72, %73
@@ -120,7 +120,7 @@
         } else {
           %89 = break_inline result, @void_value
         }
-        %91 = check_unused_error %90
+        %91 = ensure_result %90
         %92 = int 228
         %93 = int 228
         %94 = cmp_neq %92, %93
@@ -144,7 +144,7 @@
         } else {
           %109 = break_inline result, @void_value
         }
-        %111 = check_unused_error %110
+        %111 = ensure_result %110
         %112 = int 2047
         %113 = int 2047
         %114 = cmp_neq %112, %113
@@ -162,7 +162,7 @@
         } else {
           %124 = break_inline result, @void_value
         }
-        %126 = check_unused_error %125
+        %126 = ensure_result %125
         %127 = int 55296
         %128 = int 55296
         %129 = cmp_neq %127, %128
@@ -180,7 +180,7 @@
         } else {
           %139 = break_inline result, @void_value
         }
-        %141 = check_unused_error %140
+        %141 = ensure_result %140
         %142 = int 4
         %143 = as @type_usize, %142
         %144 = int_type u21
@@ -242,7 +242,7 @@
         } else {
           %194 = break_inline result, @void_value
         }
-        %196 = check_unused_error %195
+        %196 = ensure_result %195
         %197 = str "\xff\xdf\xbf\xf0\x90\x80\x80"
         %198 = field_val "len", %197
         %199 = int 7
@@ -279,7 +279,7 @@
         } else {
           %226 = break_inline result, @void_value
         }
-        %228 = check_unused_error %227
+        %228 = ensure_result %227
         %229 = ret_type
         %230 = int 0
         %231 = as_return %229, %230

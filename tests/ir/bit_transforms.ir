@@ -74,7 +74,7 @@
         } else {
           %47 = break_inline result, @void_value
         }
-        %49 = check_unused_error %48
+        %49 = ensure_result %48
         %50 = int_type u257
         %51 = int 1
         %52 = as %50, %51

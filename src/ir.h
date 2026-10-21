@@ -179,6 +179,8 @@ typedef enum IrDataKind {
 	X(FIELD_REF, "field_ref", IR_DATA_NAME)	/* type-only array .len through an expression address */ \
 	X(FIELD_VAL, "field_val", IR_DATA_NAME)	/* field name, base operand (array .len initially) */ \
 	X(OPTIONAL_TYPE, "optional_type", IR_DATA_UN) /* child type -> optional type identity only */ \
+	X(ERROR_NAME, "error_name", IR_DATA_UN) /* known finite error -> existing sentinel byte-array pointer */ \
+	X(ERROR_CAST, "error_cast", IR_DATA_BIN) /* actual destination error type, source value */ \
 	X(ERROR_VALUE, "error_value", IR_DATA_NAME) /* decoded symbolic name, operand NONE; known value only */ \
 	X(ERROR_SET_MERGE, "error_set_merge", IR_DATA_BIN) /* left and right finite error-set types */ \
 	X(ERROR_UNION_TYPE, "error_union_type", IR_DATA_BIN) /* explicit error-set type and payload type; identity only */ \

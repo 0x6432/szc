@@ -76,7 +76,7 @@
           %59 = as %57, %58
           %60 = break_inline result, %59
         }
-        %61 = check_unused_error %53
+        %61 = ensure_result %53
         %62 = ret_type
         %63 = array_base_ptr %31
         %64 = int 0

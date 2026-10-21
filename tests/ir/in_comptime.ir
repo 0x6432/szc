@@ -59,7 +59,7 @@
         } else {
           %36 = break_inline result, @void_value
         }
-        %38 = check_unused_error %37
+        %38 = ensure_result %37
         %39 = ret_type
         %40 = int 0
         %41 = as_return %39, %40

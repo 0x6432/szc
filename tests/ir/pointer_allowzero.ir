@@ -159,7 +159,7 @@
         } else {
           %109 = break_inline result, @void_value
         }
-        %111 = check_unused_error %110
+        %111 = ensure_result %110
         %112 = ptr_type @type_u8, @false allowzero
         %113 = ptr_type @type_u8, @false
         %114 = cmp_eq %112, %113
@@ -171,7 +171,7 @@
         } else {
           %119 = break_inline result, @void_value
         }
-        %121 = check_unused_error %120
+        %121 = ensure_result %120
         %122 = ret_type
         %123 = decl_val "select"
         %124 = call %123 arg0 {
